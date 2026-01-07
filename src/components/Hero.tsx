@@ -11,26 +11,29 @@ export const Hero2 = () => {
         <div className="row g-4 align-items-center justify-content-between">
           <div className="col-xl-7 col-lg-6">
             <div className="hero-content">
-              <h5 className="wow fadeInUp">
-                Our Mission: Food, Education, Medicine
-              </h5>
+              <h5 className="wow fadeInUp">Empowering Kindness</h5>
               <h1 className="wow fadeInUp" data-wow-delay=".3s">
-                We’re On A Mission To Change That
+                Empowering Kindness with Absolute Transparency.
               </h1>
+              <p className="wow fadeInUp" data-wow-delay=".4s">
+                The first charity management platform in Vietnam that ensures
+                100% financial disclosure through real-time tracking and
+                AI-powered auditing.
+              </p>
               <div className="hero-button">
                 <Link
-                  href="/causes"
+                  href="/donation-details"
                   className="theme-btn wow fadeInUp"
                   data-wow-delay=".5s"
                 >
-                  View Causes
+                  Donate Now
                 </Link>
                 <Link
-                  href="/donation-details"
+                  href="/causes"
                   className="theme-btn transparent-btn wow fadeInUp"
                   data-wow-delay=".7s"
                 >
-                  Donate Now
+                  Start a Campaign
                 </Link>
               </div>
             </div>
