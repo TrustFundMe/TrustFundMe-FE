@@ -8,7 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "gray-matter": "^4.0.3",
     "next": "15.5.5",
+    "next-mdx-remote": "^5.0.0",
     "react": "19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-countup": "^6.5.3",
