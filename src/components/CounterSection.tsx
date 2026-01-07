@@ -1,48 +1,30 @@
-import Image from "next/image";
-import Counter from "./Counter";
-
 export const CounterSection1 = () => {
+  // NOTE: Removed icons + animated counters per requirement (no icons, simple UI).
+  // NOTE: Values are placeholders to be replaced when real-time data is available.
+
   const counterData: {
-    icon: string;
-    count: number;
-    suffix?: string;
-    unit?: string;
-    title: string;
+    label: string;
+    value: string;
     delay: string;
-    iconWidth: number;
   }[] = [
     {
-      icon: "/assets/img/icon/c-1.png",
-      iconWidth: 34,
-      count: 5,
-      suffix: "M",
-      unit: "+",
-      title: "Projects Done",
+      label: "Total Funds Raised",
+      value: "$XX,XXX,XXX VND",
       delay: ".2s",
     },
     {
-      icon: "/assets/img/icon/c-2.png",
-      iconWidth: 50,
-      count: 1,
-      suffix: "M",
-      unit: "+",
-      title: "Hopeless Child",
+      label: "Total Disbursed",
+      value: "$XX,XXX,XXX VND",
       delay: ".4s",
     },
     {
-      icon: "/assets/img/icon/c-3.png",
-      iconWidth: 42,
-      count: 99,
-      unit: "+",
-      title: "Team Member",
+      label: "Verified Expenses",
+      value: "XXXX Invoices",
       delay: ".6s",
     },
     {
-      icon: "/assets/img/icon/c-4.png",
-      iconWidth: 42,
-      count: 10,
-      unit: "+",
-      title: "Get Reards",
+      label: "Active Donors",
+      value: "XXX Users",
       delay: ".8s",
     },
   ];
@@ -56,25 +38,11 @@ export const CounterSection1 = () => {
               className="counter-items wow fadeInUp"
               data-wow-delay={item.delay}
             >
-              <div className="icon">
-                <Image
-                  width={0}
-                  height={0}
-                  sizes="100vw"
-                  style={{ width: `${item.iconWidth}px`, height: "auto" }}
-                  src={item.icon}
-                  alt="img"
-                />
-              </div>
               <div className="content">
                 <h2>
-                  <span className="count">
-                    <Counter end={item.count} />
-                  </span>
-                  {item.suffix && <span>{item.suffix}</span>}
-                  {item.unit && <span>{item.unit}</span>}
+                  <span className="count">{item.value}</span>
                 </h2>
-                <p>{item.title}</p>
+                <p>{item.label}</p>
               </div>
             </div>
           ))}
