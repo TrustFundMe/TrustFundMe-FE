@@ -1,24 +1,6 @@
-/**
- * GitHub Pages serves this site from a subpath: /TrustFundMe-FE/
- * So we must prefix all assets and routes with the repo name.
- *
- * If you ever change the repo name, update `repo` below.
- */
-const repo = "TrustFundMe-FE";
-const isGitHubPages = process.env.GITHUB_PAGES === "true";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
-  ...(isGitHubPages
-    ? {
-        basePath: `/${repo}`,
-        assetPrefix: `/${repo}/`,
-      }
-    : {}),
-  images: {
-    unoptimized: true,
-  },
+  // Vercel / Node SSR (default). No GitHub Pages basePath/export hacks.
 };
 
 module.exports = nextConfig;
