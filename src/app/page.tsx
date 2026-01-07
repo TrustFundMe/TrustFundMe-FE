@@ -1,32 +1,37 @@
-import { About1 } from "@/components/About";
-import { Causes1 } from "@/components/Causes";
-import { Contact1 } from "@/components/Contact";
-import { Donate1 } from "@/components/Donate";
-import { Event1 } from "@/components/Event";
-import { Faq1 } from "@/components/Faq";
-import { HeroSlider1 } from "@/components/HeroSlider";
-import { News1 } from "@/components/News";
-import { Service1 } from "@/components/Service";
-import { Team1 } from "@/components/Team";
-import { Testimonial1 } from "@/components/Testimonial";
-import DanboxLayout from "@layout/DanboxLayout";
+import { About2 } from "@/components/About";
+import { Causes2 } from "@/components/Causes";
+import { CounterSection1 } from "@/components/CounterSection";
+import { Cta1, Cta2 } from "@/components/Cta";
+import { Event2 } from "@/components/Event";
+import { Faq2 } from "@/components/Faq";
+import { Feature1 } from "@/components/Feature";
+import { Gallery1 } from "@/components/Gallery";
+import { Hero2 } from "@/components/Hero";
+import { News2 } from "@/components/News";
+import { Promo1 } from "@/components/Promo";
+import { Team2 } from "@/components/Team";
+import { Testimonial2 } from "@/components/Testimonial";
+import DanboxLayout from "@/layout/DanboxLayout";
 
-const page = () => {
+const Home = () => {
   return (
-    <DanboxLayout header={1} footer={1}>
-      <HeroSlider1 />
-      <About1 />
-      <Service1 />
-      <Faq1 />
-      <Causes1 />
-      <Donate1 />
-      <Event1 />
-      <Testimonial1 />
-      <Team1 />
-      <News1 />
-      <Contact1 />
+    <DanboxLayout header={2} footer={2}>
+      <Hero2 />
+      <Promo1 />
+      <About2 />
+      <CounterSection1 />
+      <Feature1 />
+      <Team2 />
+      <Cta1 />
+      <Faq2 />
+      <Causes2 />
+      <Event2 />
+      <Testimonial2 />
+      <News2 />
+      <Gallery1 />
+      <Cta2 />
     </DanboxLayout>
   );
 };
 
-export default page;
+export default Home;
