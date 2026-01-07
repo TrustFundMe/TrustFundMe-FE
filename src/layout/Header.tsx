@@ -388,9 +388,6 @@ const Nav = () => (
         <li>
           <Link href="/contact">Contact</Link>
         </li>
-        <li>
-          <Link href="/sign-in">Sign In</Link>
-        </li>
       </ul>
     </nav>
   </div>
