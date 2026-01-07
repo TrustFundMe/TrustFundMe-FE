@@ -32,9 +32,14 @@ const Logo = ({
   <Link href="/" className={className}>
     <Image
       src={`/assets/img/logo/${logo}`}
-      width={178}
-      height={54}
+      width={220}
+      height={67}
       alt="logo-img"
+      style={{ 
+        filter: logo.includes('white') 
+          ? 'brightness(0) invert(1)' 
+          : 'none'
+      }}
     />
   </Link>
 );
@@ -113,7 +118,7 @@ const Header2 = ({ open }: { open: () => void }) => (
                 icon: "far fa-envelope",
                 content: (
                   <a href="mailto:info@example.com" className="link">
-                    info@example.com
+                    info@example.csom
                   </a>
                 ),
               },
@@ -153,6 +158,11 @@ const Header2 = ({ open }: { open: () => void }) => (
                   <i className="ps-2 far fa-heart" />
                 </Link>
               </div>
+              <div className="header-button d-none d-sm-block ms-2">
+                <Link href="/sign-in" className="theme-btn transparent-btn">
+                  Sign In
+                </Link>
+              </div>
               <div className="header__hamburger d-xl-none my-auto">
                 <div className="sidebar__toggle" onClick={open}>
                   <i className="fas fa-bars" />
@@ -181,7 +191,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                     icon: "far fa-envelope",
                     content: (
                       <a href="mailto:info@example.com" className="link">
-                        info@example.com
+                        info@example.cossm
                       </a>
                     ),
                   },
@@ -199,12 +209,12 @@ const Header3 = ({ open }: { open: () => void }) => {
         </div>
         <div id="header-sticky" className="header-1">
           <div className="main-logo">
-            <Logo />
+            <Logo logo="white-logo.png" />
           </div>
           <div className="container-fluid">
             <div className="mega-menu-wrapper">
               <div className="header-main">
-                <div className="logo d-none">
+                <div className="logo d-none" style={{ filter: "white-logo.png".includes('white') ? 'none' : 'brightness(0)' }}>
                   <Logo logo="black-logo.png" />
                 </div>
                 <div className="header-left">
@@ -312,6 +322,7 @@ const Header4 = ({ open }: { open: () => void }) => {
 };
 
 const HomeMenuItem = ({ n }: { n: number }) => (
+  // NOTE: Kept for minimal diff; now only used for Home 02.
   <div className="homemenu">
     <div className={`homemenu-thumb ${n > 1 ? "mb-15" : ""}`}>
       <Image
@@ -323,7 +334,7 @@ const HomeMenuItem = ({ n }: { n: number }) => (
         alt="logo-img"
       />
       <div className="demo-button">
-        <Link href={n === 1 ? "/" : `/index-${n}`} className="theme-btn">
+        <Link href={n === 2 ? "/" : `/index-${n}`} className="theme-btn">
           <span>View Demo</span>
         </Link>
       </div>
@@ -338,20 +349,8 @@ const Nav = () => (
   <div className="main-menu d-none d-xl-block">
     <nav id="mobile-menu">
       <ul>
-        <li className="has-dropdown menu-thumb">
-          <Link href="/">
-            Home
-            <i className="fas fa-angle-down" />
-          </Link>
-          <ul className="submenu has-homemenu">
-            <li>
-              <div className="homemenu-items">
-                {[1, 2, 3, 4].map((n) => (
-                  <HomeMenuItem key={n} n={n} />
-                ))}
-              </div>
-            </li>
-          </ul>
+        <li>
+          <Link href="/">Home</Link>
         </li>
         <li className="has-dropdown d-xl-none">
           <Link href="/team" className="border-none">
@@ -359,9 +358,9 @@ const Nav = () => (
             <i className="fas fa-angle-down" />
           </Link>
           <ul className="submenu">
-            {[1, 2, 3, 4].map((n) => (
+            {[2].map((n) => (
               <li key={n}>
-                <Link href={n === 1 ? "/index" : `/index-${n}`}>Home 0{n}</Link>
+                <Link href={n === 2 ? "/" : `/index-${n}`}>Home 0{n}</Link>
               </li>
             ))}
           </ul>
@@ -386,67 +385,11 @@ const Nav = () => (
             </li>
           </ul>
         </li>
-        <li className="has-dropdown">
-          <Link href="/news">
-            Pages
-            <i className="fas fa-angle-down" />
-          </Link>
-          <ul className="submenu">
-            <li className="has-dropdown">
-              <Link href="/event-details">
-                Events
-                <i className="fas fa-angle-down" />
-              </Link>
-              <ul className="submenu">
-                <li>
-                  <Link href="/events">Events</Link>
-                </li>
-                <li>
-                  <Link href="/event-details">Event Details</Link>
-                </li>
-              </ul>
-            </li>
-            <li className="has-dropdown">
-              <Link href="/team-details">
-                volunteer
-                <i className="fas fa-angle-down" />
-              </Link>
-              <ul className="submenu">
-                <li>
-                  <Link href="/team">Our volunteer</Link>
-                </li>
-                <li>
-                  <Link href="/team-details">volunteer Details</Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="/faq">Faq's</Link>
-            </li>
-            <li>
-              <Link href="/404">404 Page</Link>
-            </li>
-          </ul>
-        </li>
-        <li className="has-dropdown">
-          <Link href="/news">
-            Blog
-            <i className="fas fa-angle-down" />
-          </Link>
-          <ul className="submenu">
-            <li>
-              <Link href="/news-grid">Blog Grid</Link>
-            </li>
-            <li>
-              <Link href="/news">Blog Standard</Link>
-            </li>
-            <li>
-              <Link href="/news-details">Blog Details</Link>
-            </li>
-          </ul>
-        </li>
         <li>
           <Link href="/contact">Contact</Link>
+        </li>
+        <li>
+          <Link href="/sign-in">Sign In</Link>
         </li>
       </ul>
     </nav>
@@ -635,95 +578,11 @@ const MobileNav = () => {
                 <i className="far fa-plus" />
               </a>
             </li>
-            <li className="has-dropdown">
-              <Link href="/news">
-                Pages
-                <i className="fas fa-angle-down" />
-              </Link>
-              <ul className="submenu" style={show("Pages", activeMenu)}>
-                <li className="has-dropdown">
-                  <Link href="/event-details">
-                    Events
-                    <i className="fas fa-angle-down" />
-                  </Link>
-                  <ul className="submenu" style={show("Events", multiMenu)}>
-                    <li>
-                      <Link href="/events">Events</Link>
-                    </li>
-                    <li>
-                      <Link href="/event-details">Event Details</Link>
-                    </li>
-                  </ul>
-                  <a
-                    className="mean-expand"
-                    href="#"
-                    onClick={() => toggle("Events", setMultiMenu, multiMenu)}
-                  >
-                    <i className="far fa-plus" />
-                  </a>
-                </li>
-                <li className="has-dropdown">
-                  <Link href="/team-details">
-                    volunteer
-                    <i className="fas fa-angle-down" />
-                  </Link>
-                  <ul className="submenu" style={show("volunteer", multiMenu)}>
-                    <li>
-                      <Link href="/team">Our volunteer</Link>
-                    </li>
-                    <li>
-                      <Link href="/team-details">volunteer Details</Link>
-                    </li>
-                  </ul>
-                  <a
-                    className="mean-expand"
-                    href="#"
-                    onClick={() => toggle("volunteer", setMultiMenu, multiMenu)}
-                  >
-                    <i className="far fa-plus" />
-                  </a>
-                </li>
-                <li>
-                  <Link href="/faq">Faq's</Link>
-                </li>
-                <li>
-                  <Link href="/404">404 Page</Link>
-                </li>
-              </ul>
-              <a
-                className="mean-expand"
-                href="#"
-                onClick={() => toggle("Pages", setActiveMenu, activeMenu)}
-              >
-                <i className="far fa-plus" />
-              </a>
-            </li>
             <li>
-              <Link href="/news">
-                Blog
-                <i className="fas fa-angle-down" />
-              </Link>
-              <ul className="submenu" style={show("Blog", activeMenu)}>
-                <li>
-                  <Link href="/news-grid">Blog Grid</Link>
-                </li>
-                <li>
-                  <Link href="/news">Blog Standard</Link>
-                </li>
-                <li>
-                  <Link href="/news-details">Blog Details</Link>
-                </li>
-              </ul>
-              <a
-                className="mean-expand"
-                href="#"
-                onClick={() => toggle("Blog", setActiveMenu, activeMenu)}
-              >
-                <i className="far fa-plus" />
-              </a>
+              <Link href="/contact">Contact</Link>
             </li>
             <li className="mean-last">
-              <Link href="/contact">Contact</Link>
+              <Link href="/sign-in">Sign In</Link>
             </li>
           </ul>
         </nav>
