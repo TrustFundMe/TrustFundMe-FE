@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-
+// loading danbox kakakakaak
 const Preloader = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [shouldHide, setShouldHide] = useState(false);
@@ -28,13 +28,13 @@ const Preloader = () => {
       className={`preloader ${isLoaded ? "loaded" : ""}`}
       style={{
         opacity: isLoaded ? 0 : 1,
-        transition: "opacity 600ms ease-in-out",
+        transition: "opacity 1000ms ease-in-out",
       }}
     >
       <div className="animation-preloader">
         <div className="spinner"></div>
         <div className="txt-loading">
-          {["D", "A", "N", "B", "O", "X"].map((letter, index) => (
+          {["T", "R", "U", "S", "T", "F", "U", "N", "D", "M", "E"].map((letter, index) => (
             <span
               key={index}
               data-text-preloader={letter}
