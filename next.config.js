@@ -5,12 +5,17 @@
  * If you ever change the repo name, update `repo` below.
  */
 const repo = "TrustFundMe-FE";
+const isGitHubPages = process.env.GITHUB_PAGES === "true";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "export",
-  basePath: `/${repo}`,
-  assetPrefix: `/${repo}/`,
+  ...(isGitHubPages
+    ? {
+        basePath: `/${repo}`,
+        assetPrefix: `/${repo}/`,
+      }
+    : {}),
   images: {
     unoptimized: true,
   },
