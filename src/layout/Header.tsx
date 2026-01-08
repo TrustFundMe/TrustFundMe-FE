@@ -112,13 +112,13 @@ const Header2 = ({ open }: { open: () => void }) => (
             items={[
               {
                 icon: "fal fa-map-marker-alt",
-                content: "Main Street, Melbourne, Australia",
+                content: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
               },
               {
                 icon: "far fa-envelope",
                 content: (
-                  <a href="mailto:info@example.com" className="link">
-                    info@example.csom
+                  <a href="mailto:trustfundme@co.vn" className="link">
+                    trustfundme@co.vn
                   </a>
                 ),
               },
@@ -151,12 +151,6 @@ const Header2 = ({ open }: { open: () => void }) => (
                     <a href="tel:+2085550112">+000 (123) 456 88</a>
                   </h5>
                 </div>
-              </div>
-              <div className="header-button">
-                <Link href="causes" className="theme-btn">
-                  Donate Now
-                  <i className="ps-2 far fa-heart" />
-                </Link>
               </div>
               <div className="header-button d-none d-sm-block ms-2">
                 <Link href="/sign-in" className="theme-btn transparent-btn">
@@ -441,12 +435,12 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
                   {
                     icon: "fal fa-map-marker-alt",
                     link: "#",
-                    text: "Main Street, Melbourne, Australia",
+                    text: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
                   },
                   {
                     icon: "fal fa-envelope",
-                    link: "mailto:info@azent.com",
-                    text: "info@example.com",
+                    link: "mailto:trustfundme@co.vn",
+                    text: "trustfundme@co.vn",
                   },
                   {
                     icon: "fal fa-clock",
@@ -472,27 +466,20 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
                         target={item.link === "#" ? "_blank" : undefined}
                         href={item.link}
                       >
-                        {i === 1 ? (
-                          <span className="mailto:info@example.com">
-                            {item.text}
-                          </span>
-                        ) : (
-                          item.text
-                        )}
+                        {item.text}
                       </a>
                     </div>
                   </li>
                 ))}
               </ul>
               <div className="header-button mt-4">
-                <Link href="/contact" className="theme-btn text-center">
+                <Link href="/sign-in" className="theme-btn text-center">
                   <span>
-                    get A Quote
+                    Sign In
                     <i className="fa-solid fa-arrow-right-long" />
                   </span>
                 </Link>
               </div>
-              <SocialIcons label="" />
             </div>
           </div>
         </div>
@@ -577,9 +564,6 @@ const MobileNav = () => {
             </li>
             <li>
               <Link href="/contact">Contact</Link>
-            </li>
-            <li className="mean-last">
-              <Link href="/sign-in">Sign In</Link>
             </li>
           </ul>
         </nav>
