@@ -1,5 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Chelsea+Market&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .mean-expand {
   font-size: 18px !important;
 }
@@ -57,4 +61,68 @@ img.mfp-img {
   width: 100%;
   height: 100%;
   max-height: 500px;
+}
+
+/* Fix navigation menu wrapping issue */
+.header-main .main-menu ul {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  align-items: center;
+}
+
+.header-main .main-menu ul li {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Smooth transitions for navigation menu */
+.header-main .main-menu ul li a {
+  transition: all 0.3s ease !important;
+}
+
+.header-main .main-menu ul li .submenu {
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease !important;
+}
+
+.header-main .main-menu ul li .submenu li a {
+  transition: all 0.2s ease !important;
+}
+
+.header-main .main-menu ul li:hover > a {
+  transition: all 0.3s ease !important;
+}
+
+/* Fix header-top long address issue */
+.header-top-wrapper-2 .contact-list {
+  flex-wrap: wrap !important;
+  gap: 15px 40px !important;
+}
+
+.header-top-wrapper-2 .contact-list li {
+  max-width: none !important;
+  white-space: normal !important;
+  line-height: 1.4 !important;
+}
+
+.header-top-wrapper-2.style-3 {
+  min-height: 48px !important;
+  align-items: center !important;
+}
+
+@media (max-width: 1400px) {
+  .header-top-wrapper-2 .contact-list {
+    gap: 10px 25px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .header-top-wrapper-2 .contact-list li {
+    font-size: 13px !important;
+  }
+  
+  .header-top-wrapper-2 .social-icon {
+    gap: 15px !important;
+  }
 }
