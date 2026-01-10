@@ -493,9 +493,53 @@
 
 .header-top-section-3 {
 	background-color: $theme-color-2;
-
-	@include breakpoint (max-lg){
-		display: none;
+	padding: 8px 0;
+	
+	// Responsive font sizes - no hiding, just scale down
+	.header-top-wrapper-2 {
+		font-size: 14px;
+		
+		@include breakpoint (max-xl){
+			font-size: 13px;
+		}
+		
+		@include breakpoint (max-lg){
+			font-size: 12px;
+		}
+		
+		@include breakpoint (max-md){
+			font-size: 11px;
+		}
+		
+		@include breakpoint (max-sm){
+			font-size: 10px;
+		}
+	}
+	
+	.contact-list {
+		li {
+			@include breakpoint (max-lg){
+				margin-right: 10px;
+			}
+			
+			@include breakpoint (max-md){
+				margin-right: 5px;
+			}
+		}
+	}
+	
+	.social-icon {
+		span {
+			@include breakpoint (max-md){
+				display: none; // Hide "Follow Us On:" text on small screens
+			}
+		}
+		
+		a {
+			@include breakpoint (max-md){
+				padding: 0 5px;
+			}
+		}
 	}
 }
 
@@ -676,13 +720,8 @@
 	left: 0;
 	width: 100%;
 	z-index: 100;
-	transition: all 0.9s;
 	background-color: $white;
 	box-shadow: $shadow;
-	-webkit-transition: all 0.9s;
-	transition: all 0.9s;
-	-webkit-animation: 500ms ease-in-out 0s normal none 1 running fadeInDown;
-	animation: 500ms ease-in-out 0s normal none 1 running fadeInDown;
 
 	&.header-1 {
 		margin-left: 0;
