@@ -47,7 +47,7 @@ export const Cta1 = () => {
 
 export const Cta2 = () => {
   return (
-    <section className="cta-banner-section-3 fix section-padding">
+    <section className="cta-banner-section-3 fix py-16 md:py-20 lg:py-24">
       <div className="container">
         <div className="cta-banner-wrapper-3">
           <div className="section-title mb-0">

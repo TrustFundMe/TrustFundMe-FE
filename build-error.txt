@@ -1,0 +1,27 @@
+﻿
+> danbox@0.1.0 build
+> next build --turbopack
+
+   Γû▓ Next.js 15.5.9 (Turbopack)
+
+   Creating an optimized production build ...
+ Γ£ô Finished writing to disk in 160ms
+ Γ£ô Compiled successfully in 7.2s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/24) ...
+   Generating static pages (6/24) 
+node.exe : Error occurred prerendering page "/index-3". Read more: https://nextjs.org/docs/messages/prerender-error
+At C:\Program Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Error occurred ...prerender-error:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ReferenceError: Image is not defined
+    at e (C:\Users\Admin\Documents\danbox\.next\server\chunks\ssr\[root-of-the-server]__7ea8bab7._.js:1:3916) {
+  digest: '3536063342'
+}
+Export encountered an error on /index-3/page: /index-3, exiting the build.
+ Γ¿» Next.js build worker exited with code: 1 and signal: null
