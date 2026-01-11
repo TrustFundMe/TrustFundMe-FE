@@ -268,9 +268,43 @@
 
 .about-image-items {
     margin-top: 30px;
+    position: relative;
 
     img {
         @include imgw;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.4s ease, box-shadow 0.4s ease, filter 0.4s ease;
+        cursor: pointer;
+        // Apply uniform tone/filter to AI images
+        filter: contrast(1.05) saturate(0.95) brightness(1.02);
+        
+        &:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+            filter: contrast(1.1) saturate(1.05) brightness(1.08);
+        }
+    }
+
+    // Smooth entrance animation
+    &.wow {
+        opacity: 0;
+        transform: translateY(30px);
+        
+        &.fadeInUp {
+            animation: fadeInUpSmooth 0.8s ease forwards;
+        }
+    }
+}
+
+@keyframes fadeInUpSmooth {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
