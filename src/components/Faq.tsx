@@ -1,57 +1,101 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import Accordion from "react-bootstrap/Accordion";
 
 const Faq = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px"
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   const faqs: {
     key: string;
     question: string;
     answer: string;
-    delay: string;
+    delay: number;
   }[] = [
     {
       key: "faq1",
-      question: "How To Become A Volunteer In Zambia State?",
+      question: "How do I start a fundraiser?",
       answer:
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi.",
-      delay: ".3s",
+        "Starting a fundraiser is simple! Click on 'Start a Fundraiser' button, fill in your campaign details including your goal amount, story, and upload relevant images. Our team will review and approve your campaign within 24 hours. Once approved, you can start sharing your fundraiser with friends, family, and social networks.",
+      delay: 0,
     },
     {
       key: "faq2",
-      question: "How to customize this theme?",
+      question: "What fees does your platform charge?",
       answer:
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi.",
-      delay: ".5s",
+        "We charge a small platform fee of 2.9% + $0.30 per donation to cover payment processing and platform maintenance. This helps us keep the service running and support thousands of campaigns. There are no hidden fees, and you'll see exactly what you'll receive before withdrawing funds.",
+      delay: 100,
     },
     {
       key: "faq3",
-      question: "How Can I Give My Clothes And Other Products?",
+      question: "How long does it take to receive funds?",
       answer:
-        "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi.",
-      delay: ".7s",
+        "Funds are typically available for withdrawal within 2-5 business days after a donation is made. You can withdraw funds at any time once they're available in your account. We use secure payment processors to ensure your money is transferred safely to your bank account.",
+      delay: 200,
+    },
+    {
+      key: "faq4",
+      question: "Can I donate anonymously?",
+      answer:
+        "Yes! When making a donation, you have the option to remain anonymous. Your name won't be displayed publicly on the fundraiser page, though the campaign organizer will still be able to see your information for thank-you purposes and tax receipts.",
+      delay: 300,
     },
   ];
+  
   return (
-    <div className="faq-content">
-      <div className="section-title">
-        <span className="sub-title color-2 wow fadeInUp">
+    <div ref={sectionRef} className="faq-content">
+      <div 
+        className={`section-title transition-all duration-700 ${
+          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
+        }`}
+      >
+        <span className="sub-title color-2">
           <i className="far fa-heart" />
-          Our Faq Now
+          Frequently Asked Questions
         </span>
         <h2 className="mt-char-animation">
-          We’ve Funded 5k <br />
-          Dollars Over
+          Got Questions? <br />
+          We've Got Answers
         </h2>
       </div>
       <div className="faq-accordion mt-4 mt-md-0">
-        <Accordion defaultActiveKey="faq2">
+        <Accordion defaultActiveKey="faq1">
           {faqs.map(({ key, question, answer, delay }) => (
             <Accordion.Item
               key={key}
               eventKey={key}
-              className="wow fadeInUp"
-              data-wow-delay={delay}
+              className={`transition-all duration-700 ${
+                isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
+              }`}
+              style={{ 
+                transitionDelay: isVisible ? `${delay + 200}ms` : '0ms'
+              }}
             >
               <Accordion.Header>{question}</Accordion.Header>
               <Accordion.Body>{answer}</Accordion.Body>
@@ -113,8 +157,35 @@ export const Faq1 = () => {
 };
 
 export const Faq2 = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px"
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <section className="faq-section fix section-padding">
+    <section ref={sectionRef} className="faq-section fix section-padding">
       <div className="container">
         <div className="row g-4 align-items-center">
           <div className="col-lg-6">
@@ -122,18 +193,25 @@ export const Faq2 = () => {
           </div>
           <div className="col-lg-6">
             <div className="faq-image-items">
-              <div className="counter-box">
+              <div 
+                className={`counter-box transition-all duration-700 ${
+                  isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                }`}
+                style={{ transitionDelay: '200ms' }}
+              >
                 <h2>
-                  <span className="count">19</span>+
+                  <span className="count">10</span>M+
                 </h2>
-                <p>Year Experience</p>
+                <p>Funds Raised</p>
               </div>
               <div className="row g-4">
-                <div
-                  className="col-lg-6 col-md-6 wow fadeInUp"
-                  data-wow-delay=".2s"
-                >
-                  <div className="faq-image">
+                <div className="col-lg-6 col-md-6">
+                  <div 
+                    className={`faq-image transition-all duration-700 ${
+                      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ transitionDelay: '300ms' }}
+                  >
                     <Image
                       width={0}
                       height={0}
@@ -144,11 +222,13 @@ export const Faq2 = () => {
                     />
                   </div>
                 </div>
-                <div
-                  className="col-lg-6 col-md-6 wow fadeInUp"
-                  data-wow-delay=".4s"
-                >
-                  <div className="faq-image">
+                <div className="col-lg-6 col-md-6">
+                  <div 
+                    className={`faq-image transition-all duration-700 ${
+                      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ transitionDelay: '400ms' }}
+                  >
                     <Image
                       width={0}
                       height={0}
@@ -159,11 +239,13 @@ export const Faq2 = () => {
                     />
                   </div>
                 </div>
-                <div
-                  className="col-lg-6 col-md-6 wow fadeInUp"
-                  data-wow-delay=".6s"
-                >
-                  <div className="faq-image">
+                <div className="col-lg-6 col-md-6">
+                  <div 
+                    className={`faq-image transition-all duration-700 ${
+                      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ transitionDelay: '500ms' }}
+                  >
                     <Image
                       width={0}
                       height={0}
@@ -174,11 +256,13 @@ export const Faq2 = () => {
                     />
                   </div>
                 </div>
-                <div
-                  className="col-lg-6 col-md-6 wow fadeInUp"
-                  data-wow-delay=".7s"
-                >
-                  <div className="faq-image">
+                <div className="col-lg-6 col-md-6">
+                  <div 
+                    className={`faq-image transition-all duration-700 ${
+                      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                    }`}
+                    style={{ transitionDelay: '600ms' }}
+                  >
                     <Image
                       width={0}
                       height={0}
