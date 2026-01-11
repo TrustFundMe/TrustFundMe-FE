@@ -6,9 +6,8 @@ import { Event2 } from "@/components/Event";
 import { Faq2 } from "@/components/Faq";
 import { Feature1 } from "@/components/Feature";
 import { Gallery1 } from "@/components/Gallery";
-import { Hero2 } from "@/components/Hero";
+import HeroSection9 from "@/components/HeroSection9";
 import { News2 } from "@/components/News";
-import { Promo1 } from "@/components/Promo";
 import { Team2 } from "@/components/Team";
 import { Testimonial2 } from "@/components/Testimonial";
 import DanboxLayout from "@/layout/DanboxLayout";
@@ -16,8 +15,7 @@ import DanboxLayout from "@/layout/DanboxLayout";
 const Home = () => {
   return (
     <DanboxLayout header={2} footer={2}>
-      <Hero2 />
-      <Promo1 />
+      <HeroSection9 />
       <About2 />
       <CounterSection1 />
       <Feature1 />
