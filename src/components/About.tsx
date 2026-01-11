@@ -121,36 +121,34 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
   const aboutImages: {
     img: string;
     delay: string;
+    hideOnMobile?: boolean;
+    tabletOnly?: boolean;
   }[] = [
     {
       img: "/assets/img/about/05.jpg",
       delay: ".3s",
+      hideOnMobile: true, // Hide on mobile
     },
     {
       img: "/assets/img/about/06.jpg",
       delay: ".5s",
+      hideOnMobile: true, // Hide on mobile
     },
     {
       img: "/assets/img/about/07.jpg",
       delay: ".7s",
+      hideOnMobile: true, // Hide on mobile
+    },
+    {
+      img: "/assets/img/about/072.jpg",
+      delay: ".9s",
+      tabletOnly: false, // Show on tablet and mobile
     },
   ];
   return (
     <section className={`about-section-2 fix ${containerClass}`}>
       <div className="container">
-        <div className="org-logo-wrap text-center">
-          <div className="org-logo wow fadeInUp" data-wow-delay=".3s">
-            <Image
-              width={99}
-              height={108}
-              sizes="100vw"
-              style={{ width: "auto", height: "auto" }}
-              src="/assets/img/about-logo.png"
-              alt="img"
-            />
-          </div>
-        </div>
-        <div className="section-title text-center">
+        <div className="section-title text-center" style={{ display: 'none' }}>
           <span className="sub-title color-2 wow fadeInUp">
             <i className="far fa-heart" />
             Life Changing Video
@@ -165,10 +163,12 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
           {aboutImages.map((item, index) => (
             <div
               key={index}
-              className="col-xl-4 col-lg-6 col-md-6 wow fadeInUp"
+              className={`col-xl-4 col-lg-6 col-md-6 wow fadeInUp ${
+                item.hideOnMobile ? 'd-none d-md-block' : 'd-block d-xl-none'
+              }`}
               data-wow-delay={item.delay}
             >
-              <div className="about-image-items">
+              <div className="about-image-items overflow-hidden rounded-lg group cursor-pointer">
                 <Image
                   width={0}
                   height={0}
@@ -176,6 +176,7 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
                   style={{ width: "100%", height: "auto" }}
                   src={item.img}
                   alt="img"
+                  className="rounded-lg transition-all duration-500 ease-in-out group-hover:scale-110 group-hover:brightness-110"
                 />
               </div>
             </div>

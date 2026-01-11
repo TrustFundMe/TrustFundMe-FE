@@ -329,6 +329,12 @@ export default function SignInPage() {
   const [lastName, setLastName] = useState<string>("");
   const [signUpPassword, setSignUpPassword] = useState<string>("");
   const [showSignUpPassword, setShowSignUpPassword] = useState<boolean>(false);
+  
+  // Field touched states (for validation)
+  const [firstNameTouched, setFirstNameTouched] = useState<boolean>(false);
+  const [lastNameTouched, setLastNameTouched] = useState<boolean>(false);
+  const [emailTouched, setEmailTouched] = useState<boolean>(false);
+  const [passwordTouched, setPasswordTouched] = useState<boolean>(false);
 
   // UI states
   const [error, setError] = useState<string>("");
@@ -370,6 +376,36 @@ export default function SignInPage() {
   const isSignUpPasswordValid = useMemo(() => {
     return isPasswordValid(passwordValidation);
   }, [passwordValidation]);
+
+  // Field validation errors
+  const firstNameError = useMemo(() => {
+    if (!firstNameTouched) return "";
+    if (!firstName.trim()) return "Please fill out this field.";
+    return "";
+  }, [firstNameTouched, firstName]);
+
+  const lastNameError = useMemo(() => {
+    if (!lastNameTouched) return "";
+    if (!lastName.trim()) return "Please fill out this field.";
+    return "";
+  }, [lastNameTouched, lastName]);
+
+  const emailError = useMemo(() => {
+    if (!emailTouched) return "";
+    if (!email.trim()) return "Please fill out this field.";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Please enter a valid email address.";
+    return "";
+  }, [emailTouched, email]);
+
+  const passwordErrorMessage = useMemo(() => {
+    if (!passwordTouched) return "";
+    if (!signUpPassword) return "Please fill out this field.";
+    if (!isSignUpPasswordValid) {
+      return "Value does not comply with requirements";
+    }
+    return "";
+  }, [passwordTouched, signUpPassword, isSignUpPasswordValid]);
 
   // ==================================================================================
   // HANDLERS
@@ -678,6 +714,29 @@ export default function SignInPage() {
     setLastName("");
     setError("");
     setInfo("");
+    setFirstNameTouched(false);
+    setLastNameTouched(false);
+    setEmailTouched(false);
+    setPasswordTouched(false);
+  };
+
+  /**
+   * Handle field blur (when user leaves field)
+   */
+  const handleFirstNameBlur = (): void => {
+    setFirstNameTouched(true);
+  };
+
+  const handleLastNameBlur = (): void => {
+    setLastNameTouched(true);
+  };
+
+  const handleEmailBlur = (): void => {
+    setEmailTouched(true);
+  };
+
+  const handlePasswordBlur = (): void => {
+    setPasswordTouched(true);
   };
 
   // ==================================================================================
@@ -703,13 +762,13 @@ export default function SignInPage() {
             </div>
 
             {/* Subheading */}
-            <div className="text-center mb-8">
-              <p className="text-gray-600">
-                {step === "sign-up"
-                  ? "Create an account to get started"
-                  : "Sign in to TrustFundMe or sign up to continue"}
-              </p>
-            </div>
+            {step !== "sign-up" && (
+              <div className="text-center mb-8">
+                <p className="text-gray-600">
+                  Sign in to TrustFundMe or sign up to continue
+                </p>
+              </div>
+            )}
 
             {/* Error/Info Messages */}
             {error && (
@@ -774,18 +833,23 @@ export default function SignInPage() {
                 }}
               >
                 <div className="mb-6">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder=" "
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900 peer"
+                      required
+                    />
+                    <label 
+                      htmlFor="email" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      Email
+                    </label>
+                  </div>
                 </div>
 
                 <button
@@ -811,26 +875,41 @@ export default function SignInPage() {
                 }}
               >
                 <div className="mb-4">
-                  <p className="text-sm text-gray-600">
-                    Welcome back, <span className="font-semibold">{existingUserName}</span>!
-                  </p>
-                  <p className="text-xs text-gray-500">{email}</p>
+                  <div className="relative">
+                    <input
+                      id="emailDisplay"
+                      type="email"
+                      placeholder=" "
+                      value={email}
+                      readOnly
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 outline-none text-gray-900 peer"
+                    />
+                    <label 
+                      htmlFor="emailDisplay" 
+                      className="absolute left-4 -top-2 text-xs bg-white px-1 text-gray-500"
+                    >
+                      Email
+                    </label>
+                  </div>
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
                   <div className="relative">
                     <input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder=" "
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all pr-12 text-gray-900 placeholder:text-gray-400"
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900 peer"
                       required
                     />
+                    <label 
+                      htmlFor="password" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      Password
+                    </label>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -901,69 +980,111 @@ export default function SignInPage() {
                 }}
               >
                 <div className="mb-4">
-                  <p className="text-sm text-gray-600 mb-4">
-                    We couldn't find an account with <span className="font-semibold">{email}</span>. Let's create one!
-                  </p>
+                  <div className="relative">
+                    <input
+                      id="firstName"
+                      type="text"
+                      placeholder=" "
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      onBlur={handleFirstNameBlur}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
+                        firstNameTouched && firstNameError
+                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                      }`}
+                      required
+                    />
+                    <label 
+                      htmlFor="firstName" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      First Name
+                    </label>
+                  </div>
+                  {firstNameError && (
+                    <p className="text-xs text-red-500 mt-1 animate-fade-in">{firstNameError}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                    First Name
-                  </label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="lastName"
+                      type="text"
+                      placeholder=" "
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      onBlur={handleLastNameBlur}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
+                        lastNameTouched && lastNameError
+                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                      }`}
+                      required
+                    />
+                    <label 
+                      htmlFor="lastName" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      Last Name
+                    </label>
+                  </div>
+                  {lastNameError && (
+                    <p className="text-xs text-red-500 mt-1 animate-fade-in">{lastNameError}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Last Name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    placeholder="Doe"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="signupEmail"
+                      type="email"
+                      placeholder=" "
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={handleEmailBlur}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
+                        emailTouched && emailError
+                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                      }`}
+                      required
+                    />
+                    <label 
+                      htmlFor="signupEmail" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      Email Address
+                    </label>
+                  </div>
+                  {emailError && (
+                    <p className="text-xs text-red-500 mt-1 animate-fade-in">{emailError}</p>
+                  )}
                 </div>
 
                 <div className="mb-4">
-                  <label htmlFor="signupEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
-                  </label>
-                  <input
-                    id="signupEmail"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400"
-                    required
-                  />
-                </div>
-
-                <div className="mb-4">
-                  <label htmlFor="signupPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                    Password
-                  </label>
                   <div className="relative">
                     <input
                       id="signupPassword"
                       type={showSignUpPassword ? "text" : "password"}
-                      placeholder="Create a strong password"
+                      placeholder=" "
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all pr-12 text-gray-900 placeholder:text-gray-400"
+                      onBlur={handlePasswordBlur}
+                      className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
+                        passwordTouched && !isSignUpPasswordValid
+                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                      }`}
                       required
                     />
+                    <label 
+                      htmlFor="signupPassword" 
+                      className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
+                    >
+                      Password
+                    </label>
                     <button
                       type="button"
                       onClick={() => setShowSignUpPassword(!showSignUpPassword)}
@@ -996,6 +1117,9 @@ export default function SignInPage() {
                       )}
                     </button>
                   </div>
+                  {passwordErrorMessage && (
+                    <p className="text-xs text-red-500 mt-1 animate-fade-in">{passwordErrorMessage}</p>
+                  )}
                 </div>
 
                 {/* Password Requirements (Real-time validation) */}
@@ -1004,111 +1128,131 @@ export default function SignInPage() {
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.minLength ? (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 text-green-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      ) : passwordTouched ? (
+                        <svg className="w-4 h-4 text-red-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                             clipRule="evenodd"
                           />
                         </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <circle cx="10" cy="10" r="3" />
+                        </svg>
                       )}
-                      <span className={passwordValidation.minLength ? "text-green-700" : "text-gray-600"}>
+                      <span className={passwordValidation.minLength ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
                         Minimum 12 characters
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.hasUppercase ? (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 text-green-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      ) : passwordTouched ? (
+                        <svg className="w-4 h-4 text-red-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                             clipRule="evenodd"
                           />
                         </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <circle cx="10" cy="10" r="3" />
+                        </svg>
                       )}
-                      <span className={passwordValidation.hasUppercase ? "text-green-700" : "text-gray-600"}>
+                      <span className={passwordValidation.hasUppercase ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
                         1 uppercase letter
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.hasLowercase ? (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 text-green-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      ) : passwordTouched ? (
+                        <svg className="w-4 h-4 text-red-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                             clipRule="evenodd"
                           />
                         </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <circle cx="10" cy="10" r="3" />
+                        </svg>
                       )}
-                      <span className={passwordValidation.hasLowercase ? "text-green-700" : "text-gray-600"}>
+                      <span className={passwordValidation.hasLowercase ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
                         1 lowercase letter
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.hasNumber ? (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 text-green-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      ) : passwordTouched ? (
+                        <svg className="w-4 h-4 text-red-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                             clipRule="evenodd"
                           />
                         </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <circle cx="10" cy="10" r="3" />
+                        </svg>
                       )}
-                      <span className={passwordValidation.hasNumber ? "text-green-700" : "text-gray-600"}>
+                      <span className={passwordValidation.hasNumber ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
                         1 number
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.hasSymbol ? (
-                        <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 text-green-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                             clipRule="evenodd"
                           />
                         </svg>
-                      ) : (
-                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      ) : passwordTouched ? (
+                        <svg className="w-4 h-4 text-red-500 animate-fade-in" fill="currentColor" viewBox="0 0 20 20">
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
                             clipRule="evenodd"
                           />
                         </svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                          <circle cx="10" cy="10" r="3" />
+                        </svg>
                       )}
-                      <span className={passwordValidation.hasSymbol ? "text-green-700" : "text-gray-600"}>
+                      <span className={passwordValidation.hasSymbol ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
                         1 symbol
                       </span>
                     </li>
@@ -1197,3 +1341,8 @@ export default function SignInPage() {
     </>
   );
 }
+
+
+
+
+

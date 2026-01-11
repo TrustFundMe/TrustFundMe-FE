@@ -1,50 +1,110 @@
-export const CounterSection1 = () => {
-  // NOTE: Removed icons + animated counters per requirement (no icons, simple UI).
-  // NOTE: Values are placeholders to be replaced when real-time data is available.
+"use client";
 
+import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { GradientGridBg } from "@/components/ui/gradient-grid-bg";
+
+// Animated Counter Component - Fast version with full number display
+const AnimatedCounter = ({ 
+  value, 
+  suffix = ""
+}: { 
+  value: number; 
+  suffix?: string;
+}) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const motionValue = useMotionValue(0);
+  const springValue = useSpring(motionValue, {
+    damping: 30,
+    stiffness: 200,
+  });
+  const isInView = useInView(ref, { once: true, margin: "0px" });
+
+  useEffect(() => {
+    if (isInView) {
+      motionValue.set(value);
+    }
+  }, [motionValue, isInView, value]);
+
+  useEffect(() => {
+    springValue.on("change", (latest) => {
+      if (ref.current) {
+        ref.current.textContent = Intl.NumberFormat("en-US").format(
+          Math.floor(latest)
+        ) + suffix;
+      }
+    });
+  }, [springValue, suffix]);
+
+  return <span ref={ref} />;
+};
+
+export const CounterSection1 = () => {
   const counterData: {
     label: string;
-    value: string;
-    delay: string;
+    value: number;
+    suffix: string;
+    prefix?: string;
+    delay: number;
   }[] = [
     {
       label: "Total Funds Raised",
-      value: "$XX,XXX,XXX VND",
-      delay: ".2s",
+      value: 50000000,
+      suffix: " VND",
+      prefix: "$",
+      delay: 0.1,
     },
     {
       label: "Total Disbursed",
-      value: "$XX,XXX,XXX VND",
-      delay: ".4s",
+      value: 35000000,
+      suffix: " VND",
+      prefix: "$",
+      delay: 0.2,
     },
     {
       label: "Verified Expenses",
-      value: "XXXX Invoices",
-      delay: ".6s",
+      value: 1234,
+      suffix: " Invoices",
+      delay: 0.3,
     },
     {
       label: "Active Donors",
-      value: "XXX Users",
-      delay: ".8s",
+      value: 567,
+      suffix: " Users",
+      delay: 0.4,
     },
   ];
+
   return (
-    <section className="counter-section section-padding">
-      <div className="container">
-        <div className="counter-wrapper">
+    <section className="counter-section section-padding relative overflow-hidden">
+      {/* Gradient Grid Background */}
+      <GradientGridBg variant="default" className="absolute inset-0" />
+      
+      <div className="container relative z-10">
+        <div className="flex flex-col gap-4 max-w-md mx-auto">
           {counterData.map((item, index) => (
-            <div
+            <motion.div
               key={index}
-              className="counter-items wow fadeInUp"
-              data-wow-delay={item.delay}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: item.delay }}
+              className="wow fadeInUp"
+              data-wow-delay={item.delay + "s"}
             >
-              <div className="content">
-                <h2>
-                  <span className="count">{item.value}</span>
+              <div className="text-center">
+                <h2 className="!text-4xl md:!text-5xl lg:!text-6xl !leading-tight font-bold text-white whitespace-nowrap">
+                  <span className="count">
+                    {item.prefix && <span>{item.prefix}</span>}
+                    <AnimatedCounter 
+                      value={item.value} 
+                      suffix={item.suffix}
+                    />
+                  </span>
                 </h2>
-                <p>{item.label}</p>
+                <p className="!text-base md:!text-lg lg:!text-xl !mt-2 text-white/80">{item.label}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

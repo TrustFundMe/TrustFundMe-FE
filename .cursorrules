@@ -1,0 +1,713 @@
+# Cursor Rules for Next.js 15 + React 19 + TypeScript + Tailwind CSS
+
+You are an expert in TypeScript, Next.js App Router, React 19, shadcn/ui, Radix UI, Tailwind CSS, and modern web development.
+
+## Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure files: exported component, subcomponents, helpers, static content, types
+- Use lowercase with dashes for directories (e.g., components/auth-wizard)
+- Favor named exports for components
+
+## Naming Conventions
+
+- Use PascalCase for component files (e.g., HeroSection.tsx)
+- Use camelCase for utility files (e.g., formatDate.ts)
+- Prefix event handlers with "handle" (e.g., handleClick, handleSubmit)
+- Prefix boolean variables with "is", "has", "should" (e.g., isOpen, hasError)
+
+## TypeScript Usage
+
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use const objects with 'as const' assertion
+- Use functional components with TypeScript interfaces
+- Define strict types for all props, state, and return values
+- Avoid using 'any'; use 'unknown' if type is truly unknown
+- Use proper type guards and type narrowing
+- Leverage TypeScript's utility types (Partial, Pick, Omit, etc.)
+
+## React 19 Best Practices
+
+- Use functional components with React hooks
+- Leverage React 19 features (useTransition, useActionState, etc.)
+- Use React Server Components (RSC) by default
+- Minimize 'use client' directive; use only for Web API access or state
+- Use Suspense for async components and data fetching
+- Implement error boundaries for error handling
+- Use dynamic imports for code splitting
+- Optimize images: use WebP format, include size data, implement lazy loading
+
+## Next.js 15 App Router
+
+- Use App Router for all routing and layouts
+- Organize routes using folder-based routing structure
+- Use route groups (folders with parentheses) for organization
+- Implement layouts for shared UI across routes
+- Use loading.tsx for loading states
+- Use error.tsx for error boundaries
+- Implement not-found.tsx for 404 pages
+- Use metadata API for SEO optimization
+- Implement proper server actions for form handling
+- Use parallel routes and intercepting routes when appropriate
+
+## State Management
+
+- Use React's built-in state management (useState, useReducer, useContext)
+- Leverage URL search params for state when appropriate
+- Use Zustand or Jotai for global state if needed
+- Implement optimistic updates with useOptimistic
+- Use React Query/TanStack Query for server state if needed
+
+## UI and Styling
+
+- Use Tailwind CSS for styling
+- Leverage Tailwind's utility classes and avoid custom CSS when possible
+- Use CSS variables for theming (defined in globals.css)
+- Implement responsive design with Tailwind's breakpoint system
+- Use clsx or cn utility for conditional classes
+- Follow mobile-first approach for responsive design
+- Use Framer Motion for animations (already in dependencies)
+- Implement shadcn/ui components for consistent UI
+- Use Radix UI primitives for accessible components
+- Use Lucide React for icons (already in dependencies)
+
+## Component Patterns
+
+- Create small, focused components with single responsibility
+- Use composition over inheritance
+- Implement proper component encapsulation
+- Use React.memo() for expensive computations
+- Implement proper prop drilling alternatives (context, composition)
+- Use children prop for component composition
+- Implement render props pattern when appropriate
+
+## Performance Optimization
+
+- Minimize 'use client' components; favor server components
+- Use dynamic imports for code splitting
+- Implement proper image optimization with next/image
+- Use Suspense for lazy loading
+- Implement proper caching strategies
+- Avoid unnecessary re-renders with React.memo and useCallback
+- Use proper key props in lists
+- Implement virtualization for long lists if needed
+
+## Data Fetching
+
+- Use Server Components for data fetching when possible
+- Implement proper loading states with Suspense
+- Use streaming with Suspense for progressive rendering
+- Implement proper error handling
+- Use React Server Actions for mutations
+- Implement optimistic updates for better UX
+- Cache data appropriately using Next.js cache utilities
+
+## Security Best Practices
+
+- Sanitize user inputs to prevent XSS attacks
+- Use environment variables for sensitive data
+- Implement proper CORS policies
+- Use HTTPS in production
+- Implement rate limiting for API routes
+- Use proper authentication and authorization
+- Validate all inputs on server-side
+- Implement CSRF protection for forms
+
+### JWT & Authentication Security (BEST PRACTICE)
+
+**Token Strategy:**
+- Use short-lived access tokens (15-30 minutes)
+- Use long-lived refresh tokens (7-30 days)
+- Store refresh tokens in database for revocation capability
+- Never store sensitive data in JWT payload
+
+**Storage Security:**
+```typescript
+// ✅ CORRECT: Use httpOnly cookies
+res.cookie("access_token", accessToken, {
+  httpOnly: true,      // Prevents JavaScript access (XSS protection)
+  secure: true,        // HTTPS only
+  sameSite: "strict",  // CSRF protection
+  maxAge: 15 * 60 * 1000 // 15 minutes
+});
+
+res.cookie("refresh_token", refreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+});
+
+// ❌ WRONG: Never store in localStorage
+localStorage.setItem("token", token); // Vulnerable to XSS
+```
+
+**Token Flow:**
+1. Login → Generate access + refresh tokens
+2. API calls → Send access token via cookie
+3. Access expired → Use refresh token to get new access token
+4. Logout → Delete cookies + revoke refresh token in DB
+
+**JWT Payload Structure:**
+```typescript
+interface JWTPayload {
+  sub: string;      // user ID
+  role: string;     // user role
+  iat: number;      // issued at
+  exp: number;      // expiration
+}
+```
+
+## Error Handling
+
+- Use error boundaries for component errors
+- Implement proper error logging
+- Show user-friendly error messages
+- Use toast notifications for user feedback
+- Implement proper error recovery strategies
+- Log errors to monitoring service in production
+
+## Testing
+
+- Write unit tests for utilities and helpers
+- Write integration tests for critical user flows
+- Use React Testing Library for component tests
+- Implement E2E tests for critical paths
+- Mock external dependencies properly
+- Test accessibility with automated tools
+
+## Accessibility
+
+- Use semantic HTML elements
+- Implement proper ARIA labels and roles
+- Ensure keyboard navigation works properly
+- Test with screen readers
+- Maintain proper heading hierarchy
+- Ensure sufficient color contrast
+- Implement focus management
+- Use Radix UI for built-in accessibility
+
+## Git and Version Control
+
+- Write meaningful commit messages in English
+- Follow conventional commits format
+- Use imperative mood (e.g., "Add feature" not "Added feature")
+- Keep commits atomic and focused
+- Write descriptive PR descriptions
+
+**Commit Types:**
+- `Feat:` New feature
+- `Fix:` Bug fix
+- `Refactor:` Code restructuring
+- `Style:` Formatting changes
+- `Docs:` Documentation only
+- `Chore:` Maintenance tasks
+- `Test:` Testing related
+- `Perf:` Performance improvements
+
+**Example:**
+```bash
+Feat: add user authentication with JWT
+
+Implement secure authentication flow with httpOnly cookies.
+Added login, logout, and token refresh endpoints.
+
+Closes #42
+```
+
+## File Organization
+
+```
+src/
+├── app/                 # Next.js App Router pages
+│   ├── (auth)/         # Route group for auth pages
+│   ├── layout.tsx      # Root layout
+│   └── page.tsx        # Home page
+├── components/         # React components
+│   ├── ui/            # shadcn/ui components
+│   └── features/      # Feature-specific components
+├── layout/            # Layout components
+├── lib/               # Utility functions
+│   └── utils.ts       # Helper utilities
+└── types/             # TypeScript type definitions
+```
+
+## Environment Variables
+
+- Use `.env.local` for local development secrets
+- Use `.env.example` as template (without sensitive values)
+- Never commit `.env.local` to version control
+- Prefix public variables with `NEXT_PUBLIC_`
+- Validate environment variables at runtime
+
+## Documentation
+
+- Write clear comments for complex logic
+- Document component props with JSDoc
+- Keep README updated with setup instructions
+- Document API endpoints and their usage
+- Write inline comments for non-obvious code
+
+## Key Conventions
+
+1. Rely on Next.js App Router for state changes and routing
+2. Prioritize Web Vitals (LCP, CLS, FID)
+3. Use `nuqs` for URL search parameter state management
+4. Optimize Web Vitals (LCP, CLS, FID)
+5. Minimize 'use client' usage:
+   - Prefer server components and Next.js SSR features
+   - Use 'use client' only for Web API access or state management
+   - Move client components deeper in the component tree
+
+## Image Handling
+
+- Use placeholder images from https://placehold.co
+- Format: `https://placehold.co/{width}x{height}?text={text}&bg={bg_color}&color={text_color}`
+- Common sizes:
+  - 16:9 ratio: 1280x720, 1920x1080
+  - 4:3 ratio: 1024x768, 800x600
+  - Square: 500x500, 300x300
+- Use Lucide React icons instead of icon fonts
+- Optimize images with next/image component
+
+## Icons
+
+- ❌ DO NOT USE: Icon fonts, Font Awesome, Material Icons
+- ✅ USE: Lucide React (already installed)
+```typescript
+import { Home, User, Settings } from 'lucide-react';
+```
+
+## Code Quality
+
+- Run `npm run lint` before committing
+- Fix linting errors with `npm run lint:fix`
+- Run `npm run type-check` to verify TypeScript
+- Write self-documenting code
+- Keep functions small and focused
+- Follow DRY (Don't Repeat Yourself) principle
+- Follow SOLID principles
+
+## Framer Motion Animation Best Practices
+
+- Use `motion` components from framer-motion for animations
+- Leverage variants for complex animation sequences
+- Use `AnimatePresence` for exit animations
+- Implement layout animations with `layout` prop
+- Use `whileHover`, `whileTap` for interactive animations
+- Optimize performance with `layoutId` for shared element transitions
+- Use `useScroll` hook for scroll-based animations
+- Implement `useInView` for viewport-based animations
+
+**Example Patterns:**
+```typescript
+// ✅ Good: Using variants
+const variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+};
+
+<motion.div
+  initial="hidden"
+  animate="visible"
+  variants={variants}
+  transition={{ duration: 0.5 }}
+>
+  Content
+</motion.div>
+
+// ✅ Good: Exit animations
+<AnimatePresence mode="wait">
+  {isOpen && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      Modal content
+    </motion.div>
+  )}
+</AnimatePresence>
+
+// ✅ Good: Layout animations
+<motion.div layout>
+  Dynamic content
+</motion.div>
+```
+
+## MDX Content Management
+
+- Use `next-mdx-remote` for remote MDX content (already installed)
+- Use `gray-matter` for frontmatter parsing (already installed)
+- Structure MDX files in a dedicated content directory
+- Define custom MDX components for consistent styling
+- Use TypeScript for MDX component props
+- Implement proper code syntax highlighting
+- Use Rehype/Remark plugins for enhanced functionality
+
+**MDX Component Pattern:**
+```typescript
+// ✅ Good: Custom MDX components
+const mdxComponents = {
+  h1: (props: any) => <h1 className="text-4xl font-bold mb-4" {...props} />,
+  h2: (props: any) => <h2 className="text-3xl font-semibold mb-3" {...props} />,
+  p: (props: any) => <p className="text-base mb-4 leading-relaxed" {...props} />,
+  code: (props: any) => <code className="bg-gray-100 px-2 py-1 rounded" {...props} />,
+  pre: (props: any) => <pre className="bg-gray-900 p-4 rounded-lg overflow-x-auto" {...props} />
+};
+
+// Usage with next-mdx-remote
+import { MDXRemote } from 'next-mdx-remote/rsc';
+
+<MDXRemote source={content} components={mdxComponents} />
+```
+
+## SEO Best Practices for Next.js
+
+- Use Next.js Metadata API for all pages
+- Implement dynamic metadata for dynamic routes
+- Use `generateMetadata` for async metadata
+- Include Open Graph and Twitter Card meta tags
+- Implement proper canonical URLs
+- Add structured data (JSON-LD) for rich snippets
+- Optimize meta descriptions (150-160 characters)
+- Use descriptive, keyword-rich titles (50-60 characters)
+- Implement `robots.txt` and `sitemap.xml`
+- Use semantic HTML for better crawlability
+
+**Metadata Pattern:**
+```typescript
+// ✅ Good: Static metadata
+export const metadata: Metadata = {
+  title: 'Page Title | Site Name',
+  description: 'Clear, concise description for SEO',
+  keywords: ['keyword1', 'keyword2', 'keyword3'],
+  authors: [{ name: 'Author Name' }],
+  openGraph: {
+    title: 'Page Title',
+    description: 'Description for social media',
+    url: 'https://example.com/page',
+    siteName: 'Site Name',
+    images: [
+      {
+        url: 'https://example.com/og-image.jpg',
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Page Title',
+    description: 'Description for Twitter',
+    images: ['https://example.com/twitter-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+};
+
+// ✅ Good: Dynamic metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const data = await fetchData(params.slug);
+  
+  return {
+    title: data.title,
+    description: data.description,
+    openGraph: {
+      title: data.title,
+      description: data.description,
+      images: [data.image],
+    },
+  };
+}
+
+// ✅ Good: Structured data (JSON-LD)
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: 'Article Title',
+      author: {
+        '@type': 'Person',
+        name: 'Author Name',
+      },
+      datePublished: '2024-01-01',
+      image: 'https://example.com/image.jpg',
+    }),
+  }}
+/>
+```
+
+## Web Performance Optimization
+
+**Core Web Vitals Focus:**
+- **LCP (Largest Contentful Paint)**: < 2.5s
+  - Optimize images with next/image
+  - Use priority prop for above-fold images
+  - Preload critical resources
+  - Use CDN for static assets
+  
+- **CLS (Cumulative Layout Shift)**: < 0.1
+  - Always specify image dimensions
+  - Reserve space for dynamic content
+  - Avoid inserting content above existing content
+  - Use CSS aspect-ratio for responsive media
+  
+- **FID/INP (First Input Delay / Interaction to Next Paint)**: < 100ms
+  - Minimize JavaScript execution time
+  - Use code splitting and lazy loading
+  - Defer non-critical JavaScript
+  - Use web workers for heavy computations
+
+**Performance Patterns:**
+```typescript
+// ✅ Good: Priority image loading
+<Image
+  src="/hero-image.jpg"
+  alt="Hero"
+  width={1200}
+  height={630}
+  priority // Preload for LCP
+  placeholder="blur"
+  blurDataURL="data:image/..." // Prevent CLS
+/>
+
+// ✅ Good: Dynamic imports for code splitting
+const HeavyComponent = dynamic(() => import('@/components/HeavyComponent'), {
+  loading: () => <Skeleton />,
+  ssr: false, // Skip SSR for client-only components
+});
+
+// ✅ Good: Font optimization
+import { Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap', // Prevent FOIT/FOUT
+  preload: true,
+});
+
+// ✅ Good: Resource hints
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="dns-prefetch" href="https://api.example.com" />
+```
+
+## Form Handling Best Practices
+
+- Use Server Actions for form submissions (Next.js 15)
+- Implement client-side validation with React Hook Form or Zod
+- Show loading states during form submission
+- Implement optimistic updates for better UX
+- Handle errors gracefully with user-friendly messages
+- Use proper ARIA attributes for accessibility
+- Implement form persistence (localStorage) when appropriate
+
+**Form Pattern with Server Actions:**
+```typescript
+// ✅ Good: Server action for form handling
+'use server';
+
+export async function submitForm(formData: FormData) {
+  const data = {
+    name: formData.get('name'),
+    email: formData.get('email'),
+  };
+  
+  // Validate data
+  const validated = await schema.parseAsync(data);
+  
+  // Process data
+  await db.insert(validated);
+  
+  revalidatePath('/');
+  return { success: true };
+}
+
+// ✅ Good: Client component with useActionState
+'use client';
+
+import { useActionState } from 'react';
+
+export function ContactForm() {
+  const [state, formAction, isPending] = useActionState(submitForm, null);
+  
+  return (
+    <form action={formAction}>
+      <input
+        type="text"
+        name="name"
+        required
+        aria-label="Name"
+        disabled={isPending}
+      />
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Submitting...' : 'Submit'}
+      </button>
+      {state?.error && (
+        <p role="alert" className="text-red-500">
+          {state.error}
+        </p>
+      )}
+    </form>
+  );
+}
+```
+
+## Component Library Integration (shadcn/ui)
+
+- Install components only when needed (don't install entire library)
+- Customize components through Tailwind config
+- Use composition pattern for complex UI
+- Leverage Radix UI primitives for accessibility
+- Customize default styles in components/ui/
+- Use cn() utility for conditional styling
+- Follow shadcn/ui naming conventions
+
+**shadcn/ui Best Practices:**
+```typescript
+// ✅ Good: Install specific components
+// npx shadcn-ui@latest add button dialog form
+
+// ✅ Good: Customize with cn utility
+import { cn } from '@/lib/utils';
+
+<Button className={cn(
+  "custom-class",
+  variant === "destructive" && "bg-red-500",
+  disabled && "opacity-50"
+)}>
+  Click me
+</Button>
+
+// ✅ Good: Composition pattern
+<Dialog>
+  <DialogTrigger asChild>
+    <Button>Open</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Title</DialogTitle>
+      <DialogDescription>Description</DialogDescription>
+    </DialogHeader>
+    <DialogFooter>
+      <Button>Save</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+## Responsive Design Strategy
+
+- Always use mobile-first approach with Tailwind
+- Test on multiple screen sizes (375px, 768px, 1024px, 1440px)
+- Use Tailwind breakpoints: sm, md, lg, xl, 2xl
+- Implement responsive typography with clamp()
+- Use responsive images with next/image
+- Test touch interactions on mobile
+- Ensure adequate tap target sizes (min 44x44px)
+- Use container queries when appropriate
+
+**Responsive Patterns:**
+```typescript
+// ✅ Good: Mobile-first responsive design
+<div className="
+  flex flex-col          // Mobile: column layout
+  md:flex-row           // Tablet+: row layout
+  gap-4                 // Mobile: 1rem gap
+  lg:gap-8              // Desktop: 2rem gap
+  p-4                   // Mobile: 1rem padding
+  lg:p-8                // Desktop: 2rem padding
+">
+  Content
+</div>
+
+// ✅ Good: Responsive typography
+<h1 className="
+  text-2xl              // Mobile: 1.5rem
+  md:text-4xl           // Tablet: 2.25rem
+  lg:text-6xl           // Desktop: 3.75rem
+  font-bold
+  leading-tight
+">
+  Headline
+</h1>
+
+// ✅ Good: Container queries (Tailwind 3.4+)
+<div className="@container">
+  <div className="@lg:grid-cols-2 @2xl:grid-cols-3">
+    Grid items
+  </div>
+</div>
+```
+
+## Loading States & Skeleton Screens
+
+- Implement loading.tsx in App Router for automatic loading UI
+- Use Suspense boundaries for granular loading states
+- Create skeleton components that match final content layout
+- Show loading indicators for async operations
+- Implement progressive enhancement
+- Use optimistic updates where appropriate
+
+**Loading Patterns:**
+```typescript
+// ✅ Good: loading.tsx in app directory
+// app/dashboard/loading.tsx
+export default function Loading() {
+  return <DashboardSkeleton />;
+}
+
+// ✅ Good: Suspense for granular loading
+<Suspense fallback={<CardSkeleton />}>
+  <AsyncCard />
+</Suspense>
+
+// ✅ Good: Skeleton component
+export function CardSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
+      <div className="h-4 bg-gray-200 rounded w-1/2" />
+    </div>
+  );
+}
+```
+
+## Internationalization (i18n) Preparation
+
+- Structure content for easy translation
+- Avoid hardcoded strings in components
+- Use semantic HTML for language detection
+- Prepare for RTL languages if needed
+- Use next-intl or similar for i18n when needed
+- Store translations in JSON files
+- Use proper date/time/number formatting
+
+## References
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [React Documentation](https://react.dev)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [shadcn/ui Documentation](https://ui.shadcn.com)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs)
+- [Radix UI Documentation](https://www.radix-ui.com/docs/primitives/overview/introduction)
+- [Framer Motion Documentation](https://www.framer.com/motion/)
+- [MDX Documentation](https://mdxjs.com/)
+- [Web.dev Performance](https://web.dev/performance/)
+- [Google Search Central](https://developers.google.com/search)
