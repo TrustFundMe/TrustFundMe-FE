@@ -124,40 +124,31 @@ const Header2 = ({ open }: { open: () => void }) => (
               },
             ]}
           />
-          <SocialIcons label="Follow Us On:" />
+          <div className="d-none">
+            <SocialIcons label="Follow Us On:" />
+          </div>
         </div>
       </div>
     </div>
     <header id="header-sticky" className="header-3">
       <div className="container">
         <div className="mega-menu-wrapper">
-          <div className="header-main style-2">
-            <div className="header-left">
-              <div className="logo">
-                <Logo logo="black-logo.png" />
-              </div>
+          <div className="header-main style-2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
+            <div className="header-left" style={{ flex: '0 0 auto' }}>
               <div className="mean__menu-wrapper">
                 <Nav />
               </div>
             </div>
-            <div className="header-right d-flex justify-content-end align-items-center">
-              <div className="author-icon">
-                <div className="icon">
-                  <i className="fa fa-regular fa-phone" />
-                </div>
-                <div className="content">
-                  <span>Call Us Now</span>
-                  <h5>
-                    <a href="tel:+2085550112">+000 (123) 456 88</a>
-                  </h5>
-                </div>
-              </div>
-              <div className="header-button d-none d-sm-block ms-2">
+            <div className="logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+              <Logo logo="black-logo.png" />
+            </div>
+            <div className="header-right d-flex justify-content-end align-items-center" style={{ flex: '0 0 auto' }}>
+              <div className="header-button d-none d-xl-block">
                 <Link href="/sign-in" className="theme-btn transparent-btn">
                   Sign In
                 </Link>
               </div>
-              <div className="header__hamburger d-xl-none my-auto">
+              <div className="header__hamburger d-xl-none my-auto ms-3">
                 <div className="sidebar__toggle" onClick={open}>
                   <i className="fas fa-bars" />
                 </div>
@@ -345,19 +336,6 @@ const Nav = () => (
       <ul>
         <li>
           <Link href="/">Home</Link>
-        </li>
-        <li className="has-dropdown d-xl-none">
-          <Link href="/team" className="border-none">
-            Home
-            <i className="fas fa-angle-down" />
-          </Link>
-          <ul className="submenu">
-            {[2].map((n) => (
-              <li key={n}>
-                <Link href={n === 2 ? "/" : `/index-${n}`}>Home 0{n}</Link>
-              </li>
-            ))}
-          </ul>
         </li>
         <li>
           <Link href="/about">About</Link>
