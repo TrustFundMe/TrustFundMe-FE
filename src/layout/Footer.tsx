@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Fragment, useState, useEffect } from "react";
+import { Fragment } from "react";
 
 const Footer = ({ footer }: { footer: number }) => {
   switch (footer) {
@@ -142,18 +141,8 @@ const Footer1 = () => {
   );
 };
 const Footer2 = () => {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
-
   return (
-    <footer className="footer-section footer-bg relative overflow-hidden pb-0" suppressHydrationWarning>
+    <footer className="footer-section footer-bg relative overflow-hidden pb-0">
       <div className="container relative z-10">
         <div className="footer-widgets-wrapper style-2">
           <div className="row">

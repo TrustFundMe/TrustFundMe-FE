@@ -1,3 +1,5 @@
+"use client";
+
 import { About3 } from "@/components/About";
 import { Causes3 } from "@/components/Causes";
 import { Cta3, Cta4 } from "@/components/Cta";
@@ -7,6 +9,8 @@ import { HeroSlider3 } from "@/components/HeroSlider";
 import { News3 } from "@/components/News";
 import { Promo2 } from "@/components/Promo";
 import DanboxLayout from "@/layout/DanboxLayout";
+
+export const dynamic = 'force-dynamic';
 
 const Home3 = () => {
   return (
