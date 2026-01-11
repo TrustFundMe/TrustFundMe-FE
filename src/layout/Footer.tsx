@@ -1,6 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useState, useEffect } from "react";
 
 const Footer = ({ footer }: { footer: number }) => {
   switch (footer) {
@@ -130,7 +132,7 @@ const Footer1 = () => {
         <div className="container">
           <div className="footer-wrapper">
             <p className="wow fadeInUp text-center" data-wow-delay=".3s">
-              © <Link href="/">Danbox</Link> Charity Trust - 2024. All rights
+              © <Link href="/">TrustFundMe</Link> Charity Trust - 2026. All rights
               reserved.
             </p>
           </div>
@@ -140,9 +142,19 @@ const Footer1 = () => {
   );
 };
 const Footer2 = () => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <footer className="footer-section footer-bg">
-      <div className="container">
+    <footer className="footer-section footer-bg relative overflow-hidden pb-0" suppressHydrationWarning>
+      <div className="container relative z-10">
         <div className="footer-widgets-wrapper style-2">
           <div className="row">
             <FooterLogoContainer />
@@ -169,7 +181,7 @@ const Footer2 = () => {
                 <div className="footer-content">
                   <div className="contact-info-area">
                     <div className="contact-items">
-                      <div className="icon">
+                      <div className="icon" style={{ backgroundColor: '#ff5e14' }}>
                         <i className="fal fa-phone" />
                       </div>
                       <div className="content">
@@ -180,7 +192,7 @@ const Footer2 = () => {
                       </div>
                     </div>
                     <div className="contact-items">
-                      <div className="icon color-2">
+                      <div className="icon" style={{ backgroundColor: '#ff5e14' }}>
                         <i className="fal fa-envelope" />
                       </div>
                       <div className="content">
@@ -195,7 +207,7 @@ const Footer2 = () => {
                       </div>
                     </div>
                     <div className="contact-items">
-                      <div className="icon color-3">
+                      <div className="icon" style={{ backgroundColor: '#ff5e14' }}>
                         <i className="fal fa-map-marker-alt" />
                       </div>
                       <div className="content">
@@ -212,23 +224,13 @@ const Footer2 = () => {
           </div>
         </div>
       </div>
-      <div className="footer-bottom-3">
+      
+      <div className="footer-bottom-3" style={{ backgroundColor: 'transparent', borderTop: 'none' }}>
         <div className="container">
-          <div className="footer-bottom-wrapper d-flex align-items-center justify-content-between">
-            <p className="wow fadeInLeft" data-wow-delay=".3s">
-              © Copyright 2024 <Link href="/">Danbox</Link>. All Rights
-              Reserved.
+          <div className="footer-bottom-wrapper d-flex align-items-center justify-content-center">
+            <p className="wow fadeInUp text-center" data-wow-delay=".3s">
+              © 2026 <Link href="/">TrustFundMe</Link>. All Rights Reserved.
             </p>
-            <div className="card-image wow fadeInRight" data-wow-delay=".5s">
-              <Image
-                width={0}
-                height={0}
-                sizes="100vw"
-                style={{ width: "100%", height: "auto" }}
-                src="/assets/img/card.png"
-                alt="card-img"
-              />
-            </div>
           </div>
         </div>
       </div>
@@ -334,7 +336,7 @@ const Footer3 = () => {
         <div className="container">
           <div className="footer-wrapper">
             <p className="wow fadeInUp text-center" data-wow-delay=".3s">
-              © <Link href="/">Danbox</Link> Charity Trust - 2024. All rights
+              © <Link href="/">TrustFundMe</Link> Charity Trust - 2026. All rights
               reserved.
             </p>
           </div>
@@ -539,19 +541,13 @@ const FooterLogoContainer = () => (
   >
     <div className="single-footer-widget">
       <div className="widget-head">
-        <Link href="/">
-          <Image
-            src="/assets/img/logo/white-logo.png"
-            width={178}
-            height={54}
-            alt="logo-img"
-          />
+        <Link href="/" className="text-white text-3xl font-extrabold tracking-tight hover:text-primary transition-colors" style={{ fontFamily: "'Inter', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+          TrustFundMe
         </Link>
       </div>
       <div className="footer-content">
         <p>
-          Phasellus ultricies aliquam volutpat ullamcorper laoreet neque, a
-          lacinia curabitur lacinia mollis
+          Empowering communities through transparent fundraising. Together, we create lasting change and build a better future for those in need.
         </p>
         <div className="social-icon d-flex align-items-center">
           <a href="#">
@@ -635,11 +631,10 @@ const usefulLink = [
   { link: "news", text: "Latest News" },
 ];
 const legalLink = [
-  { link: "contact", text: "Term of use" },
-  { link: "contact", text: "Privacy Policy" },
-  { link: "contact", text: "Report Violation" },
-  { link: "contact", text: "Cookies" },
-  { link: "contact", text: "Contact Us" },
+  { link: "terms", text: "Terms of Use" },
+  { link: "privacy", text: "Privacy Policy" },
+  { link: "report", text: "Report Violation" },
+  { link: "cookies", text: "Cookies" },
 ];
 const aboutLink = [
   { link: "index", text: "Home" },
