@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import TrustTeamSection from "./ui/trust-team-section";
+import SimpleTeamSection from "./ui/simple-team-section";
 
 export const Team1 = () => {
   const teamMembers: {
@@ -122,6 +124,14 @@ export const Team1 = () => {
 };
 
 export const Team2 = () => {
+  return <SimpleTeamSection />;
+};
+
+export const Team2Scroll = () => {
+  return <TrustTeamSection />;
+};
+
+export const Team2Old = () => {
   const teamData: {
     img: string;
     name: string;
