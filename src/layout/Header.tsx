@@ -340,22 +340,8 @@ const Nav = () => (
         <li>
           <Link href="/about">About</Link>
         </li>
-        <li className="has-dropdown">
-          <Link href="/causes-details">
-            Causes
-            <i className="fas fa-angle-down" />
-          </Link>
-          <ul className="submenu">
-            <li>
-              <Link href="/causes">Causes List</Link>
-            </li>
-            <li>
-              <Link href="/causes-details">Causes Details</Link>
-            </li>
-            <li>
-              <Link href="/donation-details">Donation</Link>
-            </li>
-          </ul>
+        <li>
+          <Link href="/causes">Campaign</Link>
         </li>
         <li>
           <Link href="/contact">Contact</Link>
@@ -517,28 +503,7 @@ const MobileNav = () => {
               <Link href="/about">About</Link>
             </li>
             <li>
-              <Link href="/causes-details">
-                Causes
-                <i className="fas fa-angle-down" />
-              </Link>
-              <ul className="submenu" style={show("Causes", activeMenu)}>
-                <li>
-                  <Link href="/causes">Causes List</Link>
-                </li>
-                <li>
-                  <Link href="/causes-details">Causes Details</Link>
-                </li>
-                <li>
-                  <Link href="/donation-details">Donation</Link>
-                </li>
-              </ul>
-              <a
-                className="mean-expand"
-                href="#"
-                onClick={() => toggle("Causes", setActiveMenu, activeMenu)}
-              >
-                <i className="far fa-plus" />
-              </a>
+              <Link href="/causes">Campaign</Link>
             </li>
             <li>
               <Link href="/contact">Contact</Link>
