@@ -9,14 +9,11 @@ import DanboxLayout from "@/layout/DanboxLayout";
 const AboutPage = () => {
   return (
     <DanboxLayout>
-      <PageBanner pageName="About Us" />
-      <About1 />
-      <Cta5 />
+      <PageBanner pageName="About TrustFundMe" />
+      <Team2 />
       <About2 containerClass="section-padding pb-0" />
       <CounterSection1 />
-      <Team2 />
-      <Gallery1 />
-      <Cta2 />
+
     </DanboxLayout>
   );
 };

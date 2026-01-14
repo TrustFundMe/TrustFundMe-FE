@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Counter from "./Counter";
+import { ShieldCheck } from "lucide-react";
 
 export const About1 = () => {
   return (
@@ -18,27 +19,21 @@ export const About1 = () => {
                         height={0}
                         sizes="100vw"
                         style={{ width: "100%", height: "100%" }}
-                        src="/assets/img/about/08.jpg"
-                        alt="img"
+                        src="https://placehold.co/600x800?text=Transparent+Charity"
+                        alt="Transparent Charity"
                       />
                     </div>
                   </div>
                   <div className="col-lg-5 wow fadeInUp" data-wow-delay=".5s">
                     <div className="about-experience">
                       <h2>
-                        <span className="count">25</span>+
+                        <span className="count">100</span>%
                       </h2>
-                      <h6>Years Of Experience</h6>
-                      <div className="thumb">
-                        <Image
-                          width={135}
-                          height={55}
-                          sizes="100vw"
-                          src="/assets/img/client.png"
-                          alt="img"
-                        />
+                      <h6>Financial Transparency</h6>
+                      <div className="thumb flex items-center justify-center">
+                        <ShieldCheck className="w-16 h-16 text-green-500" strokeWidth={2} />
                       </div>
-                      <h6>Globally Clients</h6>
+                      <h6>AI-Verified Expenses</h6>
                     </div>
                     <div className="about-img">
                       <Image
@@ -46,8 +41,8 @@ export const About1 = () => {
                         height={0}
                         sizes="100vw"
                         style={{ width: "100%", height: "auto" }}
-                        src="/assets/img/about/09.jpg"
-                        alt="img"
+                        src="https://placehold.co/400x500?text=Community+Impact"
+                        alt="Community Impact"
                       />
                     </div>
                   </div>
@@ -59,21 +54,18 @@ export const About1 = () => {
                 <div className="section-title">
                   <span className="sub-title color-2 wow fadeInUp">
                     <i className="far fa-heart" />
-                    About Us
+                    About TrustFundMe
                   </span>
                   <h2 className="mt-char-animation">
-                    We’ve Funded{" "}
-                    <span className="count">
-                      <Counter end={44} />
-                    </span>
-                    <span>k</span> Dollars Over
+                    Vietnam's First{" "}
+                    <span className="color-2">AI-Powered</span> Charity Platform
                   </h2>
                 </div>
                 <p className="mt-3 mt-md-0 wow fadeInUp" data-wow-delay=".5s">
-                  There are only a few times in each of our lives that we get to
-                  witness a truly historic global ccomplishment: Ending
-                  smallpox, tearing.Your $40.00 monthly donation can give 12
-                  people.
+                  We're revolutionizing charitable giving through radical transparency. 
+                  Every donation is tracked in real-time, every expense is AI-verified, 
+                  and every donor has a voice in how funds are used. Together, we're building 
+                  trust back into charitable giving.
                 </p>
                 <div className="d-flex align-items-center flex-wrap mb-5">
                   <ul
@@ -81,11 +73,11 @@ export const About1 = () => {
                     data-wow-delay=".3s"
                   >
                     <li>
-                      <i className="far fa-check" /> A place in history
+                      <i className="far fa-check" /> 100% Financial Disclosure
                     </li>
                     <li>
                       <i className="far fa-check" />
-                      It’s about impact, goodness
+                      AI-Powered Invoice Verification
                     </li>
                   </ul>
                   <ul
@@ -93,11 +85,11 @@ export const About1 = () => {
                     data-wow-delay=".5s"
                   >
                     <li>
-                      <i className="far fa-check" /> A place in history
+                      <i className="far fa-check" /> Real-time Fund Tracking
                     </li>
                     <li>
                       <i className="far fa-check" />
-                      It’s about impact, goodness
+                      Community-Driven Governance
                     </li>
                   </ul>
                 </div>
@@ -106,7 +98,7 @@ export const About1 = () => {
                   className="theme-btn wow fadeInUp"
                   data-wow-delay=".7s"
                 >
-                  Learn More
+                  Explore Campaigns
                 </Link>
               </div>
             </div>
@@ -204,8 +196,8 @@ export const About3 = () => {
                     height={0}
                     sizes="100vw"
                     style={{ width: "100%", height: "auto" }}
-                    src="/assets/img/about/01.jpg"
-                    alt="img"
+                    src="https://placehold.co/600x800?text=Our+Mission"
+                    alt="Our Mission"
                   />
                   <div
                     className="about-image-2 wow fadeInUp"
@@ -216,19 +208,19 @@ export const About3 = () => {
                       height={0}
                       sizes="100vw"
                       style={{ width: "100%", height: "auto" }}
-                      src="/assets/img/about/02.jpg"
-                      alt="img"
+                      src="https://placehold.co/400x500?text=Our+Vision"
+                      alt="Our Vision"
                     />
                   </div>
                 </div>
                 <div className="counter-box wow fadeInUp" data-wow-delay=".6s">
                   <h2>
                     <span className="count">
-                      <Counter end={32} />
+                      <Counter end={100} />
                     </span>
-                    +
+                    %
                   </h2>
-                  <p>Years Of Experience</p>
+                  <p>Transparent Operations</p>
                 </div>
               </div>
             </div>
@@ -237,29 +229,26 @@ export const About3 = () => {
                 <div className="section-title">
                   <span className="sub-title color-2 wow fadeInUp">
                     <i className="far fa-heart" />
-                    About Us
+                    Our Mission
                   </span>
                   <h2 className="mt-char-animation">
-                    We’ve Funded{" "}
-                    <span className="count">
-                      <Counter end={44} />
-                    </span>
-                    <span>k </span>
-                    Dollars Over
+                    Restoring Trust in{" "}
+                    <span className="color-2">Charitable Giving</span>
                   </h2>
                 </div>
                 <p className="mt-3 mt-md-0 wow fadeInUp" data-wow-delay=".5s">
-                  Your $40.00 monthly donation can give 12 people clean water
-                  every <br /> year. 100% funds water projects.
+                  To restore public trust in charitable activities by providing a 
+                  professional digital solution for small-scale volunteer groups and 
+                  large-scale relief efforts alike.
                 </p>
                 <ul className="checked-list wow fadeInUp" data-wow-delay=".3s">
-                  <li>A place in history</li>
-                  <li>It’s about impact, goodness</li>
-                  <li>More goodness in the world</li>
+                  <li>Real-time tracking of every donation</li>
+                  <li>AI-powered verification of all expenses</li>
+                  <li>Community voting on fund allocation</li>
                   <li>
-                    The world we live in right now
+                    Complete transparency with
                     <br />
-                    can be hard
+                    public audit trails
                   </li>
                 </ul>
                 <div className="about-button wow fadeInUp" data-wow-delay=".5s">
@@ -303,8 +292,8 @@ export const About4 = () => {
                         height={0}
                         sizes="100vw"
                         style={{ width: "100%", height: "auto" }}
-                        src="/assets/img/about/03.jpg"
-                        alt="img"
+                        src="https://placehold.co/400x500?text=Technology"
+                        alt="Technology"
                       />
                     </div>
                   </div>
@@ -318,8 +307,8 @@ export const About4 = () => {
                         height={0}
                         sizes="100vw"
                         style={{ width: "100%", height: "auto" }}
-                        src="/assets/img/about/04.jpg"
-                        alt="img"
+                        src="https://placehold.co/400x500?text=Innovation"
+                        alt="Innovation"
                       />
                     </div>
                   </div>
@@ -331,40 +320,36 @@ export const About4 = () => {
                 <div className="section-title">
                   <span className="sub-title color-2 wow fadeInUp">
                     <i className="far fa-heart" />
-                    About Us
+                    Why Choose Us
                   </span>
                   <h2 className="mt-char-animation">
-                    We’ve Funded{" "}
-                    <span className="count">
-                      <Counter end={44} />
-                    </span>
-                    <span>k </span>
-                    Dollars Over
+                    Technology Meets{" "}
+                    <span className="color-2">Compassion</span>
                   </h2>
                 </div>
                 <p className="mt-3 mt-md-0 wow fadeInUp" data-wow-delay=".5s">
-                  Your $40.00 monthly donation can give 12 people clean water
-                  every <br /> year. 100% funds water projects.
+                  We combine cutting-edge AI technology with a passion for social good. 
+                  Every feature is designed to give donors peace of mind and maximize impact.
                 </p>
                 <div className="list-area">
                   <div className="list-items">
                     <i className="fas fa-check" />
                     <div className="content">
-                      <h5>Quick Fundraising</h5>
-                      <p>Charity Navigator's Giving you support multiple</p>
+                      <h5>Real-time Transparency</h5>
+                      <p>Track every donation and expense in real-time with our public dashboard</p>
                     </div>
                   </div>
                   <div className="list-items">
                     <i className="fas fa-check" />
                     <div className="content">
-                      <h5>Join Our Team</h5>
-                      <p>Charity Navigator's Giving you support multiple</p>
+                      <h5>AI-Powered Verification</h5>
+                      <p>Every invoice is automatically verified using advanced OCR and fraud detection</p>
                     </div>
                   </div>
                 </div>
                 <div className="about-button wow fadeInUp" data-wow-delay=".5s">
-                  <Link href="/about" className="theme-btn transparent-btn-2">
-                    Learn More
+                  <Link href="/causes" className="theme-btn transparent-btn-2">
+                    Start Donating
                   </Link>
                 </div>
               </div>

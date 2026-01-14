@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import TrustBentoCards from "./ui/trust-bento-cards";
 
 export const Feature1 = () => {
