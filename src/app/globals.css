@@ -430,3 +430,68 @@ html {
     transform: scale(1);
   }
 }
+
+/* Contact Cards Animation */
+.single-contact-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.single-contact-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.single-contact-card:hover::before {
+  left: 100%;
+}
+
+.single-contact-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.single-contact-card .icon {
+  transition: all 0.3s ease;
+}
+
+.single-contact-card:hover .icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.single-contact-card .bottom-part .icon i {
+  transition: transform 0.3s ease;
+}
+
+.single-contact-card:hover .bottom-part .icon i {
+  transform: translateX(5px);
+}
+
+/* Card specific hover colors */
+.single-contact-card.card1:hover {
+  border-color: rgba(248, 77, 67, 0.5);
+}
+
+.single-contact-card.card2:hover {
+  border-color: rgba(26, 104, 91, 0.5);
+}
+
+.single-contact-card.card3:hover {
+  border-color: rgba(248, 77, 67, 0.5);
+}
+
+/* Ensure equal height */
+.align-items-stretch > [class*='col-'] {
+  display: flex;
+}
+
+.align-items-stretch .single-contact-card {
+  width: 100%;
+}

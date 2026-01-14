@@ -13,10 +13,10 @@ export const Cta1 = () => {
               <div className="section-title">
                 <span className="sub-title text-white wow fadeInUp">
                   <i className="far fa-heart" />
-                  Life Changing Video
+                  Join Our Platform
                 </span>
                 <h2 className="mt-char-animation text-white">
-                  Joel Orphanage Of Ministry Uganda
+                  Be Part of the Transparency Revolution
                 </h2>
               </div>
               <div className="button-items mt-4 mt-md-0">
@@ -25,16 +25,16 @@ export const Cta1 = () => {
                   className="theme-btn wow fadeInUp"
                   data-wow-delay=".3s"
                 >
-                  <i className="fal fa-briefcase" />
-                  Careers
+                  <i className="fal fa-heart" />
+                  Start Donating
                 </Link>
                 <Link
                   href="donation-details"
                   className="theme-btn transparent-btn wow fadeInUp"
                   data-wow-delay=".5s"
                 >
-                  <i className="fal fa-user" />
-                  Internship
+                  <i className="fal fa-hand-holding-heart" />
+                  Create Campaign
                 </Link>
               </div>
             </div>
@@ -52,10 +52,10 @@ export const Cta2 = () => {
         <div className="cta-banner-wrapper-3">
           <div className="section-title mb-0">
             <span className="sub-title text-white wow fadeInUp">
-              <i className="far fa-heart" /> Join With Us
+              <i className="far fa-heart" /> Join TrustFundMe
             </span>
             <h2 className="mt-char-animation text-white">
-              Let’s be a Part <br /> of us
+              Start Making <br /> a Difference Today
             </h2>
           </div>
           <form
@@ -77,7 +77,7 @@ export const Cta2 = () => {
                 type="submit"
               >
                 <span>
-                  Join Now <i className="far fa-arrow-right" />
+                  Get Started <i className="far fa-arrow-right" />
                 </span>
               </button>
             </div>
@@ -97,10 +97,10 @@ export const Cta3 = () => {
             <div className="section-title mb-0">
               <span className="sub-title color-3 wow fadeInUp">
                 <i className="far fa-heart" />
-                Call To Action
+                Join Our Community
               </span>
               <h2 className="mt-char-animation text-white">
-                Give Your Big Hand Forever
+                Make Every Donation Count
               </h2>
             </div>
           </div>
@@ -163,7 +163,7 @@ export const Cta3 = () => {
                   <div className="col-lg-3 wow fadeInUp" data-wow-delay=".7s">
                     <div className="form-clt">
                       <button className="theme-btn" type="submit">
-                        Get Involed Today
+                        Get Involved Today
                       </button>
                     </div>
                   </div>
@@ -185,11 +185,11 @@ export const Cta4 = () => {
           <div className="section-title mb-0">
             <span className="sub-title wow color-3 fadeInUp">
               <i className="far fa-heart" />
-              Life Changing Video
+              Platform Demo
             </span>
             <h2 className="mt-char-animation text-white">
-              Joel Orphanage Of <br />
-              Ministry Uganda
+              See Transparency <br />
+              in Action
             </h2>
           </div>
           <div className="video-play-btn wow fadeInUp" data-wow-delay=".5s">
@@ -204,7 +204,7 @@ export const Cta4 = () => {
               className="video-text video-popup wow fadeInUp"
               data-wow-delay=".5s"
             >
-              Play Video
+              Watch Demo
             </a>
           </div>
         </div>
@@ -217,18 +217,18 @@ export const Cta5 = () => {
   return (
     <section
       className="cta-video-section-2 fix section-padding bg-cover"
-      style={{ backgroundImage: 'url("assets/img/cta-video.jpg")' }}
+      style={{ backgroundImage: 'url("https://placehold.co/1920x1080?text=Transparency+in+Action")' }}
     >
       <div className="container">
         <div className="cta-video-wrapper d-block center">
           <div className="section-title">
             <span className="sub-title color-2 wow fadeInUp">
               <i className="far fa-heart" />
-              Life Changing Video
+              See How It Works
             </span>
             <h2 className="mt-char-animation text-white">
-              Joel Orphanage Of <br />
-              Ministry Uganda
+              Transparency in <br />
+              Every Transaction
             </h2>
           </div>
           <div
@@ -246,7 +246,7 @@ export const Cta5 = () => {
               className="video-text video-popup wow fadeInUp"
               data-wow-delay=".5s"
             >
-              Play Video
+              Watch Demo
             </a>
           </div>
         </div>
