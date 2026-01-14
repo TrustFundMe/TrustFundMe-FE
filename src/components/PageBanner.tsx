@@ -10,9 +10,20 @@ const PageBanner = ({
   return (
     <div
       className="breadcrumb-wrapper section-padding bg-cover"
-      style={{ backgroundImage: 'url("assets/img/breadcrumb.jpg")' }}
+      style={{ 
+        backgroundImage: 'url("assets/img/breadcrumb.jpg")',
+        backgroundAttachment: 'fixed',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        maxWidth: '98%',
+        margin: '0 auto',
+        minHeight: '550px',
+        display: 'flex',
+        alignItems: 'center',
+      }}
     >
-      <div className="container">
+      <div className="container" style={{ maxWidth: '1400px' }}>
         <div className="page-heading">
           <div className="breadcrumb-sub-title">
             <h5 className="wow fadeInUp">
