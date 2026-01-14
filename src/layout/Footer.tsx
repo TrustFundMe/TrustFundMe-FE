@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Fragment } from "react";
 
 const Footer = ({ footer }: { footer: number }) => {
@@ -248,8 +249,8 @@ const Footer3 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          <a href="tel:00012345688">+000 (123) 456 88</a>
-                          <a href="tel:00012345688">+000 (123) 456 88</a>
+                          <a href="tel:+11002345909">+1 100 234 5909</a>
+                          <a href="tel:+11002345910">+1 100 234 5910</a>
                         </h6>
                       </div>
                     </div>
@@ -259,11 +260,11 @@ const Footer3 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          <a href="mailto:info@example.com" className="link">
-                            info@example.com
+                          <a href="mailto:trustfundme@co.vn" className="link">
+                            trustfundme@co.vn
                           </a>
-                          <a href="mailto:jobs@example.com" className="link">
-                            jobs@example.com
+                          <a href="mailto:support@trustfundme.co.vn" className="link">
+                            support@trustfundme.co.vn
                           </a>
                         </h6>
                       </div>
@@ -274,8 +275,8 @@ const Footer3 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          55 Main Street, 2nd block <br />
-                          Malborne, Australia
+                          FPT University, Long Thạnh Mỹ <br />
+                          Thủ Đức, Hồ Chí Minh, Vietnam
                         </h6>
                       </div>
                     </div>
@@ -288,10 +289,10 @@ const Footer3 = () => {
                       <i className="fab fa-twitter" />
                     </a>
                     <a href="#">
-                      <i className="fab fa-vimeo-v" />
+                      <i className="fab fa-linkedin-in" />
                     </a>
                     <a href="#">
-                      <i className="fab fa-pinterest-p" />
+                      <i className="fab fa-youtube" />
                     </a>
                   </div>
                 </div>
@@ -626,27 +627,23 @@ const legalLink = [
   { link: "cookies", text: "Cookies" },
 ];
 const aboutLink = [
-  { link: "index", text: "Home" },
-  { link: "about", text: "About" },
-  { link: "causes", text: "Our Causes" },
-  { link: "events", text: "Our Events" },
-  { link: "event-details", text: "Contact" },
-  { link: "team", text: "Team" },
-  { link: "faq", text: "Faq" },
+  { link: "/", text: "Home" },
+  { link: "/about", text: "About" },
+  { link: "/causes", text: "Our Causes" },
+  { link: "/events", text: "Our Events" },
+  { link: "/contact", text: "Contact" },
+  { link: "/team", text: "Team" },
 ];
 const specialLink = [
-  { link: "causes", text: "Causes List" },
-  { link: "donation-details", text: "Donation" },
-  { link: "team", text: "Careers" },
-  { link: "contact", text: "Get A Quote" },
-  { link: "faq", text: "Terms & Conditions" },
+  { link: "/faq", text: "FAQ" },
+  { link: "/news", text: "News" },
+  { link: "/dashboard", text: "Dashboard" },
+  { link: "/sign-in", text: "Sign In" },
 ];
 const popularlLink = [
-  { link: "causes-details", text: "Water Purify" },
-  { link: "causes-details", text: "Food Collect" },
-  { link: "causes-details", text: "Health Fund" },
-  { link: "causes-details", text: "Free Education" },
-  { link: "causes-details", text: "Poor Health" },
-  { link: "causes-details", text: "Live Donation" },
-  { link: "causes-details", text: "Stream Donation" },
+  { link: "/causes-details", text: "Water Purify" },
+  { link: "/causes-details", text: "Food Collection" },
+  { link: "/causes-details", text: "Healthcare" },
+  { link: "/causes-details", text: "Education" },
+  { link: "/donation-details", text: "Make Donation" },
 ];

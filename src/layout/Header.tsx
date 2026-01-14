@@ -175,18 +175,18 @@ const Header3 = ({ open }: { open: () => void }) => {
                   {
                     icon: "far fa-envelope",
                     content: (
-                      <a href="mailto:info@example.com" className="link">
-                        info@example.cossm
+                      <a href="mailto:trustfundme@co.vn" className="link">
+                        trustfundme@co.vn
                       </a>
                     ),
                   },
                   {
                     icon: "fa fa-regular fa-phone",
-                    content: <a href="tel:2086660112">+208-666-0112</a>,
+                    content: <a href="tel:+11002345909">+1 100 234 5909</a>,
                   },
                 ]}
               />
-              <div className="top-right">
+              <div className="top-right d-none">
                 <SocialIcons />
               </div>
             </div>
