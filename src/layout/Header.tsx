@@ -11,7 +11,9 @@ const Header = ({ header }: { header?: number }) => {
   const [toggleMobileMenu, setToggleMobileMenu] = useState(false);
   return (
     <Fragment>
-      <HeaderComponent open={() => setToggleMobileMenu(true)} />
+      <div className={toggleMobileMenu ? "mobile-menu-open" : ""}>
+        <HeaderComponent open={() => setToggleMobileMenu(true)} />
+      </div>
       <MobileMenu
         open={toggleMobileMenu}
         close={() => setToggleMobileMenu(false)}
@@ -133,16 +135,16 @@ const Header2 = ({ open }: { open: () => void }) => (
     <header id="header-sticky" className="header-3">
       <div className="container">
         <div className="mega-menu-wrapper">
-          <div className="header-main style-2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
-            <div className="header-left" style={{ flex: '0 0 auto' }}>
+          <div className="header-main style-2">
+            <div className="header-left">
               <div className="mean__menu-wrapper">
                 <Nav />
               </div>
             </div>
-            <div className="logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+            <div className="logo">
               <Logo logo="black-logo.png" />
             </div>
-            <div className="header-right d-flex justify-content-end align-items-center" style={{ flex: '0 0 auto' }}>
+            <div className="header-right d-flex justify-content-end align-items-center">
               <div className="header-button d-none d-xl-block">
                 <Link href="/sign-in" className="theme-btn transparent-btn">
                   Sign In
