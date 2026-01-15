@@ -109,6 +109,30 @@
   position: relative !important;
 }
 
+/* Fix for Projects dropdown menu - ensure it's not clipped */
+.projects-section {
+  position: relative;
+  overflow: visible !important;
+}
+
+.projects-section .container {
+  position: relative;
+  overflow: visible !important;
+}
+
+#filter-dropdown {
+  position: absolute !important;
+  z-index: 99999 !important;
+  isolation: isolate;
+}
+
+/* Ensure dropdown parent doesn't clip */
+.projects-section > .container > div:first-of-type {
+  overflow: visible !important;
+  position: relative;
+  z-index: 9999;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -344,18 +368,50 @@ button.rounded-lg::before {
   z-index: -1;
 }
 
-/* Smooth sticky header - no animation to prevent jank */
+/* Smooth sticky header with mobile menu animation support */
 .header-top-section-3 {
-  transition: none !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 #header-sticky {
-  transition: none !important;
+  z-index: 9999 !important;
+  position: relative;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  will-change: opacity, transform, visibility;
 }
 
 #header-sticky.sticky {
   animation: none !important;
   top: 0 !important;
+  z-index: 9999 !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Hide header when mobile menu is open with smooth animation */
+.mobile-menu-open #header-sticky,
+body:has(.offcanvas__overlay.overlay-open) #header-sticky,
+.offcanvas__overlay.overlay-open ~ * #header-sticky {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateY(-100%) !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: opacity, transform, visibility;
+}
+
+/* Ensure header-top-section also animates */
+.mobile-menu-open .header-top-section-3,
+body:has(.offcanvas__overlay.overlay-open) .header-top-section-3 {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateY(-100%) !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: opacity, transform, visibility;
 }
 
 /* Fix nextjs-portal positioning */
@@ -364,11 +420,74 @@ nextjs-portal {
   top: auto !important;
 }
 
+/* Mobile Menu Z-Index Hierarchy */
+/* Overlay should be above header but below menu */
+.offcanvas__overlay {
+  z-index: 10000 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.offcanvas__overlay.overlay-open {
+  z-index: 10000 !important;
+}
+
+/* Offcanvas menu should be above overlay */
+.offcanvas__info {
+  z-index: 10001 !important;
+  position: fixed !important;
+}
+
+.offcanvas__info.info-open {
+  z-index: 10001 !important;
+}
+
+.offcanvas__wrapper {
+  z-index: 10002 !important;
+  position: relative !important;
+}
+
+/* Dropdown menu items inside mobile menu should be above everything */
+.offcanvas__info .mobile-menu .mean-nav .submenu,
+.offcanvas__info .mobile-menu .mean-nav ul.submenu {
+  z-index: 10003 !important;
+  position: relative !important;
+}
+
+/* Ensure mobile menu dropdowns are visible */
+.offcanvas__info .has-dropdown .submenu {
+  z-index: 10003 !important;
+  position: relative !important;
+}
+
+/* Hide close button in mobile menu */
+.offcanvas__close {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* Project card animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
     transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dropdown animation */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
@@ -494,4 +613,139 @@ html {
 
 .align-items-stretch .single-contact-card {
   width: 100%;
+}
+
+/* Fix mobile horizontal overflow */
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
+.container,
+.container-fluid {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Header-3 desktop layout - centered logo with nav on sides */
+.header-3 .header-main.style-2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0;
+  position: relative;
+}
+
+.header-3 .header-main.style-2 .header-left {
+  flex: 0 0 auto;
+  z-index: 2;
+}
+
+.header-3 .header-main.style-2 .logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.header-3 .header-main.style-2 .header-right {
+  flex: 0 0 auto;
+  z-index: 2;
+}
+
+/* Fix header overflow on mobile */
+@media (max-width: 991px) {
+  .header-top-section-3,
+  .header-3,
+  .header-main {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+  
+  .mega-menu-wrapper {
+    overflow-x: hidden !important;
+  }
+  
+  /* Prevent absolutely positioned logo from causing overflow */
+  .header-3 .header-main.style-2 .logo {
+    position: relative !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 auto;
+  }
+  
+  /* Adjust header layout for mobile */
+  .header-3 .header-main.style-2 {
+    flex-direction: row !important;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  
+  .header-3 .header-main.style-2 .header-left {
+    display: none !important;
+  }
+  
+  .header-3 .header-main.style-2 .header-right {
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
+  }
+  
+  /* Reduce logo size on mobile */
+  .header-3 .header-main.style-2 .logo {
+    flex: 0 0 auto !important;
+  }
+  
+  .header-3 .header-main.style-2 .logo img {
+    max-width: 150px !important;
+    height: auto !important;
+  }
+  
+  /* Hide desktop nav on mobile, show hamburger */
+  .header-3 .header-left .mean__menu-wrapper .main-menu {
+    display: none !important;
+  }
+}
+
+/* Additional mobile viewport fixes */
+@media (max-width: 768px) {
+  * {
+    max-width: 100%;
+  }
+  
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  /* Ensure header container doesn't overflow */
+  .header-3 .container,
+  .header-top-section-3 .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  
+  /* Fix logo size on very small screens */
+  .header-3 .logo img {
+    max-width: 180px !important;
+    height: auto !important;
+  }
+  
+  /* Ensure hamburger menu is visible and positioned correctly */
+  .header__hamburger {
+    display: flex !important;
+    align-items: center;
+    margin-left: 15px;
+  }
 }
