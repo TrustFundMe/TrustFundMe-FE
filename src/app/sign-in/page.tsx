@@ -247,6 +247,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ==================================================================================
 // TYPES
@@ -314,6 +315,7 @@ const isPasswordValid = (validation: PasswordValidation): boolean => {
 
 export default function SignInPage() {
   const router = useRouter();
+  const { login } = useAuth();
 
   // ==================================================================================
   // STATE MANAGEMENT
@@ -528,8 +530,16 @@ export default function SignInPage() {
       const user = fakeUsers[normalized];
 
       if (user && user.password === password) {
-        // Success - redirect to dashboard
-        router.push("/dashboard");
+        // Success - login user and redirect to homepage
+        login({
+          id: `user_${Date.now()}`,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: normalized,
+          phone: "+84123456703",
+          birthday: "1990-01-01",
+        });
+        router.push("/");
       } else {
         setError("Invalid password. Please try again.");
         setLoading(false);
@@ -605,8 +615,17 @@ export default function SignInPage() {
 
     // Frontend simulation
     setTimeout(() => {
-      // Success - redirect to dashboard
-      router.push("/dashboard");
+      // Success - create user, login and redirect to homepage
+      const normalized = normalizeEmail(email);
+      login({
+        id: `user_${Date.now()}`,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: normalized,
+        phone: "+84123456703",
+        birthday: "1990-01-01",
+      });
+      router.push("/");
     }, 500);
   };
 
@@ -697,10 +716,23 @@ export default function SignInPage() {
     //   }
     // });
 
-    // Frontend simulation
+    // Frontend simulation - giả lập Google login
     setError("");
     setInfo("");
-    router.push("/dashboard");
+    
+    // Giả lập user data từ Google
+    const googleUser = {
+      id: `google_user_${Date.now()}`,
+      firstName: "Google",
+      lastName: "User",
+      email: "google.user@example.com",
+      phone: "+84123456703",
+      birthday: "1990-01-01",
+    };
+    
+    // Login và redirect to homepage
+    login(googleUser);
+    router.push("/");
   };
 
   /**
