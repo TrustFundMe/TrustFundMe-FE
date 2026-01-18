@@ -373,6 +373,13 @@ button.rounded-lg::before {
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
+/* Prevent header from expanding due to dropdowns */
+#header-sticky,
+#header-sticky .header-main,
+#header-sticky .header-right {
+  overflow: visible !important;
+}
+
 #header-sticky {
   z-index: 9999 !important;
   position: relative;

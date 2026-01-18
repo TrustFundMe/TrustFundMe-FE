@@ -3,6 +3,9 @@ import { useStickyHeader } from "@/utility";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useState } from "react";
+import UserDropdown from "@/components/UserDropdown";
+import WalletButton from "@/components/WalletButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -144,12 +147,8 @@ const Header2 = ({ open }: { open: () => void }) => (
             <div className="logo">
               <Logo logo="black-logo.png" />
             </div>
-            <div className="header-right d-flex justify-content-end align-items-center">
-              <div className="header-button d-none d-xl-block">
-                <Link href="/sign-in" className="theme-btn transparent-btn">
-                  Sign In
-                </Link>
-              </div>
+            <div className="header-right d-flex justify-content-end align-items-center gap-3">
+              <AuthButton />
               <div className="header__hamburger d-xl-none my-auto ms-3">
                 <div className="sidebar__toggle" onClick={open}>
                   <i className="fas fa-bars" />
@@ -209,7 +208,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                     <Nav />
                   </div>
                 </div>
-                <div className="header-right d-flex justify-content-end align-items-center">
+                <div className="header-right d-flex justify-content-end align-items-center gap-3">
                   <a
                     href="#0"
                     className="search-trigger search-icon"
@@ -223,6 +222,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
+                  <AuthButton />
                   <div className="header__hamburger d-xl-none my-auto">
                     <div className="sidebar__toggle" onClick={open}>
                       <i className="fas fa-bars" />
@@ -372,7 +372,10 @@ const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
   </div>
 );
 
-const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
+const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
+  const { isAuthenticated } = useAuth();
+  
+  return (
   <Fragment>
     <div className="fix-area">
       <div className={`offcanvas__info ${open ? "info-open" : ""}`}>
@@ -438,14 +441,16 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
                   </li>
                 ))}
               </ul>
-              <div className="header-button mt-4">
-                <Link href="/sign-in" className="theme-btn text-center">
-                  <span>
-                    Sign In
-                    <i className="fa-solid fa-arrow-right-long" />
-                  </span>
-                </Link>
-              </div>
+              {!isAuthenticated && (
+                <div className="header-button mt-4">
+                  <Link href="/sign-in" className="theme-btn text-center">
+                    <span>
+                      Sign In
+                      <i className="fa-solid fa-arrow-right-long" />
+                    </span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -456,9 +461,32 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
       onClick={close}
     ></div>
   </Fragment>
-);
+  );
+};
+
+const AuthButton = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return (
+      <div className="d-flex align-items-center gap-3">
+        <WalletButton balance={100000000} />
+        <UserDropdown />
+      </div>
+    );
+  }
+
+  return (
+    <div className="header-button d-none d-xl-block">
+      <Link href="/sign-in" className="theme-btn transparent-btn">
+        Sign In
+      </Link>
+    </div>
+  );
+};
 
 const MobileNav = () => {
+  const { isAuthenticated } = useAuth();
   const [activeMenu, setActiveMenu] = useState("");
   const [multiMenu, setMultiMenu] = useState("");
   const toggle = (menu: string, setter: (v: string) => void, current: string) =>
