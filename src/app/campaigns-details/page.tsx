@@ -1,0 +1,190 @@
+"use client";
+
+import DanboxLayout from "@/layout/DanboxLayout";
+import { useMemo, useState } from "react";
+
+import CampaignDonateCard from "@/components/campaign/CampaignDonateCard";
+import CampaignHeader from "@/components/campaign/CampaignHeader";
+import CampaignCommentsCard from "@/components/campaign/CampaignCommentsCard";
+import FollowersRow from "@/components/campaign/FollowersRow";
+import PlansList from "@/components/campaign/PlansList";
+import PostsFeed from "@/components/campaign/PostsFeed";
+import {
+  mockCampaign,
+  mockComments,
+  mockPlans,
+  mockPosts,
+} from "@/components/campaign/mock";
+import type { Campaign, CampaignPost } from "@/components/campaign/types";
+
+const CampaignDetailsPage = () => {
+  const [campaign, setCampaign] = useState<Campaign>(mockCampaign);
+  const [posts] = useState<CampaignPost[]>(mockPosts);
+
+  const comments = useMemo(() => [...mockComments], []);
+
+  return (
+    <DanboxLayout>
+      <section
+        className="causes-details-section fix section-padding"
+        style={{ paddingTop: 0, fontFamily: "var(--font-dm-sans)" }}
+      >
+        <div className="container">
+          <div
+            style={{
+              maxWidth: 1200,
+              margin: "0 auto",
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
+              gap: 48,
+              alignItems: "start",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <CampaignHeader
+                campaign={campaign}
+                onToggleLike={() =>
+                  setCampaign((c) => ({
+                    ...c,
+                    liked: !c.liked,
+                    likeCount: c.liked
+                      ? Math.max(0, c.likeCount - 1)
+                      : c.likeCount + 1,
+                  }))
+                }
+                onToggleFollow={() =>
+                  setCampaign((c) => ({
+                    ...c,
+                    followed: !c.followed,
+                    followerCount: c.followed
+                      ? Math.max(0, c.followerCount - 1)
+                      : c.followerCount + 1,
+                  }))
+                }
+                onToggleFlag={() =>
+                  setCampaign((c) => ({ ...c, flagged: !c.flagged }))
+                }
+              />
+
+              <div
+                className="single-sidebar-widgets"
+                style={{ marginTop: 24, marginBottom: 24 }}
+              >
+                <div className="widget-title">
+                  <h4>Followers</h4>
+                </div>
+                <FollowersRow
+                  followers={campaign.followers}
+                  onClick={() => {
+                    alert("Go to followers list page (route not implemented)");
+                  }}
+                />
+              </div>
+
+              <CampaignCommentsCard comments={comments} />
+
+              <CampaignDonateCard
+                raisedAmount={campaign.raisedAmount}
+                goalAmount={campaign.goalAmount}
+                onDonate={(amount) => alert(`Donate: $${amount}`)}
+              />
+            </div>
+
+            <div style={{ minWidth: 0, marginTop: 86 }}>
+              <div className="casues-sidebar-wrapper">
+                <div style={{ marginBottom: 18 }}>
+                  <PlansList
+                    plans={mockPlans}
+                    onOpenPlan={(planId) => {
+                      alert(
+                        `Go to plan details page: ${planId} (route not implemented)`,
+                      );
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid rgba(0,0,0,0.10)",
+                    borderRadius: 16,
+                    padding: 16,
+                    background: "#fff",
+                  }}
+                >
+                  <div
+                    className="d-flex align-items-center justify-content-between"
+                    style={{ marginBottom: 14 }}
+                  >
+                    <div className="widget-title" style={{ marginBottom: 0 }}>
+                      <h4 style={{ marginBottom: 0 }}>Posts</h4>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="text-sm"
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        padding: 0,
+                        color: "#0F5D51",
+                        fontWeight: 700,
+                      }}
+                      onClick={() =>
+                        alert("See more posts (route not implemented)")
+                      }
+                    >
+                      See more
+                    </button>
+                  </div>
+
+                  <PostsFeed
+                    posts={posts}
+                    campaignCreatorId={campaign.creator.id}
+                    onOpenPost={(postId) =>
+                      alert(
+                        `Open post details: ${postId} (route not implemented)`,
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <style jsx>{`
+          @media (max-width: 991px) {
+            section :global(.container) > div {
+              grid-template-columns: 1fr !important;
+              gap: 24px !important;
+            }
+
+            section :global(.container) > div > div:last-child {
+              margin-top: 0 !important;
+            }
+
+            section :global(.casues-sidebar-wrapper) {
+              margin-top: 24px;
+            }
+          }
+
+          @media (max-width: 575px) {
+            section :global(h2) {
+              font-size: 26px !important;
+            }
+
+            section :global(.single-sidebar-widgets) {
+              border-radius: 14px;
+            }
+
+            section :global(.widget-title h4) {
+              font-size: 18px;
+            }
+          }
+        `}</style>
+      </section>
+    </DanboxLayout>
+  );
+};
+
+export default CampaignDetailsPage;
