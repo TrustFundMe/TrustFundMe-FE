@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export type CampaignCardItem = {
   id: string;
@@ -13,7 +14,10 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
   const progress = Math.min(100, Math.round((item.raised / item.goal) * 100));
 
   return (
-    <div className="group relative w-full overflow-hidden rounded-xl bg-slate-200 shadow-sm ring-1 ring-slate-200">
+    <Link
+      href="/campaigns-details"
+      className="group relative block w-full overflow-hidden rounded-xl bg-slate-200 shadow-sm ring-1 ring-slate-200"
+    >
       <div className="relative aspect-[2/3] w-full">
         <Image
           src={item.image}
@@ -52,6 +56,6 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

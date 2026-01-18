@@ -1,6 +1,6 @@
-import { CampaignCategoriesSection } from "@/components/CampaignCategoriesSection";
-import CampaignBanner from "@/components/CampaignBanner";
-import CampaignHighlightSlider from "@/components/CampaignHighlightSlider";
+import { CampaignCategoriesSection } from "@/components/campaign/CampaignCategoriesSection";
+import CampaignBanner from "@/components/campaign/CampaignBanner";
+import CampaignHighlightSlider from "@/components/campaign/CampaignHighlightSlider";
 import DanboxLayout from "@/layout/DanboxLayout";
 
 const CampaignsPage = () => {
