@@ -971,7 +971,7 @@ export const CausesTab = () => {
     ],
   };
   return (
-    <section className="causes-section fix section-padding fix">
+    <section id="campaigns" className="causes-section fix section-padding fix">
       <div className="container">
         <Tab.Container defaultActiveKey={"categories"}>
           <div className="cuases-tab-header">

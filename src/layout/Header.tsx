@@ -343,7 +343,7 @@ const Nav = () => (
           <Link href="/about">About</Link>
         </li>
         <li>
-          <Link href="/causes">Campaign</Link>
+          <Link href="/campaigns">Campaign</Link>
         </li>
         <li>
           <Link href="/contact">Contact</Link>
@@ -533,7 +533,7 @@ const MobileNav = () => {
               <Link href="/about">About</Link>
             </li>
             <li>
-              <Link href="/causes">Campaign</Link>
+              <Link href="/campaigns">Campaign</Link>
             </li>
             <li>
               <Link href="/contact">Contact</Link>
