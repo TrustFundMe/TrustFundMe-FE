@@ -11,7 +11,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 
-import CampaignCard, { type CampaignCardItem } from "@/components/CampaignCard";
+import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
 
 interface CampaignCategoryItem {
   id: string;
@@ -116,12 +116,6 @@ const categoryCampaigns: Record<string, CampaignCardItem[]> = {
   "nutritional-support": buildManyCampaigns("nutritional-support", 12),
 };
 
-function computeBalancedColumns(count: number, maxPerRow: number) {
-  const safeCount = Math.max(1, count);
-  const rows = Math.ceil(safeCount / maxPerRow);
-  return Math.ceil(safeCount / rows);
-}
-
 const CategoryCard = ({
   id,
   title,
@@ -137,12 +131,15 @@ const CategoryCard = ({
     <button
       type="button"
       onClick={() => onClick(id)}
-      className="group flex w-full flex-col items-center justify-center gap-2 rounded-2xl bg-white px-3 py-4 text-center shadow-sm ring-1 ring-slate-200 transition hover:shadow-md"
+      className="group flex w-full min-w-0 flex-col items-center justify-start gap-2 rounded-2xl bg-white px-3 py-4 text-center shadow-sm ring-1 ring-slate-200 transition hover:shadow-md"
+      style={{ minHeight: 140 }}
     >
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F84D43] text-white transition group-hover:bg-[#1A685B]">
         <Icon className="h-6 w-6" />
       </span>
-      <span className="text-base font-bold text-slate-900">{title}</span>
+      <span className="w-full text-sm sm:text-base font-bold text-slate-900 leading-snug break-words">
+        {title}
+      </span>
     </button>
   );
 };
@@ -168,18 +165,13 @@ export function CampaignCategoriesSection() {
 
   const totalPages = useMemo(
     () => Math.ceil(categories.length / CATEGORY_SECTIONS_PER_PAGE),
-    []
+    [],
   );
 
   const visibleCategories = useMemo(() => {
     const start = pageIndex * CATEGORY_SECTIONS_PER_PAGE;
     return categories.slice(start, start + CATEGORY_SECTIONS_PER_PAGE);
   }, [pageIndex]);
-
-  const categoryColumns = useMemo(
-    () => computeBalancedColumns(categories.length, 7),
-    []
-  );
 
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < totalPages - 1;
@@ -265,12 +257,7 @@ export function CampaignCategoriesSection() {
           </div>
         </div>
 
-        <div
-          className="mx-auto grid w-fit gap-3"
-          style={{
-            gridTemplateColumns: `repeat(${categoryColumns}, minmax(0, 1fr))`,
-          }}
-        >
+        <div className="mx-auto grid w-full max-w-5xl gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {categories.map(({ title, id, Icon }) => (
             <CategoryCard
               key={id}
@@ -282,7 +269,7 @@ export function CampaignCategoriesSection() {
           ))}
         </div>
 
-        <div className="mx-auto mt-10 flex w-full max-w-5xl items-center justify-between gap-4">
+        <div className="mx-auto mt-10 flex flex-wrap w-full max-w-5xl items-center justify-between gap-4">
           <button
             type="button"
             onClick={handlePrev}
@@ -318,7 +305,7 @@ export function CampaignCategoriesSection() {
                       {title}
                     </p>
                     <h3 className="text-2xl md:text-3xl font-bold text-slate-900">
-                      Các chiến dịch nổi bật
+                      Featured campaigns
                     </h3>
                     <p className="mt-2 text-slate-600 max-w-2xl">
                       {description}
@@ -328,13 +315,13 @@ export function CampaignCategoriesSection() {
                     href={`/campaigns/campaignsList?categoryId=${id}`}
                     className="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
                   >
-                    Xem thêm
+                    See more
                   </Link>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col lg:flex-row items-stretch gap-4">
                   <div className="flex-1">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                       {visible.map((item) => (
                         <CampaignCard key={item.id} item={item} />
                       ))}
@@ -344,8 +331,8 @@ export function CampaignCategoriesSection() {
                   {showArrow && (
                     <Link
                       href={`/campaigns/campaignsList?categoryId=${id}`}
-                      className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm hover:bg-slate-50"
-                      aria-label="Xem thêm"
+                      className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm hover:bg-slate-50 self-center lg:self-auto"
+                      aria-label="See more"
                     >
                       <ChevronRight className="h-6 w-6 text-slate-800" />
                     </Link>

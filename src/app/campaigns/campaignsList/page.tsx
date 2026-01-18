@@ -5,8 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import DanboxLayout from "@/layout/DanboxLayout";
-import CampaignsListBanner from "@/components/CampaignsListBanner";
-import CampaignCard, { type CampaignCardItem } from "@/components/CampaignCard";
+import CampaignsListBanner from "@/components/campaign/CampaignsListBanner";
+import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
 
 const PAGE_SIZE = 12;
 
@@ -120,7 +120,7 @@ export default function CampaignsListPage() {
     if (!search.trim()) return data.campaigns;
     const q = search.trim().toLowerCase();
     return data.campaigns.filter((c) =>
-      String(c.title ?? "").toLowerCase().includes(q)
+      String(c.title ?? "").toLowerCase().includes(q),
     );
   }, [data.campaigns, search]);
 
@@ -136,7 +136,7 @@ export default function CampaignsListPage() {
   const categoryTitle = data.category?.title ?? "Campaigns";
   const categoryDescription =
     data.category?.description ??
-    "Vui lòng chọn category hợp lệ để xem danh sách chiến dịch.";
+    "Please select a valid category to view available campaigns.";
   const categoryImage = data.category?.image ?? "/assets/img/campaign/1.jpg";
 
   return (
@@ -146,16 +146,17 @@ export default function CampaignsListPage() {
           <div className="container mx-auto px-4">
             <CampaignsListBanner
               categoryTitle={categoryTitle}
-              heading="List All Campaigns"
+              heading="All campaigns"
               description={categoryDescription}
               image={categoryImage}
               backHref="/campaigns"
-              backLabel="Create a Campaign"
+              backLabel="Back"
             />
 
-            <div className="mt-10 flex items-center gap-4">
-              <div className="h-[2px] flex-1 bg-slate-300" />
-              <div className="w-full max-w-2xl">
+            <div className="mt-8 md:mt-10 flex flex-col md:flex-row md:items-center gap-4">
+              <div className="hidden md:block h-[2px] flex-1 bg-slate-300" />
+
+              <div className="w-full md:max-w-2xl">
                 <div className="flex items-center gap-1 rounded-full bg-white px-5 py-3 ring-[3px] ring-slate-400 shadow-sm">
                   <input
                     value={search}
@@ -163,19 +164,20 @@ export default function CampaignsListPage() {
                     placeholder="Search campaigns..."
                     className="w-full bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
                   />
-                  <Search className="h-5 w-5 text-slate-800" />
+                  <Search className="h-5 w-5 text-slate-800 shrink-0" />
                 </div>
               </div>
-              <div className="h-[2px] flex-1 bg-slate-300" />
+
+              <div className="hidden md:block h-[2px] flex-1 bg-slate-300" />
             </div>
 
-            <div className="mt-10 md:mt-12 mx-auto grid w-full max-w-5xl grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 justify-items-stretch">
+            <div className="mt-8 md:mt-12 mx-auto grid w-full max-w-5xl grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {pageItems.map((item) => (
                 <CampaignCard key={item.id} item={item} />
               ))}
             </div>
 
-            <div className="mt-10 flex items-center justify-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
