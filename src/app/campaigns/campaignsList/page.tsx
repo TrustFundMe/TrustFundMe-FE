@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import DanboxLayout from "@/layout/DanboxLayout";
@@ -10,7 +10,7 @@ import CampaignCard, { type CampaignCardItem } from "@/components/campaign/Campa
 
 const PAGE_SIZE = 12;
 
-export default function CampaignsListPage() {
+function CampaignsListContent() {
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("categoryId") ?? "";
 
@@ -202,5 +202,28 @@ export default function CampaignsListPage() {
         </section>
       </div>
     </DanboxLayout>
+  );
+}
+
+export default function CampaignsListPage() {
+  return (
+    <Suspense fallback={
+      <DanboxLayout>
+        <div className="font-dm-sans">
+          <section className="bg-white py-10 md:py-14">
+            <div className="container mx-auto px-4">
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-800 mx-auto mb-4"></div>
+                  <p className="text-slate-600">Loading campaigns...</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </DanboxLayout>
+    }>
+      <CampaignsListContent />
+    </Suspense>
   );
 }
