@@ -3,10 +3,15 @@
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { campaignService } from "@/services/campaignService";
+import type { CampaignDto } from "@/types/campaign";
+import { withFallbackImage } from "@/lib/image";
 
 import DanboxLayout from "@/layout/DanboxLayout";
 import CampaignsListBanner from "@/components/campaign/CampaignsListBanner";
-import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
+import CampaignCard, {
+  type CampaignCardItem,
+} from "@/components/campaign/CampaignCard";
 
 const PAGE_SIZE = 12;
 
@@ -56,73 +61,59 @@ export default function CampaignsListPage() {
       },
     ];
 
-    const base: Record<string, Omit<CampaignCardItem, "id">> = {
-      "community-kitchens": {
-        title: "Renovate community kitchen",
-        location: "Hue, Vietnam",
-        raised: 5600,
-        goal: 12000,
-        image: "/assets/img/campaign/1.jpg",
-      },
-      "school-feeding": {
-        title: "Milk for primary students",
-        location: "Lagos, Nigeria",
-        raised: 3100,
-        goal: 8000,
-        image: "/assets/img/campaign/2.jpg",
-      },
-      "health-wellness": {
-        title: "Medical kits for rural clinics",
-        location: "Quang Tri, Vietnam",
-        raised: 7200,
-        goal: 14000,
-        image: "/assets/img/campaign/1.jpg",
-      },
-      "emergency-food": {
-        title: "Flood relief food packs",
-        location: "Central Vietnam",
-        raised: 15400,
-        goal: 25000,
-        image: "/assets/img/campaign/2.jpg",
-      },
-      "nutritional-support": {
-        title: "Micronutrient packs for moms",
-        location: "Phnom Penh, Cambodia",
-        raised: 4800,
-        goal: 10000,
-        image: "/assets/img/campaign/1.jpg",
-      },
-    };
-
-    const buildMany = (key: keyof typeof base, n: number) =>
-      Array.from({ length: n }).map((_, i) => ({
-        id: `${key}-${i + 1}`,
-        ...base[key],
-        title: `${base[key].title} #${i + 1}`,
-        raised: Math.max(100, base[key].raised + i * 350),
-      }));
-
-    const categoryCampaigns: Record<string, CampaignCardItem[]> = {
-      "community-kitchens": buildMany("community-kitchens", 18),
-      "school-feeding": buildMany("school-feeding", 18),
-      "health-wellness": buildMany("health-wellness", 18),
-      "emergency-food": buildMany("emergency-food", 18),
-      "nutritional-support": buildMany("nutritional-support", 18),
-    };
-
     const category = categories.find((c) => c.id === categoryId);
-    const campaigns = categoryCampaigns[categoryId] ?? [];
 
-    return { category, campaigns };
+    return { category };
   }, [categoryId]);
 
+  const [campaigns, setCampaigns] = useState<CampaignCardItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      setError("");
+
+      try {
+        setLoading(true);
+        const res = await campaignService.getAll();
+
+        const items: CampaignCardItem[] = res.map((c: CampaignDto) => ({
+          id: String(c.id),
+          title: c.title,
+          location: `Fund Owner #${c.fundOwnerId}`,
+          raised: c.balance ?? 0,
+          goal: Math.max(1, c.balance ?? 1),
+          image: withFallbackImage(c.coverImage, "/assets/img/campaign/1.jpg"),
+        }));
+
+        if (!mounted) return;
+        setCampaigns(items);
+      } catch {
+        if (!mounted) return;
+        setError("Failed to load campaigns");
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const filteredCampaigns = useMemo(() => {
-    if (!search.trim()) return data.campaigns;
+    if (!search.trim()) return campaigns;
     const q = search.trim().toLowerCase();
-    return data.campaigns.filter((c) =>
+    return campaigns.filter((c) =>
       String(c.title ?? "").toLowerCase().includes(q),
     );
-  }, [data.campaigns, search]);
+  }, [campaigns, search]);
 
   useEffect(() => {
     setPage(1);
