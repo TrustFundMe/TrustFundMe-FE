@@ -26,24 +26,17 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-            <div className="col-lg-4">
-              <div className="service-card-items" style={{ borderRadius: 0 }}>
-                <div className="content">
-                  <h4>My Contributions</h4>
-                  <p>Total amount you have donated across all funds.</p>
-                  <h3 style={{ marginTop: 12 }}>$XX,XXX,XXX VND</h3>
-                </div>
-              </div>
-            </div>
+export default function DashboardPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-            <div className="col-lg-4">
-              <div className="service-card-items" style={{ borderRadius: 0 }}>
-                <div className="content">
-                  <h4>Impact Tracking</h4>
-                  <p>"Your donations have helped [X] children and provided [Y] meals."</p>
-                </div>
-              </div>
-            </div>
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/account/impact");
+    } else {
+      router.replace("/sign-in");
+    }
+  }, [isAuthenticated, router]);
 
             <div className="col-lg-4">
               <div className="service-card-items" style={{ borderRadius: 0 }}>

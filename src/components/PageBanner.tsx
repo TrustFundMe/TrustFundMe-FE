@@ -23,7 +23,8 @@ const PageBanner = ({
         alignItems: 'center',
       }}
     >
-      <div className="container" style={{ maxWidth: '1400px' }}>
+
+\      <div className="container" style={{ maxWidth: '1400px' }}>
         <div className="page-heading">
           <div className="breadcrumb-sub-title">
             <h5 className="wow fadeInUp">

@@ -132,7 +132,7 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
       hideOnMobile: true, // Hide on mobile
     },
     {
-      img: "/assets/img/about/072.jpg",
+      img: "/assets/img/about/05.jpg",
       delay: ".9s",
       tabletOnly: false, // Show on tablet and mobile
     },

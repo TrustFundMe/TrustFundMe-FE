@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import { Chelsea_Market, Inter } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/layout/Preloader";
+
 // Using Proxy Mode: FE → Next.js API (service_role) → Supabase
 // This allows using service_role key safely (server-side only)
 import { AuthProvider } from "@/contexts/AuthContextProxy";
