@@ -3,6 +3,8 @@ import { useStickyHeader } from "@/utility";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useState } from "react";
+import { UserDropdown } from "@/components/UserDropdown";
+import { UserMenuMobile } from "@/components/UserMenuMobile";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -144,9 +146,7 @@ const Header2 = ({ open }: { open: () => void }) => (
             </div>
             <div className="header-right d-flex justify-content-end align-items-center" style={{ flex: '0 0 auto' }}>
               <div className="header-button d-none d-xl-block">
-                <Link href="/sign-in" className="theme-btn transparent-btn">
-                  Sign In
-                </Link>
+                <UserDropdown />
               </div>
               <div className="header__hamburger d-xl-none my-auto ms-3">
                 <div className="sidebar__toggle" onClick={open}>
@@ -344,7 +344,7 @@ const Nav = () => (
           <Link href="/campaigns">Campaign</Link>
         </li>
         <li>
-          <Link href="/contact">Contact</Link>
+          <Link href="/post">Communication</Link>
         </li>
       </ul>
     </nav>
@@ -437,12 +437,7 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
                 ))}
               </ul>
               <div className="header-button mt-4">
-                <Link href="/sign-in" className="theme-btn text-center">
-                  <span>
-                    Sign In
-                    <i className="fa-solid fa-arrow-right-long" />
-                  </span>
-                </Link>
+                <UserMenuMobile />
               </div>
             </div>
           </div>
@@ -506,7 +501,7 @@ const MobileNav = () => {
               <Link href="/campaigns">Campaign</Link>
             </li>
             <li>
-              <Link href="/contact">Contact</Link>
+              <Link href="/post">Communication</Link>
             </li>
           </ul>
         </nav>
