@@ -1,92 +1,255 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { User, Session, AuthError } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+interface UserMetadata {
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
   phone?: string;
-  avatar?: string;
   birthday?: string;
+  [key: string]: unknown;
+}
+
+interface AuthUser {
+  id: string;
+  email: string;
+  emailVerified: boolean;
+  emailConfirmedAt: string | null;
+  metadata: UserMetadata;
+  raw: User;
 }
 
 interface AuthContextType {
+  user: AuthUser | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  user: User | null;
-  login: (user: User) => void;
-  logout: () => void;
-  updateUser: (user: Partial<User>) => void;
+  isEmailVerified: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: AuthError | null }>;
+  logout: () => Promise<void>;
+  updateUser: (updates: Partial<AuthUser>) => void;
+  resendVerificationEmail: (email: string) => Promise<{ error: AuthError | null }>;
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  exchangeTokenForBEJWT: (accessToken: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // Load auth state from localStorage on mount
+  // Transform Supabase User to AuthUser
+  const transformUser = (supabaseUser: User | null): AuthUser | null => {
+    if (!supabaseUser) return null;
+
+    const metadata = (supabaseUser.user_metadata || {}) as UserMetadata;
+    
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      emailVerified: !!supabaseUser.email_confirmed_at,
+      emailConfirmedAt: supabaseUser.email_confirmed_at || null,
+      metadata: {
+        fullName: metadata.fullName || `${metadata.firstName || ''} ${metadata.lastName || ''}`.trim() || undefined,
+        firstName: metadata.firstName,
+        lastName: metadata.lastName,
+        avatarUrl: metadata.avatarUrl,
+        phone: metadata.phone,
+        birthday: metadata.birthday,
+        ...metadata,
+      },
+      raw: supabaseUser,
+    };
+  };
+
+  // Initialize auth state
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const auth = localStorage.getItem("auth");
-      const userData = localStorage.getItem("user");
-      
-      if (auth === "true" && userData) {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(transformUser(session?.user ?? null));
+      setLoading(false);
+
+      // If we have a session, exchange token for BE JWT
+      if (session?.access_token) {
+        exchangeTokenForBEJWT(session.access_token).catch((error) => {
+          console.error('Failed to exchange token for BE JWT:', error);
+        });
+      }
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session);
+      setUser(transformUser(session?.user ?? null));
+
+      if (event === 'SIGNED_IN' && session?.access_token) {
+        // Exchange Supabase token for BE JWT
+        await exchangeTokenForBEJWT(session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        // Clear BE session
         try {
-          const parsedUser = JSON.parse(userData);
-          setIsAuthenticated(true);
-          setUser(parsedUser);
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+          });
         } catch (error) {
-          console.error("Error parsing user data:", error);
-          localStorage.removeItem("auth");
-          localStorage.removeItem("user");
+          console.error('Failed to logout from BE:', error);
         }
       }
-    }
+
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = (userData: User) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    localStorage.setItem("auth", "true");
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (!error && data.session) {
+      setSession(data.session);
+      setUser(transformUser(data.user));
+      
+      // Exchange token for BE JWT
+      if (data.session.access_token) {
+        await exchangeTokenForBEJWT(data.session.access_token);
+      }
+    }
+
+    return { error };
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
+  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          firstName,
+          lastName,
+          fullName: `${firstName} ${lastName}`,
+        },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (!error && data.session) {
+      setSession(data.session);
+      setUser(transformUser(data.user));
+      
+      // Exchange token for BE JWT if session exists
+      if (data.session?.access_token) {
+        await exchangeTokenForBEJWT(data.session.access_token);
+      }
+    }
+
+    return { error };
+  };
+
+  const logout = async () => {
+    // Logout from Supabase
+    await supabase.auth.signOut();
+    
+    // Clear BE session
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Failed to logout from BE:', error);
+    }
+
+    setSession(null);
     setUser(null);
-    localStorage.removeItem("auth");
-    localStorage.removeItem("user");
+    router.push('/sign-in');
   };
 
-  const updateUser = (userData: Partial<User>) => {
+  const updateUser = (updates: Partial<AuthUser>) => {
     if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser({ ...user, ...updates });
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        login,
-        logout,
-        updateUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const resendVerificationEmail = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    return { error };
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    return { error };
+  };
+
+  const exchangeTokenForBEJWT = async (accessToken: string) => {
+    try {
+      const response = await fetch('/api/auth/exchange-supabase-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ accessToken }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to exchange token');
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    session,
+    isAuthenticated: !!user,
+    isEmailVerified: user?.emailVerified ?? false,
+    loading,
+    login,
+    signUp,
+    logout,
+    updateUser,
+    resendVerificationEmail,
+    signInWithGoogle,
+    exchangeTokenForBEJWT,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

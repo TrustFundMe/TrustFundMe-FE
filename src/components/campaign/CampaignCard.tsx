@@ -15,7 +15,7 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
 
   return (
     <Link
-      href="/campaigns-details"
+      href={`/campaigns-details?id=${encodeURIComponent(item.id)}`}
       className="group relative block w-full overflow-hidden rounded-xl bg-slate-200 shadow-sm ring-1 ring-slate-200"
     >
       <div className="relative aspect-[2/3] w-full">
