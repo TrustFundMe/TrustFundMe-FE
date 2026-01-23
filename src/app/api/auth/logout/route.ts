@@ -6,9 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const refreshToken = request.cookies.get('refresh_token')?.value;
-    
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
-    
+
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+
     // Call BE logout endpoint if available
     // TODO: Create BE endpoint POST /api/auth/logout
     if (refreshToken) {

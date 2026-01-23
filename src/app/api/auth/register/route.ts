@@ -15,28 +15,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
-    
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+
     // Map firstName + lastName to fullName for BE
     const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-    
+
     const response = await fetch(`${BE_API_URL}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         email: email.trim().toLowerCase(),
         password,
         fullName,
       }),
     });
 
-    const data = await response.json();
+    // Handle non-JSON responses (e.g., 404 Not Found, 502 Bad Gateway)
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.error('Register API non-JSON response:', text);
+      return NextResponse.json(
+        { error: `Service unavailable: ${response.status} ${response.statusText}` },
+        { status: response.status }
+      );
+    }
 
     if (!response.ok) {
+      console.error('Register API error response:', data);
+
+      // Extract error message from various possible formats
+      // BE might return: { error: "msg" }, { message: "msg" }, { errors: [...] }
+      let errorMessage = data.message || data.error;
+
+      if (typeof errorMessage !== 'string') {
+        errorMessage = JSON.stringify(errorMessage) || 'Registration failed';
+      }
+
       return NextResponse.json(
-        { error: data.message || data.error || 'Registration failed' },
+        { error: errorMessage },
         { status: response.status }
       );
     }

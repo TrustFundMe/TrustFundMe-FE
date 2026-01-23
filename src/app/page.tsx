@@ -23,11 +23,11 @@ const Home = () => {
       <About2 />
       <CounterSection1 />
       <Projects1 />
-       <Feature1 />
-       <Faq2 />
-       <Team2 />
+      <Feature1 />
+      <Faq2 />
+      {/* <Team2 /> */}
       <TestimonialsNew />
- 
+
       <Cta2 />
     </DanboxLayout>
   );

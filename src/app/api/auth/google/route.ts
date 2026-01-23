@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
-    
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+
     // TODO: Check if BE has this endpoint
     // For now, return error indicating it's not implemented
     const response = await fetch(`${BE_API_URL}/api/auth/google`, {

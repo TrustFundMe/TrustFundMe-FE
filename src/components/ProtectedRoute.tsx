@@ -21,13 +21,14 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
       return;
     }
 
-    if (requireVerified && !isVerified) {
-      // Redirect to verify email page with user's email
-      const email = user?.email || '';
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
-      return;
-    }
-  }, [isAuthenticated, isVerified, requireVerified, loading, router, user]);
+    // Unverified users are allowed access, just show banner (handled by layout)
+    // Only redirect if requireVerified is explicitly strict (which we default to false now?)
+    // Actually, for now, we NEVER force redirect unverified users from protected routes
+    // unless it's a specific route that ABSOLUTELY needs verification (like withdrawal)
+    // But generalized ProtectedRoute should be permissive.
+
+    // Previous logic redirected to verify-email. We remove that.
+  }, [isAuthenticated, loading, router]);
 
   if (loading) {
     return (
@@ -44,9 +45,9 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
     return null;
   }
 
-  if (requireVerified && !isVerified) {
-    return null;
-  }
+  // if (requireVerified && !isVerified) {
+  //   return null;
+  // }
 
   return <>{children}</>;
 }

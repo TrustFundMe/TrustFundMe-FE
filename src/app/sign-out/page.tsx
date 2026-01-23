@@ -1,7 +1,7 @@
 "use client";
 
 import DanboxLayout from "@/layout/DanboxLayout";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContextProxy";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";

@@ -324,7 +324,7 @@ export default function SignInPage() {
   const [lastName, setLastName] = useState<string>("");
   const [signUpPassword, setSignUpPassword] = useState<string>("");
   const [showSignUpPassword, setShowSignUpPassword] = useState<boolean>(false);
-  
+
   // Field touched states (for validation)
   const [firstNameTouched, setFirstNameTouched] = useState<boolean>(false);
   const [lastNameTouched, setLastNameTouched] = useState<boolean>(false);
@@ -417,37 +417,39 @@ export default function SignInPage() {
 
     try {
       const normalized = normalizeEmail(email);
-      
+
       // Check if email exists in system
       const checkResult = await authService.checkEmail(normalized);
-      
+
       // Handle rate limiting from check email
       if (checkResult.error) {
         const errorMsg = checkResult.error.toLowerCase();
-        if (errorMsg.includes('for security purposes') || 
-            errorMsg.includes('rate limit') ||
-            errorMsg.includes('too many requests') ||
-            (errorMsg.includes('after') && errorMsg.includes('seconds'))) {
+        if (errorMsg.includes('for security purposes') ||
+          errorMsg.includes('rate limit') ||
+          errorMsg.includes('too many requests') ||
+          (errorMsg.includes('after') && errorMsg.includes('seconds'))) {
           const waitMatch = checkResult.error.match(/(\d+)\s*seconds?/i);
           const waitTime = waitMatch ? waitMatch[1] : '60';
           setError(`⚠️ Too many requests. Please wait ${waitTime} seconds before checking email again.`);
         } else {
-          setError(checkResult.error);
+          // SANITIZED ERROR MESSAGE: Never show raw backend errors
+          console.warn('Check email raw error:', checkResult.error);
+          setError("Unable to verify email. Please try again.");
         }
         setLoading(false);
         return;
       }
-      
+
       // Debug log
       console.log('Check email result:', checkResult);
-      
+
       if (checkResult.exists === true) {
         // Email exists - show password entry
         // BE returns fullName, not firstName/lastName
-        const displayName = (checkResult as any).fullName || 
-                           (checkResult.firstName && checkResult.lastName
-                             ? `${checkResult.firstName} ${checkResult.lastName}`
-                             : '');
+        const displayName = (checkResult as any).fullName ||
+          (checkResult.firstName && checkResult.lastName
+            ? `${checkResult.firstName} ${checkResult.lastName}`
+            : '');
         setExistingUserName(displayName);
         setStep("password-entry");
       } else {
@@ -478,7 +480,7 @@ export default function SignInPage() {
 
     try {
       const { error } = await login(normalizeEmail(email), password);
-      
+
       if (error) {
         setError(error.message || "Invalid email or password. Please try again.");
         setLoading(false);
@@ -521,12 +523,12 @@ export default function SignInPage() {
         firstName.trim(),
         lastName.trim()
       );
-      
+
       if (result.error) {
         // Handle different error cases
         // result.error could be { message: string } or empty object {}
         let errorMsg = '';
-        
+
         if (result.error && typeof result.error === 'object') {
           errorMsg = result.error.message || JSON.stringify(result.error) || "Registration failed. Please try again.";
         } else if (typeof result.error === 'string') {
@@ -534,28 +536,28 @@ export default function SignInPage() {
         } else {
           errorMsg = "Registration failed. Please try again.";
         }
-        
+
         console.error('Signup error:', { error: result.error, errorMsg });
-        
+
         // If error message is empty or just "{}", show generic message
         if (!errorMsg || errorMsg === '{}' || errorMsg.trim() === '') {
           errorMsg = "Registration failed. Please check your information and try again.";
         }
-        
+
         // Handle rate limiting
-        if (errorMsg.includes('For security purposes') || 
-            errorMsg.includes('rate limit') ||
-            errorMsg.includes('too many requests') ||
-            errorMsg.includes('after') && errorMsg.includes('seconds')) {
+        if (errorMsg.includes('For security purposes') ||
+          errorMsg.includes('rate limit') ||
+          errorMsg.includes('too many requests') ||
+          errorMsg.includes('after') && errorMsg.includes('seconds')) {
           // Extract wait time if available
           const waitMatch = errorMsg.match(/(\d+)\s*seconds?/i);
           const waitTime = waitMatch ? waitMatch[1] : '60';
           setError(`Too many requests. Please wait ${waitTime} seconds before trying again.`);
-        } else if (errorMsg.includes('User already registered') || 
-            errorMsg.includes('already registered') ||
-            errorMsg.includes('already exists') ||
-            errorMsg.includes('Email rate limit exceeded') ||
-            errorMsg.includes('user already exists')) {
+        } else if (errorMsg.includes('User already registered') ||
+          errorMsg.includes('already registered') ||
+          errorMsg.includes('already exists') ||
+          errorMsg.includes('Email rate limit exceeded') ||
+          errorMsg.includes('user already exists')) {
           setError("This email is already registered. Please sign in instead.");
           setStep("password-entry");
         } else if (errorMsg.includes('Password') || errorMsg.includes('password')) {
@@ -563,16 +565,16 @@ export default function SignInPage() {
         } else if (errorMsg.includes('Email') || errorMsg.includes('email')) {
           setError(`Email error: ${errorMsg}`);
         } else {
-          setError(errorMsg);
+          // SANITIZED ERROR MESSAGE
+          console.warn('Signup raw error:', errorMsg);
+          setError("Registration failed. Please check your details and try again.");
         }
         setLoading(false);
       } else {
         // Success - User registered and logged in automatically
-        setInfo("Account created successfully! Please verify your email with OTP code.");
-        // Redirect to OTP verification page
-        setTimeout(() => {
-          router.push(`/auth/verify-email?email=${encodeURIComponent(normalizeEmail(email))}`);
-        }, 1500);
+        setInfo("Account created! Redirecting to verification...");
+        // Redirect to OTP verification page immediately
+        router.push(`/auth/verify-email?email=${encodeURIComponent(normalizeEmail(email))}`);
       }
     } catch (error: any) {
       console.error('Signup exception:', error);
@@ -597,7 +599,7 @@ export default function SignInPage() {
 
     try {
       const result = await authService.forgotPassword(normalizeEmail(email));
-      
+
       if (result.error) {
         setError(result.error);
       } else {
@@ -619,7 +621,7 @@ export default function SignInPage() {
 
     try {
       const { error } = await signInWithGoogle();
-      
+
       if (error) {
         setError(error.message || "Failed to sign in with Google. Please try again.");
       }
@@ -679,9 +681,9 @@ export default function SignInPage() {
             {/* Logo */}
             <div className="flex justify-center mb-8">
               <Link href="/" className="inline-block">
-                <img 
-                  src="/assets/img/logo/black-logo.png" 
-                  alt="TrustFundMe Logo" 
+                <img
+                  src="/assets/img/logo/black-logo.png"
+                  alt="TrustFundMe Logo"
                   className="h-12 w-auto hover:opacity-80 transition-opacity"
                 />
               </Link>
@@ -769,8 +771,8 @@ export default function SignInPage() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900 peer"
                       required
                     />
-                    <label 
-                      htmlFor="email" 
+                    <label
+                      htmlFor="email"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       Email
@@ -810,8 +812,8 @@ export default function SignInPage() {
                       readOnly
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 outline-none text-gray-900 peer"
                     />
-                    <label 
-                      htmlFor="emailDisplay" 
+                    <label
+                      htmlFor="emailDisplay"
                       className="absolute left-4 -top-2 text-xs bg-white px-1 text-gray-500"
                     >
                       Email
@@ -830,8 +832,8 @@ export default function SignInPage() {
                       className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900 peer"
                       required
                     />
-                    <label 
-                      htmlFor="password" 
+                    <label
+                      htmlFor="password"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       Password
@@ -927,15 +929,14 @@ export default function SignInPage() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       onBlur={handleFirstNameBlur}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
-                        firstNameTouched && firstNameError
-                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
-                      }`}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${firstNameTouched && firstNameError
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                        }`}
                       required
                     />
-                    <label 
-                      htmlFor="firstName" 
+                    <label
+                      htmlFor="firstName"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       First Name
@@ -955,15 +956,14 @@ export default function SignInPage() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       onBlur={handleLastNameBlur}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
-                        lastNameTouched && lastNameError
-                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
-                      }`}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${lastNameTouched && lastNameError
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                        }`}
                       required
                     />
-                    <label 
-                      htmlFor="lastName" 
+                    <label
+                      htmlFor="lastName"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       Last Name
@@ -983,15 +983,14 @@ export default function SignInPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onBlur={handleEmailBlur}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
-                        emailTouched && emailError
-                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
-                      }`}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${emailTouched && emailError
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                        }`}
                       required
                     />
-                    <label 
-                      htmlFor="signupEmail" 
+                    <label
+                      htmlFor="signupEmail"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       Email Address
@@ -1011,15 +1010,14 @@ export default function SignInPage() {
                       value={signUpPassword}
                       onChange={(e) => setSignUpPassword(e.target.value)}
                       onBlur={handlePasswordBlur}
-                      className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${
-                        passwordTouched && !isSignUpPasswordValid
-                          ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:ring-red-500 focus:border-red-500"
-                      }`}
+                      className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 outline-none transition-all text-gray-900 peer ${passwordTouched && !isSignUpPasswordValid
+                        ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 focus:ring-red-500 focus:border-red-500"
+                        }`}
                       required
                     />
-                    <label 
-                      htmlFor="signupPassword" 
+                    <label
+                      htmlFor="signupPassword"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
                       Password
