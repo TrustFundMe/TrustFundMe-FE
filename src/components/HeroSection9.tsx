@@ -20,6 +20,12 @@ const HeroSection9 = () => {
         className: 'bg-[#F84D43] hover:bg-[#1A685B] text-white border-none shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',
       },
       {
+        text: 'View Communication',
+        onClick: () => window.location.href = '/post',
+        variant: 'outline' as const,
+        className: 'border-2 border-[#1A685B] text-[#1A685B] hover:bg-[#1A685B] hover:text-white shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',
+      },
+      {
         text: 'Start a Campaign',
         onClick: () => window.location.href = '/causes',
         variant: 'outline' as const,

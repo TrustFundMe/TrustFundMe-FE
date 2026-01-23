@@ -1,257 +1,74 @@
-"use client";
+'use client';
 
-import DanboxLayout from "@/layout/DanboxLayout";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { motion } from "framer-motion";
-import { Wallet, Calendar, Heart, Users } from "lucide-react";
-import PageBanner from "@/components/PageBanner";
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import DanboxLayout from '@/layout/DanboxLayout';
+import { Wallet, TrendingUp, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ImpactPage() {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/sign-in");
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Mock donations data
-  const donations: any[] = [];
-  
-  // Calculate total impact
-  const totalImpact = donations.reduce((sum, donation) => sum + donation.amount, 0);
-  const fundraisersSupported = new Set(donations.map(d => d.campaignId)).size;
-  const peopleInspired = 0; // Mock data
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   return (
-    <DanboxLayout header={2} footer={2}>
-      <PageBanner pageName="Your Impact" />
-      <section className="causes-section section-padding">
-        <div className="container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Total Impact Section */}
-            <div className="row mb-5">
-              <div className="col-12">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center mb-5"
-                >
-                  <h1 className="display-4 fw-bold mb-3" style={{ color: "#ff5e14" }}>
-                    {formatCurrency(totalImpact)}
-                  </h1>
-                  <p className="text-muted fs-5">
-                    Your total impact from donating, organizing and sharing
-                  </p>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="row g-4 mb-5">
-              <div className="col-md-6">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="card border-0 shadow-sm h-100"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-4 d-flex align-items-center gap-3">
-                    <div
-                      className="rounded-circle d-flex align-items-center justify-content-center"
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        backgroundColor: "#fff5f0",
-                      }}
-                    >
-                      <Heart size={30} style={{ color: "#ff5e14" }} />
-                    </div>
-                    <div>
-                      <h3 className="mb-0 fw-bold" style={{ color: "#ff5e14" }}>
-                        {fundraisersSupported}
-                      </h3>
-                      <p className="text-muted mb-0">Fundraisers supported</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-
-              <div className="col-md-6">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="card border-0 shadow-sm h-100"
-                  style={{ borderRadius: "12px" }}
-                >
-                  <div className="card-body p-4 d-flex align-items-center gap-3">
-                    <div
-                      className="rounded-circle d-flex align-items-center justify-content-center"
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        backgroundColor: "#fff5f0",
-                      }}
-                    >
-                      <Users size={30} style={{ color: "#ff5e14" }} />
-                    </div>
-                    <div>
-                      <h3 className="mb-0 fw-bold" style={{ color: "#ff5e14" }}>
-                        {peopleInspired}
-                      </h3>
-                      <p className="text-muted mb-0">People you inspired to help</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Call to Action */}
-            {totalImpact === 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="card border-0 mb-5"
-                style={{
-                  backgroundColor: "#ff5e14",
-                  borderRadius: "12px",
-                  color: "white",
-                }}
+    <ProtectedRoute requireVerified={true}>
+      <DanboxLayout header={2} footer={2}>
+        <div className="min-h-screen bg-gray-50 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Header */}
+            <div className="mb-8">
+              <Link
+                href="/account/profile"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
               >
-                <div className="card-body p-5 text-center">
-                  <h4 className="fw-bold mb-3">Start seeing your impact</h4>
-                  <p className="mb-4">
-                    When you donate to and share fundraisers, you can view the total
-                    impact above.
-                  </p>
-                  <a
-                    href="/causes"
-                    className="btn btn-light px-4 py-2"
-                    style={{ borderRadius: "8px" }}
-                  >
-                    Find a fundraiser &gt;
-                  </a>
-                </div>
-              </motion.div>
-            )}
+                <ArrowLeft className="w-4 h-4" />
+                Back to Profile
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Your Impact</h1>
+                <p className="mt-2 text-gray-600">Track your contributions and the difference you've made</p>
+              </div>
+            </div>
 
-            {/* Donations List */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <h3 className="fw-bold mb-4">Your Donations</h3>
+            {/* Impact Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium text-gray-600">Total Donated</h3>
+                  <Wallet className="w-5 h-5 text-orange-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">$0.00</p>
+              </div>
               
-              {donations.length === 0 ? (
-                <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-5 text-center">
-                    <div
-                      className="rounded-circle d-inline-flex align-items-center justify-content-center mb-4"
-                      style={{
-                        width: "80px",
-                        height: "80px",
-                        backgroundColor: "#fff5f0",
-                        margin: "0 auto",
-                      }}
-                    >
-                      <Wallet size={40} style={{ color: "#ff5e14" }} />
-                    </div>
-                    <h4 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                      No donations yet
-                    </h4>
-                    <p className="text-muted mb-0">
-                      Your donation history will appear here once you start contributing.
-                    </p>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium text-gray-600">Campaigns Supported</h3>
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-medium text-gray-600">This Month</h3>
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="text-2xl font-bold text-gray-900">$0.00</p>
+              </div>
+            </div>
+
+            {/* Impact Details */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Donation History</h2>
+              <div className="text-center py-12">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Wallet className="w-8 h-8 text-gray-400" />
                   </div>
                 </div>
-              ) : (
-                <div className="row g-4">
-                  {donations.map((donation, index) => (
-                    <motion.div
-                      key={donation.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                      className="col-12"
-                    >
-                      <div
-                        className="card border-0 shadow-sm"
-                        style={{ borderRadius: "12px" }}
-                      >
-                        <div className="card-body p-4">
-                          <div className="d-flex justify-content-between align-items-start">
-                            <div className="flex-grow-1">
-                              <div className="d-flex align-items-center gap-3 mb-2">
-                                <div
-                                  className="rounded-circle d-flex align-items-center justify-content-center"
-                                  style={{
-                                    width: "50px",
-                                    height: "50px",
-                                    backgroundColor: "#fff5f0",
-                                  }}
-                                >
-                                  <Heart size={24} style={{ color: "#ff5e14" }} />
-                                </div>
-                                <div>
-                                  <h5 className="fw-bold mb-1">{donation.campaignName}</h5>
-                                  <p className="text-muted small mb-0">
-                                    <Calendar size={14} className="d-inline me-1" />
-                                    {formatDate(donation.date)}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-end">
-                              <h4 className="fw-bold mb-0" style={{ color: "#ff5e14" }}>
-                                {formatCurrency(donation.amount)}
-                              </h4>
-                              <p className="text-muted small mb-0">
-                                {donation.anonymous ? "Anonymous" : "Public"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No donations yet</h3>
+                <p className="text-gray-600">Start supporting campaigns to see your impact here</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
-    </DanboxLayout>
+      </DanboxLayout>
+    </ProtectedRoute>
   );
 }

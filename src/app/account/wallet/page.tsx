@@ -1,169 +1,73 @@
-"use client";
+'use client';
 
-import DanboxLayout from "@/layout/DanboxLayout";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { motion } from "framer-motion";
-import { Wallet as WalletIcon, CreditCard, TrendingUp, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import DanboxLayout from '@/layout/DanboxLayout';
+import { Wallet, ArrowLeft, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 
 export default function WalletPage() {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/sign-in");
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  const balance = 0;
-  const totalSpent = 0;
-  const thisMonth = 0;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   return (
-    <DanboxLayout header={2} footer={2}>
-      <section className="section-padding" style={{ minHeight: "80vh" }}>
-        <div className="container">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Link
-              href="/account/profile"
-              className="d-inline-flex align-items-center gap-2 text-muted text-decoration-none mb-4"
-            >
-              <ArrowLeft size={18} />
-              Back to Profile
-            </Link>
+    <ProtectedRoute requireVerified={true}>
+      <DanboxLayout header={2} footer={2}>
+        <div className="min-h-screen bg-gray-50 py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Header */}
+            <div className="mb-8">
+              <Link
+                href="/account/profile"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Profile
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Wallet</h1>
+                <p className="mt-2 text-gray-600">Manage your wallet balance and transactions</p>
+              </div>
+            </div>
 
-            <h1 className="fw-bold mb-5">Wallet</h1>
-
-            {/* Wallet Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="card border-0 shadow-sm mb-4"
-              style={{
-                borderRadius: "16px",
-                background: "linear-gradient(135deg, #ff5e14 0%, #e64a0a 100%)",
-                color: "white",
-                overflow: "hidden",
-                position: "relative",
-              }}
-            >
-              {/* Decorative circles */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-50px",
-                  right: "-50px",
-                  width: "200px",
-                  height: "200px",
-                  borderRadius: "50%",
-                  background: "rgba(255, 255, 255, 0.1)",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "-30px",
-                  left: "-30px",
-                  width: "150px",
-                  height: "150px",
-                  borderRadius: "50%",
-                  background: "rgba(255, 255, 255, 0.05)",
-                }}
-              />
-
-              <div className="card-body p-4" style={{ position: "relative", zIndex: 1 }}>
-                <div className="d-flex justify-content-between align-items-start mb-4">
+            {/* Wallet Balance Card */}
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-8 mb-8 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-6">
                   <div>
-                    <p className="text-white-50 small mb-1">Wallet Balance</p>
-                    <h2 className="fw-bold mb-0" style={{ fontSize: "2rem" }}>
-                      {formatCurrency(balance)}
-                    </h2>
+                    <p className="text-orange-100 text-sm font-medium mb-2">Wallet Balance</p>
+                    <p className="text-4xl font-bold text-white">$0.00</p>
                   </div>
-                  <div
-                    className="rounded-circle d-flex align-items-center justify-content-center"
-                    style={{
-                      width: "60px",
-                      height: "60px",
-                      backgroundColor: "rgba(255, 255, 255, 0.2)",
-                    }}
-                  >
-                    <WalletIcon size={30} />
+                  <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center">
+                    <Wallet className="w-12 h-12 text-white opacity-50" />
                   </div>
                 </div>
-
-                <div className="d-flex gap-3 mt-4">
-                  <div className="flex-grow-1">
-                    <div
-                      className="card border-0 p-3"
-                      style={{
-                        backgroundColor: "rgba(255, 255, 255, 0.15)",
-                        borderRadius: "12px",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <CreditCard size={18} />
-                        <span className="small">Total Spent</span>
-                      </div>
-                      <h5 className="mb-0 fw-bold">{formatCurrency(totalSpent)}</h5>
+                
+                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-orange-400/30">
+                  <div>
+                    <div className="flex items-center gap-2 text-orange-100 text-sm mb-1">
+                      <Wallet className="w-4 h-4" />
+                      <span>Total Spent</span>
                     </div>
+                    <p className="text-xl font-semibold text-white">$0.00</p>
                   </div>
-                  <div className="flex-grow-1">
-                    <div
-                      className="card border-0 p-3"
-                      style={{
-                        backgroundColor: "rgba(255, 255, 255, 0.15)",
-                        borderRadius: "12px",
-                        backdropFilter: "blur(10px)",
-                      }}
-                    >
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <TrendingUp size={18} />
-                        <span className="small">This Month</span>
-                      </div>
-                      <h5 className="mb-0 fw-bold">{formatCurrency(thisMonth)}</h5>
+                  <div>
+                    <div className="flex items-center gap-2 text-orange-100 text-sm mb-1">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>This Month</span>
                     </div>
+                    <p className="text-xl font-semibold text-white">$0.00</p>
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Transaction History */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <h3 className="fw-bold mb-4">Transaction History</h3>
-              <div className="card border-0 shadow-sm" style={{ borderRadius: "12px" }}>
-                <div className="card-body p-5 text-center">
-                  <p className="text-muted mb-0">No transactions yet</p>
-                </div>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Transaction History</h2>
+              <div className="text-center py-12">
+                <p className="text-gray-500">No transactions yet</p>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
-      </section>
-    </DanboxLayout>
+      </DanboxLayout>
+    </ProtectedRoute>
   );
 }
