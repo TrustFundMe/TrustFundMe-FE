@@ -1,251 +1,384 @@
-"use client";
+'use client';
 
-import DanboxLayout from "@/layout/DanboxLayout";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Edit2, Info } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContextProxy';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { supabase } from '@/lib/supabaseClient';
+import DanboxLayout from '@/layout/DanboxLayout';
+import { User, Mail, Phone, Calendar, Upload, Save, X } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { isAuthenticated, user, updateUser } = useAuth();
-  const router = useRouter();
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
+  const { user, beUser, updateUser, updateBEUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/sign-in");
-    }
-  }, [isAuthenticated, router]);
+  // Form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [birthday, setBirthday] = useState('');
 
+  // Initialize form with user data from BE
   useEffect(() => {
     if (user) {
-      setEditedName(`${user.firstName} ${user.lastName}`);
+      // Parse fullName from BE user
+      const nameParts = user.fullName?.split(' ') || [];
+      setFirstName(nameParts[0] || '');
+      setLastName(nameParts.slice(1).join(' ') || '');
+      setEmail(user.email || '');
+      setPhone(user.phoneNumber || '');
+      setAvatarPreview(user.avatarUrl || null);
     }
   }, [user]);
 
-  if (!isAuthenticated || !user) {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Supabase Storage
+      if (!user) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload file
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+
+      // Update local state immediately
+      updateUser({
+        avatarUrl,
+      });
+
+      // Sync with BE
+      if (user?.id) {
+        try {
+          const response = await fetch('/api/users/profile/avatar', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ userId: user.id, avatarUrl }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Update user state
+            updateUser({ avatarUrl: data.avatarUrl || avatarUrl });
+          }
+        } catch (err) {
+          console.error('Failed to sync avatar with BE:', err);
+          // Don't fail the whole operation if BE sync fails
+        }
+      }
+
+      setSuccess('Avatar updated successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload avatar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Update local state immediately (BE sync happens below)
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      updateUser({
+        fullName,
+        phoneNumber: phone.trim() || undefined,
+      });
+
+      // Sync with BE
+      if (user?.id) {
+        try {
+          const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+          const response = await fetch('/api/users/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              userId: user.id,
+              fullName: fullName || undefined,
+              phoneNumber: phone.trim() || undefined,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            // Update user state
+            updateUser({
+              fullName: data.fullName || fullName,
+              phoneNumber: data.phoneNumber || phone.trim() || undefined,
+            });
+          }
+        } catch (err) {
+          console.error('Failed to sync with BE:', err);
+          // Don't fail the whole operation if BE sync fails
+        }
+      }
+
+      setSuccess('Profile updated successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!user) {
     return null;
   }
 
-  const getInitials = () => {
-    return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
-  };
-
-  const getAvatarUrl = () => {
-    if (user.avatar) return user.avatar;
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      `${user.firstName} ${user.lastName}`
-    )}&background=1a685b&color=fff&size=200`;
-  };
-
-  const maskPhone = (phone?: string) => {
-    if (!phone) return "*******0703";
-    const lastThree = phone.slice(-3);
-    return `*******${lastThree}`;
-  };
-
-  const maskPassword = () => {
-    return "••••••••••••";
-  };
-
-  const handleSaveName = () => {
-    const names = editedName.trim().split(" ");
-    const firstName = names[0] || "";
-    const lastName = names.slice(1).join(" ") || "";
-    updateUser({ firstName, lastName });
-    setIsEditingName(false);
-  };
-
   return (
-    <DanboxLayout header={2} footer={2}>
-      <section className="section-padding" style={{ minHeight: "80vh" }}>
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h1 className="fw-bold mb-5">Profile</h1>
-
-                {/* Avatar Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-center gap-4">
-                      <div
-                        className="rounded-circle overflow-hidden"
-                        style={{
-                          width: "80px",
-                          height: "80px",
-                          border: "3px solid #1a685b",
-                        }}
-                      >
-                        {user.avatar ? (
-                          <img
-                            src={getAvatarUrl()}
-                            alt={`${user.firstName} ${user.lastName}`}
-                            className="w-100 h-100"
-                            style={{ objectFit: "cover" }}
-                          />
-                        ) : (
-                          <div
-                            className="w-100 h-100 d-flex align-items-center justify-content-center"
-                            style={{ backgroundColor: "#1a685b", color: "white" }}
-                          >
-                            <span className="fw-bold fs-4">{getInitials()}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-grow-1">
-                        <h4 className="mb-1 fw-bold">
-                          {user.firstName} {user.lastName}
-                        </h4>
-                        <p className="text-muted mb-0">{user.email}</p>
-                      </div>
-                    </div>
-                  </div>
+    <ProtectedRoute requireVerified={true}>
+      <DanboxLayout header={2} footer={2}>
+        <section className="about-section section-padding">
+          <div className="container">
+            <div className="row">
+              <div className="col-12">
+                <div className="section-title mb-5">
+                  <h2>My Profile</h2>
+                  <p>Manage your personal information and account settings</p>
                 </div>
 
-                {/* Name Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start justify-content-between mb-3">
-                      <div>
-                        <label className="text-muted small d-block mb-2 fw-semibold">
-                          Name
-                        </label>
-                        {isEditingName ? (
-                          <div className="d-flex gap-2 align-items-center">
-                            <input
-                              type="text"
-                              value={editedName}
-                              onChange={(e) => setEditedName(e.target.value)}
-                              className="form-control"
-                              style={{ maxWidth: "300px" }}
-                              autoFocus
+                {error && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                {success && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800">{success}</p>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  <form onSubmit={handleSubmit}>
+                    {/* Avatar Section */}
+                    <div className="mb-8">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Profile Picture
+                      </label>
+                      <div className="flex items-center gap-6">
+                        <div className="relative">
+                          {avatarPreview ? (
+                            <img
+                              src={avatarPreview}
+                              alt="Avatar"
+                              className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
                             />
-                            <button
-                              onClick={handleSaveName}
-                              className="btn btn-primary btn-sm"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={() => {
-                                setIsEditingName(false);
-                                setEditedName(`${user.firstName} ${user.lastName}`);
-                              }}
-                              className="btn btn-outline-secondary btn-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="mb-0 fw-semibold">
-                            {user.firstName} {user.lastName}
-                          </p>
-                        )}
-                      </div>
-                      {!isEditingName && (
-                        <button
-                          onClick={() => setIsEditingName(true)}
-                          className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2"
-                        >
-                          <Edit2 size={16} />
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                    <hr className="my-3" />
-                    <p className="text-muted small mb-0">
-                      Your phone number is linked to your account for security. To
-                      change your number please visit our help center.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Phone Number Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start justify-content-between mb-3">
-                      <div>
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                          <label className="text-muted small fw-semibold mb-0">
-                            Verification phone number
-                          </label>
-                          <Info size={16} className="text-muted" />
+                          ) : (
+                            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                              <User className="w-12 h-12 text-gray-400" />
+                            </div>
+                          )}
                         </div>
-                        <p className="mb-0 fw-semibold">{maskPhone(user.phone)}</p>
+                        <div>
+                          <label
+                            htmlFor="avatar-upload"
+                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            {loading ? 'Uploading...' : 'Upload Avatar'}
+                          </label>
+                          <input
+                            id="avatar-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarChange}
+                            disabled={loading}
+                            className="hidden"
+                          />
+                          <p className="mt-2 text-xs text-gray-500">
+                            JPG, PNG or GIF. Max size 5MB
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Email Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start justify-content-between mb-3">
+                    {/* Name Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
-                        <label className="text-muted small d-block mb-2 fw-semibold">
-                          Email address
+                        <label
+                          htmlFor="firstName"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          <User className="w-4 h-4 inline mr-2" />
+                          First Name
                         </label>
-                        <p className="mb-0 fw-semibold">{user.email}</p>
+                        <input
+                          id="firstName"
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="lastName"
+                          className="block text-sm font-medium text-gray-700 mb-2"
+                        >
+                          Last Name
+                        </label>
+                        <input
+                          id="lastName"
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                          required
+                        />
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Birthday Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start justify-content-between mb-3">
-                      <div>
-                        <label className="text-muted small d-block mb-2 fw-semibold">
-                          Birthday
-                        </label>
-                        <p className="mb-0 fw-semibold">
-                          {user.birthday
-                            ? new Date(user.birthday).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })
-                            : "Not set"}
-                        </p>
-                      </div>
+                    {/* Email Field (Read-only) */}
+                    <div className="mb-6">
+                      <label
+                        htmlFor="email"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <Mail className="w-4 h-4 inline mr-2" />
+                        Email Address
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        disabled
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Email cannot be changed
+                      </p>
                     </div>
-                  </div>
-                </div>
 
-                {/* Password Section */}
-                <div className="card border-0 shadow-sm mb-4" style={{ borderRadius: "12px" }}>
-                  <div className="card-body p-4">
-                    <div className="d-flex align-items-start justify-content-between mb-3">
-                      <div>
-                        <label className="text-muted small d-block mb-2 fw-semibold">
-                          Password
-                        </label>
-                        <p className="mb-0 fw-semibold">{maskPassword()}</p>
-                      </div>
+                    {/* Phone Field */}
+                    <div className="mb-6">
+                      <label
+                        htmlFor="phone"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <Phone className="w-4 h-4 inline mr-2" />
+                        Phone Number
+                      </label>
+                      <input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                        placeholder="+84 123 456 789"
+                      />
                     </div>
-                    <hr className="my-3" />
-                    <p className="text-muted small mb-0">
-                      To edit your password, please visit our{" "}
-                      <a href="/forgot-password" className="text-primary">
-                        forgot password page
-                      </a>
-                      .
-                    </p>
-                  </div>
+
+                    {/* Birthday Field */}
+                    <div className="mb-6">
+                      <label
+                        htmlFor="birthday"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        Date of Birth
+                      </label>
+                      <input
+                        id="birthday"
+                        type="date"
+                        value={birthday}
+                        onChange={(e) => setBirthday(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="flex justify-end gap-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nameParts = user.fullName?.split(' ') || [];
+                          setFirstName(nameParts[0] || '');
+                          setLastName(nameParts.slice(1).join(' ') || '');
+                          setPhone(user.phoneNumber || '');
+                          setError('');
+                          setSuccess('');
+                        }}
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <X className="w-4 h-4 inline mr-2" />
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Save className="w-4 h-4 inline mr-2" />
+                        {saving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </DanboxLayout>
+        </section>
+      </DanboxLayout>
+    </ProtectedRoute>
   );
 }

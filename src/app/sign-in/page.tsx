@@ -247,21 +247,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContextProxy";
+import { authService } from "@/services/authService";
 
 // ==================================================================================
 // TYPES
 // ==================================================================================
 
 type Step = "email-entry" | "password-entry" | "sign-up" | "forgot-password";
-
-type FakeUserDb = {
-  [email: string]: {
-    firstName: string;
-    lastName: string;
-    password: string; // NOTE: In real backend, this would be hashed!
-  };
-};
 
 type PasswordValidation = {
   minLength: boolean;
@@ -315,7 +308,7 @@ const isPasswordValid = (validation: PasswordValidation): boolean => {
 
 export default function SignInPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, signUp, signInWithGoogle, resendVerificationEmail } = useAuth();
 
   // ==================================================================================
   // STATE MANAGEMENT
@@ -347,25 +340,11 @@ export default function SignInPage() {
   const [existingUserName, setExistingUserName] = useState<string>("");
 
   // ==================================================================================
-  // FAKE DATABASE (Frontend-only simulation)
+  // EMAIL CHECK (Using Supabase)
   // ==================================================================================
-  // BACKEND TODO: Replace with real API calls to check email existence
-  // Example: const response = await fetch('/api/auth/check-email', { method: 'POST', body: JSON.stringify({ email }) })
-
-  const fakeUsers: FakeUserDb = useMemo(() => {
-    return {
-      "demo@trustfundme.com": {
-        firstName: "Demo",
-        lastName: "User",
-        password: "Demo@1234567", // NOTE: In real backend, this would be bcrypt hash!
-      },
-      "john@example.com": {
-        firstName: "John",
-        lastName: "Doe",
-        password: "SecurePass123!",
-      },
-    };
-  }, []);
+  // Check if email exists by attempting to sign in with a dummy password
+  // This is a workaround - Supabase doesn't have a direct "check email" endpoint
+  // In production, you might want to create a custom endpoint for this
 
   // ==================================================================================
   // PASSWORD VALIDATION (Real-time)
@@ -415,12 +394,8 @@ export default function SignInPage() {
 
   /**
    * Handle email continue button click
-   * Checks if email exists in database
-   * 
-   * BACKEND TODO: Replace with API call
-   * POST /api/auth/check-email
-   * Request: { email: string }
-   * Response: { exists: boolean, firstName?: string, lastName?: string }
+   * Checks if email exists in Supabase by attempting password reset
+   * (Supabase doesn't expose email existence directly for security)
    */
   const handleEmailContinue = async (): Promise<void> => {
     setError("");
@@ -440,56 +415,55 @@ export default function SignInPage() {
 
     setLoading(true);
 
-    // BACKEND TODO: Replace this with actual API call
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/check-email', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ email: normalizeEmail(email) })
-    //   });
-    //   const data = await response.json();
-    //   if (data.exists) {
-    //     setExistingUserName(`${data.firstName} ${data.lastName}`);
-    //     setStep("password-entry");
-    //   } else {
-    //     setStep("sign-up");
-    //   }
-    // } catch (error) {
-    //   setError("Something went wrong. Please try again.");
-    // }
-
-    // Frontend simulation
-    setTimeout(() => {
+    try {
       const normalized = normalizeEmail(email);
-      const user = fakeUsers[normalized];
-
-      if (user) {
+      
+      // Check if email exists in system
+      const checkResult = await authService.checkEmail(normalized);
+      
+      // Handle rate limiting from check email
+      if (checkResult.error) {
+        const errorMsg = checkResult.error.toLowerCase();
+        if (errorMsg.includes('for security purposes') || 
+            errorMsg.includes('rate limit') ||
+            errorMsg.includes('too many requests') ||
+            (errorMsg.includes('after') && errorMsg.includes('seconds'))) {
+          const waitMatch = checkResult.error.match(/(\d+)\s*seconds?/i);
+          const waitTime = waitMatch ? waitMatch[1] : '60';
+          setError(`⚠️ Too many requests. Please wait ${waitTime} seconds before checking email again.`);
+        } else {
+          setError(checkResult.error);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      // Debug log
+      console.log('Check email result:', checkResult);
+      
+      if (checkResult.exists === true) {
         // Email exists - show password entry
-        setExistingUserName(`${user.firstName} ${user.lastName}`);
+        // BE returns fullName, not firstName/lastName
+        const displayName = (checkResult as any).fullName || 
+                           (checkResult.firstName && checkResult.lastName
+                             ? `${checkResult.firstName} ${checkResult.lastName}`
+                             : '');
+        setExistingUserName(displayName);
         setStep("password-entry");
       } else {
         // Email doesn't exist - show sign up form
         setStep("sign-up");
       }
-
+    } catch (error: any) {
+      console.error('Check email error:', error);
+      setError(error?.message || "Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   /**
-   * Handle sign in with password
-   * 
-   * BACKEND TODO: Replace with API call
-   * POST /api/auth/login
-   * Request: { email: string, password: string }
-   * Response: { success: boolean, accessToken: string, refreshToken: string, user: {...} }
-   * 
-   * Backend should:
-   * 1. Find user by email
-   * 2. Compare password: await bcrypt.compare(password, user.hashedPassword)
-   * 3. If valid: Generate JWT tokens, set httpOnly cookies
-   * 4. Return user info and tokens
+   * Handle sign in with password - calls BE API directly
    */
   const handleSignIn = async (): Promise<void> => {
     setError("");
@@ -502,69 +476,25 @@ export default function SignInPage() {
 
     setLoading(true);
 
-    // BACKEND TODO: Replace with actual API call
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/login', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     credentials: 'include', // Important for cookies
-    //     body: JSON.stringify({ email: normalizeEmail(email), password })
-    //   });
-    //   
-    //   if (response.ok) {
-    //     const data = await response.json();
-    //     // Tokens are automatically stored in httpOnly cookies by backend
-    //     router.push('/dashboard');
-    //   } else {
-    //     const error = await response.json();
-    //     setError(error.message || 'Invalid email or password');
-    //   }
-    // } catch (error) {
-    //   setError("Something went wrong. Please try again.");
-    // }
-
-    // Frontend simulation
-    setTimeout(() => {
-      const normalized = normalizeEmail(email);
-      const user = fakeUsers[normalized];
-
-      if (user && user.password === password) {
-        // Success - login user and redirect to homepage
-        login({
-          id: `user_${Date.now()}`,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: normalized,
-          phone: "+84123456703",
-          birthday: "1990-01-01",
-        });
-        router.push("/");
-      } else {
-        setError("Invalid password. Please try again.");
+    try {
+      const { error } = await login(normalizeEmail(email), password);
+      
+      if (error) {
+        setError(error.message || "Invalid email or password. Please try again.");
         setLoading(false);
+      } else {
+        // Success - redirect to homepage
+        router.push("/");
       }
-    }, 500);
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   /**
-   * Handle user registration
-   * 
-   * BACKEND TODO: Replace with API call
-   * POST /api/auth/register
-   * Request: { email: string, password: string, firstName: string, lastName: string }
-   * Response: { success: boolean, accessToken: string, refreshToken: string, user: {...} }
-   * 
-   * Backend should:
-   * 1. Validate all inputs (email format, password strength, required fields)
-   * 2. Check if email already exists
-   * 3. Hash password: await bcrypt.hash(password, 12)
-   * 4. Create user in database
-   * 5. Generate JWT tokens (access + refresh)
-   * 6. Store refresh token in database
-   * 7. Set httpOnly cookies
-   * 8. Send verification email (optional but recommended)
-   * 9. Return user info and tokens
+   * Handle user registration - calls BE API directly
+   * User is automatically logged in after successful registration
    */
   const handleSignUp = async (): Promise<void> => {
     setError("");
@@ -584,65 +514,75 @@ export default function SignInPage() {
 
     setLoading(true);
 
-    // BACKEND TODO: Replace with actual API call
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/register', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     credentials: 'include', // Important for cookies
-    //     body: JSON.stringify({
-    //       email: normalizeEmail(email),
-    //       password: signUpPassword,
-    //       firstName: firstName.trim(),
-    //       lastName: lastName.trim()
-    //     })
-    //   });
-    //   
-    //   if (response.ok) {
-    //     const data = await response.json();
-    //     // Show success message if email verification is required
-    //     // setInfo("Account created! Please check your email to verify your account.");
-    //     // Or redirect directly if no verification needed
-    //     router.push('/dashboard');
-    //   } else {
-    //     const error = await response.json();
-    //     setError(error.message || 'Registration failed');
-    //   }
-    // } catch (error) {
-    //   setError("Something went wrong. Please try again.");
-    // }
-
-    // Frontend simulation
-    setTimeout(() => {
-      // Success - create user, login and redirect to homepage
-      const normalized = normalizeEmail(email);
-      login({
-        id: `user_${Date.now()}`,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: normalized,
-        phone: "+84123456703",
-        birthday: "1990-01-01",
-      });
-      router.push("/");
-    }, 500);
+    try {
+      const result = await signUp(
+        normalizeEmail(email),
+        signUpPassword,
+        firstName.trim(),
+        lastName.trim()
+      );
+      
+      if (result.error) {
+        // Handle different error cases
+        // result.error could be { message: string } or empty object {}
+        let errorMsg = '';
+        
+        if (result.error && typeof result.error === 'object') {
+          errorMsg = result.error.message || JSON.stringify(result.error) || "Registration failed. Please try again.";
+        } else if (typeof result.error === 'string') {
+          errorMsg = result.error;
+        } else {
+          errorMsg = "Registration failed. Please try again.";
+        }
+        
+        console.error('Signup error:', { error: result.error, errorMsg });
+        
+        // If error message is empty or just "{}", show generic message
+        if (!errorMsg || errorMsg === '{}' || errorMsg.trim() === '') {
+          errorMsg = "Registration failed. Please check your information and try again.";
+        }
+        
+        // Handle rate limiting
+        if (errorMsg.includes('For security purposes') || 
+            errorMsg.includes('rate limit') ||
+            errorMsg.includes('too many requests') ||
+            errorMsg.includes('after') && errorMsg.includes('seconds')) {
+          // Extract wait time if available
+          const waitMatch = errorMsg.match(/(\d+)\s*seconds?/i);
+          const waitTime = waitMatch ? waitMatch[1] : '60';
+          setError(`Too many requests. Please wait ${waitTime} seconds before trying again.`);
+        } else if (errorMsg.includes('User already registered') || 
+            errorMsg.includes('already registered') ||
+            errorMsg.includes('already exists') ||
+            errorMsg.includes('Email rate limit exceeded') ||
+            errorMsg.includes('user already exists')) {
+          setError("This email is already registered. Please sign in instead.");
+          setStep("password-entry");
+        } else if (errorMsg.includes('Password') || errorMsg.includes('password')) {
+          setError(`Password error: ${errorMsg}. Please ensure your password meets all requirements.`);
+        } else if (errorMsg.includes('Email') || errorMsg.includes('email')) {
+          setError(`Email error: ${errorMsg}`);
+        } else {
+          setError(errorMsg);
+        }
+        setLoading(false);
+      } else {
+        // Success - User registered and logged in automatically
+        setInfo("Account created successfully! Please verify your email with OTP code.");
+        // Redirect to OTP verification page
+        setTimeout(() => {
+          router.push(`/auth/verify-email?email=${encodeURIComponent(normalizeEmail(email))}`);
+        }, 1500);
+      }
+    } catch (error: any) {
+      console.error('Signup exception:', error);
+      setError(error?.message || "Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   /**
-   * Handle forgot password
-   * 
-   * BACKEND TODO: Replace with API call
-   * POST /api/auth/forgot-password
-   * Request: { email: string }
-   * Response: { success: boolean, message: string }
-   * 
-   * Backend should:
-   * 1. Check if email exists
-   * 2. Generate secure reset token (crypto.randomBytes(32).toString('hex'))
-   * 3. Store token in database with expiration (15-30 minutes)
-   * 4. Send email with reset link: https://trustfundme.com/reset-password?token=xyz
-   * 5. Return generic success message (don't reveal if email exists for security)
+   * Handle forgot password - TODO: Implement BE endpoint
    */
   const handleForgotPassword = async (): Promise<void> => {
     setError("");
@@ -655,84 +595,38 @@ export default function SignInPage() {
 
     setLoading(true);
 
-    // BACKEND TODO: Replace with actual API call
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/forgot-password', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ email: normalizeEmail(email) })
-    //   });
-    //   
-    //   const data = await response.json();
-    //   setInfo(data.message);
-    // } catch (error) {
-    //   setError("Something went wrong. Please try again.");
-    // }
-
-    // Frontend simulation
-    setTimeout(() => {
-      setInfo("If this email exists in our system, you will receive a password reset link shortly.");
+    try {
+      const result = await authService.forgotPassword(normalizeEmail(email));
+      
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setInfo(result.message || "If this email exists in our system, you will receive a password reset link shortly.");
+      }
       setLoading(false);
-    }, 500);
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   /**
-   * Handle Google OAuth login
-   * 
-   * BACKEND TODO: Implement Google OAuth flow
-   * 1. Frontend: Redirect to Google OAuth consent screen
-   * 2. Google: User authorizes, redirects back with authorization code
-   * 3. Frontend: Send code to backend
-   * 4. Backend: Exchange code for Google ID token
-   * 5. Backend: Verify ID token with Google
-   * 6. Backend: Get user info from token (email, name, etc.)
-   * 7. Backend: Check if user exists by email
-   *    - If exists: Login user, generate tokens
-   *    - If not exists: Create new user, generate tokens
-   * 8. Backend: Set httpOnly cookies and return user info
-   * 9. Frontend: Redirect to dashboard
-   * 
-   * Libraries to use:
-   * - Frontend: @react-oauth/google or next-auth
-   * - Backend: google-auth-library
+   * Handle Google OAuth login using Supabase
    */
-  const handleGoogleSignIn = (): void => {
-    // BACKEND TODO: Implement Google OAuth
-    // Example using @react-oauth/google:
-    // import { useGoogleLogin } from '@react-oauth/google';
-    // 
-    // const login = useGoogleLogin({
-    //   onSuccess: async (response) => {
-    //     const result = await fetch('/api/auth/google', {
-    //       method: 'POST',
-    //       headers: { 'Content-Type': 'application/json' },
-    //       credentials: 'include',
-    //       body: JSON.stringify({ idToken: response.credential })
-    //     });
-    //     if (result.ok) {
-    //       router.push('/dashboard');
-    //     }
-    //   }
-    // });
-
-    // Frontend simulation - giả lập Google login
+  const handleGoogleSignIn = async (): Promise<void> => {
     setError("");
     setInfo("");
-    
-    // Giả lập user data từ Google
-    const googleUser = {
-      id: `google_user_${Date.now()}`,
-      firstName: "Google",
-      lastName: "User",
-      email: "google.user@example.com",
-      phone: "+84123456703",
-      birthday: "1990-01-01",
-    };
-    
-    // Login và redirect to homepage
-    login(googleUser);
-    router.push("/");
+
+    try {
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        setError(error.message || "Failed to sign in with Google. Please try again.");
+      }
+      // If successful, user will be redirected by Supabase OAuth flow
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   /**
@@ -996,10 +890,23 @@ export default function SignInPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
                   {loading ? "Signing in..." : "Sign in"}
                 </button>
+
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Don't have an account?
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setStep("sign-up")}
+                    className="text-sm text-primary hover:underline font-medium"
+                  >
+                    Sign up
+                  </button>
+                </div>
               </form>
             )}
 

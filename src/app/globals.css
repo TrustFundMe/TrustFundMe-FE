@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Chelsea+Market&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Chelsea+Market&family=Inter:wght@400;500;600;700&display=swap&subset=latin,vietnamese");
 
 @tailwind base;
 @tailwind components;
@@ -186,7 +186,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
+}
+
+/* Ensure Vietnamese characters render correctly */
+* {
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .mean-expand {

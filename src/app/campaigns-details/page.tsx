@@ -1,7 +1,7 @@
 "use client";
 
 import DanboxLayout from "@/layout/DanboxLayout";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import CampaignDonateCard from "@/components/campaign/CampaignDonateCard";
 import CampaignHeader from "@/components/campaign/CampaignHeader";
@@ -10,18 +10,133 @@ import FollowersRow from "@/components/campaign/FollowersRow";
 import PlansList from "@/components/campaign/PlansList";
 import PostsFeed from "@/components/campaign/PostsFeed";
 import {
-  mockCampaign,
   mockComments,
   mockPlans,
   mockPosts,
 } from "@/components/campaign/mock";
 import type { Campaign, CampaignPost } from "@/components/campaign/types";
+import { useSearchParams } from "next/navigation";
+import { campaignService } from "@/services/campaignService";
+import type { CampaignDto } from "@/types/campaign";
+import { mockCampaign } from "@/components/campaign/mock";
+import { withFallbackImage } from "@/lib/image";
+
+const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
+  return {
+    id: String(dto.id),
+    title: dto.title,
+    category: dto.status ?? "Campaign",
+    description: dto.description ?? "",
+    coverImage: withFallbackImage(dto.coverImage, "/assets/img/campaign/1.jpg"),
+    galleryImages: [withFallbackImage(dto.coverImage, "/assets/img/campaign/1.jpg")],
+    goalAmount: 0,
+    raisedAmount: dto.balance ?? 0,
+    creator: {
+      id: String(dto.fundOwnerId),
+      name: `Fund Owner #${dto.fundOwnerId}`,
+      avatar: "/assets/img/about/01.jpg",
+    },
+    followers: [],
+    liked: false,
+    followed: false,
+    flagged: false,
+    likeCount: 0,
+    followerCount: 0,
+    commentCount: 0,
+  };
+};
 
 const CampaignDetailsPage = () => {
-  const [campaign, setCampaign] = useState<Campaign>(mockCampaign);
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get("id");
+  const campaignId = idParam ? Number(idParam) : NaN;
+
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
+
   const [posts] = useState<CampaignPost[]>(mockPosts);
 
   const comments = useMemo(() => [...mockComments], []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      setError("");
+
+      if (!Number.isFinite(campaignId) || campaignId <= 0) {
+        setError("Invalid campaign id");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const dto = await campaignService.getById(campaignId);
+        if (!mounted) return;
+        setCampaign(mapCampaignDtoToUi(dto));
+      } catch {
+        if (!mounted) return;
+        setError("Failed to load campaign");
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [campaignId]);
+
+  if (loading) {
+    return (
+      <DanboxLayout>
+        <div
+          className="container"
+          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
+        >
+          <div>Loading...</div>
+        </div>
+      </DanboxLayout>
+    );
+  }
+
+  // Backward compatibility: old UI used slug-like ids (e.g. community-kitchens-2)
+  // If a non-numeric id is provided, fall back to mock data so the page still renders.
+  if (!Number.isFinite(campaignId)) {
+    return (
+      <DanboxLayout>
+        <div
+          className="container"
+          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
+        >
+          <div style={{ marginBottom: 12, fontWeight: 700 }}>
+            This campaign id is not numeric, so API fetch is skipped.
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            Please open a campaign from the campaigns list to use the real API id.
+          </div>
+        </div>
+      </DanboxLayout>
+    );
+  }
+
+  if (error || !campaign) {
+    return (
+      <DanboxLayout>
+        <div
+          className="container"
+          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
+        >
+          <div>{error || "Campaign not found"}</div>
+        </div>
+      </DanboxLayout>
+    );
+  }
 
   return (
     <DanboxLayout>
