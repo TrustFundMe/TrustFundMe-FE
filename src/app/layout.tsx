@@ -8,14 +8,18 @@ import "@css/meanmenu.css";
 import "@css/nice-select.css";
 import "@css/main.css";
 import type { Metadata } from "next";
-import { Chelsea_Market, DM_Sans } from "next/font/google";
+import { Chelsea_Market, Inter } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/layout/Preloader";
+// Using Proxy Mode: FE → Next.js API (service_role) → Supabase
+// This allows using service_role key safely (server-side only)
+import { AuthProvider } from "@/contexts/AuthContextProxy";
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const dmSans = Inter({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-dm-sans",
+  display: "swap",
 });
 const chelsea_market = Chelsea_Market({
   subsets: ["latin"],
@@ -37,8 +41,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${chelsea_market.variable} ${dmSans.variable}`}>
-        <Preloader />
-        {children}
+        <AuthProvider>
+          <Preloader />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
