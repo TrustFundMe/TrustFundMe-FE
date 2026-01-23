@@ -13,10 +13,12 @@ import { Team2 } from "@/components/Team";
 import { Testimonial2 } from "@/components/Testimonial";
 import { TestimonialsNew } from "@/components/TestimonialsNew";
 import DanboxLayout from "@/layout/DanboxLayout";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 
 const Home = () => {
   return (
     <DanboxLayout header={2} footer={2}>
+      <EmailVerificationBanner />
       <HeroSection9 />
       <About2 />
       <CounterSection1 />
