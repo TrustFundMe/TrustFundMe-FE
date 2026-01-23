@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Fragment, useState } from "react";
 import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
+import { useAuth } from "@/contexts/AuthContextProxy";
+import WalletButton from "@/components/WalletButton";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -39,9 +41,9 @@ const Logo = ({
       width={220}
       height={67}
       alt="logo-img"
-      style={{ 
-        filter: logo.includes('white') 
-          ? 'brightness(0) invert(1)' 
+      style={{
+        filter: logo.includes('white')
+          ? 'brightness(0) invert(1)'
           : 'none'
       }}
     />
@@ -85,7 +87,7 @@ const Header1 = ({ open }: { open: () => void }) => (
               <Logo className="header-logo-2" logo="black-logo.png" />
             </div>
           </div>
-          <div className="header-right d-flex justify-content-end align-items-center">
+          <div className="header-right d-flex justify-content-end align-items-center gap-3">
             <div className="mean__menu-wrapper">
               <Nav />
             </div>
@@ -95,6 +97,7 @@ const Header1 = ({ open }: { open: () => void }) => (
                 <i className="ps-2 far fa-heart" />
               </Link>
             </div>
+            <AuthButton />
             <div className="header__hamburger d-xl-none my-auto">
               <div className="sidebar__toggle" onClick={open}>
                 <i className="fas fa-bars" />
@@ -146,11 +149,9 @@ const Header2 = ({ open }: { open: () => void }) => (
             <div className="logo">
               <Logo logo="black-logo.png" />
             </div>
-            <div className="header-right d-flex justify-content-end align-items-center" style={{ flex: '0 0 auto' }}>
-              <div className="header-button d-none d-xl-block">
-                <UserDropdown />
-              </div>
-              <div className="header__hamburger d-xl-none my-auto ms-3">
+            <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: '0 0 auto' }}>
+              <AuthButton />
+              <div className="header__hamburger d-xl-none my-auto">
                 <div className="sidebar__toggle" onClick={open}>
                   <i className="fas fa-bars" />
                 </div>
@@ -277,7 +278,7 @@ const Header4 = ({ open }: { open: () => void }) => {
                     <Logo logo="black-logo.png" />
                   </div>
                 </div>
-                <div className="header-right d-flex justify-content-end align-items-center">
+                <div className="header-right d-flex justify-content-end align-items-center gap-3">
                   <div className="mean__menu-wrapper">
                     <Nav />
                   </div>
@@ -294,6 +295,7 @@ const Header4 = ({ open }: { open: () => void }) => {
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
+                  <AuthButton />
                   <div className="header__hamburger d-xl-none my-auto">
                     <div className="sidebar__toggle" onClick={open}>
                       <i className="fas fa-bars" />
@@ -375,86 +377,85 @@ const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
 
 const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
   const { isAuthenticated } = useAuth();
-  
+
   return (
-  <Fragment>
-    <div className="fix-area">
-      <div className={`offcanvas__info ${open ? "info-open" : ""}`}>
-        <div className="offcanvas__wrapper">
-          <div className="offcanvas__content">
-            <div className="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
-              <div className="offcanvas__logo">
-                <Logo logo="black-logo.png" className="" />
+    <Fragment>
+      <div className="fix-area">
+        <div className={`offcanvas__info ${open ? "info-open" : ""}`}>
+          <div className="offcanvas__wrapper">
+            <div className="offcanvas__content">
+              <div className="offcanvas__top mb-5 d-flex justify-content-between align-items-center">
+                <div className="offcanvas__logo">
+                  <Logo logo="black-logo.png" className="" />
+                </div>
+                <div className="offcanvas__close">
+                  <button onClick={close}>
+                    <i className="fas fa-times" />
+                  </button>
+                </div>
               </div>
-              <div className="offcanvas__close">
-                <button onClick={close}>
-                  <i className="fas fa-times" />
-                </button>
-              </div>
-            </div>
-            <p className="text d-none d-xl-block">
-              Nullam dignissim, ante scelerisque the is euismod fermentum odio
-              sem semper the is erat, a feugiat leo urna eget eros. Duis Aenean
-              a imperdiet risus.
-            </p>
-            <MobileNav />
-            <div className="offcanvas__contact">
-              <h4>Contact Info</h4>
-              <ul>
-                {[
-                  {
-                    icon: "fal fa-map-marker-alt",
-                    link: "#",
-                    text: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
-                  },
-                  {
-                    icon: "fal fa-envelope",
-                    link: "mailto:trustfundme@co.vn",
-                    text: "trustfundme@co.vn",
-                  },
-                  {
-                    icon: "fal fa-clock",
-                    link: "#",
-                    text: "Mod-friday, 09am -05pm",
-                  },
-                  {
-                    icon: "far fa-phone",
-                    link: "tel:+11002345909",
-                    text: "+11002345909",
-                  },
-                ].map((item, i) => (
-                  <li key={i} className="d-flex align-items-center">
-                    <div
-                      className={`offcanvas__contact-icon ${
-                        i > 0 ? "mr-15" : ""
-                      }`}
-                    >
-                      <i className={item.icon} />
-                    </div>
-                    <div className="offcanvas__contact-text">
-                      <a
-                        target={item.link === "#" ? "_blank" : undefined}
-                        href={item.link}
+              <p className="text d-none d-xl-block">
+                Nullam dignissim, ante scelerisque the is euismod fermentum odio
+                sem semper the is erat, a feugiat leo urna eget eros. Duis Aenean
+                a imperdiet risus.
+              </p>
+              <MobileNav />
+              <div className="offcanvas__contact">
+                <h4>Contact Info</h4>
+                <ul>
+                  {[
+                    {
+                      icon: "fal fa-map-marker-alt",
+                      link: "#",
+                      text: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
+                    },
+                    {
+                      icon: "fal fa-envelope",
+                      link: "mailto:trustfundme@co.vn",
+                      text: "trustfundme@co.vn",
+                    },
+                    {
+                      icon: "fal fa-clock",
+                      link: "#",
+                      text: "Mod-friday, 09am -05pm",
+                    },
+                    {
+                      icon: "far fa-phone",
+                      link: "tel:+11002345909",
+                      text: "+11002345909",
+                    },
+                  ].map((item, i) => (
+                    <li key={i} className="d-flex align-items-center">
+                      <div
+                        className={`offcanvas__contact-icon ${i > 0 ? "mr-15" : ""
+                          }`}
                       >
-                        {item.text}
-                      </a>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="header-button mt-4">
-                <UserMenuMobile />
+                        <i className={item.icon} />
+                      </div>
+                      <div className="offcanvas__contact-text">
+                        <a
+                          target={item.link === "#" ? "_blank" : undefined}
+                          href={item.link}
+                        >
+                          {item.text}
+                        </a>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="header-button mt-4">
+                  <UserMenuMobile />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    <div
-      className={`offcanvas__overlay ${open ? "overlay-open" : ""}`}
-      onClick={close}
-    ></div>
-  </Fragment>
+      <div
+        className={`offcanvas__overlay ${open ? "overlay-open" : ""}`}
+        onClick={close}
+      ></div>
+    </Fragment>
   );
 };
 

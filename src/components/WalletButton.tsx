@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContextProxy";
 import { Wallet as WalletIcon } from "lucide-react";
 import Link from "next/link";
 
