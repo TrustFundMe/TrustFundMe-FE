@@ -13,7 +13,9 @@ const Header = ({ header }: { header?: number }) => {
   const [toggleMobileMenu, setToggleMobileMenu] = useState(false);
   return (
     <Fragment>
-      <HeaderComponent open={() => setToggleMobileMenu(true)} />
+      <div className={toggleMobileMenu ? "mobile-menu-open" : ""}>
+        <HeaderComponent open={() => setToggleMobileMenu(true)} />
+      </div>
       <MobileMenu
         open={toggleMobileMenu}
         close={() => setToggleMobileMenu(false)}
@@ -135,13 +137,13 @@ const Header2 = ({ open }: { open: () => void }) => (
     <header id="header-sticky" className="header-3">
       <div className="container">
         <div className="mega-menu-wrapper">
-          <div className="header-main style-2" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 0' }}>
-            <div className="header-left" style={{ flex: '0 0 auto' }}>
+          <div className="header-main style-2">
+            <div className="header-left">
               <div className="mean__menu-wrapper">
                 <Nav />
               </div>
             </div>
-            <div className="logo" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+            <div className="logo">
               <Logo logo="black-logo.png" />
             </div>
             <div className="header-right d-flex justify-content-end align-items-center" style={{ flex: '0 0 auto' }}>
@@ -207,7 +209,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                     <Nav />
                   </div>
                 </div>
-                <div className="header-right d-flex justify-content-end align-items-center">
+                <div className="header-right d-flex justify-content-end align-items-center gap-3">
                   <a
                     href="#0"
                     className="search-trigger search-icon"
@@ -221,6 +223,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
+                  <AuthButton />
                   <div className="header__hamburger d-xl-none my-auto">
                     <div className="sidebar__toggle" onClick={open}>
                       <i className="fas fa-bars" />
@@ -370,7 +373,10 @@ const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
   </div>
 );
 
-const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
+const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
+  const { isAuthenticated } = useAuth();
+  
+  return (
   <Fragment>
     <div className="fix-area">
       <div className={`offcanvas__info ${open ? "info-open" : ""}`}>
@@ -449,9 +455,32 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => (
       onClick={close}
     ></div>
   </Fragment>
-);
+  );
+};
+
+const AuthButton = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated) {
+    return (
+      <div className="d-flex align-items-center gap-3">
+        <WalletButton balance={100000000} />
+        <UserDropdown />
+      </div>
+    );
+  }
+
+  return (
+    <div className="header-button d-none d-xl-block">
+      <Link href="/sign-in" className="theme-btn transparent-btn">
+        Sign In
+      </Link>
+    </div>
+  );
+};
 
 const MobileNav = () => {
+  const { isAuthenticated } = useAuth();
   const [activeMenu, setActiveMenu] = useState("");
   const [multiMenu, setMultiMenu] = useState("");
   const toggle = (menu: string, setter: (v: string) => void, current: string) =>

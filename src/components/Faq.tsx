@@ -197,10 +197,10 @@ export const Faq2 = () => {
                 className={`counter-box transition-all duration-700 ${
                   isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                 }`}
-                style={{ transitionDelay: '200ms' }}
+                style={{ transitionDelay: '200ms', zIndex: 1 }}
               >
                 <h2>
-                  <span className="count">10</span>M+
+                  <span className="count">10</span>K+
                 </h2>
                 <p>Funds Raised</p>
               </div>

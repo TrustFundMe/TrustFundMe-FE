@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import ProjectCard from "./ui/project-card"
 import { ChevronLeft, ChevronRight, Globe, Target, Rocket, Zap, TrendingUp } from "lucide-react"
 
@@ -10,11 +11,65 @@ export const Projects1 = () => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const sectionRef = useRef<HTMLElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Update dropdown position when it opens
+  useEffect(() => {
+    if (dropdownOpen && buttonRef.current) {
+      const updatePosition = () => {
+        if (buttonRef.current) {
+          const rect = buttonRef.current.getBoundingClientRect()
+          setDropdownPosition({
+            top: rect.bottom + window.scrollY + 8,
+            left: rect.left + window.scrollX
+          })
+        }
+      }
+      updatePosition()
+      window.addEventListener('scroll', updatePosition, true)
+      window.addEventListener('resize', updatePosition)
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true)
+        window.removeEventListener('resize', updatePosition)
+      }
+    }
+  }, [dropdownOpen])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!dropdownOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (
+        buttonRef.current && 
+        !buttonRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
+        setDropdownOpen(false)
+      }
+    }
+
+    // Use setTimeout to avoid immediate closure
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 0)
+    
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [dropdownOpen])
 
   useEffect(() => {
     if (!mounted) return
@@ -205,53 +260,81 @@ export const Projects1 = () => {
         >
           <div className="relative">
             <button
-              onClick={() => {
-                const dropdown = document.getElementById('filter-dropdown')
-                dropdown?.classList.toggle('hidden')
+              ref={buttonRef}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (buttonRef.current) {
+                  const rect = buttonRef.current.getBoundingClientRect()
+                  setDropdownPosition({
+                    top: rect.bottom + window.scrollY + 8,
+                    left: rect.left + window.scrollX
+                  })
+                }
+                setDropdownOpen((prev) => !prev)
               }}
-              className="appearance-none bg-white border-2 border-gray-300 rounded-full px-6 py-3 pr-12 text-base font-semibold text-gray-800 hover:border-gray-400 focus:outline-none focus:border-gray-400 transition-all cursor-pointer flex items-center gap-2 shadow-sm hover:shadow-md"
+              className="hidden appearance-none bg-white border-2 border-gray-300 rounded-full px-6 py-3 pr-10 text-base font-semibold text-gray-800 hover:border-gray-400 focus:outline-none focus:border-gray-400 transition-all cursor-pointer shadow-sm hover:shadow-md relative z-50"
+              aria-expanded={dropdownOpen}
+              aria-haspopup="true"
             >
               {(() => {
                 const currentFilter = filters.find(f => f.id === selectedFilter)
                 const Icon = currentFilter?.Icon || Globe
                 return (
                   <>
-                    <Icon className="w-5 h-5 text-gray-700" />
-                    {currentFilter?.label}
+                    <Icon className="w-5 h-5 text-gray-700 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{currentFilter?.label}</span>
                   </>
                 )
               })()}
-              <ChevronRight className="w-4 h-4 ml-2 rotate-90 text-gray-600" />
+              <ChevronRight className={`w-4 h-4 flex-shrink-0 rotate-90 text-gray-600 transition-transform duration-200 ${dropdownOpen ? 'rotate-[-90deg]' : ''}`} />
             </button>
             
-            <div 
-              id="filter-dropdown"
-              className="hidden absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden z-10 min-w-[280px]"
-            >
-              {filters.map(filter => {
-                const Icon = filter.Icon
-                const isActive = selectedFilter === filter.id
-                return (
-                  <button
-                    key={filter.id}
-                    onClick={() => {
-                      handleFilterChange(filter.id)
-                      document.getElementById('filter-dropdown')?.classList.add('hidden')
-                    }}
-                    className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-200 ${
-                      isActive 
-                        ? 'bg-orange-50' 
-                        : 'hover:bg-orange-50/50'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-[#ff5e14]' : 'text-gray-600'}`} />
-                    <span className={`font-medium text-base ${isActive ? 'text-[#ff5e14]' : 'text-gray-700 hover:text-gray-900'}`}>
-                      {filter.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            {mounted && dropdownOpen && createPortal(
+              <div 
+                ref={dropdownRef}
+                data-dropdown="filter"
+                className="fixed bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden min-w-[280px] max-w-[320px] z-[9999]"
+                style={{ 
+                  top: `${dropdownPosition.top}px`,
+                  left: `${dropdownPosition.left}px`,
+                  animation: 'fadeInDown 0.2s ease-out'
+                }}
+                onClick={(e) => e.stopPropagation()}
+                role="menu"
+                aria-orientation="vertical"
+              >
+                {filters.filter(filter => filter.id !== "all").map((filter, index, filteredArray) => {
+                  const Icon = filter.Icon
+                  const isActive = selectedFilter === filter.id
+                  return (
+                    <button
+                      key={filter.id}
+                      onClick={() => {
+                        handleFilterChange(filter.id)
+                        setDropdownOpen(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-all duration-200 ${
+                        isActive 
+                          ? 'bg-orange-50 border-l-4 border-[#ff5e14]' 
+                          : 'hover:bg-gray-50'
+                      } ${index !== filteredArray.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    >
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#ff5e14]' : 'text-gray-600'}`} />
+                      <span className={`font-medium text-base flex-1 ${isActive ? 'text-[#ff5e14]' : 'text-gray-700'}`}>
+                        {filter.label}
+                      </span>
+                      {isActive && (
+                        <svg className="w-5 h-5 text-[#ff5e14] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>,
+              document.body
+            )}
           </div>
 
           {/* Navigation Arrows */}
@@ -276,18 +359,18 @@ export const Projects1 = () => {
         </div>
 
         <div 
-          className={`row g-4 transition-all duration-700 ${
+          className={`row g-4 transition-all duration-700 relative ${
             isTransitioning 
               ? 'opacity-0 translate-y-4' 
               : isVisible 
                 ? 'opacity-100 translate-y-0' 
                 : 'opacity-0 translate-y-10'
           }`}
-          style={{ transitionDelay: isVisible && !isTransitioning ? '400ms' : '0ms' }}
+          style={{ transitionDelay: isVisible && !isTransitioning ? '400ms' : '0ms', zIndex: 1 }}
         >
           {/* Featured Project - 50% width */}
           {featuredProject && (
-            <div className="col-lg-6">
+            <div className="col-12 col-lg-6">
               <ProjectCard
                 imageSrc={featuredProject.imageSrc}
                 title={featuredProject.title}
@@ -301,12 +384,12 @@ export const Projects1 = () => {
           )}
 
           {/* Other Projects - 50% width total, arranged in 2x2 grid */}
-          <div className="col-lg-6">
+          <div className="col-12 col-lg-6">
             <div className="row g-4">
               {otherProjects.map((project, index) => (
                 <div 
                   key={project.id} 
-                  className="col-6"
+                  className="col-12 col-md-6"
                   style={{
                     animation: isTransitioning ? 'none' : `fadeInUp 0.6s ease-out ${(index + 1) * 0.1}s both`
                   }}

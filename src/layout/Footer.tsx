@@ -637,7 +637,7 @@ const aboutLink = [
 const specialLink = [
   { link: "/faq", text: "FAQ" },
   { link: "/news", text: "News" },
-  { link: "/dashboard", text: "Dashboard" },
+  { link: "/account/impact", text: "Your Impact" },
   { link: "/sign-in", text: "Sign In" },
 ];
 const popularlLink = [
