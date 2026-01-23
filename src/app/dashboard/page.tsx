@@ -1,20 +1,30 @@
+'use client';
+
 import DanboxLayout from "@/layout/DanboxLayout";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContextProxy";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  
+  const displayName = user?.fullName || 
+                     user?.email?.split('@')[0] ||
+                     'User';
+
   return (
-    <DanboxLayout header={2} footer={2}>
-      <section className="about-section section-padding">
-        <div className="container">
-          <div className="row g-4">
-            <div className="col-12">
-              <div className="section-title">
-                <h2>Welcome back, User!</h2>
-                <p>
-                  This is a frontend-only demo dashboard. Authentication and real-time data
-                  will be integrated later.
-                </p>
+    <ProtectedRoute>
+      <DanboxLayout header={2} footer={2}>
+        <section className="about-section section-padding">
+          <div className="container">
+            <div className="row g-4">
+              <div className="col-12">
+                <div className="section-title">
+                  <h2>Welcome back, {displayName}!</h2>
+                  <p>
+                    Manage your contributions, track your impact, and participate in voting.
+                  </p>
+                </div>
               </div>
-            </div>
 
             <div className="col-lg-4">
               <div className="service-card-items" style={{ borderRadius: 0 }}>
@@ -51,6 +61,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
-    </DanboxLayout>
+      </DanboxLayout>
+    </ProtectedRoute>
   );
 }
