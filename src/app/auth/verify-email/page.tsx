@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { OtpInput } from '@/components/OtpInput';
 import Link from 'next/link';
 import { Mail, ArrowLeft } from 'lucide-react';
 
-export default function VerifyEmailPage() {
+function VerifyEmailInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, updateUser } = useAuth();
@@ -36,6 +36,7 @@ export default function VerifyEmailPage() {
       hasSentOtp.current = true;
       handleSendOtp();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user]);
 
   // Resend cooldown timer
@@ -69,7 +70,7 @@ export default function VerifyEmailPage() {
       let data;
       try {
         data = await response.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse server response');
       }
 
@@ -84,7 +85,10 @@ export default function VerifyEmailPage() {
       }
     } catch (err: any) {
       console.error('Send OTP error:', err);
-      setError(err.message || 'Unable to send verification code. Please check your connection and try again.');
+      setError(
+        err.message ||
+          'Unable to send verification code. Please check your connection and try again.'
+      );
     } finally {
       setSending(false);
     }
@@ -117,7 +121,7 @@ export default function VerifyEmailPage() {
       let verifyData;
       try {
         verifyData = await verifyResponse.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse verify response');
       }
 
@@ -149,7 +153,7 @@ export default function VerifyEmailPage() {
       let emailData;
       try {
         emailData = await emailResponse.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse email verification response');
       }
 
@@ -173,10 +177,14 @@ export default function VerifyEmailPage() {
       }, 1500);
     } catch (err: any) {
       console.error('Verify email error:', err);
-      setError(err.message || 'Unable to verify email. Please check your connection and try again.');
+      setError(
+        err.message ||
+          'Unable to verify email. Please check your connection and try again.'
+      );
       setLoading(false);
     }
   };
+
   const targetEmail = email || user?.email || '';
 
   return (
@@ -200,9 +208,7 @@ export default function VerifyEmailPage() {
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Verify Your Email</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              We've sent a verification code to:
-            </p>
+            <p className="mt-2 text-sm text-gray-600">We've sent a verification code to:</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{targetEmail}</p>
           </div>
 
@@ -253,5 +259,26 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full">
+            <div className="bg-white rounded-lg shadow-lg p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <VerifyEmailInner />
+    </Suspense>
   );
 }
