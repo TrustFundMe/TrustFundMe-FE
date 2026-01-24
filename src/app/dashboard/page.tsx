@@ -26,18 +26,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.replace("/account/impact");
-    } else {
-      router.replace("/sign-in");
-    }
-  }, [isAuthenticated, router]);
-
             <div className="col-lg-4">
               <div className="service-card-items" style={{ borderRadius: 0 }}>
                 <div className="content">
