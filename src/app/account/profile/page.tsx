@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { supabase } from '@/lib/supabaseClient';
 import DanboxLayout from '@/layout/DanboxLayout';
 import { User, Mail, Phone, Calendar, Upload, Save, X } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, beUser, updateUser, updateBEUser } = useAuth();
+  const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -62,31 +61,24 @@ export default function ProfilePage() {
       };
       reader.readAsDataURL(file);
 
-      // Upload to Supabase Storage
       if (!user) return;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', String(user.id));
 
-      // Upload file
-      const { error: uploadError, data } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type,
-        });
+      const uploadRes = await fetch('/api/upload/avatar', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      const uploadJson = await uploadRes.json();
+      if (!uploadRes.ok) {
+        throw new Error(uploadJson.error || 'Upload failed');
       }
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      const avatarUrl = urlData.publicUrl;
+      const avatarUrl = uploadJson.avatarUrl as string;
 
       // Update local state immediately
       updateUser({
