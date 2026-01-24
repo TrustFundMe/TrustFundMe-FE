@@ -17,21 +17,17 @@ export async function PUT(request: NextRequest) {
     }
 
     const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
-    
-    // Get BE JWT from cookies
-    const cookies = request.headers.get('cookie') || '';
-    
+    const accessToken = request.cookies.get('access_token')?.value;
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const response = await fetch(`${BE_API_URL}/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: cookies,
-        // Also try Authorization header if available
-        ...(request.headers.get('authorization') && {
-          Authorization: request.headers.get('authorization') || '',
-        }),
+        Authorization: `Bearer ${accessToken}`,
       },
-      credentials: 'include',
       body: JSON.stringify({
         fullName,
         phoneNumber,

@@ -254,7 +254,7 @@ import { authService } from "@/services/authService";
 // TYPES
 // ==================================================================================
 
-type Step = "email-entry" | "password-entry" | "sign-up" | "forgot-password";
+type Step = "email-entry" | "password-entry" | "sign-up" | "forgot-password" | "verify-otp" | "reset-password";
 
 type PasswordValidation = {
   minLength: boolean;
@@ -339,6 +339,14 @@ export default function SignInPage() {
   // User info (when email exists)
   const [existingUserName, setExistingUserName] = useState<string>("");
 
+  // Password reset states
+  const [otp, setOtp] = useState<string>("");
+  const [resetToken, setResetToken] = useState<string>("");
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+  const [confirmNewPassword, setConfirmNewPassword] = useState<string>("");
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState<boolean>(false);
+
   // ==================================================================================
   // EMAIL CHECK (Using Supabase)
   // ==================================================================================
@@ -351,12 +359,16 @@ export default function SignInPage() {
   // ==================================================================================
 
   const passwordValidation = useMemo(() => {
-    return validatePassword(signUpPassword);
-  }, [signUpPassword]);
+    return validatePassword(step === "reset-password" ? newPassword : signUpPassword);
+  }, [signUpPassword, newPassword, step]);
 
   const isSignUpPasswordValid = useMemo(() => {
     return isPasswordValid(passwordValidation);
   }, [passwordValidation]);
+
+  const isNewPasswordValid = useMemo(() => {
+    return isPasswordValid(validatePassword(newPassword));
+  }, [newPassword]);
 
   // Field validation errors
   const firstNameError = useMemo(() => {
@@ -584,7 +596,7 @@ export default function SignInPage() {
   };
 
   /**
-   * Handle forgot password - TODO: Implement BE endpoint
+   * Handle forgot password - request OTP
    */
   const handleForgotPassword = async (): Promise<void> => {
     setError("");
@@ -600,10 +612,87 @@ export default function SignInPage() {
     try {
       const result = await authService.forgotPassword(normalizeEmail(email));
 
-      if (result.error) {
-        setError(result.error);
+      if (result.success) {
+        setInfo(result.message || "OTP has been sent to your email.");
+        setStep("verify-otp");
       } else {
-        setInfo(result.message || "If this email exists in our system, you will receive a password reset link shortly.");
+        setError(result.error || "Failed to send reset code.");
+      }
+      setLoading(false);
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Handle OTP verification
+   */
+  const handleVerifyOtp = async (): Promise<void> => {
+    setError("");
+    setInfo("");
+
+    if (!otp.trim() || otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await authService.verifyOtp(normalizeEmail(email), otp);
+
+      if (result.success && result.token) {
+        setResetToken(result.token);
+        setStep("reset-password");
+        setInfo("OTP verified. Please set your new password.");
+      } else {
+        setError(result.error || "Invalid OTP. Please try again.");
+      }
+      setLoading(false);
+    } catch (error) {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Handle reset password
+   */
+  const handleResetPassword = async (): Promise<void> => {
+    setError("");
+    setInfo("");
+
+    if (!newPassword.trim()) {
+      setError("Please enter your new password.");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (!isNewPasswordValid) {
+      setError("Password does not meet security requirements.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await authService.resetPassword(resetToken, newPassword);
+
+      if (result.success) {
+        setStep("password-entry");
+        setInfo("Password reset successfully. Please sign in with your new password.");
+        setPassword("");
+        setOtp("");
+        setResetToken("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+      } else {
+        setError(result.error || "Failed to reset password.");
       }
       setLoading(false);
     } catch (error) {
@@ -1226,7 +1315,7 @@ export default function SignInPage() {
               >
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-4">
-                    Enter your email address and we'll send you a link to reset your password.
+                    Enter your email address and we'll send you an OTP to reset your password.
                   </p>
                 </div>
 
@@ -1249,7 +1338,7 @@ export default function SignInPage() {
                   disabled={loading}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Sending..." : "Send reset link"}
+                  {loading ? "Sending..." : "Send OTP"}
                 </button>
 
                 <div className="text-center">
@@ -1259,6 +1348,172 @@ export default function SignInPage() {
                     className="text-sm text-gray-600 hover:underline"
                   >
                     Back to sign in
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* VERIFY OTP STEP */}
+            {step === "verify-otp" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleVerifyOtp();
+                }}
+              >
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Please enter the 6-digit OTP sent to {email}
+                  </p>
+                </div>
+
+                <div className="mb-6">
+                  <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
+                    OTP Code
+                  </label>
+                  <input
+                    id="otp"
+                    type="text"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-gray-900 placeholder:text-gray-400 tracking-widest text-center text-lg"
+                    placeholder="000000"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setStep("forgot-password")}
+                    className="text-sm text-gray-600 hover:underline"
+                  >
+                    Resend OTP
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* RESET PASSWORD STEP */}
+            {step === "reset-password" && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleResetPassword();
+                }}
+              >
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-4">
+                    Create a new password for your account.
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="New Password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showNewPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="relative">
+                    <input
+                      id="confirmNewPassword"
+                      type={showConfirmNewPassword ? "text" : "password"}
+                      placeholder="Confirm New Password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showConfirmNewPassword ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reuse password validation UI */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-gray-700 mb-3">Your new password must have at least:</p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm">
+                      <span className={passwordValidation.minLength ? "text-green-700" : "text-gray-600"}>
+                        {passwordValidation.minLength ? "✓" : "○"} Minimum 12 characters
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <span className={passwordValidation.hasUppercase ? "text-green-700" : "text-gray-600"}>
+                        {passwordValidation.hasUppercase ? "✓" : "○"} 1 uppercase letter
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <span className={passwordValidation.hasLowercase ? "text-green-700" : "text-gray-600"}>
+                        {passwordValidation.hasLowercase ? "✓" : "○"} 1 lowercase letter
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <span className={passwordValidation.hasNumber ? "text-green-700" : "text-gray-600"}>
+                        {passwordValidation.hasNumber ? "✓" : "○"} 1 number
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <span className={passwordValidation.hasSymbol ? "text-green-700" : "text-gray-600"}>
+                        {passwordValidation.hasSymbol ? "✓" : "○"} 1 symbol
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading || !isNewPasswordValid || newPassword !== confirmNewPassword}
+                  className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                >
+                  {loading ? "Resetting..." : "Reset Password"}
+                </button>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => setStep("password-entry")}
+                    className="text-sm text-gray-600 hover:underline"
+                  >
+                    Cancel
                   </button>
                 </div>
               </form>

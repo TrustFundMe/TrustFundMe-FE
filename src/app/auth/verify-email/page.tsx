@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { OtpInput } from '@/components/OtpInput';
@@ -19,6 +19,8 @@ export default function VerifyEmailPage() {
   const [success, setSuccess] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
+  const hasSentOtp = useRef(false);
+
   useEffect(() => {
     // Get email from query params or user context
     const emailParam = searchParams.get('email');
@@ -28,8 +30,10 @@ export default function VerifyEmailPage() {
       setEmail(user.email);
     }
 
-    // Auto-send OTP on page load
-    if (emailParam || user?.email) {
+    // Auto-send OTP on page load (only once)
+    const targetEmail = emailParam || user?.email;
+    if (targetEmail && !hasSentOtp.current) {
+      hasSentOtp.current = true;
       handleSendOtp();
     }
   }, [searchParams, user]);
@@ -62,38 +66,25 @@ export default function VerifyEmailPage() {
         body: JSON.stringify({ email: targetEmail }),
       });
 
-      // Check if response is JSON
       let data;
       try {
         data = await response.json();
       } catch (e) {
-        // If not JSON, it might be a Next.js error
-        setError('Unable to send verification code. Please try again later.');
-        setSending(false);
-        return;
+        throw new Error('Failed to parse server response');
       }
 
       if (!response.ok) {
-        // Don't show technical errors to users
         const errorMessage = data.error || data.message || 'Failed to send OTP';
-        // Filter out technical error messages
-        if (errorMessage.includes('static resource') || 
-            errorMessage.includes('No static') ||
-            errorMessage.includes('404') ||
-            errorMessage.includes('ENOTFOUND')) {
-          setError('Unable to send verification code. Please check your connection and try again.');
-        } else {
-          setError(errorMessage);
-        }
+        console.error('Send OTP failed:', { status: response.status, data });
+        setError(errorMessage);
       } else {
-        setSuccess('OTP has been sent to your email');
+        setSuccess(data.message || 'OTP has been sent to your email');
         setResendCooldown(60); // 60 seconds cooldown
         setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err: any) {
-      // Don't show technical errors
       console.error('Send OTP error:', err);
-      setError('Unable to send verification code. Please check your connection and try again.');
+      setError(err.message || 'Unable to send verification code. Please check your connection and try again.');
     } finally {
       setSending(false);
     }
@@ -127,20 +118,13 @@ export default function VerifyEmailPage() {
       try {
         verifyData = await verifyResponse.json();
       } catch (e) {
-        setError('Unable to verify code. Please try again.');
-        setLoading(false);
-        return;
+        throw new Error('Failed to parse verify response');
       }
 
       if (!verifyResponse.ok) {
         const errorMessage = verifyData.error || verifyData.message || 'Invalid or expired OTP';
-        if (errorMessage.includes('static resource') || 
-            errorMessage.includes('No static') ||
-            errorMessage.includes('404')) {
-          setError('Unable to verify code. Please check your connection and try again.');
-        } else {
-          setError(errorMessage);
-        }
+        console.error('Verify OTP failed:', { status: verifyResponse.status, data: verifyData });
+        setError(errorMessage);
         setLoading(false);
         return;
       }
@@ -166,20 +150,13 @@ export default function VerifyEmailPage() {
       try {
         emailData = await emailResponse.json();
       } catch (e) {
-        setError('Unable to verify email. Please try again.');
-        setLoading(false);
-        return;
+        throw new Error('Failed to parse email verification response');
       }
 
       if (!emailResponse.ok) {
         const errorMessage = emailData.error || emailData.message || 'Failed to verify email';
-        if (errorMessage.includes('static resource') || 
-            errorMessage.includes('No static') ||
-            errorMessage.includes('404')) {
-          setError('Unable to verify email. Please check your connection and try again.');
-        } else {
-          setError(errorMessage);
-        }
+        console.error('Email verification failed:', { status: emailResponse.status, data: emailData });
+        setError(errorMessage);
         setLoading(false);
         return;
       }
@@ -196,11 +173,10 @@ export default function VerifyEmailPage() {
       }, 1500);
     } catch (err: any) {
       console.error('Verify email error:', err);
-      setError('Unable to verify email. Please check your connection and try again.');
+      setError(err.message || 'Unable to verify email. Please check your connection and try again.');
       setLoading(false);
     }
   };
-
   const targetEmail = email || user?.email || '';
 
   return (
@@ -262,8 +238,8 @@ export default function VerifyEmailPage() {
               {sending
                 ? 'Sending...'
                 : resendCooldown > 0
-                ? `Resend code in ${resendCooldown}s`
-                : 'Resend Code'}
+                  ? `Resend code in ${resendCooldown}s`
+                  : 'Resend Code'}
             </button>
 
             <Link

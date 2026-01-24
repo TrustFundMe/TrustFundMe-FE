@@ -19,34 +19,57 @@ export async function POST(request: NextRequest) {
     const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
     const normalizedEmail = email.trim().toLowerCase();
 
-    // User confirmed BE endpoint is GET /api/users/check-email
-    const response = await fetch(`${BE_API_URL}/api/users/check-email?email=${encodeURIComponent(normalizedEmail)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    console.log(`Proxying check-email request to: ${BE_API_URL}/api/users/check-email?email=${normalizedEmail}`);
 
-    const data = await response.json();
+    try {
+      // User confirmed BE endpoint is GET /api/users/check-email
+      const response = await fetch(`${BE_API_URL}/api/users/check-email?email=${encodeURIComponent(normalizedEmail)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    // Debug log
-    console.log('BE check-email response:', { status: response.status, data });
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data;
 
-    if (!response.ok) {
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('BE returned non-JSON response for check-email:', text);
+        return NextResponse.json(
+          { error: `Backend error: ${response.status} ${response.statusText}`, details: text.substring(0, 100) },
+          { status: response.status }
+        );
+      }
+
+      // Debug log
+      console.log('BE check-email response:', { status: response.status, data });
+
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: data.message || data.error || 'Failed to check email' },
+          { status: response.status }
+        );
+      }
+
+      const result = {
+        exists: data.exists === true || data.exists === 'true',
+        email: data.email || normalizedEmail,
+        fullName: data.fullName,
+      };
+
+      console.log('Check email result:', result);
+      return NextResponse.json(result);
+    } catch (fetchError: any) {
+      console.error('Fetch error calling BE check-email:', fetchError);
       return NextResponse.json(
-        { error: data.message || data.error || 'Failed to check email' },
-        { status: response.status }
+        { error: 'Failed to connect to backend service', details: fetchError.message },
+        { status: 502 }
       );
     }
-
-    const result = {
-      exists: data.exists === true || data.exists === 'true',
-      email: data.email || normalizedEmail,
-      fullName: data.fullName,
-    };
-
-    console.log('Check email result:', result);
-    return NextResponse.json(result);
   } catch (error: any) {
     console.error('Check email API error:', error);
     return NextResponse.json(

@@ -79,7 +79,7 @@ export const authService = {
     if (!response.ok) {
       const errorMessage = data.error || data.message || 'Signup failed';
       console.error('Signup API error:', { status: response.status, data });
-      
+
       return {
         success: false,
         user: null,
@@ -106,21 +106,21 @@ export const authService = {
   async getSession(): Promise<{ session: any; user: any }> {
     // Check localStorage for user info
     const storedUser = localStorage.getItem('be_user');
-    
+
     const response = await fetch('/api/auth/session', {
       method: 'GET',
       credentials: 'include',
     });
 
     const data = await response.json();
-    
+
     // If session is valid, return it; otherwise return stored user or null
     if (data.session && data.user) {
       // Update stored user
       localStorage.setItem('be_user', JSON.stringify(data.user));
       return data;
     }
-    
+
     // Fallback to stored user
     if (storedUser) {
       try {
@@ -133,7 +133,7 @@ export const authService = {
         console.warn('Failed to parse stored user:', e);
       }
     }
-    
+
     return { session: null, user: null };
   },
 
@@ -159,12 +159,109 @@ export const authService = {
   },
 
   /**
-   * Forgot password - request password reset email
-   * TODO: Implement in BE if needed
+   * Forgot password - request OTP for password reset
    */
-  async forgotPassword(email: string): Promise<{ error?: string; message?: string }> {
-    // TODO: Create BE endpoint for password reset
-    return { error: 'Password reset not yet implemented in BE' };
+  async forgotPassword(email: string): Promise<{ success?: boolean; error?: string; message?: string }> {
+    try {
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || 'Failed to send OTP',
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'OTP sent successfully',
+      };
+    } catch (error: any) {
+      console.error('Forgot password service error:', error);
+      return {
+        success: false,
+        error: error?.message || 'Failed to request password reset',
+      };
+    }
+  },
+
+  /**
+   * Verify OTP for password reset
+   */
+  async verifyOtp(email: string, otp: string): Promise<{ success: boolean; token?: string; error?: string; message?: string }> {
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || 'Verification failed',
+        };
+      }
+
+      return {
+        success: true,
+        token: data.token,
+        message: data.message,
+      };
+    } catch (error: any) {
+      console.error('Verify OTP service error:', error);
+      return {
+        success: false,
+        error: error?.message || 'Failed to verify OTP',
+      };
+    }
+  },
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; error?: string; message?: string }> {
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || 'Password reset failed',
+        };
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Password reset successfully',
+      };
+    } catch (error: any) {
+      console.error('Reset password service error:', error);
+      return {
+        success: false,
+        error: error?.message || 'Failed to reset password',
+      };
+    }
   },
 
   /**
@@ -188,10 +285,10 @@ export const authService = {
       });
 
       const data = await response.json();
-      
+
       // Debug log
       console.log('Check email API response:', { status: response.status, data });
-      
+
       if (!response.ok) {
         return {
           exists: false,
@@ -199,7 +296,7 @@ export const authService = {
           error: data.error || 'Failed to check email',
         };
       }
-      
+
       // BE returns { exists: boolean, email: string, fullName?: string }
       // Ensure exists is boolean (not null/undefined)
       return {
