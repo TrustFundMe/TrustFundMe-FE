@@ -7,6 +7,8 @@ import { motion, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
+import { BlurText } from "@/components/ui/blur-text";
+
 export const PhotoGallery = ({
   animationDelay = 0.5,
 }: {
@@ -116,22 +118,45 @@ export const PhotoGallery = ({
   ];
 
   return (
-    <div className="relative py-20" style={{ fontFamily: "var(--font-dm-sans)" }}>
+    <div className="relative" style={{ fontFamily: "var(--font-dm-sans)" }}>
       <div className="absolute inset-0 max-md:hidden top-[200px] -z-10 h-[300px] w-full bg-transparent bg-[linear-gradient(to_right,#57534e_1px,transparent_1px),linear-gradient(to_bottom,#57534e_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-20 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
-      <h3
-        className="z-20 mx-auto max-w-2xl justify-center py-3 text-center text-4xl md:text-7xl font-bold"
-        style={{
-          fontFamily: "var(--font-dm-sans)",
-          color: "#1A685B",
-          lineHeight: 1.2,
-        }}
-      >
-        Welcome to{" "}
-        <span style={{ color: "#F84D43" }}>
-          Communication
-        </span>
-      </h3>
-      <div className="relative mb-8 h-[350px] w-full items-center justify-center lg:flex">
+
+      <div className="flex flex-col items-center justify-center mb-12 mt-10 z-20 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center flex flex-col items-center"
+        >
+          <div style={{ color: "#1A685B", fontFamily: "var(--font-dm-sans)" }}>
+            <BlurText
+              text="Welcome to"
+              delay={50}
+              animateBy="words"
+              direction="top"
+              className="text-4xl md:text-6xl font-bold tracking-tight justify-center mb-4"
+            />
+          </div>
+
+          <style jsx global>{`
+              .font-playfair {
+                font-family: var(--font-playfair), serif;
+              }
+            `}</style>
+
+          <div style={{ fontFamily: "var(--font-playfair)", color: "#F84D43", fontStyle: "italic" }} className="flex justify-center mt-2">
+            <BlurText
+              text="Communication"
+              delay={200}
+              animateBy="letters"
+              direction="top"
+              className="text-6xl md:text-8xl font-bold tracking-tight justify-center"
+            />
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="relative mb-12 h-[350px] w-full items-center justify-center lg:flex">
         <motion.div
           className="relative mx-auto flex w-full max-w-7xl justify-center"
           initial={{ opacity: 0 }}

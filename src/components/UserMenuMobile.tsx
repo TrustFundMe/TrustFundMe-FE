@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, Heart, Wallet, Settings } from 'lucide-react';
+import { User, LogOut, Heart, Wallet } from 'lucide-react';
 
 export function UserMenuMobile() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -96,16 +96,6 @@ export function UserMenuMobile() {
           >
             <Wallet className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
             <span>Your impact</span>
-          </Link>
-        </li>
-        
-        <li className="mb-2">
-          <Link
-            href="/account/profile"
-            className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
-          >
-            <Settings className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Account settings</span>
           </Link>
         </li>
         

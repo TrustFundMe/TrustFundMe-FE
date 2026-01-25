@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     if (!supabaseAdmin) {
       return NextResponse.json(
-        { error: 'Server: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY (hoặc SHARED_SUPABASE_KEY) chưa được cấu hình' },
+        { error: 'Server: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY (or SHARED_SUPABASE_KEY) is not set' },
         { status: 500 }
       );
     }

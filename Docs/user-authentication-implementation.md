@@ -122,6 +122,41 @@ Hiển thị avatar và dropdown menu khi user đã đăng nhập.
 }
 ```
 
+### 4.1. Google OAuth (BE `/api/auth/google-login`)
+
+**Cấu hình:**
+1. **Google Cloud Console** – Tạo OAuth 2.0 Client ID (Web application):  
+   https://console.cloud.google.com/apis/credentials  
+2. **FE** `.env.local`: `NEXT_PUBLIC_GOOGLE_CLIENT_ID=<client-id>`  
+3. **BE** identity-service: `GOOGLE_CLIENT_ID` cùng giá trị (dùng để verify id token).
+
+**Sửa lỗi "Error 400: origin_mismatch" (Authorized JavaScript origins):**
+
+`@react-oauth/google` dùng Google Identity Services; Google yêu cầu **Authorized JavaScript origins** khớp chính xác với URL gốc (origin) nơi app chạy.
+
+1. Vào [APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials).  
+2. Mở OAuth 2.0 Client ID loại **Web application** đang dùng cho app.  
+3. Trong **Authorized JavaScript origins**, thêm từng origin (không dấu `/` cuối, có port nếu khác 80/443):
+
+   | Môi trường        | Origin cần thêm           |
+   |-------------------|---------------------------|
+   | Dev (Next.js)     | `http://localhost:3000`   |
+   | Dev (IP)          | `http://127.0.0.1:3000`   |
+   | Production        | `https://yourdomain.com`  |
+   | Vercel            | `https://xxx.vercel.app`  |
+
+4. **Authorized redirect URIs**: Với One Tap/Google Sign-In button (trả `credential` trong JS), thường không bắt buộc. Nếu vẫn báo lỗi, thử thêm cùng các URL trên (ví dụ `http://localhost:3000`).  
+5. Lưu (Save). Thay đổi có thể mất vài phút mới áp dụng.
+
+**Lưu ý:** `http://localhost:3000` và `http://127.0.0.1:3000` là hai origin khác nhau; thêm cả hai nếu có thể dùng cả hai để dev.
+
+**Luồng:**
+- Sign-in: Nút "Continue with Google" (chỉ hiện khi có `NEXT_PUBLIC_GOOGLE_CLIENT_ID`).
+- `@react-oauth/google` → Google Login → `onSuccess` nhận `credential` (id token JWT).
+- FE gọi `signInWithGoogle(idToken)` → `authService.signInWithGoogle(idToken)` → `POST /api/auth/google` (Next.js).
+- Next.js proxy `POST /api/auth/google-login` với `{ idToken }` tới BE. BE verify id token, tạo/find user, trả `{ accessToken, refreshToken, user }`.
+- FE set httpOnly cookies (access_token, refresh_token), `setUser`, redirect `/`.
+
 ## 5. Dashboard Page (`src/app/dashboard/page.tsx`)
 
 ### Mục đích

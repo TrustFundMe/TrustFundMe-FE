@@ -8,7 +8,9 @@ out/
 # Environment
 .env
 .env.*
-
+!.env.example
+!.env.example
+tsconfig.tsbuildinfo
 # Logs
 npm-debug.log*
 yarn-debug.log*
