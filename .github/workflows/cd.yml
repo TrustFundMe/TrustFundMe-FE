@@ -1,8 +1,6 @@
 name: CD
 
 on:
-  push:
-    branches: [ main ]
   workflow_run:
     workflows: ["CI"]
     types:
@@ -17,9 +15,9 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    # Only deploy if CI workflow passed or on direct push to main
-    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
-    
+    # Chỉ deploy khi: CI (build) pass VÀ CI chạy trên main
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+
     environment:
       name: production
       url: https://trustfundme.vercel.app
@@ -27,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
