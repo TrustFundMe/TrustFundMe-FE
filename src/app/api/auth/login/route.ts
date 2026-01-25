@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
 
     const response = await fetch(`${BE_API_URL}/api/auth/login`, {
       method: 'POST',

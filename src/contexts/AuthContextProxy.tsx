@@ -24,7 +24,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (updates: Partial<BEUserInfo>) => void;
   resendVerificationEmail: (email: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signInWithGoogle: (idToken: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -122,14 +122,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: result.error ? { message: result.error } : null };
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (idToken: string) => {
     try {
-      // TODO: Integrate Google OAuth client library
-      // For now, return error indicating it needs frontend OAuth flow
-      // Once Google OAuth is set up, get idToken from Google and call authService.signInWithGoogle(idToken)
-      return { error: { message: 'Google OAuth requires frontend OAuth setup. Please contact support.' } };
-    } catch (error: any) {
-      return { error: { message: error?.message || 'Google OAuth failed' } };
+      const result = await authService.signInWithGoogle(idToken);
+      if (result.success && result.user) {
+        setUser(result.user);
+        localStorage.setItem('be_user', JSON.stringify(result.user));
+        return { error: null };
+      }
+      return { error: { message: result.error || 'Google OAuth failed' } };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Google OAuth failed';
+      return { error: { message: msg } };
     }
   };
 
