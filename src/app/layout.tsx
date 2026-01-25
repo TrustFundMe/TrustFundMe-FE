@@ -8,7 +8,7 @@ import "@css/meanmenu.css";
 import "@css/nice-select.css";
 import "@css/main.css";
 import type { Metadata } from "next";
-import { Chelsea_Market, Inter } from "next/font/google";
+import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google"; // 1. Import
 import "./globals.css";
 import Preloader from "@/layout/Preloader";
 
@@ -27,6 +27,11 @@ const chelsea_market = Chelsea_Market({
   weight: ["400"],
   variable: "--font-chelsea_market",
 });
+const playfair = Playfair_Display({ // 2. Configure
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-playfair",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Danbox - Charity & Fundraiser React NextJS Template",
@@ -41,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${chelsea_market.variable} ${dmSans.variable}`}>
+      <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
         <AuthProvider>
           <Preloader />
           {children}

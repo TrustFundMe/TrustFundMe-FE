@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
 
     // Verify token with BE (we can decode JWT client-side or call BE to verify)
     // For now, we'll try to get user info using the token
