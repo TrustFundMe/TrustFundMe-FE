@@ -245,7 +245,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContextProxy";
@@ -309,6 +309,10 @@ const isPasswordValid = (validation: PasswordValidation): boolean => {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnToParam = searchParams.get('returnTo');
+  const returnTo = returnToParam && returnToParam.startsWith('/') ? returnToParam : null;
+
   const { login, signUp, signInWithGoogle, resendVerificationEmail } = useAuth();
 
   // ==================================================================================
@@ -508,7 +512,7 @@ export default function SignInPage() {
         } else if (effectiveRole === 'STAFF') {
           router.push('/staff');
         } else {
-          router.push('/');
+          router.push(returnTo || '/');
         }
       }
     } catch (error) {
@@ -724,7 +728,7 @@ export default function SignInPage() {
       if (error) {
         setError(error.message || "Failed to sign in with Google. Please try again.");
       } else {
-        router.push("/");
+        router.push(returnTo || "/");
       }
     } catch {
       setError("Something went wrong. Please try again.");
