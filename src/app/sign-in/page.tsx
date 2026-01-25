@@ -502,7 +502,9 @@ export default function SignInPage() {
         const userRole = typeof (loggedInUser as any)?.role === 'string' ? (loggedInUser as any).role.toUpperCase().replace(/^ROLE_/, '') : null;
         const effectiveRole = claimRole || userRole;
 
-        if (effectiveRole === 'STAFF' || effectiveRole === 'ADMIN') {
+        if (effectiveRole === 'ADMIN') {
+          router.push('/admin');
+        } else if (effectiveRole === 'STAFF') {
           router.push('/staff');
         } else {
           router.push('/');
