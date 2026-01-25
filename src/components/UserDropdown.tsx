@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, ChevronDown, Heart, Wallet, Settings } from 'lucide-react';
+import { User, LogOut, ChevronDown, Heart, Wallet } from 'lucide-react';
 
 export function UserDropdown() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -114,15 +114,6 @@ export function UserDropdown() {
           >
             <Wallet className="w-4 h-4" />
             Your impact
-          </Link>
-          
-          <Link
-            href="/account/profile"
-            onClick={() => setIsOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Account settings
           </Link>
           
           <div className="border-t border-gray-200 my-1" />

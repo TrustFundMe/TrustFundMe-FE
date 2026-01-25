@@ -6,12 +6,14 @@ import type { FeedPost } from "@/types/feedPost";
 interface FeedPostListProps {
   posts: FeedPost[];
   onPostClick?: (postId: string) => void;
+  onEdit?: (post: FeedPost) => void;
   loading?: boolean;
 }
 
 export default function FeedPostList({
   posts,
   onPostClick,
+  onEdit,
   loading = false,
 }: FeedPostListProps) {
   if (loading) {
@@ -57,6 +59,7 @@ export default function FeedPostList({
             key={post.id}
             post={post}
             onOpen={onPostClick}
+            onEdit={onEdit}
           />
         ))}
       </div>

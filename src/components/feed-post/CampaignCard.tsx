@@ -133,9 +133,7 @@ export default function CampaignCard({
                 fontFamily: "var(--font-dm-sans)",
               }}
             >
-              <span>
-                {campaign.raised.toLocaleString()} / {campaign.goal.toLocaleString()} VNĐ
-              </span>
+              {campaign.raised.toLocaleString('vi-VN')} / {campaign.goal.toLocaleString('vi-VN')} VNĐ
               <span style={{ fontWeight: 600, color: "#1A685B" }}>
                 {progress}%
               </span>
@@ -173,52 +171,52 @@ export default function CampaignCard({
           e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
         }}
       >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              color: "#1A685B",
-              marginBottom: 12,
-              fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            Chiến dịch liên quan
-          </div>
-          <div
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            color: "#1A685B",
+            marginBottom: 12,
+            fontFamily: "var(--font-dm-sans)",
+          }}
+        >
+          Chiến dịch liên quan
+        </div>
+        <div
+          style={{
+            width: "100%",
+            height: 200,
+            borderRadius: 8,
+            overflow: "hidden",
+            marginBottom: 12,
+            background: "#e5e5e5",
+          }}
+        >
+          <Image
+            src={campaign.image}
+            alt={campaign.title}
+            width={400}
+            height={200}
             style={{
               width: "100%",
-              height: 200,
-              borderRadius: 8,
-              overflow: "hidden",
-              marginBottom: 12,
-              background: "#e5e5e5",
+              height: "100%",
+              objectFit: "cover",
             }}
-          >
-            <Image
-              src={campaign.image}
-              alt={campaign.title}
-              width={400}
-              height={200}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 600,
-              lineHeight: 1.3,
-              marginBottom: 12,
-              fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            {campaign.title}
-          </div>
+          />
+        </div>
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.3,
+            marginBottom: 12,
+            fontFamily: "var(--font-dm-sans)",
+          }}
+        >
+          {campaign.title}
+        </div>
         <div
           style={{
             height: 6,
@@ -237,23 +235,23 @@ export default function CampaignCard({
             }}
           />
         </div>
-          <div
-            style={{
-              fontSize: 14,
-              color: "rgba(0,0,0,0.6)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            <span>
-              {campaign.raised.toLocaleString()} / {campaign.goal.toLocaleString()} VNĐ
-            </span>
-            <span style={{ fontWeight: 600, color: "#1A685B" }}>
-              {progress}%
-            </span>
-          </div>
+        <div
+          style={{
+            fontSize: 14,
+            color: "rgba(0,0,0,0.6)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: "var(--font-dm-sans)",
+          }}
+        >
+          <span>
+            {campaign.raised.toLocaleString('vi-VN')} / {campaign.goal.toLocaleString('vi-VN')} VNĐ
+          </span>
+          <span style={{ fontWeight: 600, color: "#1A685B" }}>
+            {progress}%
+          </span>
+        </div>
       </div>
     </Link>
   );
