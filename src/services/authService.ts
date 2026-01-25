@@ -3,6 +3,24 @@
  * BE handles authentication and stores user data in MySQL
  */
 
+/**
+ * Merge avatarUrl from stored user when BE user is missing it (e.g. sync to BE failed).
+ * Keeps avatar after re-login when BE DB does not have avatar_url yet.
+ */
+function mergeAvatarFromStored(beUser: { id?: number; email?: string; avatarUrl?: string | null } | null, storedJson: string | null): typeof beUser {
+  if (!beUser || (beUser.avatarUrl != null && beUser.avatarUrl !== '')) return beUser;
+  if (!storedJson) return beUser;
+  try {
+    const p = JSON.parse(storedJson) as { id?: number; email?: string; avatarUrl?: string } | null;
+    if (p && (p.id === beUser.id || p.email === beUser.email) && (p.avatarUrl != null && p.avatarUrl !== '')) {
+      return { ...beUser, avatarUrl: p.avatarUrl };
+    }
+  } catch {
+    // ignore parse error
+  }
+  return beUser;
+}
+
 interface LoginResponse {
   success: boolean;
   accessToken?: string;
@@ -43,7 +61,10 @@ export const authService = {
       };
     }
 
-    // Store user info in localStorage (tokens are in httpOnly cookies)
+    // Preserve avatarUrl from stored user if BE did not return it (e.g. sync to BE failed earlier)
+    const stored = localStorage.getItem('be_user');
+    data.user = mergeAvatarFromStored(data.user, stored);
+
     if (data.user) {
       localStorage.setItem('be_user', JSON.stringify(data.user));
     }
@@ -116,7 +137,8 @@ export const authService = {
 
     // If session is valid, return it; otherwise return stored user or null
     if (data.session && data.user) {
-      // Update stored user
+      // Preserve avatarUrl from stored when BE did not return it
+      data.user = mergeAvatarFromStored(data.user, storedUser);
       localStorage.setItem('be_user', JSON.stringify(data.user));
       return data;
     }
@@ -316,8 +338,7 @@ export const authService = {
   },
 
   /**
-   * Sign in with Google OAuth
-   * TODO: BE needs to implement POST /api/auth/google endpoint
+   * Sign in with Google OAuth - sends idToken to BE /api/auth/google-login
    */
   async signInWithGoogle(idToken: string): Promise<LoginResponse> {
     const response = await fetch('/api/auth/google', {
@@ -339,7 +360,9 @@ export const authService = {
       };
     }
 
-    // Store user info in localStorage (tokens are in httpOnly cookies)
+    const stored = localStorage.getItem('be_user');
+    data.user = mergeAvatarFromStored(data.user, stored);
+
     if (data.user) {
       localStorage.setItem('be_user', JSON.stringify(data.user));
     }
