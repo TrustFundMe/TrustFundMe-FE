@@ -4,124 +4,124 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import DanboxLayout from "@/layout/DanboxLayout";
 import FeedPostForm from "@/components/feed-post/FeedPostForm";
-import { feedPostService } from "@/services/feedPostService";
-import type { FeedPostDto, FeedPost, UpdateFeedPostRequest } from "@/types/feedPost";
-import { useAuth } from "@/contexts/AuthContextProxy";
+import { mockFeedPosts } from "@/components/feed-post/mockData";
+import type { FeedPost, UpdateFeedPostRequest, CreateFeedPostRequest } from "@/types/feedPost";
 import PageBanner from "@/components/PageBanner";
+import { useAuth } from "@/contexts/AuthContextProxy";
+import { updatePostFeOnly } from "@/lib/feedPostFeOnly";
 
-const mapFeedPostDtoToUi = (dto: FeedPostDto): FeedPost => {
-  return {
-    id: String(dto.id),
-    author: {
-      id: String(dto.authorId),
-      name: `User #${dto.authorId}`,
-      avatar: "/assets/img/about/01.jpg",
-    },
-    title: dto.title,
-    content: dto.content,
-    type: dto.type,
-    visibility: dto.visibility,
-    status: dto.status,
-    createdAt: dto.createdAt,
-    updatedAt: dto.updatedAt,
-    attachments: [],
-    liked: false,
-    likeCount: 0,
-    flagged: false,
-    comments: [],
-    budgetId: dto.budgetId,
-  };
-};
+const SESSION_KEY_CREATED = "feed-posts-mock-created";
+const SESSION_KEY_UPDATES = "feed-post-mock-updates";
 
 const EditFeedPostPage = () => {
   const router = useRouter();
   const params = useParams();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const postId = params?.id as string;
+  const { user } = useAuth();
 
   const [post, setPost] = useState<FeedPost | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push(`/sign-in?redirect=/post/${postId}/edit`);
-      return;
-    }
+    // FE-Only Mode: Mock fetching
+    const foundPost = mockFeedPosts.find((p) => p.id === postId);
 
-    let mounted = true;
+    // Check if we have local updates for this post
+    const updatesRaw = sessionStorage.getItem(SESSION_KEY_UPDATES);
+    let updatedPost = foundPost;
 
-    const loadPost = async () => {
-      if (!postId || isNaN(Number(postId))) {
-        setError("Invalid post ID");
-        setLoading(false);
-        return;
-      }
-
+    if (updatesRaw) {
       try {
-        setLoading(true);
-        setError("");
-        const dto = await feedPostService.getById(Number(postId));
-        if (!mounted) return;
-
-        const uiPost = mapFeedPostDtoToUi(dto);
-
-        // Check if user is the author
-        if (user && user.id !== Number(uiPost.author.id)) {
-          setError("You don't have permission to edit this post");
-          setLoading(false);
-          return;
+        const updates = JSON.parse(updatesRaw);
+        if (updates[postId]) {
+          updatedPost = updates[postId];
         }
-
-        setPost(uiPost);
-      } catch (err) {
-        if (!mounted) return;
-        setError("Failed to load post");
-        console.error("Error loading post:", err);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (isAuthenticated) {
-      loadPost();
+      } catch (e) { console.error(e); }
     }
 
-    return () => {
-      mounted = false;
-    };
-  }, [postId, isAuthenticated, authLoading, user, router]);
+    // Also check pending created posts not yet in mockData
+    if (!foundPost) {
+      const createdRaw = sessionStorage.getItem(SESSION_KEY_CREATED);
+      if (createdRaw) {
+        try {
+          const createdList = JSON.parse(createdRaw);
+          if (Array.isArray(createdList)) {
+            const match = createdList.find((p: any) => p.id === postId);
+            if (match) updatedPost = match;
+          }
+        } catch { /* ignore */ }
+      }
+    }
 
-  const handleSubmit = async (data: UpdateFeedPostRequest) => {
+    // Simulate delay
+    const timer = setTimeout(() => {
+      setPost(updatedPost || null);
+      setLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [postId]);
+
+  const handleSubmit = async (data: CreateFeedPostRequest | UpdateFeedPostRequest) => {
+    if (!post) return;
+
+    // FE-Only Mode: Mock Update
     try {
-      await feedPostService.update(Number(postId), data);
-      router.push(`/post/${postId}`);
-    } catch (error) {
-      throw error;
+      const updated = updatePostFeOnly(post, {
+        title: data.title,
+        content: data.content,
+        type: data.type,
+        visibility: data.visibility,
+        status: data.status,
+        budgetId: data.budgetId,
+        attachments: data.attachments,
+      });
+
+      // Update in local state
+      setPost(updated);
+
+      // Save to SessionStorage so list page can see it
+      const updatesRaw = sessionStorage.getItem(SESSION_KEY_UPDATES);
+      const updates = updatesRaw ? JSON.parse(updatesRaw) : {};
+      updates[updated.id] = updated;
+      sessionStorage.setItem(SESSION_KEY_UPDATES, JSON.stringify(updates));
+
+      // Simulate API delay
+      await new Promise(r => setTimeout(r, 800));
+
+      router.push("/post");
+    } catch (e) {
+      console.error("Mock update failed", e);
+      alert("Failed to update post");
     }
   };
 
   const handleCancel = () => {
-    router.push(`/post/${postId}`);
+    router.back();
   };
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <DanboxLayout header={2} footer={2}>
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Loading...</div>
+        <PageBanner pageName="Edit Post" />
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <div className="text-zinc-500">Loading post...</div>
         </div>
       </DanboxLayout>
     );
   }
 
-  if (error || !post) {
+  if (!post) {
     return (
       <DanboxLayout header={2} footer={2}>
+        <PageBanner pageName="Edit Post" />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-red-500">{error || "Post not found"}</div>
+          <div className="text-center text-red-500">Post not found</div>
+          <div className="text-center mt-4">
+            <button onClick={() => router.back()} className="text-primary hover:underline">
+              Go Back
+            </button>
+          </div>
         </div>
       </DanboxLayout>
     );
@@ -130,19 +130,29 @@ const EditFeedPostPage = () => {
   return (
     <DanboxLayout header={2} footer={2}>
       <PageBanner pageName="Edit Post" />
-      <section className="section-padding">
-        <div className="container">
-          <div style={{ maxWidth: 800, margin: "0 auto" }}>
+
+      <div className="bg-zinc-50 dark:bg-black min-h-screen py-12 md:py-20">
+        <div className="container px-4 mx-auto">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-8 text-center md:text-left">
+              <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">
+                Edit Post
+              </h2>
+              <p className="text-zinc-500 dark:text-zinc-400">
+                Update your post content.
+              </p>
+            </div>
+
             <FeedPostForm
               initialData={post}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
-              submitLabel="Update Post"
+              submitLabel="Save Changes"
               isEdit={true}
             />
           </div>
         </div>
-      </section>
+      </div>
     </DanboxLayout>
   );
 };

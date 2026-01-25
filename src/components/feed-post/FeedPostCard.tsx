@@ -4,23 +4,34 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FeedPost } from "@/types/feedPost";
+import { useAuth } from "@/contexts/AuthContextProxy";
 import CampaignCard, { type CampaignInfo } from "./CampaignCard";
 
 interface FeedPostCardProps {
   post: FeedPost;
   onOpen?: (postId: string) => void;
+  onEdit?: (post: FeedPost) => void;
 }
 
 export default function FeedPostCard({
   post,
   onOpen,
+  onEdit,
 }: FeedPostCardProps) {
+  const { user } = useAuth();
   const router = useRouter();
   const [liked, setLiked] = useState(post.liked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
-  const attachment = post.attachments?.[0];
-  const hasMedia = Boolean(attachment && attachment.type === "image");
+  const [showOptions, setShowOptions] = useState(false);
+
+  const isAuthor = user?.id && String(user.id) === String(post.author.id);
+  // Debug log (remove in production)
+  // console.log(`Post ${post.id}: user=${user?.id}, author=${post.author.id}, isAuthor=${isAuthor}`);
+
+  const images = (post.attachments || []).filter((a) => a.type === "image");
+  const hasMedia = images.length > 0;
   const campaign = (post as any).campaign as CampaignInfo | undefined;
+  const isHtml = /<[a-z][\s\S]*>/i.test(post.content || "");
 
   const handleClick = () => {
     if (onOpen) {
@@ -132,24 +143,58 @@ export default function FeedPostCard({
               </div>
             </div>
           </div>
-          <button
-            type="button"
-            style={{
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              padding: 8,
-              fontSize: 16,
-              color: "rgba(0,0,0,0.6)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <i className="far fa-ellipsis-h" />
-          </button>
+          {isAuthor && (
+            <div className="relative">
+              <button
+                type="button"
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: 8,
+                  fontSize: 16,
+                  color: "rgba(0,0,0,0.6)",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowOptions(!showOptions);
+                }}
+              >
+                <i className="far fa-ellipsis-h" />
+              </button>
+
+              {showOptions && (
+                <div
+                  className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-100 dark:border-zinc-700 py-1 z-10 w-32 origin-top-right transform transition-all"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => {
+                      if (onEdit) {
+                        onEdit(post);
+                      } else {
+                        router.push(`/post/${post.id}/edit`);
+                      }
+                      setShowOptions(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+                  >
+                    <i className="far fa-edit text-xs" /> Edit
+                  </button>
+                  <button
+                    onClick={() => alert("Delete mocked")}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
+                  >
+                    <i className="far fa-trash text-xs" /> Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </fieldset>
 
-      {/* Media Field */}
+      {/* Media Field - 1 ảnh full, nhiều ảnh lưới kiểu Facebook */}
       {hasMedia && (
         <fieldset
           style={{
@@ -161,28 +206,33 @@ export default function FeedPostCard({
         >
           <div
             style={{
-              width: "100%",
-              aspectRatio: "1 / 1",
-              position: "relative",
-              background: "#f2f2f2",
+              display: "grid",
+              gridTemplateColumns: images.length === 1 ? "1fr" : images.length === 2 ? "1fr 1fr" : "repeat(3, 1fr)",
+              gap: 2,
+              maxHeight: images.length <= 2 ? 400 : 360,
+              overflow: "hidden",
               cursor: "pointer",
             }}
             onClick={handleClick}
           >
-            <Image
-              src={attachment!.url}
-              alt={post.title || "Post image"}
-              fill
-              style={{ objectFit: "cover" }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.02) 100%)",
-                pointerEvents: "none",
-              }}
-            />
+            {images.slice(0, 9).map((att, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "relative",
+                  aspectRatio: images.length === 1 ? "1" : "1",
+                  background: "#f2f2f2",
+                  overflow: "hidden",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={att.url}
+                  alt={post.title || `Image ${i + 1}`}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+            ))}
           </div>
         </fieldset>
       )}
@@ -217,13 +267,14 @@ export default function FeedPostCard({
             fontSize: 15,
             lineHeight: 1.6,
             color: "#1a1a1a",
-            whiteSpace: "pre-wrap",
+            whiteSpace: isHtml ? "normal" : "pre-wrap",
             wordBreak: "break-word",
             fontFamily: "var(--font-dm-sans)",
           }}
-        >
-          {post.content}
-        </div>
+          {...(isHtml
+            ? { dangerouslySetInnerHTML: { __html: post.content || "" } }
+            : { children: post.content })}
+        />
       </fieldset>
 
       {/* Campaign Field */}
