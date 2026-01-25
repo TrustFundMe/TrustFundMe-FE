@@ -492,14 +492,22 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      const { error } = await login(normalizeEmail(email), password);
+      const { error, user: loggedInUser, tokenRole } = await login(normalizeEmail(email), password);
 
       if (error) {
         setError(error.message || "Invalid email or password. Please try again.");
         setLoading(false);
       } else {
-        // Success - redirect to homepage
-        router.push("/");
+        // Success - redirect based on authoritative role claim from token (RBAC)
+        const claimRole = typeof tokenRole === 'string' ? tokenRole.toUpperCase().replace(/^ROLE_/, '') : null;
+        const userRole = typeof (loggedInUser as any)?.role === 'string' ? (loggedInUser as any).role.toUpperCase().replace(/^ROLE_/, '') : null;
+        const effectiveRole = claimRole || userRole;
+
+        if (effectiveRole === 'STAFF' || effectiveRole === 'ADMIN') {
+          router.push('/staff');
+        } else {
+          router.push('/');
+        }
       }
     } catch (error) {
       setError("Something went wrong. Please try again.");

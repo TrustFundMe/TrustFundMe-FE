@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          maxAge: data.expiresIn ? Math.floor(data.expiresIn / 1000) : 15 * 60, // 15 minutes default
+          maxAge: data.expiresIn ? Math.floor(data.expiresIn / 1000) : 15 * 60,
           path: '/',
         });
       }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60, // 7 days
+          maxAge: 7 * 24 * 60 * 60,
           path: '/',
         });
       }

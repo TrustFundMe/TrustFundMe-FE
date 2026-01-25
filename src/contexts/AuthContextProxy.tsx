@@ -10,7 +10,7 @@ interface BEUserInfo {
   fullName: string;
   phoneNumber?: string;
   avatarUrl?: string;
-  role: string;
+  role: import('@/config/roles').UserRole;
   verified?: boolean;
 }
 
@@ -19,7 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isVerified: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ error: any }>;
+  login: (email: string, password: string) => Promise<{ error: any; user?: BEUserInfo | null; tokenRole?: string | null }>;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<BEUserInfo>) => void;
@@ -79,10 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.success && result.user) {
       setUser(result.user);
       localStorage.setItem('be_user', JSON.stringify(result.user));
-      return { error: null };
+      return { error: null, user: result.user, tokenRole: result.tokenRole ?? null };
     }
 
-    return { error: { message: result.error || 'Login failed' } };
+    return { error: { message: result.error || 'Login failed' }, user: null };
   };
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
@@ -94,11 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     }
 
-    // Handle error - result.error could be string or undefined
-    const errorMessage = typeof result.error === 'string' 
-      ? result.error 
-      : result.error?.message || 'Signup failed';
-    
+    // Handle error - result.error is a string (see authService)
+    const errorMessage = typeof result.error === 'string' ? result.error : 'Signup failed';
+
     return { error: { message: errorMessage } };
   };
 
