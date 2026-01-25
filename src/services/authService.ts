@@ -26,6 +26,7 @@ interface LoginResponse {
   accessToken?: string;
   refreshToken?: string;
   user: any;
+  tokenRole?: string | null;
   error?: string;
 }
 
@@ -74,6 +75,7 @@ export const authService = {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
       user: data.user,
+      tokenRole: data.tokenRole ?? null,
     };
   },
 
@@ -125,25 +127,30 @@ export const authService = {
    * Get current session - verify token with BE
    */
   async getSession(): Promise<{ session: any; user: any }> {
-    // Check localStorage for user info
+    // Check localStorage for user info (fast path for initial render)
     const storedUser = localStorage.getItem('be_user');
 
-    const response = await fetch('/api/auth/session', {
+    // Canonical server-side source of truth: /api/auth/me (validated by BE)
+    const response = await fetch('/api/auth/me', {
       method: 'GET',
       credentials: 'include',
+      cache: 'no-store',
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ user: null }));
 
     // If session is valid, return it; otherwise return stored user or null
     if (data.session && data.user) {
       // Preserve avatarUrl from stored when BE did not return it
       data.user = mergeAvatarFromStored(data.user, storedUser);
       localStorage.setItem('be_user', JSON.stringify(data.user));
-      return data;
+      return {
+        session: { access_token: null, token_type: 'Bearer' },
+        user: data.user,
+      };
     }
 
-    // Fallback to stored user
+    // Fallback to stored user (best-effort UX)
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
@@ -372,6 +379,7 @@ export const authService = {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
       user: data.user,
+      tokenRole: data.tokenRole ?? null,
     };
   },
 };

@@ -36,6 +36,7 @@ function VerifyEmailContent() {
       hasSentOtp.current = true;
       handleSendOtp();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user]);
 
   // Resend cooldown timer
@@ -69,7 +70,7 @@ function VerifyEmailContent() {
       let data;
       try {
         data = await response.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse server response');
       }
 
@@ -84,7 +85,10 @@ function VerifyEmailContent() {
       }
     } catch (err: any) {
       console.error('Send OTP error:', err);
-      setError(err.message || 'Unable to send verification code. Please check your connection and try again.');
+      setError(
+        err.message ||
+          'Unable to send verification code. Please check your connection and try again.'
+      );
     } finally {
       setSending(false);
     }
@@ -117,7 +121,7 @@ function VerifyEmailContent() {
       let verifyData;
       try {
         verifyData = await verifyResponse.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse verify response');
       }
 
@@ -149,7 +153,7 @@ function VerifyEmailContent() {
       let emailData;
       try {
         emailData = await emailResponse.json();
-      } catch (e) {
+      } catch {
         throw new Error('Failed to parse email verification response');
       }
 
@@ -173,10 +177,14 @@ function VerifyEmailContent() {
       }, 1500);
     } catch (err: any) {
       console.error('Verify email error:', err);
-      setError(err.message || 'Unable to verify email. Please check your connection and try again.');
+      setError(
+        err.message ||
+          'Unable to verify email. Please check your connection and try again.'
+      );
       setLoading(false);
     }
   };
+
   const targetEmail = email || user?.email || '';
 
   return (
@@ -200,9 +208,7 @@ function VerifyEmailContent() {
               </div>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Verify Your Email</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              We've sent a verification code to:
-            </p>
+            <p className="mt-2 text-sm text-gray-600">We've sent a verification code to:</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{targetEmail}</p>
           </div>
 

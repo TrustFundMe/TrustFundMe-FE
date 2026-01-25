@@ -1,40 +1,35 @@
-"use client";
+'use client';
 
-import DanboxLayout from "@/layout/DanboxLayout";
-import { useEffect, useMemo, useState } from "react";
+import DanboxLayout from '@/layout/DanboxLayout';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 
-import CampaignDonateCard from "@/components/campaign/CampaignDonateCard";
-import CampaignHeader from "@/components/campaign/CampaignHeader";
-import CampaignCommentsCard from "@/components/campaign/CampaignCommentsCard";
-import FollowersRow from "@/components/campaign/FollowersRow";
-import PlansList from "@/components/campaign/PlansList";
-import PostsFeed from "@/components/campaign/PostsFeed";
-import {
-  mockComments,
-  mockPlans,
-  mockPosts,
-} from "@/components/campaign/mock";
-import type { Campaign, CampaignPost } from "@/components/campaign/types";
-import { useSearchParams } from "next/navigation";
-import { campaignService } from "@/services/campaignService";
-import type { CampaignDto } from "@/types/campaign";
-import { mockCampaign } from "@/components/campaign/mock";
-import { withFallbackImage } from "@/lib/image";
+import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
+import CampaignHeader from '@/components/campaign/CampaignHeader';
+import CampaignCommentsCard from '@/components/campaign/CampaignCommentsCard';
+import FollowersRow from '@/components/campaign/FollowersRow';
+import PlansList from '@/components/campaign/PlansList';
+import PostsFeed from '@/components/campaign/PostsFeed';
+import { mockComments, mockPlans, mockPosts } from '@/components/campaign/mock';
+import type { Campaign, CampaignPost } from '@/components/campaign/types';
+import { useSearchParams } from 'next/navigation';
+import { campaignService } from '@/services/campaignService';
+import type { CampaignDto } from '@/types/campaign';
+import { withFallbackImage } from '@/lib/image';
 
 const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
   return {
     id: String(dto.id),
     title: dto.title,
-    category: dto.status ?? "Campaign",
-    description: dto.description ?? "",
-    coverImage: withFallbackImage(dto.coverImage, "/assets/img/campaign/1.jpg"),
-    galleryImages: [withFallbackImage(dto.coverImage, "/assets/img/campaign/1.jpg")],
+    category: dto.status ?? 'Campaign',
+    description: dto.description ?? '',
+    coverImage: withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg'),
+    galleryImages: [withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg')],
     goalAmount: 0,
     raisedAmount: dto.balance ?? 0,
     creator: {
       id: String(dto.fundOwnerId),
       name: `Fund Owner #${dto.fundOwnerId}`,
-      avatar: "/assets/img/about/01.jpg",
+      avatar: '/assets/img/about/01.jpg',
     },
     followers: [],
     liked: false,
@@ -46,14 +41,14 @@ const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
   };
 };
 
-const CampaignDetailsPage = () => {
+function CampaignDetailsInner() {
   const searchParams = useSearchParams();
-  const idParam = searchParams.get("id");
+  const idParam = searchParams.get('id');
   const campaignId = idParam ? Number(idParam) : NaN;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>("");
+  const [error, setError] = useState<string>('');
 
   const [posts] = useState<CampaignPost[]>(mockPosts);
 
@@ -63,10 +58,10 @@ const CampaignDetailsPage = () => {
     let mounted = true;
 
     const run = async () => {
-      setError("");
+      setError('');
 
       if (!Number.isFinite(campaignId) || campaignId <= 0) {
-        setError("Invalid campaign id");
+        setError('Invalid campaign id');
         setLoading(false);
         return;
       }
@@ -78,7 +73,7 @@ const CampaignDetailsPage = () => {
         setCampaign(mapCampaignDtoToUi(dto));
       } catch {
         if (!mounted) return;
-        setError("Failed to load campaign");
+        setError('Failed to load campaign');
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -95,10 +90,7 @@ const CampaignDetailsPage = () => {
   if (loading) {
     return (
       <DanboxLayout>
-        <div
-          className="container"
-          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
-        >
+        <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div>Loading...</div>
         </div>
       </DanboxLayout>
@@ -110,10 +102,7 @@ const CampaignDetailsPage = () => {
   if (!Number.isFinite(campaignId)) {
     return (
       <DanboxLayout>
-        <div
-          className="container"
-          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
-        >
+        <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div style={{ marginBottom: 12, fontWeight: 700 }}>
             This campaign id is not numeric, so API fetch is skipped.
           </div>
@@ -128,11 +117,8 @@ const CampaignDetailsPage = () => {
   if (error || !campaign) {
     return (
       <DanboxLayout>
-        <div
-          className="container"
-          style={{ padding: "80px 0", fontFamily: "var(--font-dm-sans)" }}
-        >
-          <div>{error || "Campaign not found"}</div>
+        <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
+          <div>{error || 'Campaign not found'}</div>
         </div>
       </DanboxLayout>
     );
@@ -142,56 +128,57 @@ const CampaignDetailsPage = () => {
     <DanboxLayout>
       <section
         className="causes-details-section fix section-padding"
-        style={{ paddingTop: 0, fontFamily: "var(--font-dm-sans)" }}
+        style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}
       >
         <div className="container">
           <div
             style={{
               maxWidth: 1200,
-              margin: "0 auto",
-              display: "grid",
-              gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
+              margin: '0 auto',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
               gap: 48,
-              alignItems: "start",
+              alignItems: 'start',
             }}
           >
             <div style={{ minWidth: 0 }}>
               <CampaignHeader
                 campaign={campaign}
                 onToggleLike={() =>
-                  setCampaign((c) => ({
-                    ...c,
-                    liked: !c.liked,
-                    likeCount: c.liked
-                      ? Math.max(0, c.likeCount - 1)
-                      : c.likeCount + 1,
-                  }))
+                  setCampaign((c) =>
+                    c
+                      ? {
+                          ...c,
+                          liked: !c.liked,
+                          likeCount: c.liked ? Math.max(0, c.likeCount - 1) : c.likeCount + 1,
+                        }
+                      : c
+                  )
                 }
                 onToggleFollow={() =>
-                  setCampaign((c) => ({
-                    ...c,
-                    followed: !c.followed,
-                    followerCount: c.followed
-                      ? Math.max(0, c.followerCount - 1)
-                      : c.followerCount + 1,
-                  }))
+                  setCampaign((c) =>
+                    c
+                      ? {
+                          ...c,
+                          followed: !c.followed,
+                          followerCount: c.followed
+                            ? Math.max(0, c.followerCount - 1)
+                            : c.followerCount + 1,
+                        }
+                      : c
+                  )
                 }
-                onToggleFlag={() =>
-                  setCampaign((c) => ({ ...c, flagged: !c.flagged }))
-                }
+                onToggleFlag={() => setCampaign((c) => (c ? { ...c, flagged: !c.flagged } : c))}
               />
 
-              <div
-                className="single-sidebar-widgets"
-                style={{ marginTop: 24, marginBottom: 24 }}
-              >
+              <div className="single-sidebar-widgets" style={{ marginTop: 24, marginBottom: 24 }}>
                 <div className="widget-title">
                   <h4>Followers</h4>
                 </div>
                 <FollowersRow
                   followers={campaign.followers}
                   onClick={() => {
-                    alert("Go to followers list page (route not implemented)");
+                    alert('Go to followers list page (route not implemented)');
                   }}
                 />
               </div>
@@ -211,19 +198,17 @@ const CampaignDetailsPage = () => {
                   <PlansList
                     plans={mockPlans}
                     onOpenPlan={(planId) => {
-                      alert(
-                        `Go to plan details page: ${planId} (route not implemented)`,
-                      );
+                      alert(`Go to plan details page: ${planId} (route not implemented)`);
                     }}
                   />
                 </div>
 
                 <div
                   style={{
-                    border: "1px solid rgba(0,0,0,0.10)",
+                    border: '1px solid rgba(0,0,0,0.10)',
                     borderRadius: 16,
                     padding: 16,
-                    background: "#fff",
+                    background: '#fff',
                   }}
                 >
                   <div
@@ -238,15 +223,13 @@ const CampaignDetailsPage = () => {
                       type="button"
                       className="text-sm"
                       style={{
-                        border: "none",
-                        background: "transparent",
+                        border: 'none',
+                        background: 'transparent',
                         padding: 0,
-                        color: "#0F5D51",
+                        color: '#0F5D51',
                         fontWeight: 700,
                       }}
-                      onClick={() =>
-                        alert("See more posts (route not implemented)")
-                      }
+                      onClick={() => alert('See more posts (route not implemented)')}
                     >
                       See more
                     </button>
@@ -255,11 +238,7 @@ const CampaignDetailsPage = () => {
                   <PostsFeed
                     posts={posts}
                     campaignCreatorId={campaign.creator.id}
-                    onOpenPost={(postId) =>
-                      alert(
-                        `Open post details: ${postId} (route not implemented)`,
-                      )
-                    }
+                    onOpenPost={(postId) => alert(`Open post details: ${postId} (route not implemented)`)}
                   />
                 </div>
               </div>
@@ -300,6 +279,20 @@ const CampaignDetailsPage = () => {
       </section>
     </DanboxLayout>
   );
-};
+}
 
-export default CampaignDetailsPage;
+export default function CampaignDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <DanboxLayout>
+          <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
+            <div>Loading...</div>
+          </div>
+        </DanboxLayout>
+      }
+    >
+      <CampaignDetailsInner />
+    </Suspense>
+  );
+}
