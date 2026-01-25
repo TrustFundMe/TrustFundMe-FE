@@ -58,6 +58,8 @@ export type CreateFeedPostRequest = {
   title?: string | null;
   content: string;
   status?: string;
+  /** For FE-only or when BE supports: image URLs (blob or uploaded) */
+  attachments?: { type: "image"; url: string }[];
 };
 
 export type UpdateFeedPostRequest = {
@@ -67,4 +69,5 @@ export type UpdateFeedPostRequest = {
   title?: string | null;
   content?: string;
   status?: string;
+  attachments?: { type: "image"; url: string }[];
 };
