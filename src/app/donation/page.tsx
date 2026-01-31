@@ -1,7 +1,7 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -16,7 +16,7 @@ import DonationRecentDonors, { type RecentDonor } from '@/components/campaign/Do
 
 type DonationStep = 'form' | 'thanks';
 
-export default function DonationPage() {
+function DonationContent() {
   const { user, isAuthenticated, loading } = useAuth();
   const searchParams = useSearchParams();
 
@@ -254,5 +254,26 @@ export default function DonationPage() {
         `}</style>
       </section>
     </DanboxLayout>
+  );
+}
+
+// ==================================================================================
+// MAIN EXPORT WITH SUSPENSE BOUNDARY
+// ==================================================================================
+
+export default function DonationPage() {
+  return (
+    <Suspense fallback={
+      <DanboxLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </DanboxLayout>
+    }>
+      <DonationContent />
+    </Suspense>
   );
 }

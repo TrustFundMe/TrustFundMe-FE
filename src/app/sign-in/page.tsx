@@ -246,7 +246,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import { authService } from "@/services/authService";
@@ -304,10 +304,10 @@ const isPasswordValid = (validation: PasswordValidation): boolean => {
 };
 
 // ==================================================================================
-// MAIN COMPONENT
+// SEARCH PARAMS WRAPPER COMPONENT
 // ==================================================================================
 
-export default function SignInPage() {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnToParam = searchParams.get('returnTo');
@@ -1540,7 +1540,21 @@ export default function SignInPage() {
   );
 }
 
+// ==================================================================================
+// MAIN EXPORT WITH SUSPENSE BOUNDARY
+// ==================================================================================
 
-
-
-
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
+  );
+}
