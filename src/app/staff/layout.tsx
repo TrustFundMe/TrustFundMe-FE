@@ -3,15 +3,14 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Megaphone, Inbox, LogOut } from 'lucide-react';
+import { LayoutDashboard, Inbox, LogOut, MessageCircle } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
 
 const sidebarNavItems = [
   { href: '/staff', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/staff/request', label: 'Requests', icon: Inbox },
-  { href: '/staff/users', label: 'Users', icon: Users },
-  { href: '/staff/campaigns', label: 'Campaigns', icon: Megaphone },
+  { href: '/staff/chat', label: 'Chat', icon: MessageCircle },
 ];
 
 function Sidebar() {
@@ -28,7 +27,7 @@ function Sidebar() {
       .join('') || 'S';
 
   return (
-    <aside className="hidden md:flex md:flex-col w-[72px] bg-white border-r border-gray-200">
+    <aside className="hidden md:flex md:flex-col w-[72px] bg-white border-r border-gray-200 h-full">
       <nav className="flex-1 flex flex-col items-center justify-center gap-3">
         {sidebarNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -80,13 +79,13 @@ function Sidebar() {
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
     <RequireRole allowedRoles={['STAFF', 'ADMIN']}>
-      <div className="flex h-screen bg-gray-100 font-sans">
+      <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
         <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+        <main className="flex-1 h-screen overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
+          <div className="h-full p-2">
             {children}
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </RequireRole>
   );
