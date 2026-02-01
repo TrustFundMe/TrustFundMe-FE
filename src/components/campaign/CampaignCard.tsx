@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 export type CampaignCardItem = {
   id: string;
@@ -14,10 +17,15 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
   const progress = Math.min(100, Math.round((item.raised / item.goal) * 100));
 
   return (
-    <Link
-      href={`/campaigns-details?id=${encodeURIComponent(item.id)}`}
-      className="group relative block w-full overflow-hidden rounded-xl bg-slate-200 shadow-sm ring-1 ring-slate-200"
+    <motion.div
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      className="h-full"
     >
+      <Link
+        href={`/campaigns-details?id=${encodeURIComponent(item.id)}`}
+        className="group relative block w-full h-full overflow-hidden rounded-xl bg-slate-200 shadow-sm ring-1 ring-slate-200"
+      >
       <div className="relative aspect-[2/3] w-full">
         <Image
           src={item.image}
@@ -50,12 +58,13 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
               />
             </div>
             <div className="mt-1 flex items-center justify-between text-xs font-semibold text-white">
-              <span>{item.raised.toLocaleString()} USD</span>
+              <span>{item.raised.toLocaleString("en-US")} USD</span>
               <span>{progress}%</span>
             </div>
           </div>
         </div>
       </div>
     </Link>
+    </motion.div>
   );
 }

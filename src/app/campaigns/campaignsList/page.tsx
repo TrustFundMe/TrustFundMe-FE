@@ -162,33 +162,60 @@ function CampaignsListContent() {
               <div className="hidden md:block h-[2px] flex-1 bg-slate-300" />
             </div>
 
-            <div className="mt-8 md:mt-12 mx-auto grid w-full max-w-5xl grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {pageItems.map((item) => (
-                <CampaignCard key={item.id} item={item} />
-              ))}
-            </div>
-
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-              >
-                Previous
-              </button>
-              <div className="text-sm font-bold text-slate-800">
-                Page {safePage} / {totalPages}
+            {loading ? (
+              <div className="mt-8 md:mt-12 flex flex-col items-center justify-center min-h-[280px] gap-4">
+                <div
+                  className="h-12 w-12 rounded-full border-2 border-slate-300 border-t-slate-800 animate-spin"
+                  aria-hidden
+                />
+                <p className="text-slate-600 font-medium">Loading campaigns...</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-              >
-                Next
-              </button>
-            </div>
+            ) : error ? (
+              <div className="mt-8 md:mt-12 flex flex-col items-center justify-center min-h-[280px] gap-4 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-8 text-center">
+                <p className="text-slate-700 font-semibold">{error}</p>
+                <p className="text-sm text-slate-500">
+                  Make sure the API is running (e.g. API Gateway on port 8080 and Campaign Service registered).
+                </p>
+              </div>
+            ) : filteredCampaigns.length === 0 ? (
+              <div className="mt-8 md:mt-12 flex flex-col items-center justify-center min-h-[280px] gap-4 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-8 text-center">
+                <p className="text-slate-700 font-semibold">No campaigns found</p>
+                <p className="text-sm text-slate-500">
+                  {search.trim() ? "Try a different search." : "There are no campaigns yet."}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="mt-8 md:mt-12 mx-auto grid w-full max-w-5xl grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {pageItems.map((item) => (
+                    <CampaignCard key={item.id} item={item} />
+                  ))}
+                </div>
+
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                  >
+                    Previous
+                  </button>
+                  <div className="text-sm font-bold text-slate-800">
+                    Page {safePage} / {totalPages}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         </section>
       </div>

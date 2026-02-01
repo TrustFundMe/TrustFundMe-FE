@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { CampaignCategoriesSection } from "@/components/campaign/CampaignCategoriesSection";
 import CampaignBanner from "@/components/campaign/CampaignBanner";
 import CampaignHighlightSlider from "@/components/campaign/CampaignHighlightSlider";
 import DanboxLayout from "@/layout/DanboxLayout";
+
+export const metadata: Metadata = {
+  title: "Campaigns",
+  description:
+    "Explore and support fundraising campaigns. Help bring meaningful campaigns to life.",
+};
 
 const CampaignsPage = () => {
   return (

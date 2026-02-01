@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
   HeartHandshake,
@@ -10,6 +10,7 @@ import {
   School,
   Stethoscope,
 } from "lucide-react";
+import { motion, useInView } from "framer-motion";
 
 import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
 
@@ -116,22 +117,114 @@ const categoryCampaigns: Record<string, CampaignCardItem[]> = {
   "nutritional-support": buildManyCampaigns("nutritional-support", 12),
 };
 
+const categoryCardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.06, duration: 0.35 },
+  }),
+};
+
+const featuredBlockContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+};
+
+const featuredBlockItem = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+};
+
+const featuredCardItem = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+function FeaturedBlock({
+  id,
+  title,
+  description,
+  visible,
+}: {
+  id: string;
+  title: string;
+  description: string;
+  visible: CampaignCardItem[];
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.12 });
+
+  return (
+    <motion.div
+      ref={ref}
+      id={id}
+      className="scroll-mt-28"
+      initial="hidden"
+      animate={inView ? "visible" : "hidden"}
+      variants={featuredBlockContainer}
+    >
+      <motion.div
+        className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        variants={featuredBlockItem}
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
+            {title}
+          </p>
+          <h3 className="text-xl md:text-2xl font-bold text-slate-900">
+            Featured campaigns
+          </h3>
+          <p className="mt-1 text-slate-600 text-sm md:text-base max-w-xl line-clamp-2">
+            {description}
+          </p>
+        </div>
+        <Link
+          href={`/campaigns/campaignsList?categoryId=${id}`}
+          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
+        >
+          See more
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </motion.div>
+      <motion.div
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+      >
+        {visible.map((item) => (
+          <motion.div key={item.id} variants={featuredCardItem}>
+            <CampaignCard item={item} />
+          </motion.div>
+        ))}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const CategoryCard = ({
   id,
   title,
   Icon,
   onClick,
+  index,
 }: {
   id: string;
   title: string;
   Icon: React.ComponentType<{ className?: string }>;
   onClick: (categoryId: string) => void;
+  index: number;
 }) => {
   return (
-    <button
+    <motion.button
       type="button"
       onClick={() => onClick(id)}
-      className="group flex w-full min-w-0 flex-col items-center justify-start gap-2 rounded-2xl bg-white px-3 py-4 text-center shadow-sm ring-1 ring-slate-200 transition hover:shadow-md"
+      variants={categoryCardVariants}
+      initial="hidden"
+      animate="visible"
+      custom={index}
+      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      className="group flex w-full min-w-0 flex-col items-center justify-start gap-2 rounded-2xl bg-white px-3 py-4 text-center shadow-sm ring-1 ring-slate-200 hover:shadow-md"
       style={{ minHeight: 140 }}
     >
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F84D43] text-white transition group-hover:bg-[#1A685B]">
@@ -140,7 +233,7 @@ const CategoryCard = ({
       <span className="w-full text-sm sm:text-base font-bold text-slate-900 leading-snug break-words">
         {title}
       </span>
-    </button>
+    </motion.button>
   );
 };
 
@@ -175,11 +268,11 @@ export function CampaignCategoriesSection() {
 
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < totalPages - 1;
+  const sectionRef = useRef<HTMLElement>(null);
+  const sectionInView = useInView(sectionRef, { once: true, amount: 0.08 });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const hash = window.location.hash;
+    const hash = typeof window !== "undefined" ? window.location.hash : "";
     if (!hash) return;
 
     const categoryId = decodeURIComponent(hash.replace("#", ""));
@@ -188,12 +281,11 @@ export function CampaignCategoriesSection() {
     const targetPage = getPageIndexByCategoryId(categoryId);
     setPageIndex(targetPage);
 
-    const timeout = window.setTimeout(() => {
+    const t = setTimeout(() => {
       const el = document.getElementById(categoryId);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);
-
-    return () => window.clearTimeout(timeout);
+    return () => clearTimeout(t);
   }, []);
 
   const handleCategoryClick = (categoryId: string) => {
@@ -247,101 +339,72 @@ export function CampaignCategoriesSection() {
   };
 
   return (
-    <section id="campaigns" className="py-16 md:py-24 bg-white">
+    <section ref={sectionRef} id="campaigns" className="py-12 md:py-20 bg-white">
       <div className="container mx-auto px-4">
-        <div className="mb-10 md:mb-14 flex items-start justify-between gap-6">
-          <div className="hidden md:flex items-center gap-2 text-[#1A685B]">
-            <span className="inline-flex h-2 w-2 rounded-full bg-[#1A685B]" />
-            <span className="inline-flex h-2 w-2 rounded-full bg-[#1A685B]/70" />
-            <span className="inline-flex h-2 w-2 rounded-full bg-[#1A685B]/40" />
-          </div>
-        </div>
-
-        <div className="mx-auto grid w-full max-w-5xl gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {categories.map(({ title, id, Icon }) => (
+        <motion.div
+          className="mx-auto grid w-full max-w-5xl gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          initial="hidden"
+          animate={sectionInView ? "visible" : "hidden"}
+          variants={{
+            visible: { transition: { staggerChildren: 0.06 } },
+            hidden: {},
+          }}
+        >
+          {categories.map(({ title, id, Icon }, i) => (
             <CategoryCard
               key={id}
               id={id}
               title={title}
               Icon={Icon}
               onClick={handleCategoryClick}
+              index={i}
             />
           ))}
-        </div>
+        </motion.div>
 
-        <div className="mx-auto mt-10 flex flex-wrap w-full max-w-5xl items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={!canPrev}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          >
-            Previous
-          </button>
-          <div className="text-sm font-semibold text-slate-700">
-            Page {pageIndex + 1} / {totalPages}
-          </div>
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!canNext}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-          >
-            Next
-          </button>
-        </div>
-
-        <div className="mt-12 md:mt-16 space-y-12 md:space-y-16">
+        <div className="mt-10 md:mt-14 space-y-10 md:space-y-14">
           {visibleCategories.map(({ id, title, description }) => {
             const all = categoryCampaigns[id] ?? [];
             const visible = all.slice(0, CAMPAIGNS_PER_SECTION);
-            const showArrow = all.length > CAMPAIGNS_PER_SECTION;
 
             return (
-              <div key={id} id={id} className="scroll-mt-28">
-                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
-                      {title}
-                    </p>
-                    <h3 className="text-2xl md:text-3xl font-bold text-slate-900">
-                      Featured campaigns
-                    </h3>
-                    <p className="mt-2 text-slate-600 max-w-2xl">
-                      {description}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/campaigns/campaignsList?categoryId=${id}`}
-                    className="inline-flex w-fit shrink-0 items-center justify-center rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
-                  >
-                    See more
-                  </Link>
-                </div>
-
-                <div className="flex flex-col lg:flex-row items-stretch gap-4">
-                  <div className="flex-1">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {visible.map((item) => (
-                        <CampaignCard key={item.id} item={item} />
-                      ))}
-                    </div>
-                  </div>
-
-                  {showArrow && (
-                    <Link
-                      href={`/campaigns/campaignsList?categoryId=${id}`}
-                      className="shrink-0 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-slate-200 shadow-sm hover:bg-slate-50 self-center lg:self-auto"
-                      aria-label="See more"
-                    >
-                      <ChevronRight className="h-6 w-6 text-slate-800" />
-                    </Link>
-                  )}
-                </div>
-              </div>
+              <FeaturedBlock key={id} id={id} title={title} description={description} visible={visible} />
             );
           })}
         </div>
+
+        {totalPages > 1 && (
+          <motion.div
+            className="mx-auto mt-10 md:mt-14 flex flex-wrap w-full max-w-5xl items-center justify-center gap-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.button
+              type="button"
+              onClick={handlePrev}
+              disabled={!canPrev}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+              whileHover={canPrev ? { scale: 1.03 } : {}}
+              whileTap={canPrev ? { scale: 0.98 } : {}}
+            >
+              Previous
+            </motion.button>
+            <span className="text-sm font-semibold text-slate-700">
+              Page {pageIndex + 1} / {totalPages}
+            </span>
+            <motion.button
+              type="button"
+              onClick={handleNext}
+              disabled={!canNext}
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+              whileHover={canNext ? { scale: 1.03 } : {}}
+              whileTap={canNext ? { scale: 0.98 } : {}}
+            >
+              Next
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     </section>
   );
