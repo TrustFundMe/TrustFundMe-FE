@@ -18,7 +18,7 @@ const CampaignsPage = () => {
           heading="Help Bring Meaningful Campaigns to Life"
           subheading="Helping today so communities can thrive tomorrow"
           ctaLabel="Start a Campaign"
-          ctaHref="#campaigns"
+          ctaHref="/campaign-creation"
         />
         <CampaignHighlightSlider />
         <CampaignCategoriesSection />

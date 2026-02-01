@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
+import CampaignBannerCta from "@/components/campaign/CampaignBannerCta";
 
 interface CampaignBannerProps {
   heading?: string;
@@ -51,13 +50,25 @@ const CampaignBanner = ({
           {heading}
         </h1>
 
-        <Link
-          href={ctaHref}
-          className="inline-flex items-center justify-center rounded-full bg-[#F84D43] hover:bg-[#1A685B] text-white font-semibold text-sm md:text-base px-8 md:px-10 lg:px-12 py-3 md:py-3.5 lg:py-4 shadow-lg shadow-black/25 transition-colors duration-200"
-        >
-          {ctaLabel}
-        </Link>
-      </motion.div>
+        {ctaHref === '/campaign-creation' ? (
+          <CampaignBannerCta
+            label={ctaLabel}
+            toWhenAuthed="/campaign-creation"
+            toWhenGuest="/sign-in"
+            returnTo="/campaign-creation"
+            className="inline-flex items-center justify-center rounded-full bg-[#F84D43] hover:bg-[#1A685B] text-white font-semibold text-sm md:text-base px-8 md:px-10 lg:px-12 py-3 md:py-3.5 lg:py-4 shadow-lg shadow-black/25 transition-colors duration-200"
+          />
+        ) : (
+          <Link
+            href={ctaHref}
+            className="inline-flex items-center justify-center rounded-full bg-[#F84D43] hover:bg-[#1A685B] text-white font-semibold text-sm md:text-base px-8 md:px-10 lg:px-12 py-3 md:py-3.5 lg:py-4 shadow-lg shadow-black/25 transition-colors duration-200"
+          >
+            {ctaLabel}
+          </Link>
+        )}
+      </div>
+
+      
     </section>
   );
 };

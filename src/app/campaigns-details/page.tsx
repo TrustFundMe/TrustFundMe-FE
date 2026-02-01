@@ -11,7 +11,7 @@ import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import { mockComments, mockPlans, mockPosts } from '@/components/campaign/mock';
 import type { Campaign, CampaignPost } from '@/components/campaign/types';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import type { CampaignDto } from '@/types/campaign';
 import { withFallbackImage } from '@/lib/image';
@@ -42,6 +42,7 @@ const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
 };
 
 function CampaignDetailsInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const idParam = searchParams.get('id');
   const campaignId = idParam ? Number(idParam) : NaN;
@@ -188,7 +189,13 @@ function CampaignDetailsInner() {
               <CampaignDonateCard
                 raisedAmount={campaign.raisedAmount}
                 goalAmount={campaign.goalAmount}
-                onDonate={(amount) => alert(`Donate: $${amount}`)}
+                onDonate={(amount) => {
+                  const params = new URLSearchParams({
+                    campaignId: String(campaignId),
+                    amount: String(amount),
+                  });
+                  router.push(`/donation?${params.toString()}`);
+                }}
               />
             </div>
 
