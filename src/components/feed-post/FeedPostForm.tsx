@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { FeedPost, CreateFeedPostRequest, UpdateFeedPostRequest } from "@/types/feedPost";
 import type { CampaignDto } from "@/types/campaign";
+import type { ForumCategory } from "@/types/forumCategory";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image as ImageIcon, X, Loader2, Send, Globe, Lock, Users, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import { campaignService } from "@/services/campaignService";
+import { forumCategoryService } from "@/services/forumCategoryService";
 import { RichTextEditor } from "./RichTextEditor";
 
 interface FeedPostFormProps {
@@ -31,6 +32,7 @@ export default function FeedPostForm({
   const { user } = useAuth();
   const [myCampaigns, setMyCampaigns] = useState<CampaignDto[]>([]);
   const [otherCampaigns, setOtherCampaigns] = useState<CampaignDto[]>([]);
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
@@ -39,9 +41,9 @@ export default function FeedPostForm({
     visibility: initialData?.visibility || "PUBLIC",
     status: initialData?.status || "PUBLISHED",
     budgetId: initialData?.budgetId || null,
+    categoryId: initialData?.categoryId || null,
   });
 
-  // Mock file state
   const [files, setFiles] = useState<string[]>(
     initialData?.attachments?.map(a => a.url) || []
   );
@@ -49,21 +51,23 @@ export default function FeedPostForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch campaigns: mine + others (can link to own or others' campaigns)
+  // Fetch campaigns and categories
   useEffect(() => {
     let cancelled = false;
     setCampaignsLoading(true);
     const run = async () => {
       try {
-        const [mine, all] = await Promise.all([
+        const [mine, all, cats] = await Promise.all([
           user?.id ? campaignService.getByFundOwner(Number(user.id)).catch(() => []) : [] as CampaignDto[],
           campaignService.getAll().catch(() => []),
+          forumCategoryService.getAll().catch(() => []),
         ]);
         if (cancelled) return;
         const mineList = Array.isArray(mine) ? mine : [];
         const allList = Array.isArray(all) ? all : [];
         setMyCampaigns(mineList);
         setOtherCampaigns(allList.filter((c) => c.fundOwnerId !== user?.id).slice(0, 50));
+        setCategories(Array.isArray(cats) ? cats : []);
       } finally {
         if (!cancelled) setCampaignsLoading(false);
       }
@@ -90,6 +94,7 @@ export default function FeedPostForm({
         visibility: formData.visibility,
         status: formData.status,
         ...(formData.budgetId && { budgetId: formData.budgetId }),
+        ...(formData.categoryId && { categoryId: formData.categoryId }),
         attachments: files.length ? files.map((url) => ({ type: "image" as const, url })) : undefined,
       };
 
@@ -133,7 +138,9 @@ export default function FeedPostForm({
             onClick={onCancel}
             className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-zinc-500" />
+            <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         )}
       </div>
@@ -152,40 +159,29 @@ export default function FeedPostForm({
 
         {/* Visibility & Type Selectors */}
         <div className="flex flex-wrap gap-2">
-          <div className="relative group">
-            <select
-              value={formData.visibility}
-              onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
-              className="appearance-none pl-9 pr-8 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none accent-[#ff5e14]"
-            >
-              <option value="PUBLIC">Public</option>
-              <option value="PRIVATE">Private</option>
-              <option value="FOLLOWERS">Followers</option>
-            </select>
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
-              {formData.visibility === 'PUBLIC' && <Globe className="w-4 h-4" />}
-              {formData.visibility === 'PRIVATE' && <Lock className="w-4 h-4" />}
-              {formData.visibility === 'FOLLOWERS' && <Users className="w-4 h-4" />}
-            </div>
-            <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <select
+            value={formData.visibility}
+            onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
+            className="appearance-none px-4 pr-8 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none"
+          >
+            <option value="PUBLIC">🌐 Public</option>
+            <option value="PRIVATE">🔒 Private</option>
+            <option value="FOLLOWERS">👥 Followers</option>
+          </select>
 
-          <div className="relative group">
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="appearance-none pl-3 pr-8 py-2 rounded-full bg-[#ff5e14]/10 text-[#ff5e14] text-sm font-medium hover:bg-[#ff5e14]/20 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none accent-[#ff5e14]"
-            >
-              <option value="UPDATE">Update</option>
-              <option value="ANNOUNCEMENT">Announcement</option>
-              <option value="NEWS">News</option>
-            </select>
-            <ChevronDown className="w-3 h-3 text-[#ff5e14] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+          <select
+            value={formData.type}
+            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+            className="appearance-none px-4 pr-8 py-2 rounded-full bg-[#ff5e14]/10 text-[#ff5e14] text-sm font-medium hover:bg-[#ff5e14]/20 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none"
+          >
+            <option value="UPDATE">📝 Update</option>
+            <option value="ANNOUNCEMENT">📢 Announcement</option>
+            <option value="NEWS">📰 News</option>
+          </select>
         </div>
 
         <div className="space-y-4">
-          {/* Title Input (Optional) */}
+          {/* Title Input */}
           <input
             type="text"
             placeholder="Post Title (Optional)"
@@ -194,7 +190,7 @@ export default function FeedPostForm({
             className="w-full bg-transparent text-xl font-bold placeholder:text-zinc-400 border-none px-0 focus:ring-0 p-0"
           />
 
-          {/* Main Content - rich text (B, I, U) */}
+          {/* Main Content */}
           <RichTextEditor
             value={formData.content}
             onChange={(html) => setFormData((s) => ({ ...s, content: html }))}
@@ -225,7 +221,9 @@ export default function FeedPostForm({
                       onClick={() => removeFile(i)}
                       className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm hover:bg-red-500/80"
                     >
-                      <X className="w-4 h-4" />
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </motion.div>
                 ))}
@@ -234,62 +232,57 @@ export default function FeedPostForm({
           </AnimatePresence>
         </div>
 
-        {/* Campaigns & Status */}
+        {/* Category & Campaign Selectors */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Campaign Selector: my campaigns or others' (optional) */}
+          {/* Category Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
+              Category
+            </label>
+            <select
+              value={formData.categoryId != null ? String(formData.categoryId) : ""}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : null })}
+              className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
+            >
+              <option value="">No category</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Campaign Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
               Link to campaign
             </label>
-            <div className="relative group">
-              <select
-                value={formData.budgetId != null ? String(formData.budgetId) : ""}
-                onChange={(e) => setFormData({ ...formData, budgetId: e.target.value ? Number(e.target.value) : null })}
-                className="w-full appearance-none pl-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200 accent-[#ff5e14]"
-              >
-                <option value="">Don&apos;t link to a campaign</option>
-                {campaignsLoading ? (
-                  <option disabled>Loading campaigns…</option>
-                ) : (
-                  <>
-                    {myCampaigns.length > 0 && (
-                      <optgroup label="My campaigns">
-                        {myCampaigns.map((c) => (
-                          <option key={c.id} value={c.id}>{c.title}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {otherCampaigns.length > 0 && (
-                      <optgroup label="Other campaigns">
-                        {otherCampaigns.map((c) => (
-                          <option key={c.id} value={c.id}>{c.title}</option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </>
-                )}
-              </select>
-              <ChevronDown className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-            <p className="text-xs text-zinc-400 ml-1">Optional. Link this post to your campaign or one you support.</p>
-          </div>
-
-          {/* Status Selector */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
-              Status
-            </label>
-            <div className="relative group">
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full appearance-none pl-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200 accent-[#ff5e14]"
-              >
-                <option value="PUBLISHED">Published</option>
-                <option value="DRAFT">Draft</option>
-              </select>
-              <ChevronDown className="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+            <select
+              value={formData.budgetId != null ? String(formData.budgetId) : ""}
+              onChange={(e) => setFormData({ ...formData, budgetId: e.target.value ? Number(e.target.value) : null })}
+              className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
+            >
+              <option value="">Don&apos;t link to a campaign</option>
+              {campaignsLoading ? (
+                <option disabled>Loading campaigns…</option>
+              ) : (
+                <>
+                  {myCampaigns.length > 0 && (
+                    <optgroup label="My campaigns">
+                      {myCampaigns.map((c) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {otherCampaigns.length > 0 && (
+                    <optgroup label="Other campaigns">
+                      {otherCampaigns.map((c) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              )}
+            </select>
           </div>
         </div>
 
@@ -298,9 +291,11 @@ export default function FeedPostForm({
           <div className="flex items-center gap-2">
             <label className="p-2.5 text-[#ff5e14] bg-[#ff5e14]/10 hover:bg-[#ff5e14]/20 rounded-full cursor-pointer transition-colors active:scale-95">
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-              <ImageIcon className="w-5 h-5" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </label>
-            <span className="text-xs text-zinc-400">Tối đa {MAX_IMAGES} ảnh</span>
+            <span className="text-xs text-zinc-400">Max {MAX_IMAGES} images</span>
             {showFullEditorLink && (
               <Link
                 href="/post/create"
@@ -322,11 +317,16 @@ export default function FeedPostForm({
             )}
           >
             {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
             ) : (
               <>
                 <span>{submitLabel}</span>
-                <Send className="w-4 h-4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
               </>
             )}
           </button>

@@ -49,6 +49,12 @@ export type FeedPost = {
   flagged: boolean;
   comments: FeedPostComment[];
   budgetId?: number | null;
+  categoryId?: number | null;
+  parentPostId?: number | null;
+  replyCount: number;
+  viewCount: number;
+  isPinned: boolean;
+  isLocked: boolean;
 };
 
 export type CreateFeedPostRequest = {

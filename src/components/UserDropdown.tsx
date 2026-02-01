@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, ChevronDown, Heart, Wallet } from 'lucide-react';
+import { User, LogOut, ChevronDown, Heart, TrendingUp } from 'lucide-react';
 
 export function UserDropdown() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -34,9 +34,9 @@ export function UserDropdown() {
     );
   }
 
-  const displayName = user.fullName || 
-                     user.email?.split('@')[0] ||
-                     'User';
+  const displayName = user.fullName ||
+    user.email?.split('@')[0] ||
+    'User';
 
   const handleLogout = async () => {
     await logout();
@@ -88,7 +88,7 @@ export function UserDropdown() {
             <p className="text-sm font-medium text-gray-900">{displayName}</p>
             <p className="text-xs text-gray-500 truncate">{user.email}</p>
           </div>
-          
+
           <Link
             href="/account/profile"
             onClick={() => setIsOpen(false)}
@@ -97,7 +97,7 @@ export function UserDropdown() {
             <User className="w-4 h-4" />
             Profile
           </Link>
-          
+
           <Link
             href="/account/campaigns"
             onClick={() => setIsOpen(false)}
@@ -106,18 +106,18 @@ export function UserDropdown() {
             <Heart className="w-4 h-4" />
             Your fundraisers
           </Link>
-          
+
           <Link
             href="/account/impact"
             onClick={() => setIsOpen(false)}
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <Wallet className="w-4 h-4" />
+            <TrendingUp className="w-4 h-4" />
             Your impact
           </Link>
-          
+
           <div className="border-t border-gray-200 my-1" />
-          
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
