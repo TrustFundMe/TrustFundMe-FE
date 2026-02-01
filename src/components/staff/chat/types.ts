@@ -5,6 +5,8 @@ export interface Conversation {
   time: string;
   unread?: number;
   avatar?: string;
+  staffId?: number;
+  fundOwnerId?: number;
 }
 
 export interface MessageItem {

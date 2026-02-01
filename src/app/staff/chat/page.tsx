@@ -1,147 +1,22 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import NewCustomersPanel from '@/components/staff/chat/NewCustomersPanel';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import ChatSidebar from '@/components/staff/chat/ChatSidebar';
 import ChatMessages from '@/components/staff/chat/ChatMessages';
 import ChatDetails from '@/components/staff/chat/ChatDetails';
 import type { Conversation, MessageItem, Appointment, MediaItem } from '@/components/staff/chat/types';
+import { chatService } from '@/services/chatService';
+import { userService } from '@/services/userService';
 
-// Mock data - chỉ để hiển thị UI
-const mockNewCustomers: Conversation[] = [
-  {
-    id: '1',
-    name: 'Nguyễn Văn A',
-    lastMessage: 'Xin chào, tôi cần hỗ trợ về campaign...',
-    time: '2 phút trước',
-    avatar: undefined,
-  },
-  {
-    id: '2',
-    name: 'Trần Thị B',
-    lastMessage: 'Tôi muốn đóng góp nhưng gặp vấn đề...',
-    time: '5 phút trước',
-    avatar: undefined,
-  },
-];
-
-const mockAssignedConversations: Conversation[] = [
-  {
-    id: '3',
-    name: 'Lê Văn C',
-    lastMessage: 'Cảm ơn bạn đã hỗ trợ!',
-    time: '1 giờ trước',
-    avatar: undefined,
-  },
-  {
-    id: '4',
-    name: 'Phạm Thị D',
-    lastMessage: 'Tôi đã nhận được email xác nhận',
-    time: '2 giờ trước',
-    avatar: undefined,
-  },
-];
-
-const mockMessages: MessageItem[] = [
-  {
-    id: '1',
-    fromMe: false,
-    text: 'Xin chào, tôi cần hỗ trợ về campaign của tôi',
-    time: '10:30',
-    senderName: 'Lê Văn C',
-    senderAvatar: undefined,
-  },
-  {
-    id: '2',
-    fromMe: true,
-    text: 'Chào bạn! Tôi có thể giúp gì cho bạn?',
-    time: '10:31',
-  },
-  {
-    id: '3',
-    fromMe: false,
-    text: 'Campaign của tôi đã được duyệt chưa?',
-    time: '10:32',
-    senderName: 'Lê Văn C',
-  },
-  {
-    id: '4',
-    fromMe: true,
-    text: 'Để tôi kiểm tra giúp bạn nhé',
-    time: '10:33',
-  },
-];
-
-const mockAppointments: Appointment[] = [
-  {
-    id: '1',
-    title: 'Hẹn gặp để thảo luận về campaign',
-    date: '2024-01-15',
-    time: '14:00',
-    status: 'scheduled',
-    location: 'Văn phòng TrustFundMe, 123 Đường ABC',
-    notes: 'Thảo luận về chiến dịch gây quỹ cho trẻ em',
-  },
-  {
-    id: '2',
-    title: 'Kiểm tra tiến độ campaign',
-    date: '2024-01-10',
-    time: '10:00',
-    status: 'completed',
-    location: 'Online - Google Meet',
-  },
-  {
-    id: '3',
-    title: 'Hẹn gặp lần đầu',
-    date: '2024-01-05',
-    time: '15:30',
-    status: 'completed',
-    location: 'Café XYZ, 456 Đường DEF',
-  },
-];
-
-const mockMediaItems: MediaItem[] = [
-  {
-    id: '1',
-    type: 'image',
-    url: 'https://placehold.co/400x300?text=Campaign+Image',
-    name: 'campaign-banner.jpg',
-    size: '245760',
-    uploadedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    uploadedBy: 'Lê Văn C',
-  },
-  {
-    id: '2',
-    type: 'file',
-    url: '#',
-    name: 'campaign-proposal.pdf',
-    size: '1048576',
-    uploadedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    uploadedBy: 'Lê Văn C',
-  },
-  {
-    id: '3',
-    type: 'image',
-    url: 'https://placehold.co/400x300?text=Event+Photo',
-    name: 'event-photo.png',
-    size: '512000',
-    uploadedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    uploadedBy: 'Staff',
-  },
-  {
-    id: '4',
-    type: 'video',
-    url: 'https://placehold.co/400x300?text=Video',
-    name: 'campaign-video.mp4',
-    size: '5242880',
-    uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    uploadedBy: 'Lê Văn C',
-  },
-];
+// Keep some mocks for message details/appointments/media since those APIs aren't implemented yet
+const mockMessages: MessageItem[] = [];
+const mockAppointments: Appointment[] = [];
+const mockMediaItems: MediaItem[] = [];
 
 export default function ChatWithDonorPage() {
-  const [showNew, setShowNew] = useState<boolean>(false);
-  const [activeId, setActiveId] = useState<string>('3');
+  const [activeId, setActiveId] = useState<string>('');
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showDetails, setShowDetails] = useState<boolean>(false);
   const [inputMessage, setInputMessage] = useState<string>('');
@@ -150,39 +25,120 @@ export default function ChatWithDonorPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const hasFetchedRef = useRef<boolean>(false);
 
-  // Filter conversations based on search
-  const filteredNewCustomers = mockNewCustomers.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredAssigned = mockAssignedConversations.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Fetch conversations on mount
+  useEffect(() => {
+    const fetchConversations = async () => {
+      // Prevent duplicate fetch in Strict Mode
+      if (hasFetchedRef.current) return;
+      hasFetchedRef.current = true;
 
-  // Get active conversation
-  const activeConversation = mockAssignedConversations.find((c) => c.id === activeId);
-  const activeMessages = activeId === '3' ? mockMessages : [];
+      setIsLoading(true);
+      try {
+        const result = await chatService.getAllConversations();
+
+        if (result.success && result.data) {
+          // Map API conversations to UI format
+          // Need to fetch user info for each conversation
+          const mappedConversations = await Promise.all(
+            result.data.map(async (conv) => {
+              // Fetch user info based on fundOwnerId
+              // Assuming we are staff, talking to fundOwner
+              const userResult = await userService.getUserById(conv.fundOwnerId || conv.id); // Fallback to id if fundOwnerId missing, though interface implies it's number
+
+              const user = userResult.success && userResult.data ? userResult.data : null;
+
+              return {
+                id: conv.id.toString(),
+                name: user?.fullName || `User ${conv.fundOwnerId}`,
+                // API doesn't provide last message content, so we leave it empty or use placeholder
+                lastMessage: 'Tap to view conversation',
+                time: conv.lastMessageAt ? formatTimeAgo(conv.lastMessageAt) : '',
+                avatar: user?.avatarUrl,
+                unread: 0,
+                staffId: conv.staffId,
+                fundOwnerId: conv.fundOwnerId,
+              };
+            })
+          );
+
+          setConversations(mappedConversations);
+          if (mappedConversations.length > 0 && !activeId) {
+            setActiveId(mappedConversations[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch conversations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Format time helper
   const formatTimeAgo = useCallback((timestamp: string): string => {
+    if (!timestamp) return '';
     const now = new Date();
     const created = new Date(timestamp);
     const diffInSeconds = Math.floor((now.getTime() - created.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) return 'vừa xong';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
     return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
   }, []);
 
-  // Handle accept new conversation
-  const handleAccept = useCallback((id: string) => {
-    // UI only - không có logic thật
-    console.log('Accept conversation:', id);
-    setShowNew(false);
-    setActiveId(id);
-  }, []);
+  // Filter conversations based on search
+  const filteredConversations = conversations.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
+  // Get active conversation
+  const activeConversation = conversations.find((c) => c.id === activeId);
+  const [activeMessages, setActiveMessages] = useState<MessageItem[]>([]);
+  const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
+
+  // Fetch messages when conversation changes
+  useEffect(() => {
+    if (!activeId || !activeConversation) return;
+
+    const fetchMessages = async () => {
+      setIsMessagesLoading(true);
+      try {
+        const result = await chatService.getMessagesByConversationId(activeId);
+        if (result.success && result.data) {
+          // Map API messages to UI format
+          const mappedMessages: MessageItem[] = result.data.map((msg: any) => {
+            // Determine if message is from the staff member
+            // Use senderRole if BE provides it, otherwise compare IDs
+            const fromMe = msg.senderRole
+              ? msg.senderRole === 'STAFF'
+              : activeConversation && msg.senderId === activeConversation.staffId;
+
+            return {
+              id: msg.id.toString(),
+              text: msg.content || msg.message, // Fallback to message just in case
+              fromMe: !!fromMe,
+              time: formatTimeAgo(msg.createdAt),
+              senderName: fromMe ? 'Staff' : activeConversation?.name,
+              senderAvatar: fromMe ? undefined : activeConversation?.avatar,
+            };
+          });
+          setActiveMessages(mappedMessages);
+        }
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+      } finally {
+        setIsMessagesLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [activeId, activeConversation, formatTimeAgo]);
   // Handle image select
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -226,48 +182,60 @@ export default function ChatWithDonorPage() {
   }, []);
 
   // Handle send message
-  const handleSendMessage = useCallback(() => {
-    if ((!inputMessage.trim() && selectedImages.length === 0) || !activeConversation) return;
-    
-    // UI only - không gửi thật
-    console.log('Send message:', inputMessage);
-    setInputMessage('');
-    setSelectedImages([]);
-    setImagePreviews([]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const handleSendMessage = useCallback(async () => {
+    if ((!inputMessage.trim() && selectedImages.length === 0) || !activeId || !activeConversation || isSending) {
+      return;
     }
-  }, [inputMessage, selectedImages, activeConversation]);
+
+    setIsSending(true);
+    try {
+      const result = await chatService.sendMessage(activeId, inputMessage.trim());
+      if (result.success && result.data) {
+        // Accessing data fields through type casting or any
+        const msg = result.data as any;
+        const newMsg: MessageItem = {
+          id: msg.id.toString(),
+          text: msg.message || msg.content,
+          fromMe: msg.senderRole === 'STAFF' || msg.senderId === activeConversation.staffId,
+          time: formatTimeAgo(msg.createdAt),
+          senderName: 'Staff',
+          senderAvatar: undefined,
+        };
+
+        setActiveMessages(prev => [...prev, newMsg]);
+        setInputMessage('');
+        setSelectedImages([]);
+        setImagePreviews([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    } finally {
+      setIsSending(false);
+    }
+  }, [inputMessage, activeId, activeConversation, isSending, formatTimeAgo, chatService, setActiveMessages, setInputMessage, setSelectedImages, setImagePreviews]);
 
   return (
     <div className="h-full bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="flex h-full">
-        {/* Far Left: New Customers Panel */}
-        {showNew && (
-          <NewCustomersPanel
-            conversations={filteredNewCustomers}
-            isLoading={false}
-            onAccept={handleAccept}
-            onClose={() => setShowNew(false)}
-          />
-        )}
-
         {/* Left: Assigned conversations list */}
         <ChatSidebar
-          conversations={filteredAssigned}
+          conversations={filteredConversations}
           activeId={activeId}
-          isLoading={false}
+          isLoading={isLoading}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onConversationClick={setActiveId}
-          onShowNewClick={() => setShowNew(true)}
-          newCustomersCount={mockNewCustomers.length}
+          onShowNewClick={() => { }} // Removed functionality
+          newCustomersCount={0} // Removed functionality
         />
 
         {/* Middle: messages */}
         <ChatMessages
           messages={activeMessages}
-          isLoading={false}
+          isLoading={isMessagesLoading}
           activeConversationName={activeConversation?.name}
           activeConversationAvatar={activeConversation?.avatar}
           onShowDetails={() => setShowDetails(true)}

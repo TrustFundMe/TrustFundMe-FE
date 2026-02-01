@@ -51,7 +51,7 @@ export default function ChatComposer({
           </div>
         </div>
       )}
-      
+
       <div className="p-3 flex items-center space-x-2 flex-shrink-0">
         <input
           type="file"
@@ -65,7 +65,7 @@ export default function ChatComposer({
           onClick={() => fileInputRef.current?.click()}
           disabled={isDisabled}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed border"
-          style={{ backgroundColor: '#8dcdfa', borderColor: '#014091' }}
+          style={{ backgroundColor: '#fee2e2', borderColor: '#ef4444' }}
           title="Chọn ảnh"
         >
           <svg
@@ -75,7 +75,7 @@ export default function ChatComposer({
             strokeWidth={2}
             stroke="currentColor"
             className="w-5 h-5"
-            style={{ color: '#014091' }}
+            style={{ color: '#dc2626' }}
           >
             <path
               strokeLinecap="round"
@@ -107,7 +107,7 @@ export default function ChatComposer({
           onClick={onSend}
           disabled={isDisabled}
           className="px-3 py-2 rounded-full text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ backgroundColor: '#014091' }}
+          style={{ backgroundColor: '#dc2626' }}
         >
           {isUploadingImage ? 'Đang upload...' : isSending ? 'Đang gửi...' : 'Gửi'}
         </button>
