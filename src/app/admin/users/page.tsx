@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Eye,
@@ -9,78 +9,16 @@ import {
   CheckCircle2,
   MoreVertical,
   UserRound,
+  Users,
+  ChevronRight,
 } from 'lucide-react';
+import { userService, UserInfo } from '@/services/userService';
 
-type UserStatus = 'ACTIVE' | 'DISABLED';
-
-type UserRow = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  status: UserStatus;
-  teams: string[];
-  avatarUrl?: string | null;
-  role: 'USER';
-};
-
-const mockUsers: UserRow[] = [
-  {
-    id: 'u_1',
-    name: 'Olivia Rhye',
-    username: 'olivia',
-    email: 'olivia@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Design', 'Product'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_2',
-    name: 'Phoenix Baker',
-    username: 'phoenix',
-    email: 'phoenix@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Product', 'Software Engineering'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_3',
-    name: 'Lana Steiner',
-    username: 'lana',
-    email: 'lana@unitledui.com',
-    status: 'DISABLED',
-    teams: ['Operations', 'Product'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_4',
-    name: 'Demi Wilkinson',
-    username: 'demi',
-    email: 'demi@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Design', 'Product', 'Software Engineering'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_5',
-    name: 'Candice Wu',
-    username: 'candice',
-    email: 'candice@unitledui.com',
-    status: 'DISABLED',
-    teams: ['Operations', 'Finance'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-];
-
-function StatusPill({ status }: { status: UserStatus }) {
-  if (status === 'ACTIVE') {
+function StatusPill({ status }: { status: string | boolean }) {
+  const isActive = status === 'ACTIVE' || status === true;
+  if (isActive) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
         Active
       </span>
@@ -88,80 +26,101 @@ function StatusPill({ status }: { status: UserStatus }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
       <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
       Disabled
     </span>
   );
 }
 
-function TeamTag({ name }: { name: string }) {
+function RoleBadge({ role }: { role: string }) {
   const cls =
-    name === 'Design'
-      ? 'text-purple-700 bg-purple-50'
-      : name === 'Product'
+    role === 'ADMIN'
+      ? 'text-rose-700 bg-rose-50'
+      : role === 'STAFF'
         ? 'text-blue-700 bg-blue-50'
-        : name === 'Software Engineering'
+        : role === 'FUND_OWNER'
           ? 'text-emerald-700 bg-emerald-50'
-          : name === 'Operations'
-            ? 'text-rose-700 bg-rose-50'
-            : name === 'Finance'
-              ? 'text-amber-800 bg-amber-50'
-              : 'text-slate-700 bg-slate-100';
+          : 'text-slate-700 bg-slate-100';
 
-  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${cls}`}>{name}</span>;
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`}>
+      {role}
+    </span>
+  );
 }
 
 export default function AdminUsersPage() {
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | UserStatus>('ALL');
-  const [rows, setRows] = useState<UserRow[]>(mockUsers);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL');
+  const [users, setUsers] = useState<UserInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    const res = await userService.getAllUsers();
+    if (res.success && res.data) {
+      setUsers(res.data);
+    } else {
+      setError(res.error || 'Failed to load users');
+    }
+    setLoading(false);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((u) => {
+    return users.filter((u) => {
       const matchesQuery =
         !q ||
-        u.name.toLowerCase().includes(q) ||
-        u.username.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q);
+        u.fullName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.phoneNumber?.toLowerCase().includes(q);
 
-      const matchesStatus = statusFilter === 'ALL' ? true : u.status === statusFilter;
-      return matchesQuery && matchesStatus && u.role === 'USER';
+      const isActive = u.verified;
+      const matchesStatus =
+        statusFilter === 'ALL'
+          ? true
+          : statusFilter === 'ACTIVE'
+            ? isActive
+            : !isActive;
+      return matchesQuery && matchesStatus;
     });
-  }, [query, rows, statusFilter]);
-
-  const disableUser = (id: string) => {
-    setRows((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'DISABLED' } : u)));
-  };
-
-  const activateUser = (id: string) => {
-    setRows((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'ACTIVE' } : u)));
-  };
+  }, [query, users, statusFilter]);
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {/* Top Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
         <div>
-          <div className="text-2xl font-semibold text-slate-900">User Central</div>
-          <div className="text-sm text-slate-500">Danh sách tài khoản người dùng.</div>
+          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
+            <Users className="h-4 w-4" />
+            <ChevronRight className="h-3 w-3" />
+            <span>User Management</span>
+          </div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">System Users</h1>
+          <p className="text-sm text-slate-500 mt-1">Quản lý và quyền hạn của người dùng trong hệ thống.</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-            <Search className="h-4 w-4 text-slate-500" />
+        <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="relative group/search">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/search:text-red-500 transition-colors" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, username, email..."
-              className="w-64 max-w-[70vw] bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none"
+              placeholder="Search users..."
+              className="w-64 md:w-72 bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-2 text-sm outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-sm"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-sm cursor-pointer"
           >
             <option value="ALL">All status</option>
             <option value="ACTIVE">Active</option>
@@ -170,21 +129,27 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+            <div className="h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50">
               <tr className="text-left text-slate-500">
-                <th className="py-3 pl-5 pr-4 font-medium">Name</th>
-                <th className="py-3 pr-4 font-medium">Status</th>
-                <th className="py-3 pr-4 font-medium">Email address</th>
-                <th className="py-3 pr-4 font-medium">Teams</th>
-                <th className="py-3 pr-5 font-medium text-right">Actions</th>
+                <th className="py-3.5 pl-5 pr-4 font-medium">Name</th>
+                <th className="py-3.5 pr-4 font-medium">Status</th>
+                <th className="py-3.5 pr-4 font-medium">Role</th>
+                <th className="py-3.5 pr-4 font-medium">Phone number</th>
+                <th className="py-3.5 pr-5 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((u) => {
-                const initials = u.name
+                const initials = u.fullName
                   .split(' ')
                   .filter(Boolean)
                   .slice(0, 2)
@@ -192,71 +157,53 @@ export default function AdminUsersPage() {
                   .join('');
 
                 return (
-                  <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/50">
+                  <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 pl-5 pr-4">
                       <div className="flex items-center gap-3">
                         {u.avatarUrl ? (
-                          <img src={u.avatarUrl} alt={u.name} className="h-9 w-9 rounded-full object-cover" />
+                          <img src={u.avatarUrl} alt={u.fullName} className="h-10 w-10 rounded-full object-cover shadow-sm" />
                         ) : (
-                          <div className="h-9 w-9 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center font-semibold">
-                            {initials || <UserRound className="h-4 w-4" />}
+                          <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-semibold text-xs">
+                            {initials || <UserRound className="h-5 w-5" />}
                           </div>
                         )}
                         <div className="leading-tight">
-                          <div className="font-semibold text-slate-900">{u.name}</div>
-                          <div className="text-xs text-slate-500">@{u.username}</div>
+                          <div className="font-semibold text-slate-900">{u.fullName}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{u.email}</div>
                         </div>
                       </div>
                     </td>
 
                     <td className="py-4 pr-4">
-                      <StatusPill status={u.status} />
+                      <StatusPill status={u.verified} />
                     </td>
 
-                    <td className="py-4 pr-4 text-slate-700 whitespace-nowrap">{u.email}</td>
+                    <td className="py-4 pr-4">
+                      <RoleBadge role={u.role} />
+                    </td>
 
                     <td className="py-4 pr-4">
-                      <div className="flex flex-wrap gap-2">
-                        {u.teams.map((t) => (
-                          <TeamTag key={t} name={t} />
-                        ))}
-                      </div>
+                      <span className="text-slate-600">{u.phoneNumber || '—'}</span>
                     </td>
 
                     <td className="py-4 pr-5">
                       <div className="flex items-center justify-end gap-2">
                         <Link
-                          href={`/admin/users/${u.id}`}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
-                          title="View details"
+                          href={`/admin/users/user-details?id=${u.id}`}
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-all"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3.5 w-3.5" />
                           View
                         </Link>
 
-                        {u.status === 'ACTIVE' ? (
-                          <button
-                            onClick={() => disableUser(u.id)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                            title="Disable account"
-                          >
-                            <Ban className="h-4 w-4" />
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => activateUser(u.id)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#F84D43] px-3 py-2 text-xs font-semibold text-white hover:brightness-95"
-                            title="Activate account"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Activate
-                          </button>
-                        )}
+                        <button
+                          className="inline-flex items-center justify-center rounded-xl bg-slate-900 p-2 text-white hover:bg-slate-800 transition-all"
+                        >
+                          <Ban className="h-4 w-4" />
+                        </button>
 
                         <button
-                          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
-                          title="More"
+                          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 transition-all"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </button>
@@ -266,10 +213,10 @@ export default function AdminUsersPage() {
                 );
               })}
 
-              {filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center text-slate-500">
-                    No users found.
+                  <td colSpan={5} className="py-12 text-center text-slate-500">
+                    No users found matching your criteria.
                   </td>
                 </tr>
               )}
@@ -277,6 +224,12 @@ export default function AdminUsersPage() {
           </table>
         </div>
       </div>
+
+      {error && (
+        <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
