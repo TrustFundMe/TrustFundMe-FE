@@ -11,4 +11,11 @@ export const API_ENDPOINTS = {
     BY_AUTHOR: (authorId: number | string) =>
       `/api/feed-posts/author/${authorId}`,
   },
+  CHAT: {
+    CONVERSATIONS: "/api/chat/conversations",
+    MESSAGES: (id: string | number) => `/api/chat/conversations/${id}/messages`,
+  },
+  USERS: {
+    BY_ID: (id: number | string) => `/api/users/${id}`,
+  },
 } as const;

@@ -50,12 +50,12 @@ export default function ChatMessages({
             {activeConversationAvatar ? (
               <img src={activeConversationAvatar} alt={activeConversationName} className="w-9 h-9 rounded-full mr-2 object-cover" />
             ) : (
-              <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold mr-2" style={{ backgroundColor: '#8dcdfa', color: '#014091' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold mr-2" style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}>
                 {activeConversationName.charAt(0).toUpperCase()}
               </div>
             )}
             <div className="text-left">
-              <p className="text-sm font-semibold" style={{ color: '#014091' }}>{activeConversationName}</p>
+              <p className="text-sm font-semibold" style={{ color: '#dc2626' }}>{activeConversationName}</p>
             </div>
           </button>
         </div>

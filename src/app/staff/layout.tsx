@@ -30,18 +30,19 @@ function Sidebar() {
     <aside className="hidden md:flex md:flex-col w-[72px] bg-white border-r border-gray-200 h-full">
       <nav className="flex-1 flex flex-col items-center justify-center gap-3">
         {sidebarNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = item.href === '/staff'
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-label={item.label}
               title={item.label}
-              className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors duration-150 ${
-                isActive
-                  ? 'bg-blue-50 text-blue-600'
+              className={`h-10 w-10 rounded-xl flex items-center justify-center transition-colors duration-150 ${isActive
+                  ? 'bg-red-50 text-red-600'
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
-              }`}
+                }`}
             >
               <item.icon className="h-5 w-5" />
             </Link>
