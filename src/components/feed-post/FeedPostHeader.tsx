@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import type { FeedPost } from "@/types/feedPost";
 
 interface FeedPostHeaderProps {
@@ -19,11 +18,11 @@ export default function FeedPostHeader({
     const postDate = new Date(date);
     const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-    return postDate.toLocaleDateString("en-US", {
+    if (diffInSeconds < 60) return "Vừa xong";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+    return postDate.toLocaleDateString("vi-VN", {
       day: "numeric",
       month: "long",
       year: "numeric",
@@ -52,7 +51,7 @@ export default function FeedPostHeader({
             color: "#F84D43",
           }}
         >
-          {post.type}
+          {post.type === "DISCUSSION" ? "Thảo luận" : post.type === "QUESTION" ? "Hỏi đáp" : post.type === "ANNOUNCEMENT" ? "Thông báo" : post.type === "CAMPAIGN_UPDATE" ? "Cập nhật chiến dịch" : post.type}
         </span>
         <span
           style={{
@@ -70,7 +69,7 @@ export default function FeedPostHeader({
             color: "#1A685B",
           }}
         >
-          {post.visibility}
+          {post.visibility === "PUBLIC" ? "Công khai" : post.visibility === "PRIVATE" ? "Riêng tư" : post.visibility === "FOLLOWERS" ? "Người theo dõi" : post.visibility}
         </span>
         {post.status === "DRAFT" && (
           <span
@@ -89,7 +88,7 @@ export default function FeedPostHeader({
               color: "rgba(0,0,0,0.6)",
             }}
           >
-            DRAFT
+            Nháp
           </span>
         )}
       </div>
@@ -124,11 +123,9 @@ export default function FeedPostHeader({
             border: "2px solid rgba(26, 104, 91, 0.1)",
           }}
         >
-          <Image
-            src={post.author.avatar || "/assets/img/about/01.jpg"}
+          <img
+            src={post.author.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author.name)}&background=6366f1&color=fff`}
             alt={post.author.name}
-            width={48}
-            height={48}
             style={{
               width: "100%",
               height: "100%",

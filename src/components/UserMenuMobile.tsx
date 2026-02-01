@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, Heart, Wallet } from 'lucide-react';
+import { User, LogOut, Heart, TrendingUp } from 'lucide-react';
 
 export function UserMenuMobile() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -20,9 +20,9 @@ export function UserMenuMobile() {
     );
   }
 
-  const displayName = user.fullName || 
-                     user.email?.split('@')[0] ||
-                     'User';
+  const displayName = user.fullName ||
+    user.email?.split('@')[0] ||
+    'User';
 
   const handleLogout = async () => {
     await logout();
@@ -54,7 +54,7 @@ export function UserMenuMobile() {
             style={{ flexShrink: 0 }}
           />
         ) : (
-          <div 
+          <div
             className="rounded-full bg-gray-300 d-flex align-items-center justify-content-center text-lg font-medium text-gray-700 me-3"
             style={{ width: '48px', height: '48px', flexShrink: 0 }}
           >
@@ -78,7 +78,7 @@ export function UserMenuMobile() {
             <span>Profile</span>
           </Link>
         </li>
-        
+
         <li className="mb-2">
           <Link
             href="/account/campaigns"
@@ -88,17 +88,17 @@ export function UserMenuMobile() {
             <span>Your fundraisers</span>
           </Link>
         </li>
-        
+
         <li className="mb-2">
           <Link
             href="/account/impact"
             className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
           >
-            <Wallet className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
+            <TrendingUp className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
             <span>Your impact</span>
           </Link>
         </li>
-        
+
         <li className="mt-3 pt-3 border-top">
           <button
             onClick={handleLogout}

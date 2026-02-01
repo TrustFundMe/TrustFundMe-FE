@@ -7,10 +7,10 @@ const BE_API_URL = process.env.BE_API_GATEWAY_URL || "http://localhost:8080";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const cookies = request.headers.get("cookie") || "";
 
     const response = await fetch(`${BE_API_URL}/api/feed-posts/${id}`, {
@@ -51,23 +51,25 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
-    const cookies = request.headers.get("cookie") || "";
+    const accessToken = getAccessToken(request);
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Missing access token" },
+        { status: 401 }
+      );
+    }
 
     const response = await fetch(`${BE_API_URL}/api/feed-posts/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        Cookie: cookies,
-        ...(request.headers.get("authorization") && {
-          Authorization: request.headers.get("authorization") || "",
-        }),
+        Authorization: `Bearer ${accessToken}`,
       },
-      credentials: "include",
       body: JSON.stringify(body),
     });
 
@@ -92,27 +94,36 @@ export async function PUT(
   }
 }
 
+function getAccessToken(request: NextRequest): string {
+  const authHeader = request.headers.get("authorization");
+  const cookieHeader = request.headers.get("cookie") || "";
+  return authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : (cookieHeader.match(/access_token=([^;]+)/)?.[1] ?? "").trim();
+}
+
 /**
  * DELETE /api/feed-posts/[id] - Delete feed post
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const cookies = request.headers.get("cookie") || "";
+    const { id } = await params;
+    const accessToken = getAccessToken(request);
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Missing access token" },
+        { status: 401 }
+      );
+    }
 
     const response = await fetch(`${BE_API_URL}/api/feed-posts/${id}`, {
       method: "DELETE",
       headers: {
-        "Content-Type": "application/json",
-        Cookie: cookies,
-        ...(request.headers.get("authorization") && {
-          Authorization: request.headers.get("authorization") || "",
-        }),
+        Authorization: `Bearer ${accessToken}`,
       },
-      credentials: "include",
     });
 
     if (!response.ok) {

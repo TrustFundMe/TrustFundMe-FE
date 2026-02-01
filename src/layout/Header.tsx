@@ -6,7 +6,6 @@ import { Fragment, useState } from "react";
 import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
 import { useAuth } from "@/contexts/AuthContextProxy";
-import WalletButton from "@/components/WalletButton";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -465,7 +464,6 @@ const AuthButton = () => {
   if (isAuthenticated) {
     return (
       <div className="d-flex align-items-center gap-3">
-        <WalletButton balance={100000000} />
         <UserDropdown />
       </div>
     );
