@@ -3,6 +3,11 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
 import type { FeedPost } from "@/types/feedPost";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import CampaignCard, { type CampaignInfo } from "./CampaignCard";
@@ -28,7 +33,13 @@ export default function FeedPostCard({
   // Debug log (remove in production)
   // console.log(`Post ${post.id}: user=${user?.id}, author=${post.author.id}, isAuthor=${isAuthor}`);
 
-  const images = (post.attachments || []).filter((a) => a.type === "image");
+  const imageAttachments = (post.attachments || []).filter((a) => a.type === "image");
+  const seenUrls = new Set<string>();
+  const images = imageAttachments.filter((a) => {
+    if (seenUrls.has(a.url)) return false;
+    seenUrls.add(a.url);
+    return true;
+  });
   const hasMedia = images.length > 0;
   const campaign = (post as any).campaign as CampaignInfo | undefined;
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content || "");
@@ -152,7 +163,6 @@ export default function FeedPostCard({
                   background: "transparent",
                   cursor: "pointer",
                   padding: 8,
-                  fontSize: 16,
                   color: "rgba(0,0,0,0.6)",
                 }}
                 onClick={(e) => {
@@ -160,7 +170,7 @@ export default function FeedPostCard({
                   setShowOptions(!showOptions);
                 }}
               >
-                <i className="far fa-ellipsis-h" />
+                <MoreHorizontal className="w-5 h-5" />
               </button>
 
               {showOptions && (
@@ -179,13 +189,13 @@ export default function FeedPostCard({
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
                   >
-                    <i className="far fa-edit text-xs" /> Edit
+                    Chỉnh sửa
                   </button>
                   <button
                     onClick={() => alert("Delete mocked")}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
                   >
-                    <i className="far fa-trash text-xs" /> Delete
+                    Xóa
                   </button>
                 </div>
               )}
@@ -204,36 +214,42 @@ export default function FeedPostCard({
             borderBottom: "1px solid rgba(0,0,0,0.08)",
           }}
         >
-          <div
+          <Swiper
+            modules={[Pagination]}
+            spaceBetween={0}
+            slidesPerView={1}
+            pagination={{ clickable: true }}
+            className="post-card-image-swiper"
             style={{
-              display: "grid",
-              gridTemplateColumns: images.length === 1 ? "1fr" : images.length === 2 ? "1fr 1fr" : "repeat(3, 1fr)",
-              gap: 2,
-              maxHeight: images.length <= 2 ? 400 : 360,
-              overflow: "hidden",
+              width: "100%",
+              aspectRatio: "3/4",
+              maxHeight: 400,
+              background: "#000",
               cursor: "pointer",
             }}
             onClick={handleClick}
           >
             {images.slice(0, 9).map((att, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "relative",
-                  aspectRatio: images.length === 1 ? "1" : "1",
-                  background: "#f2f2f2",
-                  overflow: "hidden",
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={att.url}
-                  alt={post.title || `Image ${i + 1}`}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              </div>
+              <SwiperSlide key={`${att.url}-${i}`}>
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    height: "100%",
+                    background: "#000",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={att.url}
+                    alt={post.title || `Image ${i + 1}`}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                </div>
+              </SwiperSlide>
             ))}
-          </div>
+          </Swiper>
         </fieldset>
       )}
 
@@ -317,7 +333,6 @@ export default function FeedPostCard({
               background: "transparent",
               cursor: "pointer",
               padding: 0,
-              fontSize: 24,
               color: liked ? "#F84D43" : "rgba(0,0,0,0.6)",
               transition: "transform 0.2s, color 0.2s",
             }}
@@ -328,7 +343,7 @@ export default function FeedPostCard({
               e.currentTarget.style.transform = "scale(1)";
             }}
           >
-            <i className={liked ? "fas fa-heart" : "far fa-heart"} />
+            {liked ? <Heart className="w-6 h-6 fill-current" /> : <Heart className="w-6 h-6" />}
           </button>
           <button
             type="button"
@@ -338,7 +353,6 @@ export default function FeedPostCard({
               background: "transparent",
               cursor: "pointer",
               padding: 0,
-              fontSize: 24,
               color: "rgba(0,0,0,0.6)",
               transition: "transform 0.2s",
             }}
@@ -349,7 +363,7 @@ export default function FeedPostCard({
               e.currentTarget.style.transform = "scale(1)";
             }}
           >
-            <i className="far fa-comment" />
+            <MessageCircle className="w-6 h-6" />
           </button>
           <button
             type="button"
@@ -358,7 +372,6 @@ export default function FeedPostCard({
               background: "transparent",
               cursor: "pointer",
               padding: 0,
-              fontSize: 24,
               color: "rgba(0,0,0,0.6)",
               transition: "transform 0.2s",
             }}
@@ -369,7 +382,7 @@ export default function FeedPostCard({
               e.currentTarget.style.transform = "scale(1)";
             }}
           >
-            <i className="far fa-share-square" />
+            <Send className="w-6 h-6" />
           </button>
           <div style={{ marginLeft: "auto" }}>
             <button
@@ -379,7 +392,6 @@ export default function FeedPostCard({
                 background: "transparent",
                 cursor: "pointer",
                 padding: 0,
-                fontSize: 24,
                 color: "rgba(0,0,0,0.6)",
                 transition: "transform 0.2s",
               }}
@@ -390,7 +402,7 @@ export default function FeedPostCard({
                 e.currentTarget.style.transform = "scale(1)";
               }}
             >
-              <i className="far fa-bookmark" />
+              <Bookmark className="w-6 h-6" />
             </button>
           </div>
         </div>
