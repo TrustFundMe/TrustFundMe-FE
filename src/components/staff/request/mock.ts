@@ -1,4 +1,4 @@
-import type { CampaignRequest, FlagRequest, KycRequest } from './RequestTypes';
+import type { CampaignRequest, FlagRequest } from './RequestTypes';
 
 export const mockCampaignRequests: CampaignRequest[] = [
   {
@@ -77,34 +77,4 @@ export const mockFlagRequests: FlagRequest[] = [
   },
 ];
 
-export const mockKycRequests: KycRequest[] = [
-  {
-    id: 'KR_2001',
-    createdAt: '2026-01-24 11:20',
-    status: 'PENDING',
-    type: 'FUND_OWNER_KYC',
-    userId: 'u_12',
-    userName: 'Nguyen Van A',
-    documentType: 'National ID',
-    note: 'First-time fund owner verification',
-  },
-  {
-    id: 'KR_2002',
-    createdAt: '2026-01-23 15:05',
-    status: 'PENDING',
-    type: 'BANK_VERIFICATION',
-    userId: 'u_41',
-    userName: 'Tran Thi B',
-    documentType: 'Bank statement',
-    note: 'Verify payout account',
-  },
-  {
-    id: 'KR_2003',
-    createdAt: '2026-01-22 09:48',
-    status: 'APPROVED',
-    type: 'FUND_OWNER_KYC',
-    userId: 'u_7',
-    userName: 'Le Van C',
-    documentType: 'Passport',
-  },
-];
+

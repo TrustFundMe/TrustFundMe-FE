@@ -48,4 +48,42 @@ export const userService = {
             };
         }
     },
+
+    /**
+     * Get all users
+     */
+    async getAllUsers(): Promise<{
+        success: boolean;
+        data?: UserInfo[];
+        error?: string;
+    }> {
+        try {
+            const response = await fetch(API_ENDPOINTS.USERS.BASE, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data.error || data.message || "Failed to fetch users",
+                };
+            }
+
+            return {
+                success: true,
+                data: data,
+            };
+        } catch (error: any) {
+            console.error("User service error:", error);
+            return {
+                success: false,
+                error: error?.message || "Failed to fetch users",
+            };
+        }
+    },
 };

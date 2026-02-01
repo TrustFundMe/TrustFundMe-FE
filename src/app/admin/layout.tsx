@@ -1,127 +1,200 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard,
+  LayoutGrid,
   Users,
-  Megaphone,
   LogOut,
   Bell,
+  Search,
+  Box,
+  Home,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
 
 const sidebarNavItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/users', label: 'User Central', icon: Users },
-  { href: '/admin/campaigns', label: 'Campaigns', icon: Megaphone },
+  { href: '/admin', label: 'Dashboard', icon: Home },
+  { href: '/admin/users', label: 'User Central', icon: LayoutGrid },
+  { href: '/admin/campaigns', label: 'Campaigns', icon: Box },
 ];
 
-function Sidebar() {
+function Sidebar({ isExpanded, setIsExpanded }: { isExpanded: boolean; setIsExpanded: (v: boolean) => void }) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+
+  const displayName = user?.fullName || user?.email?.split('@')[0] || 'Admin';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('') || 'A';
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-72 bg-slate-900 text-slate-50">
-      <div className="h-16 flex items-center px-6 border-b border-slate-800/70">
-        <Link href="/" className="text-white font-semibold text-xl tracking-tight">
-          TrustFundMe
-        </Link>
+    <motion.aside
+      initial={false}
+      animate={{
+        width: isExpanded ? 260 : 64,
+        margin: isExpanded ? 0 : '16px',
+        borderRadius: isExpanded ? '0px 48px 48px 0px' : '32px'
+      }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="hidden md:flex md:flex-col bg-[#111315] text-white shadow-2xl relative z-50 overflow-hidden"
+    >
+      {/* Profile/Toggle Area */}
+      <div className={`pt-8 pb-4 flex flex-col items-center px-4`}>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className={`relative group flex items-center transition-all duration-300 w-full ${isExpanded ? 'justify-start gap-4' : 'justify-center'}`}
+        >
+          <div className="h-10 w-10 min-w-[40px] rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-white transition-all shadow-lg bg-gray-800 flex items-center justify-center shrink-0">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="Admin" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xs font-black text-white">{initials}</span>
+            )}
+          </div>
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="text-left overflow-hidden whitespace-nowrap"
+              >
+                <div className="text-sm font-black text-white truncate">{displayName}</div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Administrator</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
 
-      <nav className="flex-1 py-5 space-y-2 px-4">
+      {/* Navigation Section */}
+      <nav className="flex-1 flex flex-col gap-4 py-12 px-3">
         {sidebarNavItems.map((item) => {
-          const isActive =
-            item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+          const isActive = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`group relative flex items-center px-4 py-2.5 transition-colors duration-200 ${
-                isActive
-                  ? "bg-white text-slate-900 rounded-2xl after:content-[''] after:absolute after:top-[-18px] after:right-0 after:h-[18px] after:w-[18px] after:bg-slate-900 after:rounded-br-[18px] before:content-[''] before:absolute before:bottom-[-18px] before:right-0 before:h-[18px] before:w-[18px] before:bg-slate-900 before:rounded-tr-[18px]"
-                  : 'text-slate-200 hover:bg-white/10 hover:text-white rounded-2xl'
-              }`}
+              title={item.label}
+              className={`group relative h-12 flex items-center transition-all duration-300 rounded-2xl ${isExpanded ? 'px-4 justify-start gap-5' : 'justify-center'
+                } ${isActive ? 'bg-white text-red-600 shadow-lg shadow-white/5' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
-              <item.icon className="h-5 w-5 mr-3" />
-              <span className="font-medium">{item.label}</span>
+              <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    className="text-sm font-bold whitespace-nowrap overflow-hidden"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+
+              {/* Tooltip for collapsed state */}
+              {!isExpanded && (
+                <div className="absolute left-16 bg-gray-900 text-white text-[10px] px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none font-bold uppercase tracking-wider z-50 shadow-2xl border border-white/10">
+                  {item.label}
+                </div>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="px-4 py-4 border-t border-slate-800/70">
+      {/* Logout & Bottom Toggle */}
+      <div className="pb-8 px-3 space-y-4">
         <button
           onClick={() => logout()}
-          className="w-full flex items-center px-4 py-2.5 rounded-xl hover:bg-slate-800/70 text-slate-200"
+          className={`group flex items-center transition-all duration-300 w-full h-12 rounded-2xl hover:bg-red-500/10 hover:text-red-500 text-gray-400 ${isExpanded ? 'px-4 justify-start gap-5' : 'justify-center'
+            }`}
         >
-          <LogOut className="h-5 w-5 mr-3" />
-          <span>Quit</span>
-        </button>
-      </div>
-    </aside>
-  );
-}
-
-function Header() {
-  const { user } = useAuth();
-  const displayName = user?.fullName || user?.email?.split('@')[0] || 'Admin';
-
-  return (
-    <header className="bg-white shadow-sm h-16 flex items-center justify-between px-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold text-gray-900">Admin</h1>
-      </div>
-
-      <div className="flex items-center space-x-3">
-        <button className="p-2 rounded-full hover:bg-gray-100" aria-label="Notifications">
-          <Bell className="h-5 w-5 text-gray-700" />
+          <LogOut className="h-5 w-5 shrink-0" />
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="text-sm font-bold whitespace-nowrap overflow-hidden"
+              >
+                Sign Out
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right leading-tight hidden sm:block">
-            <div className="text-sm font-semibold text-gray-900">{displayName}</div>
-            <div className="text-xs text-gray-500">{user?.email}</div>
-          </div>
-
-          {user?.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt="User Avatar"
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center font-semibold">
-              {displayName
-                .split(' ')
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((p) => p[0]?.toUpperCase())
-                .join('') || 'A'}
-            </div>
-          )}
+        <div className="pt-2 flex justify-center border-t border-white/5">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-gray-500 transition-colors"
+          >
+            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
         </div>
       </div>
-    </header>
+    </motion.aside>
   );
 }
+
+
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <RequireRole allowedRoles={['ADMIN']}>
-      <div className="flex h-screen bg-slate-900 font-sans">
-        <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-900 p-6">
-            <div className="min-h-full rounded-3xl bg-white shadow-sm border border-slate-100 p-8">
-              {children}
-            </div>
-          </main>
-        </div>
+      <div className="flex h-screen bg-[#111315] overflow-hidden antialiased select-none">
+        <Sidebar isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
+
+        {/* Animated Frame Wrapper */}
+        <motion.div
+          initial={false}
+          animate={{
+            padding: isExpanded ? '16px' : '16px 16px 16px 0px',
+          }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="flex-1 flex flex-col h-full overflow-hidden"
+        >
+          <div className="flex-1 flex flex-col bg-[#fcfcfc] rounded-[48px] overflow-hidden shadow-2xl relative border border-white/10">
+            <main className="flex-1 overflow-auto px-8 py-8 custom-scrollbar">
+              <div className="min-h-full py-2">
+                {children}
+              </div>
+            </main>
+          </div>
+        </motion.div>
       </div>
+
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
+      `}</style>
     </RequireRole>
   );
 }

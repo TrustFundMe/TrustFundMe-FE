@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
     MESSAGES: (id: string | number) => `/api/chat/conversations/${id}/messages`,
   },
   USERS: {
+    BASE: "/api/users",
     BY_ID: (id: number | string) => `/api/users/${id}`,
   },
 } as const;

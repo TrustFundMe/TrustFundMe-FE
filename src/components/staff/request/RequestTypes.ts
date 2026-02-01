@@ -31,12 +31,4 @@ export type FlagRequest = StaffRequestBase & {
   previewText?: string;
 };
 
-export type KycRequestType = 'FUND_OWNER_KYC' | 'BANK_VERIFICATION';
 
-export type KycRequest = StaffRequestBase & {
-  type: KycRequestType;
-  userId: string;
-  userName: string;
-  documentType: string;
-  note?: string;
-};

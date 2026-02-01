@@ -1,80 +1,26 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Ban, CheckCircle2, Mail, UserRound } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  Ban,
+  CheckCircle2,
+  Mail,
+  UserRound,
+  Phone,
+  CheckCircle,
+  ShieldAlert,
+  Calendar
+} from 'lucide-react';
+import { userService, UserInfo } from '@/services/userService';
 
-type UserStatus = 'ACTIVE' | 'DISABLED';
-
-type UserRow = {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  status: UserStatus;
-  teams: string[];
-  avatarUrl?: string | null;
-  role: 'USER';
-};
-
-const mockUsers: UserRow[] = [
-  {
-    id: 'u_1',
-    name: 'Olivia Rhye',
-    username: 'olivia',
-    email: 'olivia@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Design', 'Product'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_2',
-    name: 'Phoenix Baker',
-    username: 'phoenix',
-    email: 'phoenix@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Product', 'Software Engineering'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_3',
-    name: 'Lana Steiner',
-    username: 'lana',
-    email: 'lana@unitledui.com',
-    status: 'DISABLED',
-    teams: ['Operations', 'Product'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_4',
-    name: 'Demi Wilkinson',
-    username: 'demi',
-    email: 'demi@unitledui.com',
-    status: 'ACTIVE',
-    teams: ['Design', 'Product', 'Software Engineering'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-  {
-    id: 'u_5',
-    name: 'Candice Wu',
-    username: 'candice',
-    email: 'candice@unitledui.com',
-    status: 'DISABLED',
-    teams: ['Operations', 'Finance'],
-    avatarUrl: null,
-    role: 'USER',
-  },
-];
-
-function StatusPill({ status }: { status: UserStatus }) {
-  if (status === 'ACTIVE') {
+function StatusPill({ status }: { status: string | boolean }) {
+  const isActive = status === 'ACTIVE' || status === true;
+  if (isActive) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
         Active
       </span>
@@ -82,48 +28,95 @@ function StatusPill({ status }: { status: UserStatus }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
       <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
       Disabled
     </span>
   );
 }
 
+function RoleBadge({ role }: { role: string }) {
+  const cls =
+    role === 'ADMIN'
+      ? 'text-rose-700 bg-rose-50 border-rose-100'
+      : role === 'STAFF'
+        ? 'text-blue-700 bg-blue-50 border-blue-100'
+        : role === 'FUND_OWNER'
+          ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+          : 'text-slate-700 bg-slate-100 border-slate-200';
+
+  return (
+    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider border ${cls}`}>
+      {role}
+    </span>
+  );
+}
+
 export default function AdminUserDetailPage() {
-  const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('id');
   const router = useRouter();
 
-  const [users, setUsers] = useState<UserRow[]>(mockUsers);
+  const [user, setUser] = useState<UserInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const user = useMemo(() => users.find((u) => u.id === params.id), [users, params.id]);
+  useEffect(() => {
+    if (userId) {
+      fetchUser(userId);
+    } else {
+      setError('No User ID provided');
+      setLoading(false);
+    }
+  }, [userId]);
 
-  const disableUser = (id: string) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'DISABLED' } : u)));
+  const fetchUser = async (id: string) => {
+    setLoading(true);
+    const res = await userService.getUserById(id);
+    if (res.success && res.data) {
+      setUser(res.data);
+    } else {
+      setError(res.error || 'Failed to load user details');
+    }
+    setLoading(false);
   };
 
-  const activateUser = (id: string) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'ACTIVE' } : u)));
+  const toggleUserStatus = async () => {
+    // Placeholder for actual API call
+    if (!user) return;
+    console.log('Toggle status for user:', user.id);
   };
 
-  if (!user) {
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto flex items-center justify-center py-20">
+        <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !user) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
-          <div className="text-lg font-semibold text-slate-900">User not found</div>
-          <div className="mt-1 text-sm text-slate-500">The user id does not exist in current dataset.</div>
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-8 text-center">
+          <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500 mb-4">
+            <ShieldAlert className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">{error || 'User not found'}</h2>
+          <p className="mt-2 text-slate-500 max-w-xs mx-auto">Rất tiếc, thông tin người dùng bạn yêu cầu không khả dụng hoặc đã xảy ra lỗi.</p>
           <button
             onClick={() => router.push('/admin/users')}
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-all"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to list
+            Back to account list
           </button>
         </div>
       </div>
     );
   }
 
-  const initials = user.name
+  const initials = user.fullName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -131,25 +124,26 @@ export default function AdminUserDetailPage() {
     .join('');
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <Link href="/admin/users" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900">
+    <div className="max-w-4xl mx-auto pb-10">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <Link href="/admin/users" className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-red-600 transition-colors">
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Back to list
         </Link>
+
         <div className="flex items-center gap-2">
-          {user.status === 'ACTIVE' ? (
+          {user.verified ? (
             <button
-              onClick={() => disableUser(user.id)}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              onClick={toggleUserStatus}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-sm shadow-slate-200"
             >
               <Ban className="h-4 w-4" />
               Disable account
             </button>
           ) : (
             <button
-              onClick={() => activateUser(user.id)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#F84D43] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
+              onClick={toggleUserStatus}
+              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 transition-all shadow-sm shadow-red-100"
             >
               <CheckCircle2 className="h-4 w-4" />
               Activate account
@@ -158,77 +152,106 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-        <div className="p-6">
-          <div className="flex items-start gap-4">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.name} className="h-14 w-14 rounded-full object-cover" />
-            ) : (
-              <div className="h-14 w-14 rounded-full bg-slate-100 text-slate-900 flex items-center justify-center font-semibold text-lg">
-                {initials || <UserRound className="h-5 w-5" />}
-              </div>
-            )}
+      <div className="rounded-[32px] border border-slate-100 bg-white shadow-xl shadow-slate-200/50 overflow-hidden">
+        {/* Header/Cover Placeholder */}
+        <div className="h-32 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-100" />
 
-            <div className="flex-1">
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="text-xl font-semibold text-slate-900">{user.name}</div>
-                <StatusPill status={user.status} />
-                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">Role: USER</span>
-              </div>
-              <div className="mt-1 text-sm text-slate-500">@{user.username}</div>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold text-slate-500">Email</div>
-                  <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Mail className="h-4 w-4 text-slate-500" />
-                    {user.email}
-                  </div>
+        <div className="px-8 pb-8">
+          <div className="relative -mt-12 flex items-end gap-6 mb-8">
+            <div className="relative">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.fullName} className="h-32 w-32 rounded-[32px] object-cover ring-8 ring-white shadow-lg" />
+              ) : (
+                <div className="h-32 w-32 rounded-[32px] bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 flex items-center justify-center font-bold text-4xl ring-8 ring-white shadow-lg">
+                  {initials || <UserRound className="h-16 w-16" />}
                 </div>
-
-                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="text-xs font-semibold text-slate-500">Teams</div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {user.teams.map((t) => (
-                      <span key={t} className="inline-flex rounded-full bg-white border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-xl border border-[#F84D43]/20 bg-[#F84D43]/5 p-4">
-                <div className="text-sm font-semibold text-slate-900">Use cases</div>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#F84D43]" />
-                    View account details
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#F84D43]" />
-                    Activate account
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#F84D43]" />
-                    Disable account
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#F84D43]" />
-                    Back to account list
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex items-center justify-end">
-                <Link
-                  href="/admin/users"
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
-                >
-                  Done
-                </Link>
-              </div>
+              )}
+              <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white ${user.verified ? 'bg-emerald-500' : 'bg-slate-300'}`} />
             </div>
+
+            <div className="flex-1 pb-2">
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-3xl font-black text-slate-900">{user.fullName}</h1>
+                <RoleBadge role={user.role} />
+              </div>
+              <p className="text-slate-500 font-medium">#{user.id}</p>
+            </div>
+
+            <div className="pb-2">
+              <StatusPill status={user.verified} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 px-1">Contact Information</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                    <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email Address</p>
+                      <p className="text-sm font-bold text-slate-700">{user.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                    <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Phone Number</p>
+                      <p className="text-sm font-bold text-slate-700">{user.phoneNumber || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 px-1">Account Status</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                    <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                      <CheckCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Verification Status</p>
+                      <p className={`text-sm font-bold ${user.verified ? 'text-emerald-500' : 'text-amber-500'}`}>
+                        {user.verified ? 'Verified Account' : 'Unverified / Pending'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100 opacity-60">
+                    <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Join Date</p>
+                      <p className="text-sm font-bold text-slate-700">Jan 12, 2026 (Placeholder)</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <div className="mt-10 pt-8 border-t border-slate-100 flex justify-end gap-3">
+            <button
+              onClick={() => router.push('/admin/users')}
+              className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+            >
+              Close
+            </button>
+            <button
+              className="px-6 py-2.5 rounded-xl bg-red-600 text-sm font-bold text-white hover:bg-red-700 transition-all shadow-md shadow-red-100"
+            >
+              Edit Profile
+            </button>
           </div>
         </div>
       </div>

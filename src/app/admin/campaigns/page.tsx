@@ -228,37 +228,6 @@ export default function AdminCampaignsPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="text-2xl font-semibold text-slate-900">Campaigns</div>
-          <div className="text-sm text-slate-500">Quản lý chiến dịch và danh mục.</div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setTab('CAMPAIGNS')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border ${
-              tab === 'CAMPAIGNS'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-900 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <Folder className="h-4 w-4" />
-            Campaigns
-          </button>
-          <button
-            onClick={() => setTab('CATEGORIES')}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border ${
-              tab === 'CATEGORIES'
-                ? 'bg-slate-900 text-white border-slate-900'
-                : 'bg-white text-slate-900 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            <Tag className="h-4 w-4" />
-            Categories
-          </button>
-        </div>
-      </div>
 
       {tab === 'CAMPAIGNS' ? (
         <>
@@ -558,9 +527,8 @@ export default function AdminCampaignsPage() {
                           <td className="py-4 pr-4 text-slate-700">{cat.slug}</td>
                           <td className="py-4 pr-4">
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                cat.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-700'
-                              }`}
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${cat.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-700'
+                                }`}
                             >
                               {cat.isActive ? 'Active' : 'Disabled'}
                             </span>
@@ -576,11 +544,10 @@ export default function AdminCampaignsPage() {
                               </button>
                               <button
                                 onClick={() => toggleCategoryActive(cat.id)}
-                                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${
-                                  cat.isActive
-                                    ? 'bg-slate-900 text-white hover:bg-slate-800'
-                                    : 'bg-[#F84D43] text-white hover:brightness-95'
-                                }`}
+                                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${cat.isActive
+                                  ? 'bg-slate-900 text-white hover:bg-slate-800'
+                                  : 'bg-[#F84D43] text-white hover:brightness-95'
+                                  }`}
                               >
                                 <Ban className="h-4 w-4" />
                                 {cat.isActive ? 'Disable' : 'Enable'}
