@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+import { useInView, motion } from "framer-motion";
 import Link from "next/link";
 import CampaignBannerCta from "@/components/campaign/CampaignBannerCta";
 
@@ -66,9 +68,7 @@ const CampaignBanner = ({
             {ctaLabel}
           </Link>
         )}
-      </div>
-
-      
+      </motion.div>
     </section>
   );
 };
