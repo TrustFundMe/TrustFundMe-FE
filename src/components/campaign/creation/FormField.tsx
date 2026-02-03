@@ -1,8 +1,7 @@
-'use client';
-
 import type { ChangeEvent } from 'react';
+import React from 'react';
 
-export function Label({ children, htmlFor }: { children: string; htmlFor?: string }) {
+export function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return (
     <label htmlFor={htmlFor} className="text-xs font-semibold text-gray-700">
       {children}
