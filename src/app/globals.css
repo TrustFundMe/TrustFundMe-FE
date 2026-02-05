@@ -6,11 +6,14 @@
 
 /* Watercolor background animation */
 @keyframes bloom {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(0.6) rotate(0deg);
     border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
   }
+
   50% {
     opacity: 0.85;
     transform: scale(1.1) rotate(180deg);
@@ -79,7 +82,7 @@
   z-index: 999 !important;
 }
 
-.header-main .main-menu ul li:hover > .submenu {
+.header-main .main-menu ul li:hover>.submenu {
   opacity: 1 !important;
   visibility: visible !important;
 }
@@ -127,7 +130,7 @@
 }
 
 /* Ensure dropdown parent doesn't clip */
-.projects-section > .container > div:first-of-type {
+.projects-section>.container>div:first-of-type {
   overflow: visible !important;
   position: relative;
   z-index: 9999;
@@ -184,6 +187,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -195,25 +199,40 @@
   font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Override theme defaults for better Vietnamese support */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
 .mean-expand {
   font-size: 18px !important;
 }
+
 .mean-container .mean-nav ul li a.mean-expand {
   margin-top: 12px !important;
 }
-.has-dropdown > a {
+
+.has-dropdown>a {
   display: inline-flex !important;
   gap: 5px;
   align-items: center;
 }
+
 .swiper-dot .swiper-pagination-bullet:not(:last-child) {
   margin-right: 20px !important;
 }
+
 .single-testimonial-style-2 .single-testimonial-items-2 .client-info .image {
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .popular-causes-card-items .thumb {
   overflow: hidden;
 }
@@ -221,6 +240,7 @@
 .event-title-top {
   max-width: 450px;
 }
+
 .faq-content .accordion-item .accordion-header .accordion-button {
   line-height: normal;
 }
@@ -235,6 +255,7 @@ img.mfp-img {
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
 .mfp-img-container .mfp-close {
   top: -110px;
   right: -24px;
@@ -244,6 +265,7 @@ img.mfp-img {
   margin: 0;
   padding: 0;
 }
+
 .mobile-menu-modal .modal-content {
   min-height: 100vh;
 }
@@ -280,7 +302,7 @@ img.mfp-img {
   transition: all 0.2s ease !important;
 }
 
-.header-main .main-menu ul li:hover > a {
+.header-main .main-menu ul li:hover>a {
   transition: all 0.3s ease !important;
 }
 
@@ -312,7 +334,7 @@ img.mfp-img {
   .header-top-wrapper-2 .contact-list li {
     font-size: 13px !important;
   }
-  
+
   .header-top-wrapper-2 .social-icon {
     gap: 15px !important;
   }
@@ -323,7 +345,8 @@ input:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="text"]:focus {
-  color: #111827 !important; /* text-gray-900 */
+  color: #111827 !important;
+  /* text-gray-900 */
 }
 
 /* Fade-in animation for validation messages */
@@ -332,6 +355,7 @@ input[type="text"]:focus {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -344,9 +368,12 @@ input[type="text"]:focus {
 
 /* Pulse glow animation for CTA button - disabled */
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.01);
   }
@@ -407,15 +434,15 @@ header,
 }
 
 /* Ensure UserDropdown container doesn't clip */
-.header-right > div:has(button[aria-label="User menu"]),
-.header-right > div.relative {
+.header-right>div:has(button[aria-label="User menu"]),
+.header-right>div.relative {
   overflow: visible !important;
   position: relative;
   z-index: 1000;
 }
 
 /* UserDropdown menu positioning fix - allow it to overflow outside header */
-.relative[ref] > div[class*="absolute"] {
+.relative[ref]>div[class*="absolute"] {
   z-index: 9999 !important;
   position: absolute !important;
   overflow: visible !important;
@@ -452,8 +479,8 @@ header,
 }
 
 /* Specific override for any container that might clip - target only containers, not all elements */
-header > .container,
-header > .container-fluid,
+header>.container,
+header>.container-fluid,
 header .mega-menu-wrapper,
 header .header-main,
 header .header-right,
@@ -488,7 +515,7 @@ div[class*="absolute"][class*="right-0"][class*="mt-2"] {
 /* Hide header when mobile menu is open with smooth animation */
 .mobile-menu-open #header-sticky,
 body:has(.offcanvas__overlay.overlay-open) #header-sticky,
-.offcanvas__overlay.overlay-open ~ * #header-sticky {
+.offcanvas__overlay.overlay-open~* #header-sticky {
   opacity: 0 !important;
   visibility: hidden !important;
   transform: translateY(-100%) !important;
@@ -572,6 +599,7 @@ nextjs-portal {
     opacity: 0;
     transform: translateY(30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -584,6 +612,7 @@ nextjs-portal {
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -606,6 +635,7 @@ html {
     opacity: 0;
     transform: translateY(40px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -617,6 +647,7 @@ html {
     opacity: 0;
     transform: translateX(-40px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -628,6 +659,7 @@ html {
     opacity: 0;
     transform: translateX(40px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -639,6 +671,7 @@ html {
     opacity: 0;
     transform: scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -702,7 +735,7 @@ html {
 }
 
 /* Ensure equal height */
-.align-items-stretch > [class*='col-'] {
+.align-items-stretch>[class*='col-'] {
   display: flex;
 }
 
@@ -758,17 +791,18 @@ body {
 
 /* Fix header overflow on mobile */
 @media (max-width: 991px) {
+
   .header-top-section-3,
   .header-3,
   .header-main {
     overflow-x: hidden !important;
     max-width: 100% !important;
   }
-  
+
   .mega-menu-wrapper {
     overflow-x: hidden !important;
   }
-  
+
   /* Prevent absolutely positioned logo from causing overflow */
   .header-3 .header-main.style-2 .logo {
     position: relative !important;
@@ -776,33 +810,33 @@ body {
     transform: none !important;
     margin: 0 auto;
   }
-  
+
   /* Adjust header layout for mobile */
   .header-3 .header-main.style-2 {
     flex-direction: row !important;
     gap: 8px;
     padding: 8px 0;
   }
-  
+
   .header-3 .header-main.style-2 .header-left {
     display: none !important;
   }
-  
+
   .header-3 .header-main.style-2 .header-right {
     flex: 0 0 auto !important;
     margin-left: auto !important;
   }
-  
+
   /* Reduce logo size on mobile */
   .header-3 .header-main.style-2 .logo {
     flex: 0 0 auto !important;
   }
-  
+
   .header-3 .header-main.style-2 .logo img {
     max-width: 150px !important;
     height: auto !important;
   }
-  
+
   /* Hide desktop nav on mobile, show hamburger */
   .header-3 .header-left .mean__menu-wrapper .main-menu {
     display: none !important;
@@ -814,17 +848,17 @@ body {
   * {
     max-width: 100%;
   }
-  
+
   img {
     max-width: 100%;
     height: auto;
   }
-  
+
   .container {
     padding-left: 15px;
     padding-right: 15px;
   }
-  
+
   /* Ensure header container doesn't overflow */
   .header-3 .container,
   .header-top-section-3 .container {
@@ -832,13 +866,13 @@ body {
     max-width: 100% !important;
     overflow-x: hidden !important;
   }
-  
+
   /* Fix logo size on very small screens */
   .header-3 .logo img {
     max-width: 180px !important;
     height: auto !important;
   }
-  
+
   /* Ensure hamburger menu is visible and positioned correctly */
   .header__hamburger {
     display: flex !important;

@@ -7,7 +7,7 @@ import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DanboxLayout from '@/layout/DanboxLayout';
 import Link from 'next/link';
-import { User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, Wallet, ShieldCheck } from 'lucide-react';
+import { User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
@@ -72,8 +72,8 @@ export default function ProfilePage() {
       setAvatarPreview(avatarUrl);
 
       try {
-        const response = await fetch('/api/users/profile/avatar', {
-          method: 'POST',
+        const response = await fetch(`/api/users/${user.id}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({ userId: user.id, avatarUrl }),
@@ -203,11 +203,11 @@ export default function ProfilePage() {
                           <AvatarFallback className="border-2 border-gray-200 bg-gray-100 text-2xl font-semibold text-gray-600">
                             {user.fullName
                               ? user.fullName
-                                  .split(/\s+/)
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()
-                                  .slice(0, 2) || '?'
+                                .split(/\s+/)
+                                .map((n) => n[0])
+                                .join('')
+                                .toUpperCase()
+                                .slice(0, 2) || '?'
                               : '?'}
                           </AvatarFallback>
                         </Avatar>
@@ -279,17 +279,7 @@ export default function ProfilePage() {
                               Your Impact
                             </span>
                           </Link>
-                          <Link
-                            href="/account/wallet"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors"
-                          >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <Wallet className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">
-                              Wallet
-                            </span>
-                          </Link>
+
                         </div>
                       </div>
                     </>
@@ -312,11 +302,11 @@ export default function ProfilePage() {
                               <AvatarFallback className="border-2 border-gray-200 bg-gray-100 text-2xl font-semibold text-gray-600">
                                 {user.fullName
                                   ? user.fullName
-                                      .split(/\s+/)
-                                      .map((n) => n[0])
-                                      .join('')
-                                      .toUpperCase()
-                                      .slice(0, 2) || '?'
+                                    .split(/\s+/)
+                                    .map((n) => n[0])
+                                    .join('')
+                                    .toUpperCase()
+                                    .slice(0, 2) || '?'
                                   : '?'}
                               </AvatarFallback>
                             </Avatar>
@@ -460,17 +450,7 @@ export default function ProfilePage() {
                               Your Impact
                             </span>
                           </Link>
-                          <Link
-                            href="/account/wallet"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors"
-                          >
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <Wallet className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">
-                              Wallet
-                            </span>
-                          </Link>
+
                         </div>
                       </div>
                     </form>

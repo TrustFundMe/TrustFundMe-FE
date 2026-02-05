@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Verify session with BE
         const { session: currentSession, user: currentUser } = await authService.getSession();
-        
+
         if (currentSession && currentUser) {
           setUser(currentUser);
           // Update localStorage
@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.logout();
     setUser(null);
     localStorage.removeItem('be_user');
-    router.push('/sign-in');
+    router.push('/sign-out');
   };
 
   const updateUser = (updates: Partial<BEUserInfo>) => {

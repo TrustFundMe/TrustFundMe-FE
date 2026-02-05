@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef } from "react";
+import { useInView, motion } from "framer-motion";
 import Link from "next/link";
 import CampaignBannerCta from "@/components/campaign/CampaignBannerCta";
 
@@ -14,8 +18,12 @@ const CampaignBanner = ({
   ctaLabel = "Explore Campaigns",
   ctaHref = "#campaigns",
 }: CampaignBannerProps) => {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.2 });
+
   return (
     <section
+      ref={ref}
       className="relative w-full min-h-[calc(100vh-96px)] flex items-center justify-center overflow-hidden"
     >
       {/* Background image */}
@@ -29,9 +37,13 @@ const CampaignBanner = ({
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 md:bg-black/45 lg:bg-black/40" />
 
-      {/* Content */}
-      <div className="relative z-10 max-w-4xl px-4 md:px-6 lg:px-8 text-center text-white pt-12 md:pt-16"
+      {/* Content - animate when in view / on load */}
+      <motion.div
+        className="relative z-10 max-w-4xl px-4 md:px-6 lg:px-8 text-center text-white pt-12 md:pt-16"
         style={{ textShadow: "0 2px 6px rgba(0,0,0,0.6)" }}
+        initial={{ opacity: 0, y: 48 }}
+        animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 48 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
       >
         <p className="text-sm md:text-base font-medium tracking-[0.2em] uppercase text-[#FFD18B] mb-3 md:mb-4">
           {subheading}
@@ -56,9 +68,7 @@ const CampaignBanner = ({
             {ctaLabel}
           </Link>
         )}
-      </div>
-
-      
+      </motion.div>
     </section>
   );
 };

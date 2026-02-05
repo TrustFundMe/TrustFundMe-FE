@@ -42,7 +42,7 @@ export default function RelatedPosts({
           fontFamily: "var(--font-dm-sans)",
         }}
       >
-        Related Posts
+        Bài viết liên quan
       </legend>
       <div
         style={{

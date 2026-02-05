@@ -43,23 +43,30 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/feed-posts - Create a new feed post
+ * POST /api/feed-posts - Create a new feed post (proxies to BE with auth from cookie)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const cookies = request.headers.get("cookie") || "";
+    const authHeader = request.headers.get("authorization");
+    const cookieHeader = request.headers.get("cookie") || "";
+    const accessToken =
+      authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : (cookieHeader.match(/access_token=([^;]+)/)?.[1] ?? "").trim();
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Unauthorized", message: "Missing access token" },
+        { status: 401 }
+      );
+    }
 
     const response = await fetch(`${BE_API_URL}/api/feed-posts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Cookie: cookies,
-        ...(request.headers.get("authorization") && {
-          Authorization: request.headers.get("authorization") || "",
-        }),
+        Authorization: `Bearer ${accessToken}`,
       },
-      credentials: "include",
       body: JSON.stringify(body),
     });
 
