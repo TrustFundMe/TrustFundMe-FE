@@ -1,18 +1,30 @@
+export interface FundraisingGoal {
+  id: number;
+  campaignId: number;
+  targetAmount: number;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CampaignDto {
   id: number;
   fundOwnerId: number;
-  approvedByStaff?: boolean | null;
+  approvedByStaff?: number | null;
   approvedAt?: string | null;
   thankMessage?: string | null;
-  balance?: number | null;
+  balance: number;
   title: string;
   description?: string | null;
   coverImage?: string | null;
+  category?: string | null;
   startDate?: string | null;
   endDate?: string | null;
-  status?: string | null;
+  status: string;
   createdAt?: string | null;
   updatedAt?: string | null;
+  activeGoal?: FundraisingGoal | null; // We can enrich this in frontend or fetch separately
 }
 
 export interface CreateCampaignRequest {
@@ -35,6 +47,6 @@ export interface UpdateCampaignRequest {
   status?: string;
   thankMessage?: string;
   balance?: number;
-  approvedByStaff?: boolean;
-  approvedAt?: string;
+  approvedByStaff?: number | null;
+  approvedAt?: string | null;
 }

@@ -2,6 +2,7 @@
 
 import DanboxLayout from '@/layout/DanboxLayout';
 import { Suspense, useEffect, useMemo, useState } from 'react';
+import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
 import CampaignHeader from '@/components/campaign/CampaignHeader';
@@ -13,10 +14,10 @@ import { mockComments, mockPlans, mockPosts } from '@/components/campaign/mock';
 import type { Campaign, CampaignPost } from '@/components/campaign/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
-import type { CampaignDto } from '@/types/campaign';
+import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 
-const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
+const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null, ownerName?: string): Campaign => {
   return {
     id: String(dto.id),
     title: dto.title,
@@ -24,11 +25,11 @@ const mapCampaignDtoToUi = (dto: CampaignDto): Campaign => {
     description: dto.description ?? '',
     coverImage: withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg'),
     galleryImages: [withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg')],
-    goalAmount: 0,
+    goalAmount: activeGoal ? activeGoal.targetAmount : 0,
     raisedAmount: dto.balance ?? 0,
     creator: {
       id: String(dto.fundOwnerId),
-      name: `Fund Owner #${dto.fundOwnerId}`,
+      name: ownerName || `Fund Owner #${dto.fundOwnerId}`,
       avatar: '/assets/img/about/01.jpg',
     },
     followers: [],
@@ -69,9 +70,23 @@ function CampaignDetailsInner() {
 
       try {
         setLoading(true);
-        const dto = await campaignService.getById(campaignId);
+        const [dto, activeGoal] = await Promise.all([
+          campaignService.getById(campaignId),
+          campaignService.getActiveGoalByCampaignId(campaignId),
+        ]);
+
+        let ownerName = '';
+        try {
+          const userRes = await userService.getUserById(dto.fundOwnerId);
+          if (userRes.success && userRes.data) {
+            ownerName = userRes.data.fullName;
+          }
+        } catch (uErr) {
+          console.warn('Failed to fetch owner info', uErr);
+        }
+
         if (!mounted) return;
-        setCampaign(mapCampaignDtoToUi(dto));
+        setCampaign(mapCampaignDtoToUi(dto, activeGoal, ownerName));
       } catch {
         if (!mounted) return;
         setError('Failed to load campaign');
@@ -149,10 +164,10 @@ function CampaignDetailsInner() {
                   setCampaign((c) =>
                     c
                       ? {
-                          ...c,
-                          liked: !c.liked,
-                          likeCount: c.liked ? Math.max(0, c.likeCount - 1) : c.likeCount + 1,
-                        }
+                        ...c,
+                        liked: !c.liked,
+                        likeCount: c.liked ? Math.max(0, c.likeCount - 1) : c.likeCount + 1,
+                      }
                       : c
                   )
                 }
@@ -160,12 +175,12 @@ function CampaignDetailsInner() {
                   setCampaign((c) =>
                     c
                       ? {
-                          ...c,
-                          followed: !c.followed,
-                          followerCount: c.followed
-                            ? Math.max(0, c.followerCount - 1)
-                            : c.followerCount + 1,
-                        }
+                        ...c,
+                        followed: !c.followed,
+                        followerCount: c.followed
+                          ? Math.max(0, c.followerCount - 1)
+                          : c.followerCount + 1,
+                      }
                       : c
                   )
                 }

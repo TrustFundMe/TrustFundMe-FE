@@ -5,6 +5,10 @@ export const API_ENDPOINTS = {
     BY_FUND_OWNER: (fundOwnerId: number | string) =>
       `/api/campaigns/fund-owner/${fundOwnerId}`,
   },
+  FUNDRAISING_GOALS: {
+    BASE: "/api/fundraising-goals",
+    BY_CAMPAIGN: (campaignId: number | string) => `/api/fundraising-goals/campaign/${campaignId}`,
+  },
   FEED_POSTS: {
     BASE: "/api/feed-posts",
     BY_ID: (id: number | string) => `/api/feed-posts/${id}`,
