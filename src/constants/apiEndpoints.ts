@@ -18,5 +18,7 @@ export const API_ENDPOINTS = {
   USERS: {
     BASE: "/api/users",
     BY_ID: (id: number | string) => `/api/users/${id}`,
+    BAN: (id: number | string) => `/api/users/${id}/ban`,
+    UNBAN: (id: number | string) => `/api/users/${id}/unban`,
   },
 } as const;

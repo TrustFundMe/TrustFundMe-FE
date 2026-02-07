@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 
-function StatusPill({ status }: { status: string | boolean }) {
-  const isActive = status === 'ACTIVE' || status === true;
+function StatusPill({ status }: { status: string | boolean | number }) {
+  const isActive = status === 'ACTIVE' || status === true || status === 1 || status === '1';
   if (isActive) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
@@ -75,20 +75,17 @@ export default function AdminUsersPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return users.filter((u) => {
-      const matchesQuery =
-        !q ||
-        u.fullName.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        u.phoneNumber?.toLowerCase().includes(q);
+      const isSearchMatch =
+        u.fullName.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase());
 
-      const isActive = u.verified;
       const matchesStatus =
         statusFilter === 'ALL'
           ? true
           : statusFilter === 'ACTIVE'
-            ? isActive
-            : !isActive;
-      return matchesQuery && matchesStatus;
+            ? u.isActive
+            : !u.isActive;
+
+      return isSearchMatch && matchesStatus;
     });
   }, [query, users, statusFilter]);
 
@@ -174,8 +171,8 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
 
-                    <td className="py-4 pr-4">
-                      <StatusPill status={u.verified} />
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusPill status={u.isActive} />
                     </td>
 
                     <td className="py-4 pr-4">
@@ -186,27 +183,46 @@ export default function AdminUsersPage() {
                       <span className="text-slate-600">{u.phoneNumber || '—'}</span>
                     </td>
 
-                    <td className="py-4 pr-5">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          href={`/admin/users/user-details?id=${u.id}`}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-all"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          View
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/admin/users/user-details?id=${u.id}`} title="View Details" className="p-2 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all">
+                          <Eye className="h-4 w-4" />
                         </Link>
-
-                        <button
-                          className="inline-flex items-center justify-center rounded-xl bg-slate-900 p-2 text-white hover:bg-slate-800 transition-all"
-                        >
-                          <Ban className="h-4 w-4" />
-                        </button>
-
-                        <button
-                          className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50 transition-all"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                        {u.isActive ? (
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Are you sure you want to ban ${u.fullName}?`)) {
+                                const res = await userService.banUser(u.id);
+                                if (res.success) {
+                                  setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, isActive: false } : user)));
+                                } else {
+                                  alert(res.error || 'Failed to ban user');
+                                }
+                              }
+                            }}
+                            title="Ban User"
+                            className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                          >
+                            <Ban className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Are you sure you want to unban ${u.fullName}?`)) {
+                                const res = await userService.unbanUser(u.id);
+                                if (res.success) {
+                                  setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, isActive: true } : user)));
+                                } else {
+                                  alert(res.error || 'Failed to unban user');
+                                }
+                              }
+                            }}
+                            title="Unban User"
+                            className="p-2 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-all"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
