@@ -79,21 +79,33 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
 
     if (data.fundType === 'AUTHORIZED') {
         return (
-            <div className="py-20 text-center bg-white rounded-[3rem] border border-gray-100 shadow-sm">
-                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-[#6366F1] shadow-inner mb-6">
-                    <ShieldCheck className="h-10 w-10" />
+            <div className="max-w-3xl mx-auto py-20 px-10 text-center bg-white rounded-[4rem] border border-gray-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] animate-in fade-in zoom-in-95 duration-700">
+                <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-[2rem] bg-indigo-50 text-[#6366F1] shadow-inner mb-8 rotate-3">
+                    <ShieldCheck className="h-12 w-12" />
                 </div>
-                <h3 className="text-2xl font-black text-black tracking-tight">Quỹ Ủy Quyền</h3>
-                <p className="mt-3 text-sm font-medium text-black/40 mx-auto max-w-sm leading-relaxed">
-                    Bạn đã chọn loại quỹ ủy quyền. Hệ thống sẽ tự động lập kế hoạch dựa trên các tiêu chuẩn minh bạch.
-                </p>
-                <button
-                    type="button"
-                    onClick={() => onChange('fundType', 'ITEMIZED')}
-                    className="mt-8 text-xs font-black text-[#dc2626] uppercase tracking-widest hover:underline"
-                >
-                    Thay đổi sang Quỹ Tự Lập
-                </button>
+                <h3 className="text-3xl font-black text-black tracking-tight mb-4">Chế độ Quỹ Ủy Quyền</h3>
+                <div className="space-y-4 max-w-lg mx-auto">
+                    <p className="text-sm font-bold text-black/60 leading-relaxed">
+                        Đối với mô hình Quỹ Ủy quyền, sau khi chiến dịch được phê duyệt thành công, bạn sẽ thực hiện gửi <span className="text-indigo-600 font-black">Bảng chi tiêu chi tiết theo từng đợt giải ngân</span>.
+                    </p>
+                    <div className="h-px w-12 bg-gray-100 mx-auto" />
+                    <p className="text-xs font-bold text-black/40 leading-relaxed italic">
+                        Mọi thông tin chi tiêu sẽ được đội ngũ <span className="text-black font-black">Staff kiểm duyệt nghiêm ngặt</span> trước khi chính thức công khai lên hệ thống để đảm bảo tính minh bạch và uy tín tuyệt đối cho chiến dịch của bạn.
+                    </p>
+                </div>
+
+                <div className="mt-12 flex flex-col items-center gap-4">
+                    <div className="px-6 py-3 rounded-2xl bg-gray-50 text-[10px] font-black text-black/20 uppercase tracking-[2px]">
+                        Hệ thống tự động thiết lập minh chứng
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => onChange('fundType', 'ITEMIZED')}
+                        className="text-[10px] font-black text-[#dc2626] uppercase tracking-[2px] hover:underline"
+                    >
+                        Thay đổi sang Quỹ Tự Lập
+                    </button>
+                </div>
             </div>
         );
     }

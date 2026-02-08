@@ -72,5 +72,10 @@ export const mediaService = {
 
     async updateMedia(id: number, payload: { postId?: number; campaignId?: number; description?: string }): Promise<void> {
         await api.patch(`/api/media/${id}`, payload);
+    },
+
+    async getMediaByCampaignId(campaignId: number): Promise<MediaUploadResponse[]> {
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/campaigns/${campaignId}`);
+        return res.data;
     }
 };
