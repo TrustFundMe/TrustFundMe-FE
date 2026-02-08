@@ -69,6 +69,9 @@ export const authService = {
     if (data.user) {
       localStorage.setItem('be_user', JSON.stringify(data.user));
     }
+    if (data.accessToken) {
+      localStorage.setItem('token', data.accessToken);
+    }
 
     return {
       success: true,
@@ -114,6 +117,9 @@ export const authService = {
     if (data.user) {
       localStorage.setItem('be_user', JSON.stringify(data.user));
     }
+    if (data.accessToken) {
+      localStorage.setItem('token', data.accessToken);
+    }
 
     return {
       success: true,
@@ -144,8 +150,14 @@ export const authService = {
       // Preserve avatarUrl from stored when BE did not return it
       data.user = mergeAvatarFromStored(data.user, storedUser);
       localStorage.setItem('be_user', JSON.stringify(data.user));
+
+      // If BE returns session.access_token, store it
+      if (data.session.access_token) {
+        localStorage.setItem('token', data.session.access_token);
+      }
+
       return {
-        session: { access_token: null, token_type: 'Bearer' },
+        session: { access_token: data.session.access_token, token_type: 'Bearer' },
         user: data.user,
       };
     }
@@ -176,6 +188,7 @@ export const authService = {
     });
 
     localStorage.removeItem('be_user');
+    localStorage.removeItem('token');
   },
 
   /**
@@ -372,6 +385,9 @@ export const authService = {
 
     if (data.user) {
       localStorage.setItem('be_user', JSON.stringify(data.user));
+    }
+    if (data.accessToken) {
+      localStorage.setItem('token', data.accessToken);
     }
 
     return {

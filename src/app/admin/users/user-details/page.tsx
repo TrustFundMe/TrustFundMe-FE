@@ -16,8 +16,8 @@ import {
 } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 
-function StatusPill({ status }: { status: string | boolean }) {
-  const isActive = status === 'ACTIVE' || status === true;
+function StatusPill({ status }: { status: string | boolean | number }) {
+  const isActive = status === 'ACTIVE' || status === true || status === 1 || status === '1';
   if (isActive) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
@@ -61,6 +61,17 @@ export default function AdminUserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Edit states
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    avatarUrl: '',
+    password: ''
+  });
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     if (userId) {
       fetchUser(userId);
@@ -75,6 +86,13 @@ export default function AdminUserDetailPage() {
     const res = await userService.getUserById(id);
     if (res.success && res.data) {
       setUser(res.data);
+      setEditFormData({
+        fullName: res.data.fullName || '',
+        email: res.data.email || '',
+        phoneNumber: res.data.phoneNumber || '',
+        avatarUrl: res.data.avatarUrl || '',
+        password: ''
+      });
     } else {
       setError(res.error || 'Failed to load user details');
     }
@@ -82,9 +100,67 @@ export default function AdminUserDetailPage() {
   };
 
   const toggleUserStatus = async () => {
-    // Placeholder for actual API call
     if (!user) return;
-    console.log('Toggle status for user:', user.id);
+
+    const isCurrentlyActive = user.isActive;
+    const confirmMsg = isCurrentlyActive
+      ? `Are you sure you want to disable account for ${user.fullName}?`
+      : `Are you sure you want to activate account for ${user.fullName}?`;
+
+    if (confirm(confirmMsg)) {
+      setLoading(true);
+      const res = isCurrentlyActive
+        ? await userService.banUser(user.id)
+        : await userService.unbanUser(user.id);
+
+      if (res.success && res.data) {
+        setUser(res.data);
+        setEditFormData({
+          fullName: res.data.fullName || '',
+          email: res.data.email || '',
+          phoneNumber: res.data.phoneNumber || '',
+          avatarUrl: res.data.avatarUrl || '',
+          password: ''
+        });
+      } else {
+        alert(res.error || 'Operation failed');
+      }
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!user) return;
+
+    // Validate phone number
+    const phoneRegex = /^[0-9+]{10,12}$/;
+    if (editFormData.phoneNumber && !phoneRegex.test(editFormData.phoneNumber)) {
+      alert('Số điện thoại không hợp lệ. Vui lòng nhập từ 10-12 chữ số.');
+      return;
+    }
+
+    setSaving(true);
+
+    // Prepare data - only send password if not empty
+    const updateData: any = {
+      fullName: editFormData.fullName,
+      phoneNumber: editFormData.phoneNumber,
+      avatarUrl: editFormData.avatarUrl,
+    };
+
+    if (editFormData.password && editFormData.password.trim().length > 0) {
+      updateData.password = editFormData.password;
+    }
+
+    const res = await userService.updateUser(user.id, updateData);
+    if (res.success && res.data) {
+      setUser(res.data);
+      setIsEditing(false);
+      setEditFormData(prev => ({ ...prev, password: '' })); // Clear password state
+    } else {
+      alert(res.error || 'Failed to update user');
+    }
+    setSaving(false);
   };
 
   if (loading) {
@@ -132,7 +208,7 @@ export default function AdminUserDetailPage() {
         </Link>
 
         <div className="flex items-center gap-2">
-          {user.verified ? (
+          {user.isActive ? (
             <button
               onClick={toggleUserStatus}
               className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-sm shadow-slate-200"
@@ -166,19 +242,28 @@ export default function AdminUserDetailPage() {
                   {initials || <UserRound className="h-16 w-16" />}
                 </div>
               )}
-              <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white ${user.verified ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+              <div className={`absolute bottom-2 right-2 h-6 w-6 rounded-full border-4 border-white ${user.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
             </div>
 
             <div className="flex-1 pb-2">
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-black text-slate-900">{user.fullName}</h1>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editFormData.fullName}
+                    onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })}
+                    className="text-2xl font-black text-slate-900 border-b-2 border-red-500 outline-none w-full max-w-md bg-transparent"
+                  />
+                ) : (
+                  <h1 className="text-3xl font-black text-slate-900">{user.fullName}</h1>
+                )}
                 <RoleBadge role={user.role} />
               </div>
               <p className="text-slate-500 font-medium">#{user.id}</p>
             </div>
 
             <div className="pb-2">
-              <StatusPill status={user.verified} />
+              <StatusPill status={user.isActive} />
             </div>
           </div>
 
@@ -187,12 +272,30 @@ export default function AdminUserDetailPage() {
               <section>
                 <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4 px-1">Contact Information</h3>
                 <div className="space-y-4">
+                  {isEditing && (
+                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                      <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                        <UserRound className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Avatar URL</p>
+                        <input
+                          type="text"
+                          value={editFormData.avatarUrl}
+                          onChange={(e) => setEditFormData({ ...editFormData, avatarUrl: e.target.value })}
+                          placeholder="https://example.com/avatar.jpg"
+                          className="text-sm font-bold text-slate-700 border-b border-slate-200 outline-none w-full bg-transparent mt-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
                     <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
                       <Mail className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email Address</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email Address (Read Only)</p>
                       <p className="text-sm font-bold text-slate-700">{user.email}</p>
                     </div>
                   </div>
@@ -203,9 +306,36 @@ export default function AdminUserDetailPage() {
                     </div>
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Phone Number</p>
-                      <p className="text-sm font-bold text-slate-700">{user.phoneNumber || 'Not provided'}</p>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editFormData.phoneNumber}
+                          onChange={(e) => setEditFormData({ ...editFormData, phoneNumber: e.target.value })}
+                          className="text-sm font-bold text-slate-700 border-b border-slate-200 outline-none w-full bg-transparent mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm font-bold text-slate-700">{user.phoneNumber || 'Not provided'}</p>
+                      )}
                     </div>
                   </div>
+
+                  {isEditing && (
+                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
+                      <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                        <ShieldAlert className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">New Password (optional)</p>
+                        <input
+                          type="password"
+                          value={editFormData.password}
+                          onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                          placeholder="Leave blank to keep current"
+                          className="text-sm font-bold text-slate-700 border-b border-slate-200 outline-none w-full bg-transparent mt-1"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -241,17 +371,40 @@ export default function AdminUserDetailPage() {
           </div>
 
           <div className="mt-10 pt-8 border-t border-slate-100 flex justify-end gap-3">
-            <button
-              onClick={() => router.push('/admin/users')}
-              className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
-            >
-              Close
-            </button>
-            <button
-              className="px-6 py-2.5 rounded-xl bg-red-600 text-sm font-bold text-white hover:bg-red-700 transition-all shadow-md shadow-red-100"
-            >
-              Edit Profile
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateUser}
+                  disabled={saving}
+                  className="px-6 py-2.5 rounded-xl bg-red-600 text-sm font-bold text-white hover:bg-red-700 transition-all shadow-md shadow-red-100 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving && <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  Save Changes
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push('/admin/users')}
+                  className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-6 py-2.5 rounded-xl bg-slate-900 text-sm font-bold text-white hover:bg-slate-800 transition-all shadow-md shadow-slate-200"
+                >
+                  Edit Profile
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

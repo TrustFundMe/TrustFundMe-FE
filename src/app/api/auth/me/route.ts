@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
     }
 
     const user = await response.json();
-    return NextResponse.json({ user }, { status: 200 });
+    return NextResponse.json({
+      user,
+      session: { access_token: accessToken }
+    }, { status: 200 });
   } catch (error) {
     console.error('Auth me API error:', error);
     return NextResponse.json({ user: null }, { status: 200 });

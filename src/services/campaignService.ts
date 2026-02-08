@@ -1,6 +1,6 @@
 import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest } from "@/types/campaign";
+import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest, FundraisingGoal } from "@/types/campaign";
 
 export const campaignService = {
   async getAll(): Promise<CampaignDto[]> {
@@ -27,4 +27,14 @@ export const campaignService = {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.BY_ID(id), payload);
     return res.data;
   },
+
+  async getGoalsByCampaignId(campaignId: number): Promise<FundraisingGoal[]> {
+    const res = await api.get<FundraisingGoal[]>(API_ENDPOINTS.FUNDRAISING_GOALS.BY_CAMPAIGN(campaignId));
+    return res.data;
+  },
+
+  async getActiveGoalByCampaignId(campaignId: number): Promise<FundraisingGoal | null> {
+    const goals = await this.getGoalsByCampaignId(campaignId);
+    return goals.find(g => g.isActive) || null;
+  }
 };
