@@ -79,6 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.success && result.user) {
       setUser(result.user);
       localStorage.setItem('be_user', JSON.stringify(result.user));
+      if (result.accessToken) {
+        localStorage.setItem('token', result.accessToken);
+      }
       return { error: null, user: result.user, tokenRole: result.tokenRole ?? null };
     }
 
@@ -91,6 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.success && result.user) {
       setUser(result.user);
       localStorage.setItem('be_user', JSON.stringify(result.user));
+      if (result.accessToken) {
+        localStorage.setItem('token', result.accessToken);
+      }
       return { error: null };
     }
 
@@ -104,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.logout();
     setUser(null);
     localStorage.removeItem('be_user');
+    localStorage.removeItem('token');
     router.push('/sign-out');
   };
 
@@ -126,6 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (result.success && result.user) {
         setUser(result.user);
         localStorage.setItem('be_user', JSON.stringify(result.user));
+        if (result.accessToken) {
+          localStorage.setItem('token', result.accessToken);
+        }
         return { error: null };
       }
       return { error: { message: result.error || 'Google OAuth failed' } };

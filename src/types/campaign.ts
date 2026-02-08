@@ -13,6 +13,7 @@ export interface CampaignDto {
   status?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  attachments?: { type: string; url: string; name?: string }[];
 }
 
 export interface CreateCampaignRequest {
@@ -22,8 +23,26 @@ export interface CreateCampaignRequest {
   coverImage?: string;
   startDate?: string;
   endDate?: string;
+  category?: string;
+  type?: string;
   status?: string;
   thankMessage?: string;
+  attachments?: { id?: number; type: string; url: string; name?: string }[];
+}
+
+export interface FundraisingGoalDto {
+  id: number;
+  campaignId: number;
+  targetAmount: number;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface CreateFundraisingGoalRequest {
+  campaignId: number;
+  targetAmount: number;
+  description?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateCampaignRequest {
@@ -37,4 +56,5 @@ export interface UpdateCampaignRequest {
   balance?: number;
   approvedByStaff?: boolean;
   approvedAt?: string;
+  attachments?: { type: string; url: string; name?: string }[];
 }
