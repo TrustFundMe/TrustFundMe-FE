@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
 
     console.log(`Proxying verify-otp request to: ${BE_API_URL}/api/auth/verify-otp for email: ${email}`);
 

@@ -37,4 +37,11 @@ export const API_ENDPOINTS = {
     BY_USER: (userId: number | string) => `/api/bank-accounts/user/${userId}`,
     MY_ACCOUNTS: "/api/bank-accounts",
   },
+  EXPENDITURES: {
+    BASE: "/api/expenditures",
+    BY_CAMPAIGN: (campaignId: number | string) => `/api/expenditures/campaign/${campaignId}`,
+    BY_ID: (id: number | string) => `/api/expenditures/${id}`,
+    ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
+    UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
+  },
 } as const;
