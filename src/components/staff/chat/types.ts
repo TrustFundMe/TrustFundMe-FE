@@ -7,6 +7,7 @@ export interface Conversation {
   avatar?: string;
   staffId?: number;
   fundOwnerId?: number;
+  campaignId?: number;
 }
 
 export interface MessageItem {
@@ -18,6 +19,8 @@ export interface MessageItem {
   senderAvatar?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  videoUrl?: string;
+  videoUrls?: string[];
 }
 
 export interface Appointment {
