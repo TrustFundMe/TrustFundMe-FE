@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8081';
+    const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
 
     // Decode JWT to get userId (we still rely on BE to authorize the request)
     let userId: string | number | undefined;

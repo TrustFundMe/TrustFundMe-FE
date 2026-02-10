@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
+import { mediaService } from '@/services/mediaService';
 import { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 function formatVnd(value: number) {
@@ -114,19 +115,30 @@ export default function AdminCampaignsPage() {
       }
       setUsers(userMap);
 
-      // Fetch active goals for each campaign
+      // Fetch active goals and cover image for each campaign
       const enriched = await Promise.all(
         campaignRes.map(async (c) => {
           let goals: FundraisingGoal[] = [];
+          let coverImage: string | null = null;
           try {
-            goals = await campaignService.getGoalsByCampaignId(c.id);
-          } catch (goalErr) {
-            console.warn(`Failed to fetch goals for campaign ${c.id}`, goalErr);
+            const [goalsData, mediaData] = await Promise.all([
+              campaignService.getGoalsByCampaignId(c.id),
+              mediaService.getMediaByCampaignId(c.id)
+            ]);
+            goals = goalsData;
+            // Get the first image as cover image
+            if (mediaData && mediaData.length > 0) {
+              const firstImage = mediaData.find(m => m.mediaType === 'PHOTO') || mediaData[0];
+              coverImage = firstImage.url;
+            }
+          } catch (err) {
+            console.warn(`Failed to fetch goals or media for campaign ${c.id}`, err);
           }
           return {
             ...c,
             ownerName: userMap[c.fundOwnerId] || `User #${c.fundOwnerId}`,
             activeGoal: goals.find((g) => g.isActive) || null,
+            coverImage: coverImage
           };
         })
       );

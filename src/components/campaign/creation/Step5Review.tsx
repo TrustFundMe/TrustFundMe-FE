@@ -145,7 +145,7 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result }: St
                             <CheckCircle2 className="h-5 w-5" />
                         )}
                         <span className="uppercase tracking-[2px]">
-                            {isSubmitting ? 'Đang khởi tạo hệ thống...' : 'Hoàn tất & Gửi duyệt chiến dịch'}
+                            {isSubmitting ? 'Đang gửi request campaign...' : 'Hoàn tất & Gửi duyệt chiến dịch'}
                         </span>
                     </button>
 

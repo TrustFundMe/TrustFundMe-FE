@@ -103,5 +103,10 @@ export const mediaService = {
     async getMediaByConversationId(conversationId: number): Promise<MediaUploadResponse[]> {
         const res = await api.get<MediaUploadResponse[]>(`/api/media/conversations/${conversationId}`);
         return res.data;
+    },
+
+    async getMediaByCampaignId(campaignId: number): Promise<MediaUploadResponse[]> {
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/campaigns/${campaignId}`);
+        return res.data;
     }
 };

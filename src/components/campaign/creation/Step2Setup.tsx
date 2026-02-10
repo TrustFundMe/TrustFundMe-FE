@@ -156,7 +156,10 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                         {/* Right Side: Media Manager */}
                         <div className="space-y-6">
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-1">Đính kèm phương tiện (Nhiều tệp)</label>
+                                <div className="flex items-center justify-between ml-1">
+                                    <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Đính kèm phương tiện (Nhiều tệp)</label>
+                                    <span className="text-[9px] font-bold text-red-500/60 italic">(*) Ảnh đầu tiên sẽ là ảnh bìa</span>
+                                </div>
                                 <div className="grid grid-cols-3 gap-3">
                                     {mediaOptions.map((opt) => {
                                         const Icon = opt.icon;
@@ -206,15 +209,6 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                             <div className="text-[9px] font-black text-black/20 uppercase tracking-widest">{item.type}</div>
                                         </div>
                                         <div className="flex items-center gap-1 transition-all">
-                                            {item.type === 'image' && (
-                                                <button
-                                                    onClick={() => setAsCover(item.url)}
-                                                    className={`p-2 rounded-lg transition-all ${data.coverImage === item.url ? 'bg-[#dc2626] text-white' : 'bg-black text-white hover:bg-gray-800'}`}
-                                                    title="Làm ảnh bìa"
-                                                >
-                                                    <Star className={`h-3 w-3 ${data.coverImage === item.url ? 'fill-current text-white' : 'text-white'}`} />
-                                                </button>
-                                            )}
                                             <button
                                                 onClick={() => removeAttachment(idx)}
                                                 className="p-2 rounded-lg bg-[#dc2626] text-white hover:bg-red-700 transition-all shadow-md"

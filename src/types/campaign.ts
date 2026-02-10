@@ -22,6 +22,7 @@ export interface CampaignDto {
   startDate?: string | null;
   endDate?: string | null;
   status: string;
+  type?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   activeGoal?: FundraisingGoal | null; // We can enrich this in frontend or fetch separately
