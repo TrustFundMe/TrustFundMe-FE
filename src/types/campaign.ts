@@ -23,6 +23,7 @@ export interface CampaignDto {
   endDate?: string | null;
   status: string;
   rejectionReason?: string | null;
+  type?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
   activeGoal?: FundraisingGoal | null; // We can enrich this in frontend or fetch separately
@@ -37,8 +38,26 @@ export interface CreateCampaignRequest {
   coverImage?: string;
   startDate?: string;
   endDate?: string;
+  category?: string;
+  type?: string;
   status?: string;
   thankMessage?: string;
+  attachments?: { id?: number; type: string; url: string; name?: string }[];
+}
+
+export interface FundraisingGoalDto {
+  id: number;
+  campaignId: number;
+  targetAmount: number;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface CreateFundraisingGoalRequest {
+  campaignId: number;
+  targetAmount: number;
+  description?: string;
+  isActive?: boolean;
 }
 
 export interface UpdateCampaignRequest {

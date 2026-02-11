@@ -27,4 +27,23 @@ export const API_ENDPOINTS = {
     BAN: (id: number | string) => `/api/users/${id}/ban`,
     UNBAN: (id: number | string) => `/api/users/${id}/unban`,
   },
+  GOALS: {
+    BASE: "/api/fundraising-goals",
+    BY_ID: (id: number | string) => `/api/fundraising-goals/${id}`,
+    BY_CAMPAIGN: (campaignId: number | string) =>
+      `/api/fundraising-goals/campaign/${campaignId}`,
+  },
+  BANK_ACCOUNTS: {
+    BASE: "/api/bank-accounts",
+    BY_ID: (id: number | string) => `/api/bank-accounts/${id}`,
+    BY_USER: (userId: number | string) => `/api/bank-accounts/user/${userId}`,
+    MY_ACCOUNTS: "/api/bank-accounts",
+  },
+  EXPENDITURES: {
+    BASE: "/api/expenditures",
+    BY_CAMPAIGN: (campaignId: number | string) => `/api/expenditures/campaign/${campaignId}`,
+    BY_ID: (id: number | string) => `/api/expenditures/${id}`,
+    ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
+    UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
+  },
 } as const;

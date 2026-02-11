@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
 import { ChevronLeft } from 'lucide-react';
 
 import { useAuth } from '@/contexts/AuthContextProxy';
+import { useToast } from '@/components/ui/Toast';
 import { campaignService } from '@/services/campaignService';
+import { fundraisingGoalService } from '@/services/fundraisingGoalService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { mediaService } from '@/services/mediaService';
 
 import Step1Type from '../../components/campaign/creation/Step1Type';
 import Step2Setup from '../../components/campaign/creation/Step2Setup';
@@ -39,17 +43,24 @@ const steps: Step[] = [
 ];
 
 const initialCampaignState = {
+  id: undefined as number | undefined,
   title: '',
   description: '',
   startDate: '',
   endDate: '',
-  coverImage: null as File | null,
+  coverImage: '',
+  attachments: [] as { id?: number; type: string; url: string; name?: string; isLocal?: boolean; file?: File }[],
   thankMessage: '',
   fundType: 'AUTHORIZED' as 'AUTHORIZED' | 'ITEMIZED',
   targetAmount: 0,
   verificationFile: null as File | null,
   expenditureItems: [] as any[],
-  bankAccount: null as any,
+  bankAccount: {
+    id: undefined as number | undefined,
+    bankCode: '',
+    accountNumber: '',
+    accountHolderName: '',
+  },
   discount: 0,
   taxRate: 11,
 };
@@ -59,18 +70,30 @@ function formatApiError(err: unknown): string {
   const status = ax?.response?.status;
   const data = ax?.response?.data;
 
+  console.log('[API ERROR DEBUG]', { status, data });
+
+  // Handle structured validation errors (Spring Boot @Valid)
+  if (status === 400 && data && typeof data === 'object') {
+    if (data.errors && typeof data.errors === 'object') {
+      return Object.values(data.errors).join('. ');
+    }
+    if (data.message) return data.message;
+  }
+
   const fromServer =
-    (typeof data === 'string' && data) ||
     (data && typeof data === 'object' && (data.message || data.error || data.details)) ||
+    (typeof data === 'string' && data) ||
     '';
 
-  if (status === 401) return 'Unauthorized (401). Please sign in again.';
-  if (status === 403) return 'Forbidden (403).';
+  if (status === 401) {
+    return 'Phiên đăng nhập hết hạn hoặc không hợp lệ (401). Vui lòng đăng nhập lại.';
+  }
+  if (status === 403) return 'Bạn không có quyền thực hiện hành động này (403).';
   if (status === 400)
-    return fromServer ? `Invalid request (400): ${fromServer}` : 'Invalid request (400). Please check your inputs.';
-  if (status) return fromServer ? `Request failed (${status}): ${fromServer}` : `Request failed (${status}).`;
+    return fromServer ? `Yêu cầu không hợp lệ: ${fromServer}` : 'Yêu cầu không hợp lệ (400).';
+  if (status) return fromServer ? `${fromServer} (${status})` : `Lỗi hệ thống (${status}).`;
 
-  return (ax as any)?.message || 'Network error. Please try again.';
+  return (ax as any)?.message || 'Lỗi mạng, vui lòng thử lại.';
 }
 
 // Helper for error display within steps
@@ -175,6 +198,7 @@ function Stepper({
 export default function CampaignCreationPage() {
   const router = useRouter();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { toast } = useToast();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [touchedSteps, setTouchedSteps] = useState<Record<StepId, boolean>>({
@@ -186,7 +210,7 @@ export default function CampaignCreationPage() {
   });
 
   const [campaign, setCampaign] = useState(initialCampaignState);
-
+  const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmitResult>({ type: 'idle' });
 
@@ -205,30 +229,40 @@ export default function CampaignCreationPage() {
   const campaignBasicErrors = useMemo(() => {
     const e: Record<string, string> = {};
     const title = campaign.title.trim();
-    if (!title) e.title = 'Title is required.';
-    else if (title.length > 255) e.title = 'Title must be at most 255 characters.';
+    if (!title) e.title = 'Tiêu đề không được để trống.';
+    else if (title.length < 10) e.title = 'Tiêu đề phải từ 10 ký tự trở lên.';
+    else if (title.length > 255) e.title = 'Tiêu đề tối đa 255 ký tự.';
 
     const desc = campaign.description.trim();
-    if (!desc) e.description = 'Description is required.';
-    else if (desc.length > 5000) e.description = 'Description must be at most 5000 characters.';
+    if (!desc) e.description = 'Mô tả không được để trống.';
+    else if (desc.length < 50) e.description = 'Mô tả phải từ 50 ký tự trở lên.';
+    else if (desc.length > 10000) e.description = 'Mô tả tối đa 10,000 ký tự.';
 
-    const thank = campaign.thankMessage.trim();
-    if (thank.length > 2000) e.thankMessage = 'Thank you message must be at most 2000 characters.';
+    if (campaign.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
     return e;
-  }, [campaign]);
+  }, [campaign.title, campaign.description, campaign.targetAmount]);
+
+  const campaignBankingErrors = useMemo(() => {
+    const e: Record<string, string> = {};
+    const bank = campaign.bankAccount;
+
+    if (!bank.bankCode.trim()) e.bankCode = 'Vui lòng chọn ngân hàng.';
+    else if (bank.bankCode.length < 2 || bank.bankCode.length > 50) e.bankCode = 'Mã ngân hàng phải từ 2-50 ký tự.';
+
+    if (!bank.accountNumber.trim()) e.accountNumber = 'Số tài khoản không được để trống.';
+    else if (!/^\d+$/.test(bank.accountNumber)) e.accountNumber = 'Số tài khoản chỉ được chứa chữ số.';
+    else if (bank.accountNumber.length < 6 || bank.accountNumber.length > 50) e.accountNumber = 'Số tài khoản phải từ 6-50 ký tự.';
+
+    if (!bank.accountHolderName.trim()) e.accountHolderName = 'Tên chủ tài khoản không được để trống.';
+    else if (bank.accountHolderName.length < 6 || bank.accountHolderName.length > 255) e.accountHolderName = 'Tên phải từ 6-255 ký tự.';
+
+    return e;
+  }, [campaign.bankAccount]);
 
   const campaignScheduleErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (!campaign.startDate) e.startDate = 'Start date is required.';
-    if (!campaign.endDate) e.endDate = 'End date is required.';
-    // if (!campaign.coverImage) e.coverImage = 'Cover image is required.';
-
-    if (campaign.startDate && campaign.endDate) {
-      const s = new Date(campaign.startDate);
-      const ed = new Date(campaign.endDate);
-      if (ed.getTime() < s.getTime()) e.endDate = 'End date should be after start date.';
-    }
+    // Date requirements removed as requested
 
     return e;
   }, [campaign]);
@@ -238,25 +272,30 @@ export default function CampaignCreationPage() {
       case 'type':
         return true;
       case 'setup':
-        // Tạm thời cho phép next luôn để test
-        return true;
+        return Object.keys(campaignBasicErrors).length === 0;
       case 'plan':
+        return true;
       case 'banking':
+        return Object.keys(campaignBankingErrors).length === 0;
       case 'review':
         return true;
       default:
         return true;
     }
-  }, [campaignBasicErrors, campaignScheduleErrors, currentStep.id]);
+  }, [campaignBasicErrors, campaignBankingErrors, campaignScheduleErrors, currentStep.id]);
 
   const onPrev = () => {
     setResult({ type: 'idle' });
     setActiveIndex((i) => Math.max(0, i - 1));
   };
 
-  const onNext = () => {
+  const onNext = async () => {
     setStepTouched(currentStep.id);
     if (!canGoNext) return;
+
+    // Intermediate steps no longer call APIs as requested. 
+    // All persistence is moved to the final submit in Step 5.
+
     setResult({ type: 'idle' });
     setActiveIndex((i) => Math.min(steps.length - 1, i + 1));
   };
@@ -280,7 +319,29 @@ export default function CampaignCreationPage() {
     setCampaign((prev) => ({ ...prev, [key]: value }));
   };
 
+  const syncGoal = async (campaignId: number, amount: number) => {
+    try {
+      const goals = await fundraisingGoalService.getByCampaignId(campaignId);
+      if (goals.length > 0) {
+        await fundraisingGoalService.update(goals[0].id, {
+          targetAmount: amount
+        });
+      } else if (amount > 0) {
+        await fundraisingGoalService.create({
+          campaignId,
+          targetAmount: amount,
+          description: 'Mục tiêu gây quỹ'
+        });
+      }
+    } catch (err) {
+      console.error('Goal sync failed:', err);
+    }
+  };
+
   const submit = async () => {
+    setStepTouched('setup');
+    setStepTouched('plan');
+    setStepTouched('banking');
     setStepTouched('review');
 
     if (!user) {
@@ -288,13 +349,13 @@ export default function CampaignCreationPage() {
       return;
     }
 
-    // validate all steps
     const hasErrors =
       Object.keys(campaignBasicErrors).length > 0 ||
-      Object.keys(campaignScheduleErrors).length > 0;
+      Object.keys(campaignScheduleErrors).length > 0 ||
+      Object.keys(campaignBankingErrors).length > 0;
 
     if (hasErrors) {
-      setResult({ type: 'error', message: 'Please complete all steps correctly before submitting.' });
+      setResult({ type: 'error', message: 'Vui lòng hoàn thành chính xác tất cả các bước trước khi gửi duyệt.' });
       return;
     }
 
@@ -302,24 +363,86 @@ export default function CampaignCreationPage() {
     setResult({ type: 'idle' });
 
     try {
-      const campaignPayload: CreateCampaignRequest = {
+      // 1. Persist Bank Account (only if creating new - not selecting existing)
+      let bankId = campaign.bankAccount.id;
+
+      // Only create new bank account if user filled in new info (no existing id)
+      if (!bankId && campaign.bankAccount.bankCode && campaign.bankAccount.accountNumber) {
+        const bankData = {
+          bankCode: campaign.bankAccount.bankCode,
+          accountNumber: campaign.bankAccount.accountNumber,
+          accountHolderName: campaign.bankAccount.accountHolderName
+        };
+        const res = await bankAccountService.create(bankData);
+        bankId = res.id;
+        setCampaign(prev => ({ ...prev, bankAccount: { ...prev.bankAccount, id: bankId } }));
+      }
+      // If bankId already exists, user selected an existing account - no API call needed
+
+      // 2. Persist Campaign
+      const campaignPayload: any = {
         fundOwnerId: user.id,
         title: campaign.title.trim(),
         description: campaign.description.trim(),
-        startDate: campaign.startDate ? new Date(campaign.startDate).toISOString() : undefined,
-        endDate: campaign.endDate ? new Date(campaign.endDate).toISOString() : undefined,
+        category: 'General', // Default or from state if added later
         thankMessage: campaign.thankMessage.trim() || undefined,
-        coverImage: 'local-file://cover-image',
-        status: 'DRAFT',
+        coverImage: campaign.coverImage || undefined,
+        type: campaign.fundType,
+        status: 'PENDING_APPROVAL',
       };
 
-      await campaignService.create(campaignPayload);
+      let campaignId = campaign.id;
+      if (!campaignId) {
+        const res = await campaignService.create(campaignPayload);
+        campaignId = res.id;
+        setCampaign(prev => ({ ...prev, id: campaignId }));
+      } else {
+        await campaignService.update(campaignId, campaignPayload);
+      }
+
+      // 3. Upload Media Attachments (media lưu riêng với campaignId, không cần update campaign)
+      if (campaign.attachments && campaign.attachments.length > 0) {
+        for (const attr of campaign.attachments) {
+          if (attr.isLocal && attr.file) {
+            try {
+              await mediaService.uploadMedia(
+                attr.file,
+                campaignId,
+                undefined,
+                undefined,
+                attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
+              );
+            } catch (e) {
+              console.error(`Failed to upload local media ${attr.name}:`, e);
+              throw new Error(`Tải lên tệp ${attr.name} thất bại. Vui lòng thử lại.`);
+            }
+          } else if (attr.id) {
+            // Already uploaded - update campaignId if needed
+            await mediaService.updateMedia(attr.id, { campaignId });
+          }
+        }
+      }
+
+      // 4. Create Fundraising Goal
+      if (campaign.targetAmount > 0) {
+        await fundraisingGoalService.create({
+          campaignId,
+          targetAmount: campaign.targetAmount,
+          description: 'Mục tiêu gây quỹ'
+        });
+      }
 
       setResult({
         type: 'success',
-        message: 'Campaign created successfully! Staff will review your request.',
+        message: 'Chiến dịch đã được tạo và gửi duyệt thành công! Đang chuyển về trang chủ...',
       });
+
+      // Redirect to homepage after successful creation
+      setTimeout(() => {
+        router.push('/');
+      }, 1500);
     } catch (err) {
+      console.error('Submission failed:', err);
       setResult({ type: 'error', message: formatApiError(err) });
     } finally {
       setIsSubmitting(false);
@@ -347,7 +470,14 @@ export default function CampaignCreationPage() {
       case 'plan':
         return <Step3FinancialPlan data={campaign} onChange={setCampaignField} />;
       case 'banking':
-        return <Step4Banking data={campaign} onChange={setCampaignField} />;
+        return (
+          <Step4Banking
+            data={campaign}
+            onChange={setCampaignField}
+            errors={campaignBankingErrors}
+            showErrors={touchedSteps.banking}
+          />
+        );
       case 'review':
         return (
           <Step5Review
@@ -388,9 +518,10 @@ export default function CampaignCreationPage() {
                   <button
                     type="button"
                     onClick={onNext}
-                    className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors"
+                    disabled={isSaving}
+                    className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors disabled:opacity-50"
                   >
-                    Next
+                    {isSaving ? 'Saving...' : 'Next'}
                   </button>
                 </div>
               </div>

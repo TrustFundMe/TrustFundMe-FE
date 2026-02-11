@@ -15,6 +15,7 @@ import Preloader from "@/layout/Preloader";
 // Using Proxy Mode: FE → Next.js API (service_role) → Supabase
 // This allows using service_role key safely (server-side only)
 import { AuthProvider } from "@/contexts/AuthContextProxy";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const dmSans = Inter({
   subsets: ["latin", "vietnamese"],
@@ -48,8 +49,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
         <AuthProvider>
-          <Preloader />
-          {children}
+          <ToastProvider>
+            <Preloader />
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
