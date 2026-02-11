@@ -90,13 +90,21 @@ export default function CreateExpenditurePage() {
             return;
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const selectedDate = new Date(evidenceDueAt);
-        // User requested to allow current date
-        if (selectedDate < today) {
-            alert('Hạn nộp minh chứng không được là ngày trong quá khứ.');
+        const isAuthorized = campaign?.type === 'AUTHORIZED';
+
+        if (isAuthorized && !evidenceDueAt) {
+            alert('Vui lòng chọn hạn nộp minh chứng cho loại chiến dịch này.');
             return;
+        }
+
+        if (evidenceDueAt) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const selectedDate = new Date(evidenceDueAt);
+            if (selectedDate < today) {
+                alert('Hạn nộp minh chứng không được là ngày trong quá khứ.');
+                return;
+            }
         }
 
         try {
@@ -184,6 +192,18 @@ export default function CreateExpenditurePage() {
                         <h2 className="text-lg font-medium text-gray-900">Thông tin chung</h2>
                     </div>
                     <div className="p-6 space-y-6">
+                        {campaign.type === 'AUTHORIZED' && (
+                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-100 flex justify-between items-center mb-4">
+                                <div>
+                                    <p className="text-sm font-medium text-orange-800">Số dư quỹ hiện tại</p>
+                                    <p className="text-xs text-orange-600 italic">Số tiền thực tế cộng dồn từ các đợt donate</p>
+                                </div>
+                                <div className="text-2xl font-bold text-orange-600">
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign.balance)}
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <label htmlFor="plan" className="block text-sm font-medium text-gray-700">
                                 Mô tả / Kế hoạch chi tiêu <span className="text-red-500">*</span>
@@ -199,20 +219,22 @@ export default function CreateExpenditurePage() {
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="evidenceDueAt" className="block text-sm font-medium text-gray-700">
-                                Hạn nộp minh chứng <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                id="evidenceDueAt"
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm border p-2 mt-1"
-                                value={evidenceDueAt}
-                                onChange={(e) => setEvidenceDueAt(e.target.value)}
-                                required
-                            />
-                            <p className="mt-1 text-xs text-gray-500">Ngày bắt buộc phải cung cấp hóa đơn/chứng từ.</p>
-                        </div>
+                        {campaign.type === 'AUTHORIZED' && (
+                            <div>
+                                <label htmlFor="evidenceDueAt" className="block text-sm font-medium text-gray-700">
+                                    Hạn nộp minh chứng <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    id="evidenceDueAt"
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm border p-2 mt-1"
+                                    value={evidenceDueAt}
+                                    onChange={(e) => setEvidenceDueAt(e.target.value)}
+                                    required
+                                />
+                                <p className="mt-1 text-xs text-gray-500">Ngày bắt buộc phải cung cấp hóa đơn/chứng từ cho kế hoạch này.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="p-6 border-t border-b border-gray-200 bg-gray-50 flex justify-between items-center">

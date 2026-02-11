@@ -19,6 +19,7 @@ export interface Expenditure {
     totalAmount: number;
     totalExpectedAmount: number;
     variance: number;
+    isWithdrawalRequested: boolean;
     plan?: string;
     status: string;
     items?: ExpenditureItem[];

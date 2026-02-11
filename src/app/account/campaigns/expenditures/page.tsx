@@ -22,6 +22,13 @@ export default function CampaignExpendituresPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Withdrawal Modal States
+    const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+    const [selectedExpId, setSelectedExpId] = useState<number | null>(null);
+    const [evidenceDate, setEvidenceDate] = useState('');
+    const [modalError, setModalError] = useState<string | null>(null);
+    const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
             router.push('/sign-in');
@@ -68,8 +75,74 @@ export default function CampaignExpendituresPage() {
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Chờ duyệt</span>;
             case 'REJECTED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" /> Từ chối</span>;
+            case 'CLOSED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800"><CheckCircle className="w-3 h-3 mr-1" /> Đã đóng</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{status}</span>;
+        }
+    };
+
+    const handleRequestWithdrawal = async (id: number) => {
+        if (campaign?.type === 'ITEMIZED') {
+            setSelectedExpId(id);
+            setEvidenceDate('');
+            setModalError(null);
+            setShowWithdrawalModal(true);
+            return;
+        }
+
+        if (!confirm('Xác nhận gửi yêu cầu rút tiền cho kế hoạch này?')) return;
+
+        try {
+            setLoading(true);
+            const updated = await expenditureService.requestWithdrawal(id);
+            setExpenditures(prev => prev.map(exp => exp.id === id ? updated : exp));
+            alert('Yêu cầu rút tiền đã được gửi thành công.');
+        } catch (err: any) {
+            console.error('Withdrawal request failed:', err);
+            alert(err.response?.data?.message || 'Yêu cầu rút tiền thất bại. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const submitWithdrawal = async () => {
+        if (!selectedExpId || !evidenceDate) {
+            setModalError('Vui lòng chọn hạn nộp minh chứng.');
+            return;
+        }
+
+        const selectedDate = new Date(evidenceDate);
+        const now = new Date();
+        const oneMonthLater = new Date();
+        oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+
+        if (selectedDate < now) {
+            setModalError('Hạn nộp minh chứng không được ở trong quá khứ.');
+            return;
+        }
+
+        if (selectedDate > oneMonthLater) {
+            setModalError('Hạn nộp minh chứng không được quá 1 tháng kể từ hiện tại.');
+            return;
+        }
+
+        try {
+            setSubmittingWithdrawal(true);
+            setModalError(null);
+
+            // Convert to ISO string for backend
+            const isoDate = selectedDate.toISOString();
+            const updated = await expenditureService.requestWithdrawal(selectedExpId, isoDate);
+
+            setExpenditures(prev => prev.map(exp => exp.id === selectedExpId ? updated : exp));
+            setShowWithdrawalModal(false);
+            alert('Yêu cầu rút tiền đã được gửi thành công.');
+        } catch (err: any) {
+            console.error('Withdrawal submission failed:', err);
+            setModalError(err.response?.data?.message || 'Yêu cầu rút tiền thất bại.');
+        } finally {
+            setSubmittingWithdrawal(false);
         }
     };
 
@@ -166,6 +239,67 @@ export default function CampaignExpendituresPage() {
                     </div>
                 </div>
 
+                {/* Process Flow Diagrams - Moved to Top */}
+                <div className="mb-8 overflow-hidden rounded-xl border border-gray-200">
+                    {campaign.type === 'AUTHORIZED' && (
+                        <div className="px-6 py-5 bg-blue-50">
+                            <p className="text-sm text-blue-800 font-bold mb-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4" /> QUY TRÌNH GIẢI NGÂN (CHIẾN DỊCH ỦY QUYỀN)
+                            </p>
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative">
+                                {[
+                                    { step: '1', title: 'Nhận Donate', desc: 'Mọi khoản đóng góp được giữ công khai', active: true },
+                                    { step: '2', title: 'Lập danh mục', desc: 'Creator lập kế hoạch chi tiết', active: false },
+                                    { step: '3', title: 'Phê duyệt', desc: 'Nhân viên kiểm tra và duyệt chi', active: false },
+                                    { step: '4', title: 'Giải ngân', desc: 'Hệ thống chuyển khoản trong 3 ngày', active: false },
+                                    { step: '5', title: 'Minh chứng', desc: 'Creator up chứng từ sau khi chi', active: false },
+                                ].map((item, idx, arr) => (
+                                    <div key={idx} className="flex-1 flex flex-col items-center text-center relative z-10 w-full md:w-auto">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold mb-3 shadow-md transition-all ${idx === 0 ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-white text-blue-600 border-2 border-blue-200'}`}>
+                                            {item.step}
+                                        </div>
+                                        <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
+                                        <p className="text-[11px] text-gray-600 mt-1.5 px-2 font-medium">{item.desc}</p>
+
+                                        {idx < arr.length - 1 && (
+                                            <div className="hidden md:block absolute top-6 left-[65%] w-[70%] h-[2px] bg-blue-200 -z-10"></div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {campaign.type === 'ITEMIZED' && (
+                        <div className="px-6 py-5 bg-purple-50">
+                            <p className="text-sm text-purple-800 font-bold mb-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4" /> QUY TRÌNH GIẢI NGÂN (CHIẾN DỊCH MỤC TIÊU)
+                            </p>
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative">
+                                {[
+                                    { step: '1', title: 'Nhận Donate', desc: 'Cộng đồng góp tiền cho mục tiêu', active: true },
+                                    { step: '2', title: 'Lập danh mục', desc: 'Xác định các khoản cần chi trả', active: false },
+                                    { step: '3', title: 'Rút tiền', desc: 'Bấm "Yêu cầu rút" & chốt đợt', active: false },
+                                    { step: '4', title: 'Giải ngân', desc: 'Chuyển khoản & up biên lai (3 ngày)', active: false },
+                                    { step: '5', title: 'Minh chứng', desc: 'Up minh chứng trước deadline', active: false },
+                                ].map((item, idx, arr) => (
+                                    <div key={idx} className="flex-1 flex flex-col items-center text-center relative z-10 w-full md:w-auto">
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold mb-3 shadow-md transition-all ${idx === 0 ? 'bg-purple-600 text-white ring-4 ring-purple-100' : 'bg-white text-purple-600 border-2 border-purple-200'}`}>
+                                            {item.step}
+                                        </div>
+                                        <h4 className="text-sm font-bold text-gray-900">{item.title}</h4>
+                                        <p className="text-[11px] text-gray-600 mt-1.5 px-2 font-medium">{item.desc}</p>
+
+                                        {idx < arr.length - 1 && (
+                                            <div className="hidden md:block absolute top-6 left-[65%] w-[70%] h-[2px] bg-purple-200 -z-10"></div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Expenditure List */}
                 <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
@@ -200,11 +334,16 @@ export default function CampaignExpendituresPage() {
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Trạng thái
                                         </th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ngày báo cáo
-                                        </th>
+                                        {campaign.type === 'AUTHORIZED' && (
+                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Ngày báo cáo
+                                            </th>
+                                        )}
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Ngày tạo
+                                        </th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Rút tiền
                                         </th>
                                         <th scope="col" className="relative px-6 py-3">
                                             <span className="sr-only">Actions</span>
@@ -223,11 +362,43 @@ export default function CampaignExpendituresPage() {
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 {getStatusBadge(exp.status)}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {exp.evidenceDueAt ? new Date(exp.evidenceDueAt).toLocaleDateString() : '-'}
-                                            </td>
+                                            {campaign.type === 'AUTHORIZED' && (
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    {exp.evidenceDueAt ? new Date(exp.evidenceDueAt).toLocaleDateString() : '-'}
+                                                </td>
+                                            )}
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {exp.createdAt ? new Date(exp.createdAt).toLocaleDateString() : '-'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {exp.isWithdrawalRequested ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-blue-600 font-medium flex items-center gap-1">
+                                                            <CheckCircle className="w-4 h-4" /> Đã yêu cầu
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-500 leading-tight italic max-w-[150px]">
+                                                            Nhân viên sẽ giải ngân và cập nhật biên lai trong vòng 3 ngày làm việc.
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {campaign.type === 'ITEMIZED' && exp.status === 'APPROVED' ? (
+                                                            <button
+                                                                onClick={() => handleRequestWithdrawal(exp.id)}
+                                                                className="text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-xs transition-colors"
+                                                            >
+                                                                Yêu cầu rút
+                                                            </button>
+                                                        ) : campaign.type === 'AUTHORIZED' ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] text-blue-600 font-medium leading-tight"> Khi nhân viên duyệt kế hoạch này, hệ thống sẽ tự động gửi yêu cầu rút tiền.</span>
+                                                                <span className="text-[10px] text-gray-500 italic">Giải ngân & up biên lai trong 3 ngày làm việc.</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">-</span>
+                                                        )}
+                                                    </>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <Link href={`/account/campaigns/expenditures/${exp.id}`} className="text-orange-600 hover:text-orange-900">
@@ -242,6 +413,64 @@ export default function CampaignExpendituresPage() {
                     )}
                 </div>
             </div>
+
+            {/* Withdrawal Modal */}
+            {showWithdrawalModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Yêu cầu rút tiền giải ngân</h3>
+                            <p className="text-sm text-gray-600 mb-6 bg-orange-50 p-3 rounded-lg border border-orange-100 italic">
+                                <strong>Lưu ý:</strong> Yêu cầu này sẽ đóng đợt quyên góp này để giải ngân cho bạn. Vui lòng xác định hạn hoàn thành minh chứng chi tiêu.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="evidenceDate" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Hạn nộp minh chứng chi tiêu
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        id="evidenceDate"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all"
+                                        value={evidenceDate}
+                                        onChange={(e) => setEvidenceDate(e.target.value)}
+                                    />
+                                    <p className="mt-1 text-xs text-gray-500 italic">Ràng buộc: Không quá 1 tháng kể từ hôm nay.</p>
+                                </div>
+
+                                {modalError && (
+                                    <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2">
+                                        <AlertCircle className="w-4 h-4" />
+                                        {modalError}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-8 flex gap-3">
+                                <button
+                                    onClick={() => setShowWithdrawalModal(false)}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                                    disabled={submittingWithdrawal}
+                                >
+                                    Hủy bỏ
+                                </button>
+                                <button
+                                    onClick={submitWithdrawal}
+                                    className="flex-1 px-4 py-2.5 bg-orange-600 text-white font-medium rounded-xl hover:bg-orange-700 shadow-md shadow-orange-200 transition-all flex items-center justify-center gap-2"
+                                    disabled={submittingWithdrawal}
+                                >
+                                    {submittingWithdrawal ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    ) : (
+                                        <>Xác nhận yêu cầu</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
