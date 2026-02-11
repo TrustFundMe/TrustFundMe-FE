@@ -3,13 +3,16 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ClipboardList, LogOut, MessageCircle } from 'lucide-react';
+import { LayoutGrid, ClipboardList, LogOut, MessageCircle, ShieldCheck } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
+
+import { Toaster } from 'react-hot-toast';
 
 const sidebarNavItems = [
   { href: '/staff', label: 'Dashboard', icon: LayoutGrid },
   { href: '/staff/request', label: 'Requests', icon: ClipboardList },
+  { href: '/staff/verification', label: 'Verification', icon: ShieldCheck },
   { href: '/staff/chat', label: 'Chat', icon: MessageCircle },
 ];
 
@@ -85,7 +88,8 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
       <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
         <Sidebar />
         <main className="flex-1 h-screen overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
-          <div className="h-full p-2">
+          <div className="h-full p-2 relative">
+            <Toaster position="top-right" reverseOrder={false} />
             {children}
           </div>
         </main>

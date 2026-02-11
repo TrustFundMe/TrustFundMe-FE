@@ -36,5 +36,18 @@ export const campaignService = {
   async getActiveGoalByCampaignId(campaignId: number): Promise<FundraisingGoal | null> {
     const goals = await this.getGoalsByCampaignId(campaignId);
     return goals.find(g => g.isActive) || null;
+  },
+
+  async getByStatus(status: string): Promise<CampaignDto[]> {
+    const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BY_STATUS(status));
+    return res.data;
+  },
+
+  async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED', rejectionReason?: string): Promise<CampaignDto> {
+    const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.REVIEW(id), {
+      status,
+      rejectionReason
+    });
+    return res.data;
   }
 };

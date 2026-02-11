@@ -4,6 +4,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: number | string) => `/api/campaigns/${id}`,
     BY_FUND_OWNER: (fundOwnerId: number | string) =>
       `/api/campaigns/fund-owner/${fundOwnerId}`,
+    BY_STATUS: (status: string) => `/api/campaigns/status/${status}`,
+    REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
   },
   FUNDRAISING_GOALS: {
     BASE: "/api/fundraising-goals",
