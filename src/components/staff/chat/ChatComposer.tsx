@@ -9,6 +9,8 @@ interface ChatComposerProps {
   onRemoveImage: (index: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   disabled?: boolean;
+  selectedFiles?: File[];
+  uploadProgress?: number;
 }
 
 export default function ChatComposer({
@@ -22,32 +24,65 @@ export default function ChatComposer({
   onRemoveImage,
   fileInputRef,
   disabled = false,
+  selectedFiles = [],
+  uploadProgress = 0,
 }: ChatComposerProps) {
   const hasContent = inputMessage.trim().length > 0 || imagePreviews.length > 0;
-  const isDisabled = disabled || isSending || isUploadingImage || !hasContent;
+  const isInputBusy = isSending || isUploadingImage;
+  const isActionDisabled = disabled || isInputBusy;
+  const isSendDisabled = isActionDisabled || !hasContent;
 
   return (
     <div className="border-t bg-white flex flex-col flex-shrink-0" style={{ borderColor: '#e5e7eb' }}>
+      {/* Upload Progress Bar */}
+      {isUploadingImage && (
+        <div className="h-1 bg-gray-100 w-full overflow-hidden">
+          <div
+            className="h-full bg-red-600 transition-all duration-300 ease-out"
+            style={{ width: `${uploadProgress}%` }}
+          />
+        </div>
+      )}
+
       {/* Image Preview - Fixed */}
       {imagePreviews.length > 0 && (
         <div className="p-2 border-b bg-gray-50 overflow-x-auto flex-shrink-0" style={{ borderColor: '#e5e7eb' }}>
           <div className="flex items-center gap-2">
-            {imagePreviews.map((preview, index) => (
-              <div key={index} className="relative flex-shrink-0">
-                <img
-                  src={preview}
-                  alt={`Preview ${index + 1}`}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <button
-                  onClick={() => onRemoveImage(index)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                  title="Xóa ảnh"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            {imagePreviews.map((preview, index) => {
+              const file = selectedFiles?.[index];
+              const isVideo = file?.type.startsWith('video/');
+
+              return (
+                <div key={index} className="relative flex-shrink-0">
+                  {isVideo ? (
+                    <div className="w-16 h-16 rounded-lg bg-black overflow-hidden border border-slate-200 relative group">
+                      <video
+                        src={preview}
+                        className="w-full h-full object-cover opacity-80"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/center" fill="white" viewBox="0 0 24 24" className="w-6 h-6 opacity-80">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+                    />
+                  )}
+                  <button
+                    onClick={() => onRemoveImage(index)}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors shadow-sm"
+                    title="Xóa"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -56,14 +91,14 @@ export default function ChatComposer({
         <input
           type="file"
           ref={fileInputRef}
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           onChange={onImageSelect}
           className="hidden"
         />
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={isDisabled}
+          disabled={isActionDisabled}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed border"
           style={{ backgroundColor: '#fee2e2', borderColor: '#ef4444' }}
           title="Chọn ảnh"
@@ -105,7 +140,7 @@ export default function ChatComposer({
         />
         <button
           onClick={onSend}
-          disabled={isDisabled}
+          disabled={isSendDisabled}
           className="px-3 py-2 rounded-full text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#dc2626' }}
         >

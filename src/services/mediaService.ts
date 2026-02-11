@@ -31,37 +31,58 @@ export const mediaService = {
         try {
             console.log(`[mediaService] Sending POST /api/media/upload with campaignId: ${campaignId || 'MISSING'}`);
 
-            // We use a fresh header object and don't include Content-Type
-            // to allow Axios/Browser to set it with the correct boundary.
             const res = await api.post<MediaUploadResponse>("/api/media/upload", formData, {
                 headers: {
-                    "Content-Type": undefined, // Explicitly undefined to override default JSON
+                    "Content-Type": undefined,
                 },
-                // This prevents Axios from trying to stringify the FormData if headers are present
                 transformRequest: [(data) => data],
                 onUploadProgress: (progressEvent) => {
                     if (progressEvent.total && onProgress) {
                         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        console.log(`[mediaService] Upload progress: ${percentCompleted}%`);
                         onProgress(percentCompleted);
                     }
                 },
             });
 
-            console.log(`[mediaService] Upload success for ${file.name}:`, res.data.url);
             return res.data;
         } catch (error: any) {
-            console.error(`[mediaService] Upload failed for ${file.name}:`, {
-                message: error.message,
-                code: error.code,
-                status: error.response?.status,
-                data: error.response?.data,
-                config: {
-                    url: error.config?.url,
-                    method: error.config?.method,
-                    headers: error.config?.headers
-                }
+            console.error(`[mediaService] Upload failed:`, error);
+            throw error;
+        }
+    },
+
+    async uploadForConversation(
+        file: File,
+        conversationId: number,
+        description?: string,
+        mediaType?: "PHOTO" | "VIDEO" | "FILE",
+        onProgress?: (progress: number) => void
+    ): Promise<MediaUploadResponse> {
+        console.log(`[mediaService] Starting conversation upload: ${file.name}, type: ${mediaType}`);
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("conversationId", conversationId.toString());
+
+        if (description) formData.append("description", description);
+        if (mediaType) formData.append("mediaType", mediaType);
+
+        try {
+            const res = await api.post<MediaUploadResponse>("/api/media/upload/conversation", formData, {
+                headers: {
+                    "Content-Type": undefined,
+                },
+                transformRequest: [(data) => data],
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && onProgress) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        onProgress(percentCompleted);
+                    }
+                },
             });
+
+            return res.data;
+        } catch (error: any) {
+            console.error(`[mediaService] Conversation upload failed:`, error);
             throw error;
         }
     },
@@ -72,6 +93,16 @@ export const mediaService = {
 
     async updateMedia(id: number, payload: { postId?: number; campaignId?: number; description?: string }): Promise<void> {
         await api.patch(`/api/media/${id}`, payload);
+    },
+
+    async getCampaignFirstImage(campaignId: number): Promise<MediaUploadResponse | null> {
+        const res = await api.get<MediaUploadResponse>(`/api/media/campaigns/${campaignId}/first-image`);
+        return res.data;
+    },
+
+    async getMediaByConversationId(conversationId: number): Promise<MediaUploadResponse[]> {
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/conversations/${conversationId}`);
+        return res.data;
     },
 
     async getMediaByCampaignId(campaignId: number): Promise<MediaUploadResponse[]> {
