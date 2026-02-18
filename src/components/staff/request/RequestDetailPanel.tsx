@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { ShieldCheck } from 'lucide-react';
 import type { RequestStatus, StaffRequestBase } from './RequestTypes';
 import RequestStatusPill from './RequestStatusPill';
@@ -78,8 +79,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                           onReject(note);
                           setNote('');
                         } else {
-                          const reason = prompt('Please enter rejection reason:');
-                          if (reason) onReject(reason);
+                          toast.error('Vui lòng nhập lý do từ chối vào ô Review Note bên dưới.');
                         }
                       }}
                       disabled={rejectDisabled}
@@ -109,7 +109,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                   Let's add a small textarea for "Review Note" to be safe.
               */}
               <div className="pt-2">
-                <label className="text-[10px] font-semibold text-gray-500">Review Note (Required for Rejection)</label>
+                <label className="text-[10px] font-semibold text-gray-500">Review Note <span className="text-red-500">(Bắt buộc khi từ chối)</span></label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}

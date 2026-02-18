@@ -46,4 +46,11 @@ export const API_ENDPOINTS = {
     ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
     UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
   },
+  APPOINTMENTS: {
+    BASE: "/api/appointments",
+    BY_ID: (id: number | string) => `/api/appointments/${id}`,
+    BY_DONOR: (donorId: number | string) => `/api/appointments/donor/${donorId}`,
+    BY_STAFF: (staffId: number | string) => `/api/appointments/staff/${staffId}`,
+    UPDATE_STATUS: (id: number | string) => `/api/appointments/${id}/status`,
+  },
 } as const;
