@@ -6,7 +6,9 @@ export type AppointmentStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLET
 export interface AppointmentScheduleDto {
     id: number;
     donorId: number;
+    donorName?: string;
     staffId: number;
+    staffName?: string;
     startTime: string;
     endTime: string;
     status: AppointmentStatus;

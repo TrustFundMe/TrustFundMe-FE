@@ -189,11 +189,11 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                 <div className="space-y-2">
                     <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
                         <div className="h-7 w-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"><User className="h-3.5 w-3.5 text-blue-600" /></div>
-                        <div><p className="text-[10px] text-gray-500 font-medium">Donor</p><p className="text-sm font-bold text-gray-800">User #{appointment.donorId}</p></div>
+                        <div><p className="text-[10px] text-gray-500 font-medium">Donor</p><p className="text-sm font-bold text-gray-800">{appointment.donorName || `User #${appointment.donorId}`}</p></div>
                     </div>
                     <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
                         <div className="h-7 w-7 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><User className="h-3.5 w-3.5 text-purple-600" /></div>
-                        <div><p className="text-[10px] text-gray-500 font-medium">Staff phụ trách</p><p className="text-sm font-bold text-gray-800">Staff #{appointment.staffId}</p></div>
+                        <div><p className="text-[10px] text-gray-500 font-medium">Staff phụ trách</p><p className="text-sm font-bold text-gray-800">{appointment.staffName || `Staff #${appointment.staffId}`}</p></div>
                     </div>
                     {appointment.location && (
                         <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
@@ -490,7 +490,7 @@ function ListView({ appointments, isLoading, onStatusChange }: ListViewProps) {
                                                             <Calendar className={`h-4 w-4 ${isSelected ? 'text-red-500' : 'text-gray-400'}`} />
                                                         </div>
                                                         <div>
-                                                            <p className="font-semibold text-gray-900 text-xs">#{appt.id} · Donor #{appt.donorId}</p>
+                                                            <p className="font-semibold text-gray-900 text-xs">#{appt.id} · {appt.donorName || `Donor #${appt.donorId}`}</p>
                                                             <p className="text-[10px] text-gray-400 line-clamp-1">{appt.purpose || 'Không có mô tả'}</p>
                                                         </div>
                                                     </div>
