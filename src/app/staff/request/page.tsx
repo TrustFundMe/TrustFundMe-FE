@@ -12,7 +12,7 @@ import type {
   ExpenditureRequest,
   RequestStatus,
 } from '@/components/staff/request/RequestTypes';
-import { mockExpenditureRequests } from '@/components/staff/request/mock';
+
 
 export default function StaffRequestPage() {
   const router = useRouter();
@@ -178,6 +178,25 @@ export default function StaffRequestPage() {
         <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6">
           {activeTab === 'CAMPAIGN' ? (
             <>
+              {/* Stats Row */}
+              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
+                {[
+                  { label: 'Tổng cộng', value: campaignRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
+                  { label: 'Chờ duyệt', value: campaignRows.filter(r => r.status === 'PENDING').length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
+                  { label: 'Đã duyệt', value: campaignRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                  { label: 'Từ chối', value: campaignRows.filter(r => r.status === 'REJECTED').length, color: 'from-rose-500 to-red-600', wave: '#fca5a5' },
+                ].map(s => (
+                  <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
+                    <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
+                    <p className="text-2xl font-black relative z-10">{s.value}</p>
+                    <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.3" />
+                      <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.2" />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+
               {/* Campaign Filter Bar */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
@@ -327,6 +346,25 @@ export default function StaffRequestPage() {
             </>
           ) : (
             <>
+              {/* Stats Row */}
+              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
+                {[
+                  { label: 'Tổng cộng', value: expenditureRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
+                  { label: 'Chờ duyệt', value: expenditureRows.filter(r => r.status === 'PENDING').length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
+                  { label: 'Đã duyệt', value: expenditureRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                  { label: 'Từ chối', value: expenditureRows.filter(r => r.status === 'REJECTED').length, color: 'from-rose-500 to-red-600', wave: '#fca5a5' },
+                ].map(s => (
+                  <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
+                    <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
+                    <p className="text-2xl font-black relative z-10">{s.value}</p>
+                    <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.3" />
+                      <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.2" />
+                    </svg>
+                  </div>
+                ))}
+              </div>
+
               {/* Expenditure Filter Bar */}
               <div className="flex items-center gap-2 flex-shrink-0">
                 {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (

@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ClipboardList, LogOut, MessageCircle, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, ClipboardList, LogOut, MessageCircle, ShieldCheck, Calendar } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
 
@@ -13,6 +13,7 @@ const sidebarNavItems = [
   { href: '/staff', label: 'Dashboard', icon: LayoutGrid },
   { href: '/staff/request', label: 'Requests', icon: ClipboardList },
   { href: '/staff/verification', label: 'Verification', icon: ShieldCheck },
+  { href: '/staff/schedule', label: 'Schedule', icon: Calendar },
   { href: '/staff/chat', label: 'Chat', icon: MessageCircle },
 ];
 

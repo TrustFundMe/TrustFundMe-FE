@@ -269,6 +269,30 @@ function VerificationContent() {
             </div>
 
             <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative z-10 p-6 flex flex-col">
+                {/* Stats Row */}
+                <div className="grid grid-cols-4 gap-3 flex-shrink-0 mb-4">
+                    {(activeSubTab === 'KYC' ? [
+                        { label: 'Tổng cộng', value: kycRows.length + kycPendingRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
+                        { label: 'Chưa nộp', value: kycPendingRows.length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
+                        { label: 'Đã nộp', value: kycRows.filter(r => r.status === 'PENDING').length, color: 'from-blue-500 to-indigo-600', wave: '#93c5fd' },
+                        { label: 'Đã duyệt', value: kycRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                    ] : [
+                        { label: 'Tổng cộng', value: bankRows.length + bankPendingRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
+                        { label: 'Chưa nộp', value: bankPendingRows.length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
+                        { label: 'Đã nộp', value: bankRows.filter(r => r.status === 'PENDING').length, color: 'from-blue-500 to-indigo-600', wave: '#93c5fd' },
+                        { label: 'Đã duyệt', value: bankRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                    ]).map(s => (
+                        <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
+                            <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
+                            <p className="text-2xl font-black relative z-10">{s.value}</p>
+                            <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.3" />
+                                <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.2" />
+                            </svg>
+                        </div>
+                    ))}
+                </div>
+
                 {/* Sub Status Filter Buttons */}
                 <div className="flex items-center gap-2 mb-6">
                     {activeSubTab === 'KYC' ? (
@@ -277,13 +301,13 @@ function VerificationContent() {
                                 onClick={() => setKycSubStatus('PENDING')}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'PENDING' ? 'bg-red-100 text-red-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
-                                Pending (Not Submitted) · {kycPendingRows.length}
+                                Pending · {kycPendingRows.length}
                             </button>
                             <button
                                 onClick={() => setKycSubStatus('COMPLETED')}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'COMPLETED' ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
-                                Completed (Submitted) · {kycRows.length}
+                                Completed · {kycRows.length}
                             </button>
                         </>
                     ) : (
@@ -292,13 +316,13 @@ function VerificationContent() {
                                 onClick={() => setBankSubStatus('PENDING')}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'PENDING' ? 'bg-red-100 text-red-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
-                                Pending (Not Submitted) · {bankPendingRows.length}
+                                Pending · {bankPendingRows.length}
                             </button>
                             <button
                                 onClick={() => setBankSubStatus('COMPLETED')}
                                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'COMPLETED' ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
-                                Completed (Submitted) · {bankRows.length}
+                                Completed · {bankRows.length}
                             </button>
                         </>
                     )}
