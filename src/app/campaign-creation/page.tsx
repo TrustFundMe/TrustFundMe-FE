@@ -11,6 +11,7 @@ import { campaignService } from '@/services/campaignService';
 import { fundraisingGoalService } from '@/services/fundraisingGoalService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { mediaService } from '@/services/mediaService';
+import { expenditureService } from '@/services/expenditureService';
 
 import Step1Type from '../../components/campaign/creation/Step1Type';
 import Step2Setup from '../../components/campaign/creation/Step2Setup';
@@ -212,7 +213,12 @@ export default function CampaignCreationPage() {
   const [campaign, setCampaign] = useState(initialCampaignState);
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<SubmitResult>({ type: 'idle' });
+  const [result, setResult] = useState<any>({ type: 'idle' });
+  // Track success of non-state-stored operations for idempotent retries
+  const [submissionSuccess, setSubmissionSuccess] = useState({
+    goal: false,
+    expenditure: false
+  });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -362,8 +368,10 @@ export default function CampaignCreationPage() {
     setIsSubmitting(true);
     setResult({ type: 'idle' });
 
+    console.log('DEBUG [START SUBMISSION]');
     try {
       // 1. Persist Bank Account (only if creating new - not selecting existing)
+      console.log('DEBUG [STAGE 1: BANK ACCOUNT]');
       let bankId = campaign.bankAccount.id;
 
       // Only create new bank account if user filled in new info (no existing id)
@@ -379,7 +387,10 @@ export default function CampaignCreationPage() {
       }
       // If bankId already exists, user selected an existing account - no API call needed
 
+      if (bankId) console.log('DEBUG [BANK ACCOUNT SUCCESS]:', bankId);
+
       // 2. Persist Campaign
+      console.log('DEBUG [STAGE 2: CAMPAIGN]');
       const campaignPayload: any = {
         fundOwnerId: user.id,
         title: campaign.title.trim(),
@@ -400,36 +411,86 @@ export default function CampaignCreationPage() {
         await campaignService.update(campaignId, campaignPayload);
       }
 
-      // 3. Upload Media Attachments (media lưu riêng với campaignId, không cần update campaign)
+      if (campaignId) console.log('DEBUG [CAMPAIGN SUCCESS]:', campaignId);
+
+      // 3. Upload Media Attachments
+      console.log('DEBUG [STAGE 3: MEDIA]');
       if (campaign.attachments && campaign.attachments.length > 0) {
-        for (const attr of campaign.attachments) {
+        for (let i = 0; i < campaign.attachments.length; i++) {
+          const attr = campaign.attachments[i];
           if (attr.isLocal && attr.file) {
             try {
-              await mediaService.uploadMedia(
+              const uploadedMedia = await mediaService.uploadMedia(
                 attr.file,
                 campaignId,
                 undefined,
                 undefined,
                 attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
               );
+
+              // Update state locally so on retry this item is no longer isLocal
+              const updatedAttachments = [...campaign.attachments];
+              updatedAttachments[i] = {
+                ...attr,
+                id: uploadedMedia.id,
+                isLocal: false,
+                url: uploadedMedia.url // Use the real URL from server
+              };
+              setCampaign(prev => ({ ...prev, attachments: updatedAttachments }));
             } catch (e) {
               console.error(`Failed to upload local media ${attr.name}:`, e);
               throw new Error(`Tải lên tệp ${attr.name} thất bại. Vui lòng thử lại.`);
             }
           } else if (attr.id) {
-            // Already uploaded - update campaignId if needed
+            // Already uploaded - ensure campaignId is linked (optional if uploadMedia already did it)
             await mediaService.updateMedia(attr.id, { campaignId });
           }
         }
       }
 
-      // 4. Create Fundraising Goal
-      if (campaign.targetAmount > 0) {
-        await fundraisingGoalService.create({
-          campaignId,
-          targetAmount: campaign.targetAmount,
-          description: 'Mục tiêu gây quỹ'
-        });
+      // 4. Create Fundraising Goal (if not already created)
+      console.log('DEBUG [STAGE 4: GOAL]');
+      if (campaign.targetAmount > 0 && !submissionSuccess.goal) {
+        try {
+          await fundraisingGoalService.create({
+            campaignId,
+            targetAmount: campaign.targetAmount,
+            description: 'Mục tiêu gây quỹ'
+          });
+          setSubmissionSuccess(prev => ({ ...prev, goal: true }));
+        } catch (e) {
+          console.error('Failed to create fundraising goal:', e);
+          throw new Error('Lỗi khi tạo mục tiêu gây quỹ. Vui lòng thử lại.');
+        }
+      }
+
+      // 5. Create Expenditure with Items (Only for ITEMIZED, if not already created)
+      console.log('DEBUG [STAGE 5: EXPENDITURE]');
+      if (campaign.fundType === 'ITEMIZED' && campaign.expenditureItems && campaign.expenditureItems.length > 0 && !submissionSuccess.expenditure) {
+        try {
+          const itemsToCreate = campaign.expenditureItems.map((item: any) => ({
+            category: item.name + (item.unit ? ` (${item.unit})` : ''),
+            quantity: item.quantity,
+            price: 0,
+            expectedPrice: item.price,
+            note: item.note || ''
+          }));
+
+          const deadline = new Date();
+          deadline.setDate(deadline.getDate() + 30);
+          const formattedDeadline = deadline.toISOString().split('.')[0];
+
+          await expenditureService.create({
+            campaignId,
+            items: itemsToCreate,
+            plan: 'Kế hoạch chi tiêu chi tiết (Quỹ Tự Lập)',
+            evidenceDueAt: formattedDeadline
+          });
+          setSubmissionSuccess(prev => ({ ...prev, expenditure: true }));
+        } catch (e) {
+          console.error('Failed to create expenditure:', e);
+          throw new Error('Lỗi khi tạo bản kế hoạch chi tiêu. Vui lòng thử lại.');
+        }
       }
 
       setResult({
@@ -441,9 +502,17 @@ export default function CampaignCreationPage() {
       setTimeout(() => {
         router.push('/');
       }, 1500);
-    } catch (err) {
-      console.error('Submission failed:', err);
-      setResult({ type: 'error', message: formatApiError(err) });
+    } catch (err: any) {
+      console.error('DEBUG [SUBMISSION FAILED]:', err);
+      if (err.response) {
+        console.error('DEBUG [SERVER DATA]:', err.response.data);
+        console.error('DEBUG [SERVER STATUS]:', err.response.status);
+      } else if (err.request) {
+        console.error('DEBUG [NO RESPONSE RECEIVED]:', err.request);
+      } else {
+        console.error('DEBUG [ERROR MESSAGE]:', err.message);
+      }
+      setResult({ type: 'error', message: `Lỗi: ${formatApiError(err)} (Vui lòng kiểm tra Console để biết chi tiết)` });
     } finally {
       setIsSubmitting(false);
     }
