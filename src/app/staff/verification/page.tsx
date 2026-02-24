@@ -236,14 +236,14 @@ function VerificationContent() {
                 <button
                     onClick={() => setActiveSubTab('KYC')}
                     className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeSubTab === 'KYC'
-                        ? 'bg-white text-red-600 rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                        ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
                         : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
                         }`}
                 >
                     <div className="flex items-center gap-2">
-                        <UserCheck className={`h-4 w-4 ${activeSubTab === 'KYC' ? 'text-red-500' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        <UserCheck className={`h-4 w-4 ${activeSubTab === 'KYC' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                         <span className="whitespace-nowrap">KYC Requests</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeSubTab === 'KYC' ? 'bg-red-50 text-red-600' : 'bg-gray-300 text-gray-600'}`}>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeSubTab === 'KYC' ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
                             {kycRows.length + kycPendingRows.length}
                         </span>
                     </div>
@@ -253,14 +253,14 @@ function VerificationContent() {
                 <button
                     onClick={() => setActiveSubTab('BANK')}
                     className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeSubTab === 'BANK'
-                        ? 'bg-white text-red-600 rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                        ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
                         : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
                         }`}
                 >
                     <div className="flex items-center gap-2">
-                        <CreditCard className={`h-4 w-4 ${activeSubTab === 'BANK' ? 'text-red-500' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                        <CreditCard className={`h-4 w-4 ${activeSubTab === 'BANK' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                         <span className="whitespace-nowrap">Bank Requests</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeSubTab === 'BANK' ? 'bg-red-50 text-red-600' : 'bg-gray-300 text-gray-600'}`}>
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeSubTab === 'BANK' ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
                             {bankRows.length + bankPendingRows.length}
                         </span>
                     </div>
@@ -272,22 +272,22 @@ function VerificationContent() {
                 {/* Stats Row */}
                 <div className="grid grid-cols-4 gap-3 flex-shrink-0 mb-4">
                     {(activeSubTab === 'KYC' ? [
-                        { label: 'Tổng cộng', value: kycRows.length + kycPendingRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
-                        { label: 'Chưa nộp', value: kycPendingRows.length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
-                        { label: 'Đã nộp', value: kycRows.filter(r => r.status === 'PENDING').length, color: 'from-blue-500 to-indigo-600', wave: '#93c5fd' },
-                        { label: 'Đã duyệt', value: kycRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                        { label: 'Tổng cộng', value: kycRows.length + kycPendingRows.length, color: 'from-[#446b5f] to-[#6a8d83]' },
+                        { label: 'Chưa nộp', value: kycPendingRows.length, color: 'from-[#db5945] to-[#f19082]' },
+                        { label: 'Đã nộp', value: kycRows.filter(r => r.status === 'PENDING').length, color: 'from-[#446b5f] to-[#5a8075]' },
+                        { label: 'Đã duyệt', value: kycRows.filter(r => r.status === 'APPROVED').length, color: 'from-[#6a8d83] to-[#446b5f]' },
                     ] : [
-                        { label: 'Tổng cộng', value: bankRows.length + bankPendingRows.length, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
-                        { label: 'Chưa nộp', value: bankPendingRows.length, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
-                        { label: 'Đã nộp', value: bankRows.filter(r => r.status === 'PENDING').length, color: 'from-blue-500 to-indigo-600', wave: '#93c5fd' },
-                        { label: 'Đã duyệt', value: bankRows.filter(r => r.status === 'APPROVED').length, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
+                        { label: 'Tổng cộng', value: bankRows.length + bankPendingRows.length, color: 'from-[#446b5f] to-[#6a8d83]' },
+                        { label: 'Chưa nộp', value: bankPendingRows.length, color: 'from-[#db5945] to-[#f19082]' },
+                        { label: 'Đã nộp', value: bankRows.filter(r => r.status === 'PENDING').length, color: 'from-[#446b5f] to-[#5a8075]' },
+                        { label: 'Đã duyệt', value: bankRows.filter(r => r.status === 'APPROVED').length, color: 'from-[#6a8d83] to-[#446b5f]' },
                     ]).map(s => (
                         <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
                             <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
                             <p className="text-2xl font-black relative z-10">{s.value}</p>
                             <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.3" />
-                                <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.2" />
+                                <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill="white" fillOpacity="0.1" />
+                                <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill="white" fillOpacity="0.05" />
                             </svg>
                         </div>
                     ))}
@@ -299,13 +299,13 @@ function VerificationContent() {
                         <>
                             <button
                                 onClick={() => setKycSubStatus('PENDING')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'PENDING' ? 'bg-red-100 text-red-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'PENDING' ? 'bg-[#db5945]/10 text-[#db5945] shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
                                 Pending · {kycPendingRows.length}
                             </button>
                             <button
                                 onClick={() => setKycSubStatus('COMPLETED')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'COMPLETED' ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${kycSubStatus === 'COMPLETED' ? 'bg-[#446b5f]/10 text-[#446b5f] shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
                                 Completed · {kycRows.length}
                             </button>
@@ -314,13 +314,13 @@ function VerificationContent() {
                         <>
                             <button
                                 onClick={() => setBankSubStatus('PENDING')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'PENDING' ? 'bg-red-100 text-red-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'PENDING' ? 'bg-[#db5945]/10 text-[#db5945] shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
                                 Pending · {bankPendingRows.length}
                             </button>
                             <button
                                 onClick={() => setBankSubStatus('COMPLETED')}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'COMPLETED' ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${bankSubStatus === 'COMPLETED' ? 'bg-[#446b5f]/10 text-[#446b5f] shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
                             >
                                 Completed · {bankRows.length}
                             </button>
@@ -333,7 +333,7 @@ function VerificationContent() {
                         {/* Tab Content */}
                         {activeSubTab === 'KYC' && (
                             <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-[#db5945] uppercase tracking-wider flex items-center gap-2">
                                     <UserCheck className="h-4 w-4" /> {kycSubStatus === 'PENDING' ? 'Manual KYC Required' : 'Submitted KYC Requests'}
                                 </h3>
                                 <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -388,7 +388,7 @@ function VerificationContent() {
 
                         {activeSubTab === 'BANK' && (
                             <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-[#446b5f] uppercase tracking-wider flex items-center gap-2">
                                     <CreditCard className="h-4 w-4" /> {bankSubStatus === 'PENDING' ? 'Manual Bank Entry Required' : 'Submitted Bank Requests'}
                                 </h3>
                                 <div className="rounded-xl border border-gray-100 shadow-sm overflow-hidden">
