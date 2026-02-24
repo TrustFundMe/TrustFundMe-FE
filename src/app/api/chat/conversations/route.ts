@@ -48,3 +48,53 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+
+/**
+ * POST /api/chat/conversations
+ * Proxy to BE: POST /api/conversations
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const body = await request.json();
+        const accessToken = request.cookies.get("access_token")?.value;
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+        };
+
+        if (accessToken) {
+            headers["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        const response = await fetch(`${BE_API_URL}/api/conversations`, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+
+            let errorJson;
+            try {
+                errorJson = JSON.parse(errorText);
+            } catch {
+                errorJson = { message: "Failed to create conversation" };
+            }
+
+            return NextResponse.json(
+                { error: errorJson.message || "Failed to create conversation" },
+                { status: response.status }
+            );
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data);
+    } catch (error) {
+        console.error("BFF createConversation error:", error);
+        return NextResponse.json(
+            { error: "Internal server error" },
+            { status: 500 }
+        );
+    }
+}

@@ -9,12 +9,22 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
 import MyCampaignCard from '@/components/account/MyCampaignCard';
+import UserChatModal from '@/components/chat/UserChatModal';
+import { chatService, Conversation } from '@/services/chatService';
+import { useToast } from '@/components/ui/Toast';
 
 export default function CampaignsPage() {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { toast } = useToast();
+
+  // Chat Modal State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDto | null>(null);
+  const [existingConversation, setExistingConversation] = useState<Conversation | null>(null);
+  const [isCheckingChat, setIsCheckingChat] = useState(false);
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -51,9 +61,33 @@ export default function CampaignsPage() {
   }, [user?.id]);
 
   const filteredCampaigns = campaigns.filter(c =>
-    c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleChatClick = async (campaign: CampaignDto) => {
+    setSelectedCampaign(campaign);
+    setIsCheckingChat(true);
+
+    try {
+      console.log(`[Campaigns] Checking chat for campaign ${campaign.id}...`);
+      const res = await chatService.getConversationByCampaignId(campaign.id);
+
+      if (res.success && res.data) {
+        console.log(`[Campaigns] Found existing conversation: ${res.data.id}`);
+        setExistingConversation(res.data);
+      } else {
+        console.log(`[Campaigns] No conversation found (Status: ${res.isNotFound ? '404' : 'Error'}).`);
+        setExistingConversation(null);
+      }
+      setIsChatOpen(true);
+    } catch (error) {
+      console.error('[Campaigns] Error checking conversation:', error);
+      setExistingConversation(null);
+      setIsChatOpen(true);
+    } finally {
+      setIsCheckingChat(false);
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -124,7 +158,14 @@ export default function CampaignsPage() {
             ) : filteredCampaigns.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {filteredCampaigns.map((campaign) => (
-                  <MyCampaignCard key={campaign.id} campaign={campaign} />
+                  <MyCampaignCard
+                    key={campaign.id}
+                    campaign={campaign}
+                    onChatClick={() => {
+                      console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
+                      handleChatClick(campaign);
+                    }}
+                  />
                 ))}
               </div>
             ) : (
@@ -154,6 +195,19 @@ export default function CampaignsPage() {
             )}
           </div>
         </div>
+
+        {selectedCampaign && (
+          <UserChatModal
+            isOpen={isChatOpen}
+            onClose={() => {
+              setIsChatOpen(false);
+              setSelectedCampaign(null);
+              setExistingConversation(null);
+            }}
+            campaign={selectedCampaign}
+            initialConversation={existingConversation}
+          />
+        )}
       </DanboxLayout>
     </ProtectedRoute>
   );

@@ -2,17 +2,29 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Settings, Eye, Edit, BarChart } from 'lucide-react';
+import { Settings, Eye, Edit, BarChart, MessageSquare } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { CampaignDto } from '@/types/campaign';
+import { useToast } from '@/components/ui/Toast';
+import UserChatModal from '@/components/chat/UserChatModal';
 import { withFallbackImage } from '@/lib/image';
 
 interface MyCampaignCardProps {
     campaign: CampaignDto;
+    onChatClick: (campaign: CampaignDto) => void;
 }
 
-const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign }) => {
+const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }) => {
     const targetAmount = campaign.activeGoal?.targetAmount || 0;
     const progress = targetAmount > 0 ? Math.min(100, (campaign.balance / targetAmount) * 100) : 0;
+
+    const { toast } = useToast();
+    const router = useRouter();
+    const handleChatClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        onChatClick(campaign);
+    };
 
     const getStatusColor = (status: string) => {
         switch (status?.toUpperCase()) {
@@ -53,8 +65,8 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign }) => {
                                 {campaign.category || 'Campaign'}
                             </span>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded border ${campaign.type === 'AUTHORIZED'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-purple-50 text-purple-700 border-purple-200'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-purple-50 text-purple-700 border-purple-200'
                                 }`}>
                                 {campaign.type === 'AUTHORIZED' ? 'Ủy quyền' : 'Mục tiêu'}
                             </span>
@@ -112,9 +124,18 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign }) => {
                             <BarChart className="w-4 h-4" />
                             Expenditures
                         </Link>
+                        <button
+                            onClick={handleChatClick}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            Chat
+                        </button>
                     </div>
                 </div>
             </div>
+
+            {/* Modal đã được chuyển lên cấp cha (page.tsx) để tối ưu hiệu năng */}
         </div>
     );
 };

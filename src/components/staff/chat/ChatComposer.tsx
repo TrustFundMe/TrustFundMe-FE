@@ -139,7 +139,10 @@ export default function ChatComposer({
           disabled={isSending || isUploadingImage || disabled}
         />
         <button
-          onClick={onSend}
+          onClick={() => {
+            console.log("[ChatComposer] Send button clicked");
+            onSend();
+          }}
           disabled={isSendDisabled}
           className="px-3 py-2 rounded-full text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#dc2626' }}
