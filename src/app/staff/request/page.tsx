@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Megaphone, DollarSign } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
@@ -15,7 +14,6 @@ import type {
 
 
 export default function StaffRequestPage() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE'>('CAMPAIGN');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,7 +33,7 @@ export default function StaffRequestPage() {
         let status: RequestStatus = 'PENDING';
         if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
         else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
-        else if (c.status === 'DRAFT') status = 'PENDING';
+        else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
         else status = c.status as RequestStatus;
 
         return {
@@ -81,12 +79,6 @@ export default function StaffRequestPage() {
   );
 
 
-
-  // Navigation Helper
-  const handleNavigateToVerification = (userId: number, type: 'KYC' | 'BANK') => {
-    router.push(`/staff/verification?userId=${userId}`);
-    toast.success(`Redirecting to ${type} verification for user #${userId}`);
-  };
 
   // Handlers
   const handleReviewCampaign = async (campaignId?: number, reason?: string, isApprove: boolean = true) => {
@@ -229,36 +221,9 @@ export default function StaffRequestPage() {
                                 Verified
                               </span>
                             ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleNavigateToVerification(r.fundOwnerId, 'KYC');
-                                }}
-                                className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100 transition-colors"
-                              >
+                              <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
                                 Missing
-                              </button>
-                            )
-                          ),
-                        },
-                        {
-                          key: 'bank',
-                          title: 'Bank',
-                          render: (r: CampaignRequest) => (
-                            r.bankVerified ? (
-                              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                                Verified
                               </span>
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleNavigateToVerification(r.fundOwnerId, 'BANK');
-                                }}
-                                className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100 transition-colors"
-                              >
-                                Missing
-                              </button>
                             )
                           ),
                         },
@@ -292,26 +257,16 @@ export default function StaffRequestPage() {
                       { label: 'Category', value: selectedCampaign?.category || '-' },
                       { label: 'Description', value: selectedCampaign?.description || '-' },
                     ]}
-                    approveDisabled={selectedCampaign ? (!selectedCampaign.kycVerified || !selectedCampaign.bankVerified) : false}
-                    rejectDisabled={selectedCampaign ? (!selectedCampaign.kycVerified || !selectedCampaign.bankVerified) : false}
-                    approveDisabledReason={selectedCampaign && (!selectedCampaign.kycVerified || !selectedCampaign.bankVerified)
-                      ? "Please complete KYC and Bank Account verification before approving or rejecting this campaign"
+                    approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
+                    rejectDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
+                    approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
+                      ? "Please complete KYC verification before approving or rejecting this campaign"
                       : ""
                     }
-                    rejectDisabledReason={selectedCampaign && (!selectedCampaign.kycVerified || !selectedCampaign.bankVerified)
-                      ? "Please complete KYC and Bank Account verification before approving or rejecting this campaign"
+                    rejectDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
+                      ? "Please complete KYC verification before approving or rejecting this campaign"
                       : ""
                     }
-                    actionLabel={selectedCampaign && (!selectedCampaign.kycVerified || !selectedCampaign.bankVerified)
-                      ? "Verify KYC & Bank Now"
-                      : ""
-                    }
-                    onActionClick={() => {
-                      if (selectedCampaign) {
-                        const type = !selectedCampaign.kycVerified ? 'KYC' : 'BANK';
-                        handleNavigateToVerification(selectedCampaign.fundOwnerId, type);
-                      }
-                    }}
                     onApprove={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, true)}
                     onReject={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, false)}
                   />

@@ -22,6 +22,7 @@ const fmtDate = (s?: string | null) =>
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
     PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
+    PENDING_REVIEW: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
     APPROVED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
     REJECTED: { label: 'Từ chối', color: '#dc2626', bg: '#fee2e2' },
     WITHDRAWN: { label: 'Đã rút', color: '#7c3aed', bg: '#ede9fe' },
@@ -264,7 +265,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                     </div>
                     <div className="flex items-center gap-2.5 flex-shrink-0">
                         <div className="text-right hidden sm:block">
-                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-tight">Thực tế</p>
+                            <p className="text-[9px] text-gray-400 uppercase font-bold tracking-tight">Đã chi</p>
                             <p className="text-xs font-black text-[#db5945]">{fmt(exp.totalAmount)}</p>
                         </div>
                         <StatusPill status={exp.status} />
@@ -277,18 +278,10 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                         {/* Meta bar */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2 text-[10px] font-medium text-gray-500 border-b border-gray-50">
                             <span>Dự kiến: <strong className="text-gray-700">{fmt(exp.totalExpectedAmount)}</strong></span>
-                            <span>Chênh lệch: <strong style={{ color: exp.variance > 0 ? '#db5945' : '#446b5f' }}>{exp.variance > 0 ? '+' : ''}{fmt(exp.variance)}</strong></span>
-                            {exp.evidenceDueAt && <span>Hạn nộp: <strong className="text-gray-700">{fmtDate(exp.evidenceDueAt)}</strong></span>}
-                            {exp.evidenceStatus && (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase"
-                                    style={{ color: EVIDENCE_STATUS_CFG[exp.evidenceStatus]?.color ?? '#6b7280', background: EVIDENCE_STATUS_CFG[exp.evidenceStatus]?.bg ?? '#f3f4f6' }}>
-                                    {EVIDENCE_STATUS_CFG[exp.evidenceStatus]?.label ?? exp.evidenceStatus}
-                                </span>
-                            )}
                         </div>
 
                         {/* Status: Pending Review - ONLY for AUTHORIZED campaigns */}
-                        {exp.status === 'PENDING' && campaignType === 'AUTHORIZED' && (
+                        {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && campaignType === 'AUTHORIZED' && (
                             <div className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 shadow-sm">
                                 <p className="text-[10px] font-black text-amber-700 mb-2.5 uppercase tracking-wider">Đang chờ phê duyệt (Quỹ ủy quyền)</p>
                                 <div className="flex gap-2">
@@ -423,15 +416,17 @@ function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
                         <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">DỰ KIẾN</p>
                         <p className="font-bold text-[#446b5f] text-[11px]">{fmt(totalExpected)}</p>
                     </div>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
+                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">ĐÃ NHẬN</p>
+                        <p className="font-bold text-[#446b5f] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
+                    </div>
                     <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#db5945]/20">
-                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">THỰC TẾ</p>
+                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">ĐÃ CHI</p>
                         <p className="font-black text-[#db5945] text-[11px]">{fmt(totalActual)}</p>
                     </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center">
-                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">BIẾN ĐỘNG</p>
-                        <p className="font-black text-[11px]" style={{ color: diff > 0 ? '#db5945' : '#446b5f' }}>
-                            {diff > 0 ? '+' : ''}{fmt(diff)}
-                        </p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#6b7280]/20">
+                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">SỐ DƯ QUỸ</p>
+                        <p className="font-black text-gray-600 text-[11px]">{fmt(campaign.balance)}</p>
                     </div>
                 </div>
             )}
