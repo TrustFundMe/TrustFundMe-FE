@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CampaignCategoriesSection } from "@/components/campaign/CampaignCategoriesSection";
 import CampaignBanner from "@/components/campaign/CampaignBanner";
-import CampaignHighlightSlider from "@/components/campaign/CampaignHighlightSlider";
+import { VolunteerDoubleCta } from "@/components/campaign/VolunteerDoubleCta";
 import DanboxLayout from "@/layout/DanboxLayout";
 
 export const metadata: Metadata = {
@@ -20,7 +20,7 @@ const CampaignsPage = () => {
           ctaLabel="Start a Campaign"
           ctaHref="/campaign-creation"
         />
-        <CampaignHighlightSlider />
+        <VolunteerDoubleCta />
         <CampaignCategoriesSection />
       </div>
     </DanboxLayout>

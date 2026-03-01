@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { ImageIcon, Video, FileText, AlertCircle, Target, Type, Paperclip, Upload, X, Check, Star } from 'lucide-react';
+import { ImageIcon, Video, FileText, AlertCircle, Paperclip, X, Star, HeartPulse, BookOpen, Leaf, Zap, Home, Users, Baby, Dog, Globe, Utensils, Hammer, Music, ShieldCheck, Flame } from 'lucide-react';
 import { mediaService } from '@/services/mediaService';
+import { campaignCategoryService } from '@/services/campaignCategoryService';
 import { formatApiError } from '@/utils/errorUtils';
 import { useToast } from '@/components/ui/Toast';
+import { useEffect, useState, useRef } from 'react';
+import { type CampaignCategory } from '@/types/campaign';
 
 interface Step2SetupProps {
     data: any;
@@ -23,6 +25,24 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadFilter, setUploadFilter] = useState<string>('*');
+    const [categories, setCategories] = useState<CampaignCategory[]>([]);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setIsLoadingCategories(true);
+            try {
+                const data = await campaignCategoryService.getAll();
+                setCategories(data);
+            } catch (err) {
+                console.error('Failed to fetch categories:', err);
+                toast('Không thể tải danh sách danh mục.', 'error');
+            } finally {
+                setIsLoadingCategories(false);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const mediaOptions = [
         { id: 'image', label: 'Ảnh', icon: ImageIcon, desc: 'JPG, PNG', type: 'PHOTO', accept: 'image/*', limit: '10MB' },
@@ -67,10 +87,7 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
 
             const updatedAttachments = [...currentAttachments, newAttachment];
             onChange('attachments', updatedAttachments);
-
-            if (!data.coverImage && mediaType === 'PHOTO') {
-                onChange('coverImage', previewUrl);
-            }
+            // No auto-select cover: user chooses explicitly via the star button
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -80,9 +97,9 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
         const updated = currentAttachments.filter((_: any, i: number) => i !== index);
         onChange('attachments', updated);
 
+        // If the removed item was the cover, clear coverImage — user must re-pick
         if (data.coverImage === itemToRemove.url) {
-            const nextImage = updated.find((a: any) => a.type === 'image');
-            onChange('coverImage', nextImage ? nextImage.url : '');
+            onChange('coverImage', '');
         }
 
         // Revoke object URL to prevent memory leaks if it's local
@@ -94,6 +111,40 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
     const setAsCover = (url: string) => {
         onChange('coverImage', url);
     };
+
+    const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+    const categoryRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+                setIsCategoryOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const getCategoryIcon = (name: string) => {
+        const n = name.toLowerCase();
+        if (n.includes('y tế') || n.includes('sức khỏe') || n.includes('bệnh')) return <HeartPulse className="h-4 w-4" />;
+        if (n.includes('giáo dục') || n.includes('học')) return <BookOpen className="h-4 w-4" />;
+        if (n.includes('môi trường') || n.includes('thiên nhiên')) return <Leaf className="h-4 w-4" />;
+        if (n.includes('khẩn cấp') || n.includes('thiên tai') || n.includes('lũ')) return <Flame className="h-4 w-4" />;
+        if (n.includes('nhà') || n.includes('nơi ở') || n.includes('chỗ ở')) return <Home className="h-4 w-4" />;
+        if (n.includes('cộng đồng') || n.includes('xã hội')) return <Users className="h-4 w-4" />;
+        if (n.includes('trẻ em') || n.includes('trẻ') || n.includes('nhi')) return <Baby className="h-4 w-4" />;
+        if (n.includes('động vật') || n.includes('thú cưng')) return <Dog className="h-4 w-4" />;
+        if (n.includes('quốc tế') || n.includes('toàn cầu')) return <Globe className="h-4 w-4" />;
+        if (n.includes('thực phẩm') || n.includes('lương thực') || n.includes('ăn')) return <Utensils className="h-4 w-4" />;
+        if (n.includes('xây dựng') || n.includes('cơ sở hạ tầng')) return <Hammer className="h-4 w-4" />;
+        if (n.includes('nghệ thuật') || n.includes('văn hóa') || n.includes('âm nhạc')) return <Music className="h-4 w-4" />;
+        if (n.includes('năng lượng') || n.includes('điện')) return <Zap className="h-4 w-4" />;
+        if (n.includes('an toàn') || n.includes('bảo vệ')) return <ShieldCheck className="h-4 w-4" />;
+        return <AlertCircle className="h-4 w-4" />;
+    };
+
+    const selectedCategory = categories.find(c => c.id === data.categoryId);
 
     return (
         <div className="max-w-4xl mx-auto w-full h-full flex flex-col justify-center">
@@ -138,6 +189,73 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                 )}
                             </div>
 
+                            <div className="space-y-2 relative" ref={categoryRef}>
+                                <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-1">Danh mục chiến dịch</label>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                                    className={`w-full h-14 px-6 rounded-full flex items-center justify-between transition-all shadow-lg ${selectedCategory ? 'bg-[#ff5a4d] text-white shadow-[#ff5a4d]/20' : 'bg-gray-100 text-gray-400'
+                                        }`}
+                                >
+                                    <span className="font-bold text-sm tracking-wide">
+                                        {selectedCategory ? selectedCategory.name : 'Chọn danh mục'}
+                                    </span>
+                                    <svg
+                                        className={`w-5 h-5 transition-transform duration-300 ${isCategoryOpen ? 'rotate-180' : ''}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {isCategoryOpen && (
+                                    <div className="absolute top-full left-0 w-full mt-2 bg-white/95 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] z-50 overflow-hidden border border-gray-100 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="p-2 space-y-0.5 max-h-[280px] overflow-y-auto custom-scrollbar">
+                                            {categories.map((cat) => {
+                                                const isSelected = data.categoryId === cat.id;
+                                                return (
+                                                    <button
+                                                        key={cat.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onChange('categoryId', cat.id);
+                                                            setIsCategoryOpen(false);
+                                                        }}
+                                                        className={`
+                                                            w-full flex items-center justify-between px-5 py-3 rounded-2xl
+                                                            transition-all duration-200 ease-out
+                                                            hover:scale-[1.04] hover:shadow-md hover:z-10 relative
+                                                            ${isSelected
+                                                                ? 'bg-[#ff5a4d]/10 text-black scale-[1.04] shadow-sm'
+                                                                : 'text-gray-600 hover:bg-[#ff5a4d]/10 hover:text-[#ff5a4d]'
+                                                            }
+                                                        `}
+                                                    >
+                                                        <span className={`font-bold text-sm ${isSelected ? 'text-[#ff5a4d]' : ''}`}>{cat.name}</span>
+                                                        <div className={`p-1.5 rounded-full transition-all duration-200 ${isSelected
+                                                            ? 'bg-[#ff5a4d] text-white scale-110'
+                                                            : 'bg-gray-100 text-gray-400 group-hover:bg-[#ff5a4d]/20 group-hover:text-[#ff5a4d]'
+                                                            }`}>
+                                                            {getCategoryIcon(cat.name)}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                            {isLoadingCategories && (
+                                                <div className="p-4 text-center text-[10px] font-bold text-black/20 italic animate-pulse">
+                                                    Đang tải danh mục...
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {showErrors && errors.categoryId && (
+                                    <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1 mt-1">{errors.categoryId}</div>
+                                )}
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-1">Mô tả hoàn cảnh</label>
                                 <textarea
@@ -158,7 +276,10 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between ml-1">
                                     <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Đính kèm phương tiện (Nhiều tệp)</label>
-                                    <span className="text-[9px] font-bold text-red-500/60 italic">(*) Ảnh đầu tiên sẽ là ảnh bìa</span>
+                                    <span className="text-[9px] font-bold text-red-500/60 italic flex items-center gap-1">
+                                        <Star className="h-2.5 w-2.5 fill-current" />
+                                        Nhấn sao để chọn ảnh bìa
+                                    </span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-3">
                                     {mediaOptions.map((opt) => {
@@ -206,9 +327,27 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[11px] font-bold text-black truncate">{item.name || 'Tài liệu không tên'}</div>
-                                            <div className="text-[9px] font-black text-black/20 uppercase tracking-widest">{item.type}</div>
+                                            <div className="text-[9px] font-black text-black/20 uppercase tracking-widest flex items-center gap-1">
+                                                {item.type}
+                                                {data.coverImage === item.url && (
+                                                    <span className="text-[#dc2626] flex items-center gap-0.5"><Star className="h-2.5 w-2.5 fill-current" /> Ảnh bìa</span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-1 transition-all">
+                                            {item.type === 'image' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAsCover(item.url)}
+                                                    title={data.coverImage === item.url ? 'Đang là ảnh bìa' : 'Đặt làm ảnh bìa'}
+                                                    className={`p-2 rounded-lg transition-all shadow-sm ${data.coverImage === item.url
+                                                            ? 'bg-[#ff5a4d] text-white'
+                                                            : 'bg-gray-100 text-gray-400 hover:bg-[#ff5a4d]/20 hover:text-[#ff5a4d]'
+                                                        }`}
+                                                >
+                                                    <Star className={`h-3 w-3 ${data.coverImage === item.url ? 'fill-current' : ''}`} />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => removeAttachment(idx)}
                                                 className="p-2 rounded-lg bg-[#dc2626] text-white hover:bg-red-700 transition-all shadow-md"

@@ -13,109 +13,37 @@ import {
 import { motion, useInView } from "framer-motion";
 
 import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
+import { useToast } from "@/components/ui/Toast";
 
-interface CampaignCategoryItem {
-  id: string;
-  title: string;
-  description: string;
-  Icon: React.ComponentType<{ className?: string }>;
-}
+import { campaignCategoryService } from "@/services/campaignCategoryService";
+import { campaignService } from "@/services/campaignService";
+import type { CampaignCategory, CampaignDto } from "@/types/campaign";
+import { withFallbackImage } from "@/lib/image";
 
-const categories: CampaignCategoryItem[] = [
-  {
-    id: "community-kitchens",
-    title: "Community Kitchens",
-    description:
-      "Support community kitchens where volunteers prepare meals for people in need.",
-    Icon: Package,
-  },
-  {
-    id: "school-feeding",
-    title: "School Feeding Programs",
-    description:
-      "Help schools provide meals to students so kids can focus on learning.",
-    Icon: School,
-  },
-  {
-    id: "health-wellness",
-    title: "Health & Wellness",
-    description:
-      "Fund medical supplies, checkups, and wellness support for vulnerable groups.",
-    Icon: Stethoscope,
-  },
-  {
-    id: "emergency-food",
-    title: "Emergency Food Relief",
-    description:
-      "Deliver urgent food assistance during disasters and crisis situations.",
-    Icon: HeartHandshake,
-  },
-  {
-    id: "nutritional-support",
-    title: "Nutritional Support",
-    description:
-      "Provide nutrition packs and education to improve long-term health outcomes.",
-    Icon: Milk,
-  },
-];
-
-const baseCampaignByCategoryId: Record<string, Omit<CampaignCardItem, "id">> = {
-  "community-kitchens": {
-    title: "Renovate community kitchen",
-    location: "Hue, Vietnam",
-    raised: 5600,
-    goal: 12000,
-    image: "/assets/img/campaign/1.jpg",
-  },
-  "school-feeding": {
-    title: "Milk for primary students",
-    location: "Lagos, Nigeria",
-    raised: 3100,
-    goal: 8000,
-    image: "/assets/img/campaign/2.jpg",
-  },
-  "health-wellness": {
-    title: "Medical kits for rural clinics",
-    location: "Quang Tri, Vietnam",
-    raised: 7200,
-    goal: 14000,
-    image: "/assets/img/campaign/1.jpg",
-  },
-  "emergency-food": {
-    title: "Flood relief food packs",
-    location: "Central Vietnam",
-    raised: 15400,
-    goal: 25000,
-    image: "/assets/img/campaign/2.jpg",
-  },
-  "nutritional-support": {
-    title: "Micronutrient packs for moms",
-    location: "Phnom Penh, Cambodia",
-    raised: 4800,
-    goal: 10000,
-    image: "/assets/img/campaign/1.jpg",
-  },
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Community Kitchens": Package,
+  "School Feeding Programs": School,
+  "Health & Wellness": Stethoscope,
+  "Emergency Food Relief": HeartHandshake,
+  "Nutritional Support": Milk,
 };
 
-function buildManyCampaigns(categoryId: string, n: number): CampaignCardItem[] {
-  const base = baseCampaignByCategoryId[categoryId];
-  if (!base) return [];
-
-  return Array.from({ length: n }).map((_, i) => ({
-    id: `${categoryId}-${i + 1}`,
-    ...base,
-    title: `${base.title} #${i + 1}`,
-    raised: Math.max(100, base.raised + i * 350),
-  }));
+function getIcon(title: string) {
+  return ICON_MAP[title] || HeartHandshake;
 }
 
-const categoryCampaigns: Record<string, CampaignCardItem[]> = {
-  "community-kitchens": buildManyCampaigns("community-kitchens", 12),
-  "school-feeding": buildManyCampaigns("school-feeding", 12),
-  "health-wellness": buildManyCampaigns("health-wellness", 12),
-  "emergency-food": buildManyCampaigns("emergency-food", 12),
-  "nutritional-support": buildManyCampaigns("nutritional-support", 12),
-};
+function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignCardItem {
+  return {
+    id: dto.id.toString(),
+    title: dto.title,
+    type: dto.type || dto.categoryName || dto.category || "Chung",
+    raised: dto.balance || 0,
+    goal: targetAmount,
+    image: withFallbackImage(dto.coverImageUrl || dto.coverImage, "/assets/img/campaign/1.jpg"),
+  };
+}
+
+
 
 const categoryCardVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -172,9 +100,6 @@ function FeaturedBlock({
           <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
             {title}
           </p>
-          <h3 className="text-xl md:text-2xl font-bold text-slate-900">
-            Featured campaigns
-          </h3>
           <p className="mt-1 text-slate-600 text-sm md:text-base max-w-xl line-clamp-2">
             {description}
           </p>
@@ -230,7 +155,7 @@ const CategoryCard = ({
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F84D43] text-white transition group-hover:bg-[#1A685B]">
         <Icon className="h-6 w-6" />
       </span>
-      <span className="w-full text-sm sm:text-base font-bold text-slate-900 leading-snug break-words">
+      <span className="w-full text-sm sm:text-base font-bold text-slate-900 leading-snug truncate" title={title}>
         {title}
       </span>
     </motion.button>
@@ -240,109 +165,197 @@ const CategoryCard = ({
 const CATEGORY_SECTIONS_PER_PAGE = 3;
 const CAMPAIGNS_PER_SECTION = 5;
 
-function getPageIndexByCategoryId(categoryId: string) {
-  const idx = categories.findIndex((c) => c.id === categoryId);
-  if (idx < 0) return 0;
-  return Math.floor(idx / CATEGORY_SECTIONS_PER_PAGE);
-}
-
-function getCategoryIdsByPageIndex(pageIndex: number) {
-  const start = pageIndex * CATEGORY_SECTIONS_PER_PAGE;
-  return categories
-    .slice(start, start + CATEGORY_SECTIONS_PER_PAGE)
-    .map((c) => c.id);
-}
-
 export function CampaignCategoriesSection() {
+  const [categories, setCategories] = useState<CampaignCategory[]>([]);
+  const [categoryCampaigns, setCategoryCampaigns] = useState<Record<number, CampaignCardItem[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
 
   const totalPages = useMemo(
     () => Math.ceil(categories.length / CATEGORY_SECTIONS_PER_PAGE),
-    [],
+    [categories],
   );
 
   const visibleCategories = useMemo(() => {
     const start = pageIndex * CATEGORY_SECTIONS_PER_PAGE;
     return categories.slice(start, start + CATEGORY_SECTIONS_PER_PAGE);
-  }, [pageIndex]);
+  }, [pageIndex, categories]);
 
   const canPrev = pageIndex > 0;
   const canNext = pageIndex < totalPages - 1;
   const sectionRef = useRef<HTMLElement>(null);
   const sectionInView = useInView(sectionRef, { once: true, amount: 0.08 });
 
+  const { toast } = useToast();
+
+  // 1. Fetch Categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setError(null);
+        const data = await campaignCategoryService.getAll();
+        setCategories(data);
+      } catch (e) {
+        console.error("Failed to fetch categories:", e);
+        setError("Không thể tải danh sách danh mục (hệ thống có thể đang khởi động).");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // 2. Fetch Campaigns for visible categories
+  useEffect(() => {
+    if (visibleCategories.length === 0) return;
+
+    const fetchCampaigns = async () => {
+      const newCampaigns = { ...categoryCampaigns };
+      let changed = false;
+
+      await Promise.all(
+        visibleCategories.map(async (cat) => {
+          if (!newCampaigns[cat.id]) {
+            try {
+              const dtos = await campaignService.getByCategory(cat.id);
+              const mapped = await Promise.all(dtos.map(async (dto) => {
+                let goalAmount = 0;
+                try {
+                  const activeGoal = await campaignService.getActiveGoalByCampaignId(dto.id);
+                  if (activeGoal) goalAmount = activeGoal.targetAmount;
+                } catch (err) { }
+                return mapDtoToCardItem(dto, goalAmount);
+              }));
+              newCampaigns[cat.id] = mapped;
+              changed = true;
+            } catch (e) {
+              console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
+            }
+          }
+        })
+      );
+
+      if (changed) {
+        setCategoryCampaigns(newCampaigns);
+      }
+    };
+
+    fetchCampaigns();
+  }, [visibleCategories]);
+
   useEffect(() => {
     const hash = typeof window !== "undefined" ? window.location.hash : "";
-    if (!hash) return;
+    if (!hash || categories.length === 0) return;
 
     const categoryId = decodeURIComponent(hash.replace("#", ""));
-    if (!categoryId) return;
+    const idx = categories.findIndex((c) => c.id.toString() === categoryId);
+    if (idx < 0) return;
 
-    const targetPage = getPageIndexByCategoryId(categoryId);
+    const targetPage = Math.floor(idx / CATEGORY_SECTIONS_PER_PAGE);
     setPageIndex(targetPage);
 
     const t = setTimeout(() => {
       const el = document.getElementById(categoryId);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
+    }, 100);
     return () => clearTimeout(t);
-  }, []);
+  }, [categories]);
 
-  const handleCategoryClick = (categoryId: string) => {
-    const targetPage = getPageIndexByCategoryId(categoryId);
+  const handleCategoryClick = async (categoryId: string) => {
+    const idx = categories.findIndex((c) => c.id.toString() === categoryId);
+    if (idx < 0) return;
 
+    const cat = categories[idx];
+    let campaigns = categoryCampaigns[cat.id];
+
+    // Fetch if not already fetched
+    if (!campaigns) {
+      try {
+        const dtos = await campaignService.getByCategory(cat.id);
+        campaigns = await Promise.all(dtos.map(async (dto) => {
+          let goalAmount = 0;
+          try {
+            const activeGoal = await campaignService.getActiveGoalByCampaignId(dto.id);
+            if (activeGoal) goalAmount = activeGoal.targetAmount;
+          } catch (err) { }
+          return mapDtoToCardItem(dto, goalAmount);
+        }));
+        setCategoryCampaigns(prev => ({ ...prev, [cat.id]: campaigns }));
+      } catch (e) {
+        console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
+        campaigns = [];
+      }
+    }
+
+    if (campaigns.length === 0) {
+      toast(`Hiện chưa có chiến dịch nào thuộc danh mục "${cat.name}"`, 'info');
+      return;
+    }
+
+    const targetPage = Math.floor(idx / CATEGORY_SECTIONS_PER_PAGE);
     setPageIndex(targetPage);
 
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `#${categoryId}`);
-      window.setTimeout(() => {
+
+      const tryScroll = (attempts = 0) => {
         const el = document.getElementById(categoryId);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 0);
+        if (el) {
+          const y = el.getBoundingClientRect().top + window.scrollY - 100;
+          window.scrollTo({ top: y, behavior: "smooth" });
+        } else if (attempts < 10) {
+          setTimeout(() => tryScroll(attempts + 1), 50);
+        }
+      };
+      tryScroll();
     }
   };
 
   const handlePrev = () => {
     if (!canPrev) return;
-
-    const nextPage = pageIndex - 1;
-    const ids = getCategoryIdsByPageIndex(nextPage);
-
-    setPageIndex(nextPage);
-
-    if (typeof window !== "undefined") {
-      const nextHash = ids[0] ?? "campaigns";
-      window.history.replaceState(null, "", `#${nextHash}`);
-      window.setTimeout(() => {
-        const el = document.getElementById(nextHash);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 0);
-    }
+    setPageIndex(pageIndex - 1);
   };
 
   const handleNext = () => {
     if (!canNext) return;
-
-    const nextPage = pageIndex + 1;
-    const ids = getCategoryIdsByPageIndex(nextPage);
-
-    setPageIndex(nextPage);
-
-    if (typeof window !== "undefined") {
-      const nextHash = ids[0] ?? "campaigns";
-      window.history.replaceState(null, "", `#${nextHash}`);
-      window.setTimeout(() => {
-        const el = document.getElementById(nextHash);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 0);
-    }
+    setPageIndex(pageIndex + 1);
   };
+
+  // Calculate balanced grid: at least 5 per row
+  const totalCategories = categories.length;
+  const itemsPerRow = totalCategories > 5 ? Math.max(5, Math.ceil(totalCategories / 2)) : totalCategories;
+  // lg:w-[200px] + gap-4 (16px) = 216px
+  const balancedMaxWidth = totalCategories > 5 ? `${itemsPerRow * 216}px` : "100%";
+
+  if (loading && categories.length === 0) {
+    return (
+      <div className="py-20 text-center">
+        <p className="text-slate-500">Đang tải danh mục...</p>
+      </div>
+    );
+  }
+
+  if (error && categories.length === 0) {
+    return (
+      <div className="py-20 text-center flex flex-col items-center justify-center gap-4">
+        <p className="text-red-500 font-medium">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center justify-center rounded-xl bg-[#F84D43] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
+        >
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   return (
     <section ref={sectionRef} id="campaigns" className="py-12 md:py-20 bg-white">
       <div className="container mx-auto px-4">
         <motion.div
-          className="mx-auto grid w-full max-w-5xl gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+          className="mx-auto flex flex-wrap justify-center w-full gap-4"
+          style={{ maxWidth: balancedMaxWidth }}
           initial="hidden"
           animate={sectionInView ? "visible" : "hidden"}
           variants={{
@@ -350,25 +363,28 @@ export function CampaignCategoriesSection() {
             hidden: {},
           }}
         >
-          {categories.map(({ title, id, Icon }, i) => (
-            <CategoryCard
-              key={id}
-              id={id}
-              title={title}
-              Icon={Icon}
-              onClick={handleCategoryClick}
-              index={i}
-            />
+          {categories.map(({ name, id }, i) => (
+            <div key={id} className="w-[calc(50%-1rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1rem)] lg:w-[200px]">
+              <CategoryCard
+                id={id.toString()}
+                title={name}
+                Icon={getIcon(name)}
+                onClick={handleCategoryClick}
+                index={i}
+              />
+            </div>
           ))}
         </motion.div>
 
         <div className="mt-10 md:mt-14 space-y-10 md:space-y-14">
-          {visibleCategories.map(({ id, title, description }) => {
+          {visibleCategories.map(({ id, name, description }) => {
             const all = categoryCampaigns[id] ?? [];
+            if (all.length === 0) return null;
+
             const visible = all.slice(0, CAMPAIGNS_PER_SECTION);
 
             return (
-              <FeaturedBlock key={id} id={id} title={title} description={description} visible={visible} />
+              <FeaturedBlock key={id} id={id.toString()} title={name} description={description || ""} visible={visible} />
             );
           })}
         </div>
