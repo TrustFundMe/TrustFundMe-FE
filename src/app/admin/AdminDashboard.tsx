@@ -55,8 +55,8 @@ const SalesLineChart = () => (
   <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
     <defs>
       <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#dc2626" stopOpacity="0.1" />
-        <stop offset="100%" stopColor="#dc2626" stopOpacity="0" />
+        <stop offset="0%" stopColor="#F84D43" stopOpacity="0.1" />
+        <stop offset="100%" stopColor="#F84D43" stopOpacity="0" />
       </linearGradient>
     </defs>
     {/* Grid Lines */}
@@ -77,11 +77,11 @@ const SalesLineChart = () => (
       transition={{ duration: 1.5, ease: "easeInOut" }}
       d="M 0,110 Q 50,50 100,100 T 200,80 T 300,130 T 400,60"
       fill="none"
-      stroke="#dc2626"
+      stroke="#F84D43"
       strokeWidth="3"
       strokeLinecap="round"
     />
-    <circle cx="100" cy="100" r="4" fill="#dc2626" stroke="white" strokeWidth="2" />
+    <circle cx="100" cy="100" r="4" fill="#F84D43" stroke="white" strokeWidth="2" />
   </svg>
 );
 
@@ -103,9 +103,9 @@ const ComparisonBarChart = () => (
       <span>Fourth quarter</span>
     </div>
     <div className="mt-4 flex gap-6 justify-center">
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-red-400" /><span className="text-[9px] font-bold text-gray-500">Product 1</span></div>
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-red-200" /><span className="text-[9px] font-bold text-gray-500">Product 2</span></div>
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-red-600" /><span className="text-[9px] font-bold text-gray-500">Product 3</span></div>
+      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#F84D43]/60" /><span className="text-[9px] font-bold text-gray-500">Product 1</span></div>
+      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#1A685B]/40" /><span className="text-[9px] font-bold text-gray-500">Product 2</span></div>
+      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#F84D43]" /><span className="text-[9px] font-bold text-gray-500">Product 3</span></div>
     </div>
   </div>
 );
@@ -117,7 +117,7 @@ const SalesOverviewChart = () => (
         <motion.div
           initial={{ height: 0 }}
           animate={{ height: `${[40, 35, 30, 55, 45, 75, 35, 40, 65, 45, 75, 60][i]}%` }}
-          className={`w-3 rounded-md ${i % 2 === 0 ? 'bg-red-600' : 'bg-red-300'}`}
+          className={`w-3 rounded-md ${i % 2 === 0 ? 'bg-[#F84D43]' : 'bg-[#1A685B]/40'}`}
         />
         <span className="text-[8px] font-bold text-gray-400 uppercase">{month}</span>
       </div>
@@ -144,7 +144,7 @@ const TopProducts = () => (
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${p.pop}%` }}
-              className="h-full bg-red-600 rounded-full"
+              className="h-full bg-[#F84D43] rounded-full"
             />
           </div>
         </div>
@@ -161,13 +161,13 @@ export default function AdminDashboard() {
 
       {/* Top Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Sales" value="$320.000" change="+10%" colorClass="text-emerald-500">
-          <div className="h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+        <StatCard title="Total Sales" value="$320.000" change="+10%" colorClass="text-[#1A685B]">
+          <div className="h-12 w-12 rounded-full bg-[#1A685B]/10 flex items-center justify-center text-[#1A685B]">
             <TrendingUp className="h-6 w-6" />
           </div>
         </StatCard>
-        <StatCard title="Total Expense" value="$350.000" change="+10%" colorClass="text-red-600">
-          <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+        <StatCard title="Total Expense" value="$350.000" change="+10%" colorClass="text-[#F84D43]">
+          <div className="h-12 w-12 rounded-full bg-[#F84D43]/10 flex items-center justify-center text-[#F84D43]">
             <DollarSign className="h-6 w-6" />
           </div>
         </StatCard>

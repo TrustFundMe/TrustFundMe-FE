@@ -19,8 +19,8 @@ function StatusPill({ status }: { status: string | boolean | number }) {
   const isActive = status === 'ACTIVE' || status === true || status === 1 || status === '1';
   if (isActive) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1A685B]/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#1A685B]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />
         Active
       </span>
     );
@@ -37,11 +37,11 @@ function StatusPill({ status }: { status: string | boolean | number }) {
 function RoleBadge({ role }: { role: string }) {
   const cls =
     role === 'ADMIN'
-      ? 'text-rose-600 bg-rose-50 border-rose-100'
+      ? 'text-[#F84D43] bg-[#F84D43]/5 border-[#F84D43]/10'
       : role === 'STAFF'
         ? 'text-blue-600 bg-blue-50 border-blue-100'
         : role === 'FUND_OWNER'
-          ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
+          ? 'text-[#1A685B] bg-[#1A685B]/5 border-[#1A685B]/10'
           : 'text-slate-600 bg-slate-50 border-slate-100';
 
   return (
@@ -136,12 +136,12 @@ export default function AdminUsersPage() {
       {/* Filter Bar */}
       <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
         <div className="relative group/search flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-red-500 transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm theo tên, email hoặc số điện thoại..."
-            className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-xl shadow-slate-100/50"
+            className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50"
           />
         </div>
 
@@ -149,7 +149,7 @@ export default function AdminUsersPage() {
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full md:w-48 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
+            className="w-full md:w-48 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
           >
             <option value="ALL">Tất cả vai trò</option>
@@ -209,7 +209,7 @@ export default function AdminUsersPage() {
                           </div>
                         )}
                         <div className="leading-tight">
-                          <div className="font-bold text-slate-900 group-hover:text-red-600 transition-colors">{u.fullName}</div>
+                          <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors">{u.fullName}</div>
                           <div className="text-xs text-slate-400 mt-1 font-medium">{u.email}</div>
                         </div>
                       </div>
@@ -249,7 +249,7 @@ export default function AdminUsersPage() {
                               }
                             }}
                             title="Khóa tài khoản"
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-white hover:shadow-lg transition-all"
+                            className="p-2.5 rounded-xl text-slate-400 hover:text-[#F84D43] hover:bg-white hover:shadow-lg transition-all"
                           >
                             <Ban className="h-5 w-5" />
                           </button>
@@ -266,7 +266,7 @@ export default function AdminUsersPage() {
                               }
                             }}
                             title="Mở khóa tài khoản"
-                            className="p-2.5 rounded-xl text-slate-400 hover:text-green-600 hover:bg-white hover:shadow-lg transition-all"
+                            className="p-2.5 rounded-xl text-slate-400 hover:text-[#1A685B] hover:bg-white hover:shadow-lg transition-all"
                           >
                             <CheckCircle2 className="h-5 w-5" />
                           </button>

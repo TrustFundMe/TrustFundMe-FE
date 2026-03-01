@@ -22,6 +22,7 @@ export interface Expenditure {
     isWithdrawalRequested: boolean;
     plan?: string;
     status: string;
+    disbursementProofUrl?: string;
     items?: ExpenditureItem[];
     createdAt?: string;
     updatedAt?: string;

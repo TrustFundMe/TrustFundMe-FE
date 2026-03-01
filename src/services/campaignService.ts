@@ -54,5 +54,12 @@ export const campaignService = {
       rejectionReason
     });
     return res.data;
+  },
+
+  async updateDisbursementProof(id: number, proofUrl: string): Promise<any> {
+    const res = await api.put(`${API_ENDPOINTS.EXPENDITURES.BASE}/${id}/disbursement-proof`, {
+      proofUrl
+    });
+    return res.data;
   }
 };

@@ -37,8 +37,8 @@ function StatusPill({ status }: { status: string }) {
   switch (status) {
     case 'ACTIVE':
       return (
-        <span className={`${base} bg-emerald-50 text-emerald-700`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />
           Đang chạy
         </span>
       );
@@ -58,8 +58,8 @@ function StatusPill({ status }: { status: string }) {
       );
     case 'CLOSED':
       return (
-        <span className={`${base} bg-rose-50 text-rose-700`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+        <span className={`${base} bg-[#F84D43]/10 text-[#F84D43]`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#F84D43]" />
           Đã đóng
         </span>
       );
@@ -229,19 +229,19 @@ export default function AdminCampaignsPage() {
       {/* Filter Bar */}
       <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
         <div className="relative group/search flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-red-500 transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm theo tên chiến dịch, ID hoặc người tạo..."
-            className="w-full bg-white border-2 border-slate-100 rounded-[32px] pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-2xl shadow-slate-200/30"
+            className="w-full bg-white border-2 border-slate-100 rounded-[32px] pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-2xl shadow-slate-200/30"
           />
         </div>
 
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full md:w-56 rounded-[32px] border-2 border-slate-100 bg-white px-6 py-4 text-sm font-black text-slate-700 outline-none focus:ring-4 focus:ring-red-500/5 focus:border-red-500 transition-all shadow-2xl shadow-slate-200/30 cursor-pointer appearance-none"
+          className="w-full md:w-56 rounded-[32px] border-2 border-slate-100 bg-white px-6 py-4 text-sm font-black text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-2xl shadow-slate-200/30 cursor-pointer appearance-none"
           style={{
             backgroundImage:
               'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
@@ -263,7 +263,7 @@ export default function AdminCampaignsPage() {
       <div className="rounded-[40px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
-            <Loader2 className="h-10 w-10 text-red-500 animate-spin" />
+            <Loader2 className="h-10 w-10 text-[#F84D43] animate-spin" />
           </div>
         )}
 
@@ -298,7 +298,7 @@ export default function AdminCampaignsPage() {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-black text-slate-900 group-hover:text-red-600 transition-colors truncate max-w-[200px]">{c.title}</div>
+                          <div className="font-black text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[200px]">{c.title}</div>
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.category || 'Chưa phân loại'}</span>
                             <span className="h-1 w-1 rounded-full bg-slate-200" />
@@ -323,15 +323,15 @@ export default function AdminCampaignsPage() {
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
                             {formatVnd(balance)} / <span className="text-slate-900">{target > 0 ? formatVnd(target) : '??'}</span>
                           </span>
-                          <span className="text-[10px] font-black text-red-500 leading-none">{pct}%</span>
+                          <span className="text-[10px] font-black text-[#F84D43] leading-none">{pct}%</span>
                         </div>
                         <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
                           <div
-                            className="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-1000"
+                            className="h-full bg-gradient-to-r from-[#F84D43] to-[#F84D43]/60 rounded-full transition-all duration-1000"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        {!c.activeGoal && <div className="mt-1 text-[9px] font-bold text-rose-400 italic">Chưa có mục tiêu hoạt động</div>}
+                        {!c.activeGoal && <div className="mt-1 text-[9px] font-bold text-[#F84D43]/80 italic">Chưa có mục tiêu hoạt động</div>}
                       </div>
                     </td>
 
@@ -363,7 +363,7 @@ export default function AdminCampaignsPage() {
                           <select
                             value={c.status}
                             onChange={(e) => updateStatus(c.id, e.target.value)}
-                            className="appearance-none bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all cursor-pointer pr-8 hover:bg-white hover:shadow-lg"
+                            className="appearance-none bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none focus:ring-2 focus:ring-[#F84D43]/20 focus:border-[#F84D43] transition-all cursor-pointer pr-8 hover:bg-white hover:shadow-lg"
                             style={{
                               backgroundImage:
                                 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
