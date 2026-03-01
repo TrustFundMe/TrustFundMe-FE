@@ -1,4 +1,4 @@
-export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
 
 export type StaffRequestBase = {
   id: string;
@@ -43,6 +43,8 @@ export type ExpenditureRequest = StaffRequestBase & {
   expenditureItems: ExpenditureItem[];
   justification: string;
   proofImageUrl?: string;
+  disbursementProofUrl?: string;
+  disbursedAt?: string;
 };
 
 export type KycRequest = StaffRequestBase & {

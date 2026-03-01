@@ -15,6 +15,7 @@ export const mediaService = {
         file: File,
         campaignId?: number,
         postId?: number,
+        expenditureId?: number,
         description?: string,
         mediaType?: "PHOTO" | "VIDEO" | "FILE",
         onProgress?: (progress: number) => void
@@ -25,6 +26,7 @@ export const mediaService = {
 
         if (campaignId) formData.append("campaignId", campaignId.toString());
         if (postId) formData.append("postId", postId.toString());
+        if (expenditureId) formData.append("expenditureId", expenditureId.toString());
         if (description) formData.append("description", description);
         if (mediaType) formData.append("mediaType", mediaType);
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Upload, FileText, ExternalLink, Loader2 } from 'lucide-react';
 import type { RequestStatus, StaffRequestBase } from './RequestTypes';
 import RequestStatusPill from './RequestStatusPill';
 
@@ -18,6 +18,9 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   approveDisabledReason,
   rejectDisabled,
   rejectDisabledReason,
+  onUploadProof,
+  onDisburse,
+  uploading,
 }: {
   request: T | null;
   title: string;
@@ -30,6 +33,9 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   approveDisabledReason?: string;
   rejectDisabled?: boolean;
   rejectDisabledReason?: string;
+  onUploadProof?: (file: File) => void;
+  onDisburse?: () => void;
+  uploading?: boolean;
 }) {
   const [note, setNote] = useState('');
 
@@ -57,6 +63,111 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               </div>
             ))}
           </div>
+
+          {/* Disbursement Proof Section for APPROVED and DISBURSED Expenditures */}
+          {(request.status === 'APPROVED' || request.status === 'DISBURSED') && (request as any).type === 'EXPENDITURE' && (
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <div className="text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Disbursement Proof (Minh chứng chuyển tiền)</div>
+
+              {(request as any).disbursementProofUrl ? (
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-xl border border-gray-200 overflow-hidden bg-gray-50 group">
+                    <img
+                      src={(request as any).disbursementProofUrl}
+                      alt="Disbursement Proof"
+                      className="h-full w-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a
+                        href={(request as any).disbursementProofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 bg-white rounded-lg text-gray-900 flex items-center gap-2 text-xs font-bold"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Xem gốc
+                      </a>
+                    </div>
+                    {request.status === 'DISBURSED' && (
+                      <div className="absolute top-4 right-4 rotate-12 bg-transparent pointer-events-none">
+                        <div className="border-4 border-red-500/80 rounded-full p-4 flex flex-col items-center justify-center transform scale-75 opacity-80 shadow-lg">
+                          <ShieldCheck className="h-8 w-8 text-red-500/80 mb-1" />
+                          <span className="text-[10px] font-black text-red-500/80 uppercase tracking-widest">ĐÃ GIẢI NGÂN</span>
+                          <span className="text-[8px] font-bold text-red-500/60 uppercase">
+                            {(request as any).disbursedAt
+                              ? new Date((request as any).disbursedAt).toLocaleDateString('vi-VN')
+                              : new Date().toLocaleDateString('vi-VN')}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    {request.status !== 'DISBURSED' && (
+                      <label className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-xs font-bold cursor-pointer transition-colors w-fit">
+                        <Upload className="h-4 w-4" />
+                        <span>Thay đổi minh chứng</span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file && onUploadProof) onUploadProof(file);
+                          }}
+                        />
+                      </label>
+                    )}
+
+                    {request.status === 'APPROVED' && onDisburse && (
+                      <button
+                        onClick={onDisburse}
+                        className="w-full py-3 bg-[#F84D43] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#D63D35] transition-all shadow-lg shadow-red-200/50 flex items-center justify-center gap-2"
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                        Xác nhận đã chuyển tiền
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="proof-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && onUploadProof) onUploadProof(file);
+                    }}
+                    disabled={uploading}
+                  />
+                  <label
+                    htmlFor="proof-upload"
+                    className={`flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-gray-200 transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-red-200 hover:bg-red-50/30'
+                      }`}
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-red-500 animate-spin mb-3" />
+                        <span className="text-xs font-bold text-red-600">Đang tải lên...</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-3 bg-red-50 rounded-full mb-3 ring-4 ring-red-50/50">
+                          <Upload className="h-6 w-6 text-red-500" />
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">Tải minh chứng chuyển tiền</span>
+                        <span className="text-[10px] text-gray-500 mt-1 font-medium italic">(Ảnh chụp biên lai chuyển khoản)</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons for Pending Requests */}
           {isPending && (

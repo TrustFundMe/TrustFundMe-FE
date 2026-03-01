@@ -12,7 +12,8 @@ import {
   Box,
   Home,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequireRole from '@/components/auth/RequireRole';
@@ -22,6 +23,7 @@ const sidebarNavItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
   { href: '/admin/users', label: 'User Central', icon: LayoutGrid },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Box },
+  { href: '/admin/payouts', label: 'Payouts', icon: CreditCard },
 ];
 
 function Sidebar({ isExpanded, setIsExpanded }: { isExpanded: boolean; setIsExpanded: (v: boolean) => void }) {
@@ -87,7 +89,7 @@ function Sidebar({ isExpanded, setIsExpanded }: { isExpanded: boolean; setIsExpa
               href={item.href}
               title={item.label}
               className={`group relative h-12 flex items-center transition-all duration-300 rounded-2xl ${isExpanded ? 'px-4 justify-start gap-5' : 'justify-center'
-                } ${isActive ? 'bg-white text-red-600 shadow-lg shadow-white/5' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                } ${isActive ? 'bg-white text-[#F84D43] shadow-lg shadow-white/5' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
 
