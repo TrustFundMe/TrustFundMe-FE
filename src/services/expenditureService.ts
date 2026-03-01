@@ -1,4 +1,4 @@
-import { Expenditure, CreateExpenditureRequest, ExpenditureItem } from '@/types/expenditure';
+import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
 
 export const expenditureService = {
@@ -38,5 +38,14 @@ export const expenditureService = {
             params: evidenceDueAt ? { evidenceDueAt } : {}
         });
         return response.data;
+    },
+
+    addItems: async (id: string | number, items: CreateExpenditureItemRequest[]): Promise<Expenditure> => {
+        const response = await axiosInstance.post(`/api/expenditures/${id}/items`, items);
+        return response.data;
+    },
+
+    deleteItem: async (itemId: string | number): Promise<void> => {
+        await axiosInstance.delete(`/api/expenditures/items/${itemId}`);
     }
 };

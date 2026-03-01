@@ -167,7 +167,8 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
                         <thead>
                             <tr className="text-[10px] font-black text-black/20 uppercase tracking-widest border-b border-gray-50">
                                 <th className="px-4 py-3 text-left font-black">STT</th>
-                                <th className="px-4 py-3 text-left font-black">Vật phẩm chi tiết</th>
+                                <th className="px-4 py-3 text-left font-black w-1/3">Vật phẩm chi tiết</th>
+                                <th className="px-4 py-3 text-left font-black">Ghi chú</th>
                                 <th className="px-4 py-3 text-center font-black">Số lượng</th>
                                 <th className="px-4 py-3 text-right font-black">Đơn giá (VNĐ)</th>
                                 <th className="px-4 py-3 text-right font-black">Thành tiền</th>
@@ -183,8 +184,17 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
                                             type="text"
                                             value={item.name}
                                             onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                                            placeholder="Tên vật phẩm, dịch vụ..."
+                                            placeholder="Tên vật phẩm..."
                                             className="w-full bg-transparent border-none p-0 text-sm font-black text-black placeholder:text-black/5 focus:ring-0"
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <input
+                                            type="text"
+                                            value={item.note}
+                                            onChange={(e) => updateItem(item.id, 'note', e.target.value)}
+                                            placeholder="Ghi chú thêm..."
+                                            className="w-full bg-transparent border-none p-0 text-xs font-bold text-black/50 placeholder:text-black/5 focus:ring-0"
                                         />
                                     </td>
                                     <td className="px-4 py-3">
@@ -234,7 +244,7 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
                         </tbody>
                         <tfoot>
                             <tr className="bg-gray-50/30">
-                                <td colSpan={4} className="px-4 py-4 text-right">
+                                <td colSpan={5} className="px-4 py-4 text-right">
                                     <span className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Tổng cộng dự chi</span>
                                 </td>
                                 <td className="px-4 py-4 text-right">

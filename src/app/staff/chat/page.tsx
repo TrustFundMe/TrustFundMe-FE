@@ -62,7 +62,7 @@ export default function ChatWithDonorPage() {
             result.data.map(async (conv) => {
               // Fetch user info based on fundOwnerId
               // Assuming we are staff, talking to fundOwner
-              const userResult = await userService.getUserById(conv.fundOwnerId || conv.id); // Fallback to id if fundOwnerId missing, though interface implies it's number
+              const userResult = await userService.getUserById(conv.fundOwnerId || conv.id); // Fallback to id if fundOwnerId missing
 
               const user = userResult.success && userResult.data ? userResult.data : null;
 
@@ -161,25 +161,24 @@ export default function ChatWithDonorPage() {
       try {
         const result = await chatService.getMessagesByConversationId(activeId);
         if (result.success && result.data) {
-          // Map API messages to UI format
-          const mappedMessages: MessageItem[] = result.data.map((msg: any) => {
-            // Determine if message is from the staff member
-            // Use senderRole if BE provides it, otherwise compare IDs
-            const fromMe = msg.senderRole
-              ? msg.senderRole === 'STAFF'
-              : activeConversation && msg.senderId === activeConversation.staffId;
+          // Map API messages to UI format and filter out bot messages (senderId = 0)
+          const mappedMessages: MessageItem[] = result.data
+            .filter((msg: any) => msg.senderId !== 0)
+            .map((msg: any) => {
+              // Determine if message is from the staff member
+              const fromMe = user?.id && msg.senderId === Number(user.id);
 
-            return {
-              id: msg.id.toString(),
-              text: msg.content || msg.message, // Fallback to message just in case
-              fromMe: !!fromMe,
-              time: formatTimeAgo(msg.createdAt),
-              senderName: fromMe ? 'Staff' : activeConversation?.name,
-              senderAvatar: fromMe ? undefined : activeConversation?.avatar,
-              imageUrls: msg.imageUrls,
-              videoUrls: msg.videoUrls
-            };
-          });
+              return {
+                id: msg.id.toString(),
+                text: msg.content || msg.message,
+                fromMe: !!fromMe,
+                time: formatTimeAgo(msg.createdAt),
+                senderName: fromMe ? 'Staff' : activeConversation?.name,
+                senderAvatar: fromMe ? undefined : activeConversation?.avatar,
+                imageUrls: msg.imageUrls,
+                videoUrls: msg.videoUrls
+              };
+            });
           setActiveMessages(mappedMessages);
         }
       } catch (error) {
@@ -190,7 +189,7 @@ export default function ChatWithDonorPage() {
     };
 
     fetchMessages();
-  }, [activeId, activeConversation, formatTimeAgo]);
+  }, [activeId, activeConversation, formatTimeAgo, user?.id]);
 
   const [activeMediaItems, setActiveMediaItems] = useState<MediaItem[]>([]);
   const [isMediaLoading, setIsMediaLoading] = useState<boolean>(false);
@@ -228,9 +227,15 @@ export default function ChatWithDonorPage() {
     if (!activeId) return;
 
     const handleNewMessage = (msg: any) => {
-      // Check if message belongs to current conversation (though topic is specific)
+      console.log("[Staff Chat] Received message via WS:", msg);
       // Msg structure from BE: MessageResponse { id, conversationId, senderId, content, ... }
-      if (msg.conversationId.toString() !== activeId.toString()) return;
+      if (msg.conversationId.toString() !== activeId.toString()) {
+        console.log("[Staff Chat] Message ignored (wrong conversation):", msg.conversationId);
+        return;
+      }
+
+      // Filter out bot messages (senderId = 0)
+      if (msg.senderId === 0) return;
 
       const newMsg: MessageItem = {
         id: msg.id.toString(),
@@ -244,7 +249,6 @@ export default function ChatWithDonorPage() {
       };
 
       setActiveMessages(prev => {
-        // Prevent duplicates
         if (prev.some(m => m.id === newMsg.id)) return prev;
         return [...prev, newMsg];
       });
@@ -268,7 +272,7 @@ export default function ChatWithDonorPage() {
         toast(`File ${file.name} không phải là ảnh hoặc video!`, 'error');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) { // Increase to 10MB for videos
+      if (file.size > 10 * 1024 * 1024) {
         toast(`${file.type.startsWith('image/') ? 'Ảnh' : 'Video'} ${file.name} vượt quá 10MB!`, 'error');
         return;
       }
@@ -279,7 +283,7 @@ export default function ChatWithDonorPage() {
 
     const previewPromises = validFiles.map((file) => {
       if (file.type.startsWith('video/')) {
-        return Promise.resolve(''); // No preview for video for now, or use a placeholder
+        return Promise.resolve('');
       }
       return new Promise<string>((resolve) => {
         const reader = new FileReader();
@@ -294,7 +298,7 @@ export default function ChatWithDonorPage() {
       setSelectedImages((prev) => [...prev, ...validFiles]);
       setImagePreviews((prev) => [...prev, ...previews]);
     });
-  }, []);
+  }, [toast]);
 
   // Handle remove image
   const handleRemoveImage = useCallback((index: number) => {
@@ -304,8 +308,18 @@ export default function ChatWithDonorPage() {
 
   // Handle send message
   const handleSendMessage = useCallback(async () => {
+    console.log("[Staff Chat] handleSendMessage triggered:", {
+      inputMessage,
+      selectedImagesCount: selectedImages.length,
+      activeId,
+      hasActiveConversation: !!activeConversation,
+      isSending,
+      userId: user?.id
+    });
+
     const hasMedia = selectedImages.length > 0;
     if ((!inputMessage.trim() && !hasMedia) || !activeId || !activeConversation || isSending) {
+      console.log("[Staff Chat] Message sending blocked by validation check");
       return;
     }
 
@@ -314,14 +328,12 @@ export default function ChatWithDonorPage() {
       let mediaUrls: string[] = [];
       let videoUrls: string[] = [];
 
-      // 1. Upload media if any
       if (selectedImages.length > 0) {
         setIsUploadingImage(true);
         setUploadProgress(0);
         try {
           const progressMap = new Map<number, number>();
           const updateOverallProgress = (index: number, p: number) => {
-            // Cap at 98% to avoid "full bar" while server is still processing
             const cappedProgress = Math.min(p, 98);
             progressMap.set(index, cappedProgress);
             const total = Array.from(progressMap.values()).reduce((a, b) => a + b, 0);
@@ -356,46 +368,43 @@ export default function ChatWithDonorPage() {
         }
       }
 
-      // 2. Prepare message content
       let textContent = inputMessage.trim();
-
-      // Kỹ thuật Encode: Đóng gói media vào content tin nhắn
-      // Định dạng: TEXT|||IMAGE_URLS|||VIDEO_URLS
       let finalContent = textContent;
       if (mediaUrls.length > 0 || videoUrls.length > 0) {
         finalContent = `${textContent}|||${mediaUrls.join(',')}|||${videoUrls.join(',')}`;
       }
 
       if (user?.id) {
+        console.log("[Staff Chat] Sending WebSocket message", {
+          to: `/app/chat/${activeId}`,
+          senderId: user.id,
+          role: 'ROLE_STAFF'
+        });
+        // Essential fix: Send senderRole to avoid ForbiddenException on Backend
         webSocketService.sendMessage(`/app/chat/${activeId}`, {
           conversationId: Number(activeId),
           content: finalContent,
-          senderId: Number(user.id)
+          senderId: Number(user.id),
+          senderRole: 'ROLE_STAFF'
         });
-        // Optimistic update or wait for WS echo?
-        // WS echo (subscription) handles the UI update.
-        // Just clear input.
+
         setInputMessage('');
         setSelectedImages([]);
         setImagePreviews([]);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-      } else {
-        // Fallback or error if no user
-        console.error("User not identified for WS message");
       }
     } catch (error) {
       console.error("Failed to send message:", error);
     } finally {
       setIsSending(false);
     }
-  }, [inputMessage, selectedImages, activeId, activeConversation, isSending, formatTimeAgo, setActiveMessages, setInputMessage, setSelectedImages, setImagePreviews, user?.id]);
+  }, [inputMessage, selectedImages, activeId, activeConversation, isSending, formatTimeAgo, user?.id, toast]);
 
   return (
     <div className="h-full bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="flex h-full">
-        {/* Left: Assigned conversations list */}
         <ChatSidebar
           conversations={filteredConversations}
           activeId={activeId}
@@ -403,11 +412,10 @@ export default function ChatWithDonorPage() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onConversationClick={setActiveId}
-          onShowNewClick={() => { }} // Removed functionality
-          newCustomersCount={0} // Removed functionality
+          onShowNewClick={() => { }}
+          newCustomersCount={0}
         />
 
-        {/* Middle: messages */}
         <ChatMessages
           messages={activeMessages}
           isLoading={isMessagesLoading}
@@ -429,7 +437,6 @@ export default function ChatWithDonorPage() {
           campaignInfo={activeCampaignInfo}
         />
 
-        {/* Right: slide-in customer details */}
         {showDetails && activeConversation && (
           <ChatDetails
             userName={activeConversation.name}

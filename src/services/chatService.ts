@@ -1,3 +1,4 @@
+import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 
 export interface Conversation {
@@ -20,31 +21,16 @@ export const chatService = {
         error?: string;
     }> {
         try {
-            const response = await fetch(API_ENDPOINTS.CHAT.CONVERSATIONS, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                return {
-                    success: false,
-                    error: data.error || data.message || "Failed to fetch conversations",
-                };
-            }
-
-            const data = await response.json();
+            const response = await api.get<Conversation[]>(API_ENDPOINTS.CHAT.CONVERSATIONS);
             return {
                 success: true,
-                data: data,
+                data: response.data,
             };
         } catch (error: any) {
             console.error("Chat service error:", error);
             return {
                 success: false,
-                error: error?.message || "Failed to fetch conversations",
+                error: error?.response?.data?.message || error?.message || "Failed to fetch conversations",
             };
         }
     },
@@ -58,31 +44,16 @@ export const chatService = {
         error?: string;
     }> {
         try {
-            const response = await fetch(API_ENDPOINTS.CHAT.MESSAGES(conversationId), {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                return {
-                    success: false,
-                    error: data.error || data.message || "Failed to fetch messages",
-                };
-            }
-
-            const data = await response.json();
+            const response = await api.get<any[]>(API_ENDPOINTS.CHAT.MESSAGES(conversationId));
             return {
                 success: true,
-                data: data,
+                data: response.data,
             };
         } catch (error: any) {
             console.error("Chat service error:", error);
             return {
                 success: false,
-                error: error?.message || "Failed to fetch messages",
+                error: error?.response?.data?.message || error?.message || "Failed to fetch messages",
             };
         }
     },
@@ -96,32 +67,69 @@ export const chatService = {
         error?: string;
     }> {
         try {
-            const response = await fetch(API_ENDPOINTS.CHAT.MESSAGES(conversationId), {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ content: content }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                return {
-                    success: false,
-                    error: data.error || data.message || "Failed to send message",
-                };
-            }
-
-            const data = await response.json();
+            const response = await api.post(API_ENDPOINTS.CHAT.MESSAGES(conversationId), { content });
             return {
                 success: true,
-                data: data,
+                data: response.data,
             };
         } catch (error: any) {
             console.error("Chat service error:", error);
             return {
                 success: false,
-                error: error?.message || "Failed to send message",
+                error: error?.response?.data?.message || error?.message || "Failed to send message",
+            };
+        }
+    },
+
+    /**
+     * Create a new conversation
+     */
+    async createConversation(fundOwnerId: number, campaignId?: number, staffId?: number): Promise<{
+        success: boolean;
+        data?: Conversation;
+        error?: string;
+    }> {
+        try {
+            const response = await api.post<Conversation>(API_ENDPOINTS.CHAT.CONVERSATIONS, {
+                fundOwnerId,
+                campaignId,
+                staffId
+            });
+            return {
+                success: true,
+                data: response.data,
+            };
+        } catch (error: any) {
+            console.error("Chat service error:", error);
+            return {
+                success: false,
+                error: error?.response?.data?.message || error?.message || "Failed to create conversation",
+            };
+        }
+    },
+
+    /**
+     * Get conversation for a specific campaign (current user)
+     */
+    async getConversationByCampaignId(campaignId: string | number): Promise<{
+        success: boolean;
+        data?: Conversation;
+        error?: string;
+        isNotFound?: boolean;
+    }> {
+        try {
+            const response = await api.get<Conversation>(API_ENDPOINTS.CHAT.BY_CAMPAIGN(campaignId));
+            return {
+                success: true,
+                data: response.data,
+            };
+        } catch (error: any) {
+            console.error("Chat service error:", error);
+            const isNotFound = error?.response?.status === 404;
+            return {
+                success: false,
+                isNotFound,
+                error: error?.response?.data?.message || error?.message || "Failed to fetch conversation",
             };
         }
     },

@@ -1,5 +1,6 @@
 import MessageBubble from './MessageBubble';
 import ChatComposer from './ChatComposer';
+import QuickSchedulePopup from './QuickSchedulePopup';
 import type { MessageItem } from './types';
 import type { CampaignDto } from '@/types/campaign';
 import { motion } from 'framer-motion';
@@ -23,6 +24,10 @@ interface ChatMessagesProps {
   hasActiveConversation: boolean;
   campaignInfo?: CampaignDto | null;
   uploadProgress?: number;
+  showSchedulePopup?: boolean;
+  detectedScheduleText?: string;
+  onScheduleConfirm?: () => void;
+  onScheduleCancel?: () => void;
 }
 
 export default function ChatMessages({
@@ -43,7 +48,11 @@ export default function ChatMessages({
   selectedFiles = [],
   hasActiveConversation,
   campaignInfo,
-  uploadProgress = 0
+  uploadProgress = 0,
+  showSchedulePopup = false,
+  detectedScheduleText = '',
+  onScheduleConfirm = () => { },
+  onScheduleCancel = () => { }
 }: ChatMessagesProps) {
   return (
     <section className="flex-1 flex flex-col h-full min-w-0" style={{ backgroundColor: '#f8fafc' }}>
@@ -91,7 +100,7 @@ export default function ChatMessages({
                 {/* Background Image */}
                 <div
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-[2.5s] group-hover:scale-110"
-                  style={{ backgroundImage: `url(${campaignInfo.coverImage || '/placeholder-campaign.jpg'})` }}
+                  style={{ backgroundImage: `url(${campaignInfo.coverImage || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800&auto=format&fit=crop'})` }}
                 >
                   {/* Dark Gradient Overlay for better text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -146,20 +155,28 @@ export default function ChatMessages({
 
       {/* Composer */}
       {hasActiveConversation && (
-        <ChatComposer
-          inputMessage={inputMessage}
-          onInputChange={onInputChange}
-          onSend={onSend}
-          isSending={isSending}
-          isUploadingImage={isUploadingImage}
-          uploadProgress={uploadProgress}
-          imagePreviews={imagePreviews}
-          onImageSelect={onImageSelect}
-          onRemoveImage={onRemoveImage}
-          fileInputRef={fileInputRef}
-          selectedFiles={selectedFiles}
-          disabled={!hasActiveConversation}
-        />
+        <>
+          <QuickSchedulePopup
+            isVisible={showSchedulePopup}
+            detectedText={detectedScheduleText}
+            onConfirm={onScheduleConfirm}
+            onCancel={onScheduleCancel}
+          />
+          <ChatComposer
+            inputMessage={inputMessage}
+            onInputChange={onInputChange}
+            onSend={onSend}
+            isSending={isSending}
+            isUploadingImage={isUploadingImage}
+            uploadProgress={uploadProgress}
+            imagePreviews={imagePreviews}
+            onImageSelect={onImageSelect}
+            onRemoveImage={onRemoveImage}
+            fileInputRef={fileInputRef}
+            selectedFiles={selectedFiles}
+            disabled={!hasActiveConversation}
+          />
+        </>
       )}
     </section>
   );

@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   },
   CHAT: {
     CONVERSATIONS: "/api/chat/conversations",
+    BY_CAMPAIGN: (campaignId: string | number) => `/api/chat/conversations/campaign/${campaignId}`,
     MESSAGES: (id: string | number) => `/api/chat/conversations/${id}/messages`,
   },
   USERS: {

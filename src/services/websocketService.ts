@@ -113,6 +113,7 @@ class WebSocketService {
 
     sendMessage(destination: string, body: any) {
         if (this.isConnected && this.client.active) {
+            console.log(`[WS] Publishing message to ${destination}`, body);
             this.client.publish({
                 destination: destination,
                 body: JSON.stringify(body),
