@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ClipboardList, LogOut, MessageCircle, ShieldCheck, Calendar } from 'lucide-react';
+import { LayoutGrid, ClipboardList, LogOut, MessageCircle, Calendar, ShieldCheck } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
 

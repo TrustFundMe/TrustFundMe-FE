@@ -192,7 +192,7 @@ export default function ExpenditureDetailPage() {
                                     onClick={handleOpenUpdateModal}
                                     className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200 transition-colors"
                                 >
-                                    <FileText className="w-4 h-4 mr-1.5" /> Cập nhật Thực tế
+                                    <FileText className="w-4 h-4 mr-1.5" /> Cập nhật Đã chi
                                 </button>
 
                                 {campaign?.type === 'ITEMIZED' && expenditure.status === 'APPROVED' && !expenditure.isWithdrawalRequested && (
@@ -221,39 +221,38 @@ export default function ExpenditureDetailPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                            {/* Frame 1: Planned / Call */}
-                            <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm">
-                                <p className="text-sm font-medium text-blue-600 mb-1 uppercase tracking-wide">Kế hoạch / Kêu gọi</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            {/* Frame 1: Dự kiến */}
+                            <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-blue-600 mb-1 uppercase tracking-wide">Dự kiến</p>
+                                <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalExpectedAmount || 0)}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-1">Ngân sách dự kiến ban đầu</p>
                             </div>
 
-                            {/* Frame 2: Received / Donated */}
-                            <div className="bg-white p-5 rounded-xl border border-green-200 shadow-sm relative overflow-hidden">
-                                <div className="absolute top-0 right-0 -mt-2 -mr-2 w-12 h-12 bg-green-100 rounded-full opacity-50"></div>
-                                <p className="text-sm font-medium text-green-600 mb-1 uppercase tracking-wide">Đã Nhận / Donate</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                            {/* Frame 2: Đã nhận */}
+                            <div className="bg-white p-4 rounded-xl border border-green-200 shadow-sm text-center relative overflow-hidden">
+                                <div className="absolute top-0 right-0 -mt-1 -mr-1 w-8 h-8 bg-green-100 rounded-full opacity-50"></div>
+                                <p className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">Đã nhận</p>
+                                <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
                                 </p>
-                                <p className="text-xs text-green-600 mt-1 font-medium">(Đang cập nhật từ hệ thống Donate)</p>
                             </div>
 
-                            {/* Frame 3: Actual Spent */}
-                            <div className="bg-white p-5 rounded-xl border border-orange-200 shadow-sm">
-                                <p className="text-sm font-medium text-orange-600 mb-1 uppercase tracking-wide">Thực tế chi</p>
-                                <p className="text-2xl font-bold text-gray-900">
+                            {/* Frame 3: Đã chi */}
+                            <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-orange-600 mb-1 uppercase tracking-wide">Đã chi</p>
+                                <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalAmount)}
                                 </p>
-                                {expenditure.variance !== undefined && (
-                                    <p className={`text-xs mt-1 font-medium ${expenditure.variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {expenditure.variance >= 0 ? 'Dư: ' : 'Thiếu: '}
-                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.abs(expenditure.variance))}
-                                        {' '}(so với Đã nhận)
-                                    </p>
-                                )}
+                            </div>
+
+                            {/* Frame 4: Số dư quỹ */}
+                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư quỹ</p>
+                                <p className="text-xl font-bold text-gray-900">
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign?.balance || 0)}
+                                </p>
                             </div>
                         </div>
                     )}
@@ -289,7 +288,7 @@ export default function ExpenditureDetailPage() {
                                                 <>
                                                     <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Kế hoạch</th>
                                                     <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Thực tế</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi</th>
                                                 </>
                                             )}
                                         </tr>
@@ -359,15 +358,13 @@ export default function ExpenditureDetailPage() {
                                     </span>
                                 </div>
 
-                                {campaign?.type === 'AUTHORIZED' && (
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
-                                        <p className="text-sm font-medium text-gray-900 flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                            {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString() : 'Chưa đặt hạn'}
-                                        </p>
-                                    </div>
-                                )}
+                                <div>
+                                    <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
+                                    <p className="text-sm font-medium text-gray-900 flex items-center">
+                                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                        {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString() : 'Chưa đặt hạn'}
+                                    </p>
+                                </div>
 
                                 {/* TODO: Add logic/button to upload evidence here */}
                                 <div className="mt-6 pt-4 border-t border-gray-100">
@@ -391,7 +388,7 @@ export default function ExpenditureDetailPage() {
                                         <div className="sm:flex sm:items-start">
                                             <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                                                 <h3 className="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
-                                                    Cập nhật Thực tế Chi tiêu
+                                                    Cập nhật Đã chi Chi tiêu
                                                 </h3>
 
                                                 {/* Summary items for Modal */}
@@ -405,7 +402,7 @@ export default function ExpenditureDetailPage() {
                                                         </span>
                                                     </div>
                                                     <div className={`px-3 py-2 rounded border ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                                                        <span className={`${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'text-red-800' : 'text-gray-800'} font-medium`}>Tổng Thực tế đang nhập:</span>{' '}
+                                                        <span className={`${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'text-red-800' : 'text-gray-800'} font-medium`}>Tổng Đã chi đang nhập:</span>{' '}
                                                         <span className={`font-bold ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'text-red-700' : 'text-gray-700'}`}>
                                                             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0))}
                                                         </span>
@@ -430,7 +427,7 @@ export default function ExpenditureDetailPage() {
                                                                     {campaign?.type !== 'AUTHORIZED' && (
                                                                         <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
                                                                     )}
-                                                                    <th className="px-4 py-3 text-center text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Thực tế (Nhập liệu)</th>
+                                                                    <th className="px-4 py-3 text-center text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi (Nhập liệu)</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="bg-white divide-y divide-gray-200">

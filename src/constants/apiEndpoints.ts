@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
     BY_FUND_OWNER: (fundOwnerId: number | string) =>
       `/api/campaigns/fund-owner/${fundOwnerId}`,
     BY_STATUS: (status: string) => `/api/campaigns/status/${status}`,
+    BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
   },
   FUNDRAISING_GOALS: {
@@ -53,5 +54,9 @@ export const API_ENDPOINTS = {
     BY_DONOR: (donorId: number | string) => `/api/appointments/donor/${donorId}`,
     BY_STAFF: (staffId: number | string) => `/api/appointments/staff/${staffId}`,
     UPDATE_STATUS: (id: number | string) => `/api/appointments/${id}/status`,
+  },
+  CAMPAIGN_CATEGORIES: {
+    BASE: "/api/campaign-categories",
+    BY_ID: (id: number | string) => `/api/campaign-categories/${id}`,
   },
 } as const;

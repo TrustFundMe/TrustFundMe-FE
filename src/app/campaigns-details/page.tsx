@@ -21,7 +21,7 @@ const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null
   return {
     id: String(dto.id),
     title: dto.title,
-    category: dto.status ?? 'Campaign',
+    category: dto.categoryName || dto.category || 'Campaign',
     description: dto.description ?? '',
     coverImage: withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg'),
     galleryImages: [withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg')],
@@ -106,9 +106,35 @@ function CampaignDetailsInner() {
   if (loading) {
     return (
       <DanboxLayout>
-        <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
-          <div>Loading...</div>
-        </div>
+        <section className="causes-details-section fix section-padding" style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}>
+          <div className="container" style={{ padding: '80px 0' }}>
+            <div
+              style={{
+                maxWidth: 1200,
+                margin: '0 auto',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
+                gap: 48,
+                alignItems: 'start',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div className="animate-pulse space-y-4">
+                  <div className="h-[400px] w-full bg-slate-200 rounded-3xl"></div>
+                  <div className="h-8 w-3/4 bg-slate-200 rounded-xl"></div>
+                  <div className="h-6 w-1/2 bg-slate-200 rounded-xl"></div>
+                  <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
+                </div>
+              </div>
+              <div style={{ minWidth: 0, marginTop: 86 }}>
+                <div className="animate-pulse space-y-6">
+                  <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
+                  <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </DanboxLayout>
     );
   }
@@ -308,9 +334,35 @@ export default function CampaignDetailsPage() {
     <Suspense
       fallback={
         <DanboxLayout>
-          <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
-            <div>Loading...</div>
-          </div>
+          <section className="causes-details-section fix section-padding" style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}>
+            <div className="container" style={{ padding: '80px 0' }}>
+              <div
+                style={{
+                  maxWidth: 1200,
+                  margin: '0 auto',
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
+                  gap: 48,
+                  alignItems: 'start',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-[400px] w-full bg-slate-200 rounded-3xl"></div>
+                    <div className="h-8 w-3/4 bg-slate-200 rounded-xl"></div>
+                    <div className="h-6 w-1/2 bg-slate-200 rounded-xl"></div>
+                    <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
+                  </div>
+                </div>
+                <div style={{ minWidth: 0, marginTop: 86 }}>
+                  <div className="animate-pulse space-y-6">
+                    <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
+                    <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </DanboxLayout>
       }
     >

@@ -43,6 +43,11 @@ export const campaignService = {
     return res.data;
   },
 
+  async getByCategory(categoryId: number | string): Promise<CampaignDto[]> {
+    const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BY_CATEGORY(categoryId));
+    return res.data;
+  },
+
   async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED', rejectionReason?: string): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.REVIEW(id), {
       status,

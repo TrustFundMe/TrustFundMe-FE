@@ -157,7 +157,7 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
 
     return (
         <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 px-4 py-3">
+            <div className="bg-gradient-to-br from-[#446b5f] to-[#2d4a42] px-4 py-3">
                 <div className="flex items-center justify-between gap-2 mb-1">
                     <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Lịch hẹn #{appointment.id}</p>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ring-1 whitespace-nowrap flex-shrink-0 ${cfg.bg} ${cfg.color}`}>{cfg.icon}{cfg.label}</span>
@@ -592,18 +592,18 @@ export default function StaffSchedulePage() {
                     {/* Stats Row */}
                     <div className="grid grid-cols-4 gap-3 flex-shrink-0">
                         {[
-                            { label: 'Tổng cộng', value: stats.total, color: 'from-slate-600 to-slate-700', wave: '#94a3b8' },
-                            { label: 'Chờ xác nhận', value: stats.pending, color: 'from-amber-500 to-orange-500', wave: '#fcd34d' },
-                            { label: 'Đã xác nhận', value: stats.confirmed, color: 'from-emerald-500 to-green-600', wave: '#6ee7b7' },
-                            { label: 'Hoàn thành', value: stats.completed, color: 'from-blue-500 to-indigo-600', wave: '#93c5fd' },
+                            { label: 'Tổng cộng', value: stats.total, color: 'from-[#446b5f] to-[#6a8d83]' },
+                            { label: 'Chờ xác nhận', value: stats.pending, color: 'from-[#db5945] to-[#f19082]' },
+                            { label: 'Đã xác nhận', value: stats.confirmed, color: 'from-[#446b5f] to-[#5a8075]' },
+                            { label: 'Hoàn thành', value: stats.completed, color: 'from-[#6a8d83] to-[#446b5f]' },
                         ].map(s => (
                             <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
                                 <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
                                 <p className="text-2xl font-black relative z-10">{s.value}</p>
                                 {/* Wave decoration */}
                                 <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.3" />
-                                    <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill={s.wave} fillOpacity="0.2" />
+                                    <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill="white" fillOpacity="0.1" />
+                                    <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill="white" fillOpacity="0.05" />
                                 </svg>
                             </div>
                         ))}

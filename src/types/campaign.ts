@@ -8,6 +8,14 @@ export interface FundraisingGoal {
   updatedAt?: string;
 }
 
+export interface CampaignCategory {
+  id: number;
+  name: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CampaignDto {
   id: number;
   fundOwnerId: number;
@@ -17,8 +25,12 @@ export interface CampaignDto {
   balance: number;
   title: string;
   description?: string | null;
-  coverImage?: string | null;
   category?: string | null;
+  coverImage?: string | null; // Keep for backward compat, will map coverImageUrl here
+  mediaId?: number | null;
+  coverImageUrl?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   status: string;
@@ -35,10 +47,10 @@ export interface CreateCampaignRequest {
   fundOwnerId: number;
   title: string;
   description?: string;
-  coverImage?: string;
+  mediaId?: number;
   startDate?: string;
   endDate?: string;
-  category?: string;
+  categoryId: number;
   type?: string;
   status?: string;
   thankMessage?: string;
@@ -63,11 +75,12 @@ export interface CreateFundraisingGoalRequest {
 export interface UpdateCampaignRequest {
   title?: string;
   description?: string;
-  coverImage?: string;
+  mediaId?: number;
   startDate?: string;
   endDate?: string;
   status?: string;
   thankMessage?: string;
+  categoryId?: number;
   balance?: number;
   approvedByStaff?: number | null;
   approvedAt?: string | null;

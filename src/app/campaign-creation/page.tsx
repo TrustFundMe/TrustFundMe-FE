@@ -64,6 +64,7 @@ const initialCampaignState = {
   },
   discount: 0,
   taxRate: 11,
+  categoryId: undefined as number | undefined,
 };
 
 function formatApiError(err: unknown): string {
@@ -246,8 +247,10 @@ export default function CampaignCreationPage() {
 
     if (campaign.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
+    if (!campaign.categoryId) e.categoryId = 'Vui lòng chọn danh mục chiến dịch.';
+
     return e;
-  }, [campaign.title, campaign.description, campaign.targetAmount]);
+  }, [campaign.title, campaign.description, campaign.targetAmount, campaign.categoryId]);
 
   const campaignBankingErrors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -370,11 +373,10 @@ export default function CampaignCreationPage() {
 
     console.log('DEBUG [START SUBMISSION]');
     try {
-      // 1. Persist Bank Account (only if creating new - not selecting existing)
+      // 1. Persist Bank Account
       console.log('DEBUG [STAGE 1: BANK ACCOUNT]');
       let bankId = campaign.bankAccount.id;
 
-      // Only create new bank account if user filled in new info (no existing id)
       if (!bankId && campaign.bankAccount.bankCode && campaign.bankAccount.accountNumber) {
         const bankData = {
           bankCode: campaign.bankAccount.bankCode,
@@ -385,19 +387,63 @@ export default function CampaignCreationPage() {
         bankId = res.id;
         setCampaign(prev => ({ ...prev, bankAccount: { ...prev.bankAccount, id: bankId } }));
       }
-      // If bankId already exists, user selected an existing account - no API call needed
 
       if (bankId) console.log('DEBUG [BANK ACCOUNT SUCCESS]:', bankId);
 
-      // 2. Persist Campaign
-      console.log('DEBUG [STAGE 2: CAMPAIGN]');
+      // 2. Upload Media Attachments FIRST (before creating campaign, so we have real URLs)
+      console.log('DEBUG [STAGE 2: MEDIA UPLOAD]');
+      const uploadedAttachments = [...campaign.attachments];
+      let resolvedMediaId: number | undefined = undefined;
+
+      if (campaign.attachments && campaign.attachments.length > 0) {
+        for (let i = 0; i < campaign.attachments.length; i++) {
+          const attr = campaign.attachments[i];
+          if (attr.isLocal && attr.file) {
+            try {
+              // Upload without a campaignId for now; we'll link after campaign creation
+              const uploadedMedia = await mediaService.uploadMedia(
+                attr.file,
+                undefined,
+                undefined,
+                undefined,
+                attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
+              );
+
+              const localUrl = attr.url;
+              uploadedAttachments[i] = {
+                ...attr,
+                id: uploadedMedia.id,
+                isLocal: false,
+                url: uploadedMedia.url,
+              };
+
+              // If this was the chosen cover image, track its mediaId
+              if (campaign.coverImage === localUrl) {
+                resolvedMediaId = uploadedMedia.id;
+              }
+            } catch (e) {
+              console.error(`Failed to upload local media ${attr.name}:`, e);
+              throw new Error(`Tải lên tệp ${attr.name} thất bại. Vui lòng thử lại.`);
+            }
+          } else if (attr.id && campaign.coverImage === attr.url) {
+            // If already uploaded and is the cover
+            resolvedMediaId = attr.id;
+          }
+        }
+        setCampaign(prev => ({ ...prev, attachments: uploadedAttachments }));
+      }
+
+      console.log('DEBUG [MEDIA UPLOAD SUCCESS], mediaId:', resolvedMediaId);
+
+      // 3. Create / Update Campaign (now we have the real cover image media ID)
+      console.log('DEBUG [STAGE 3: CAMPAIGN]');
       const campaignPayload: any = {
         fundOwnerId: user.id,
         title: campaign.title.trim(),
         description: campaign.description.trim(),
-        category: 'General', // Default or from state if added later
+        categoryId: campaign.categoryId,
         thankMessage: campaign.thankMessage.trim() || undefined,
-        coverImage: campaign.coverImage || undefined,
+        mediaId: resolvedMediaId || undefined,
         type: campaign.fundType,
         status: 'PENDING_APPROVAL',
       };
@@ -413,43 +459,20 @@ export default function CampaignCreationPage() {
 
       if (campaignId) console.log('DEBUG [CAMPAIGN SUCCESS]:', campaignId);
 
-      // 3. Upload Media Attachments
-      console.log('DEBUG [STAGE 3: MEDIA]');
-      if (campaign.attachments && campaign.attachments.length > 0) {
-        for (let i = 0; i < campaign.attachments.length; i++) {
-          const attr = campaign.attachments[i];
-          if (attr.isLocal && attr.file) {
-            try {
-              const uploadedMedia = await mediaService.uploadMedia(
-                attr.file,
-                campaignId,
-                undefined,
-                undefined,
-                attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
-              );
-
-              // Update state locally so on retry this item is no longer isLocal
-              const updatedAttachments = [...campaign.attachments];
-              updatedAttachments[i] = {
-                ...attr,
-                id: uploadedMedia.id,
-                isLocal: false,
-                url: uploadedMedia.url // Use the real URL from server
-              };
-              setCampaign(prev => ({ ...prev, attachments: updatedAttachments }));
-            } catch (e) {
-              console.error(`Failed to upload local media ${attr.name}:`, e);
-              throw new Error(`Tải lên tệp ${attr.name} thất bại. Vui lòng thử lại.`);
-            }
-          } else if (attr.id) {
-            // Already uploaded - ensure campaignId is linked (optional if uploadMedia already did it)
+      // 4. Link uploaded media to the campaign
+      console.log('DEBUG [STAGE 4: LINK MEDIA]');
+      for (const attr of uploadedAttachments) {
+        if (attr.id && !attr.isLocal) {
+          try {
             await mediaService.updateMedia(attr.id, { campaignId });
+          } catch (e) {
+            console.warn('Failed to link media to campaign:', attr.id, e);
           }
         }
       }
 
-      // 4. Create Fundraising Goal (if not already created)
-      console.log('DEBUG [STAGE 4: GOAL]');
+      // 5. Create Fundraising Goal
+      console.log('DEBUG [STAGE 5: GOAL]');
       if (campaign.targetAmount > 0 && !submissionSuccess.goal) {
         try {
           await fundraisingGoalService.create({
@@ -464,8 +487,8 @@ export default function CampaignCreationPage() {
         }
       }
 
-      // 5. Create Expenditure with Items (Only for ITEMIZED, if not already created)
-      console.log('DEBUG [STAGE 5: EXPENDITURE]');
+      // 6. Create Expenditure with Items (Only for ITEMIZED)
+      console.log('DEBUG [STAGE 6: EXPENDITURE]');
       if (campaign.fundType === 'ITEMIZED' && campaign.expenditureItems && campaign.expenditureItems.length > 0 && !submissionSuccess.expenditure) {
         try {
           const itemsToCreate = campaign.expenditureItems.map((item: any) => ({
@@ -498,7 +521,6 @@ export default function CampaignCreationPage() {
         message: 'Chiến dịch đã được tạo và gửi duyệt thành công! Đang chuyển về trang chủ...',
       });
 
-      // Redirect to homepage after successful creation
       setTimeout(() => {
         router.push('/');
       }, 1500);

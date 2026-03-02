@@ -20,10 +20,10 @@ import { motion } from 'framer-motion';
 // --- Data & Mocks ---
 
 const taskStats = [
-  { icon: AlertTriangle, label: 'Priority Requests', value: '19/25', progress: 75, footer: '75% Done!', bgColor: 'bg-emerald-50/50', iconColor: 'text-emerald-500' },
-  { icon: Monitor, label: 'Upcoming Appts', value: '12/20', progress: 50, footer: '50% Ready!', bgColor: 'bg-sky-50/50', iconColor: 'text-sky-500' },
-  { icon: Calendar, label: 'Campaign Req', value: '02/30', progress: 90, footer: '90% Overdue!', bgColor: 'bg-violet-50/50', iconColor: 'text-violet-500' },
-  { icon: Clock, label: 'Flag Reports', value: '26/30', progress: 60, footer: '60% Progress!', bgColor: 'bg-orange-50/50', iconColor: 'text-orange-500' },
+  { icon: AlertTriangle, label: 'Priority Requests', value: '19/25', progress: 75, footer: '75% Done!', bgColor: 'bg-[#db5945]/10', iconColor: 'text-[#db5945]' },
+  { icon: Monitor, label: 'Upcoming Appts', value: '12/20', progress: 50, footer: '50% Ready!', bgColor: 'bg-[#446b5f]/10', iconColor: 'text-[#446b5f]' },
+  { icon: Calendar, label: 'Campaign Req', value: '02/30', progress: 90, footer: '90% Overdue!', bgColor: 'bg-[#db5945]/15', iconColor: 'text-[#db5945]' },
+  { icon: Clock, label: 'Flag Reports', value: '26/30', progress: 60, footer: '60% Progress!', bgColor: 'bg-[#446b5f]/20', iconColor: 'text-[#446b5f]' },
 ];
 
 const performanceData = [12, 45, 30, 60, 48, 85, 45, 100, 65, 80, 50, 75];
@@ -106,8 +106,8 @@ const PerformanceChart = () => (
       <svg className="w-full h-full overflow-visible" preserveAspectRatio="none">
         <defs>
           <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+            <stop offset="0%" stopColor="#db5945" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#446b5f" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path
@@ -120,7 +120,7 @@ const PerformanceChart = () => (
           transition={{ duration: 2, ease: "easeInOut" }}
           d={`M 0,${100 - performanceData[0]} ${performanceData.map((d, i) => `L ${(i / (performanceData.length - 1)) * 100},${100 - d}`).join(' ')}`}
           fill="none"
-          stroke="#8b5cf6"
+          stroke="#446b5f"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -184,7 +184,7 @@ const Leaderboard = () => (
         <div key={user.id} className="flex items-center justify-between group">
           <div className="flex items-center gap-3">
             <span className="text-xs font-black text-gray-300 w-4">{i + 1}</span>
-            <div className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-transparent group-hover:ring-violet-100 transition-all">
+            <div className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-transparent group-hover:ring-[#db5945]/20 transition-all">
               <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
             </div>
             <div>

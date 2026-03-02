@@ -112,7 +112,7 @@ export default function Step1Type({ data, onChange }: Step1TypeProps) {
                             </div>
                             <div className="flex flex-col items-center gap-1">
                                 <h3 className={`text-xl font-black tracking-tight ${isItemized ? 'text-[#dc2626]' : 'text-black/80'}`}>
-                                    Quỹ Mục Tiêu
+                                    Quỹ Vật Phẩm
                                 </h3>
                                 {isItemized && (
                                     <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#dc2626]">

@@ -83,7 +83,7 @@ function CampaignsListContent() {
         const items: CampaignCardItem[] = res.map((c: CampaignDto) => ({
           id: String(c.id),
           title: c.title,
-          location: `Fund Owner #${c.fundOwnerId}`,
+          type: c.type || c.categoryName || c.category || "Chung",
           raised: c.balance ?? 0,
           goal: Math.max(1, c.balance ?? 1),
           image: withFallbackImage(c.coverImage, "/assets/img/campaign/1.jpg"),

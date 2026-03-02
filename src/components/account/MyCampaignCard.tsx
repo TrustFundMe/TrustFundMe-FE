@@ -62,13 +62,13 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                     <div>
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-sm font-medium text-orange-600 uppercase tracking-wider">
-                                {campaign.category || 'Campaign'}
+                                {campaign.categoryName || campaign.category || 'Campaign'}
                             </span>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded border ${campaign.type === 'AUTHORIZED'
                                 ? 'bg-blue-50 text-blue-700 border-blue-200'
                                 : 'bg-purple-50 text-purple-700 border-purple-200'
                                 }`}>
-                                {campaign.type === 'AUTHORIZED' ? 'Ủy quyền' : 'Mục tiêu'}
+                                {campaign.type === 'AUTHORIZED' ? 'Quỹ ủy quyền' : campaign.type === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Chiến dịch'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
