@@ -50,7 +50,6 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-gray-900">{title}</div>
-              <div className="mt-1 text-xs text-gray-500">ID: {request.id}</div>
             </div>
             <RequestStatusPill status={request.status as RequestStatus} />
           </div>

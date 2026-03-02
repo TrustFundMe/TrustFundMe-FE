@@ -301,8 +301,6 @@ export default function AdminCampaignsPage() {
                           <div className="font-black text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[200px]">{c.title}</div>
                           <div className="flex items-center gap-2 mt-1.5">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.category || 'Chưa phân loại'}</span>
-                            <span className="h-1 w-1 rounded-full bg-slate-200" />
-                            <span className="text-[10px] font-bold text-slate-400">ID: {c.id}</span>
                           </div>
                         </div>
                       </div>

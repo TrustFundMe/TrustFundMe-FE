@@ -13,7 +13,8 @@ import {
     ExternalLink,
     ChevronRight,
     TrendingUp,
-    AlertCircle
+    AlertCircle,
+    Tag
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
@@ -22,9 +23,13 @@ import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import type {
-    ExpenditureRequest,
     RequestStatus,
+    ExpenditureRequest as BaseExpenditureRequest
 } from '@/components/staff/request/RequestTypes';
+
+interface ExpenditureRequest extends BaseExpenditureRequest {
+    campaignCoverImage?: string | null;
+}
 
 function formatVnd(value: number) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
@@ -46,26 +51,41 @@ export default function AdminPayoutsPage() {
             const expenditureResults = await Promise.all(expenditurePromises);
             const allExps = expenditureResults.flat();
 
-            const mappedExps: ExpenditureRequest[] = allExps.map(e => ({
-                id: `EXP_${e.id}`,
-                createdAt: e.createdAt || new Date().toISOString(),
-                status: (e.status as RequestStatus) || 'PENDING',
-                type: 'EXPENDITURE',
-                campaignId: e.campaignId,
-                campaignTitle: allCampaigns.find(c => c.id === e.campaignId)?.title || `Campaign #${e.campaignId}`,
-                requesterName: 'Fund Owner',
-                totalAmount: e.totalAmount,
-                expenditureItems: (e.items || []).map(i => ({
-                    description: i.category,
-                    quantity: i.quantity,
-                    price: i.price,
-                })),
-                justification: e.plan || 'No justification provided',
-                disbursementProofUrl: e.disbursementProofUrl,
-                disbursedAt: (e as any).disbursedAt,
+            const enrichedExps: ExpenditureRequest[] = await Promise.all(allExps.map(async (e) => {
+                const campaign = allCampaigns.find(c => c.id === e.campaignId);
+                let coverImage: string | null = null;
+                try {
+                    const mediaData = await mediaService.getMediaByCampaignId(e.campaignId);
+                    if (mediaData && mediaData.length > 0) {
+                        const firstImage = mediaData.find(m => m.mediaType === 'PHOTO') || mediaData[0];
+                        coverImage = firstImage.url;
+                    }
+                } catch (err) {
+                    console.warn(`Failed to fetch media for campaign ${e.campaignId}`, err);
+                }
+
+                return {
+                    id: `EXP_${e.id}`,
+                    createdAt: e.createdAt || new Date().toISOString(),
+                    status: (e.status as RequestStatus) || 'PENDING',
+                    type: 'EXPENDITURE',
+                    campaignId: e.campaignId,
+                    campaignTitle: campaign?.title || `Campaign #${e.campaignId}`,
+                    campaignCoverImage: coverImage,
+                    requesterName: 'Fund Owner',
+                    totalAmount: e.totalAmount,
+                    expenditureItems: (e.items || []).map(i => ({
+                        description: i.category,
+                        quantity: i.quantity,
+                        price: i.price,
+                    })),
+                    justification: e.plan || 'No justification provided',
+                    disbursementProofUrl: e.disbursementProofUrl,
+                    disbursedAt: (e as any).disbursedAt,
+                };
             }));
 
-            setExpenditureRows(mappedExps.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setExpenditureRows(enrichedExps.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         } catch (error) {
             console.error('Failed to fetch expenditures', error);
             toast.error('Không thể tải danh sách chi tiêu');
@@ -80,7 +100,8 @@ export default function AdminPayoutsPage() {
 
     const filteredExpenditures = useMemo(() => {
         return expenditureRows.filter((r) => {
-            const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter;
+            const matchesStatus = statusFilter === 'ALL' ||
+                (statusFilter === 'PENDING' ? (r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW') : r.status === statusFilter);
             const matchesSearch = searchQuery === '' ||
                 r.campaignTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -176,7 +197,7 @@ export default function AdminPayoutsPage() {
                             className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chò duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                            {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
                         </button>
                     ))}
                 </div>
@@ -207,8 +228,7 @@ export default function AdminPayoutsPage() {
                     <table className="min-w-full text-sm">
                         <thead>
                             <tr className="text-left bg-slate-50/50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
-                                <th className="py-6 pl-10 pr-4">Mã yêu cầu</th>
-                                <th className="py-6 pr-4">Chiến dịch</th>
+                                <th className="py-6 pl-10 pr-4">Chiến dịch</th>
                                 <th className="py-6 pr-4">Số tiền</th>
                                 <th className="py-6 pr-4">Ngày tạo</th>
                                 <th className="py-6 pr-4">Trạng thái</th>
@@ -218,10 +238,19 @@ export default function AdminPayoutsPage() {
                         <tbody className="divide-y divide-slate-50">
                             {filteredExpenditures.map((r) => (
                                 <tr key={r.id} className="group hover:bg-slate-50/40 transition-colors">
-                                    <td className="py-6 pl-10 pr-4 font-black text-slate-900">{r.id}</td>
-                                    <td className="py-6 pr-4">
-                                        <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors line-clamp-1 max-w-[200px]">{r.campaignTitle}</div>
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">ID Chiến dịch: {r.campaignId}</div>
+                                    <td className="py-6 pl-10 pr-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-4 ring-white">
+                                                {r.campaignCoverImage ? (
+                                                    <img src={r.campaignCoverImage} alt={r.campaignTitle} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <div className="h-full w-full flex items-center justify-center text-slate-300">
+                                                        <Tag className="h-5 w-5" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors line-clamp-1 max-w-[200px]">{r.campaignTitle}</div>
+                                        </div>
                                     </td>
                                     <td className="py-6 pr-4">
                                         <span className="text-lg font-black text-slate-900">{formatVnd(r.totalAmount)}</span>
@@ -235,7 +264,7 @@ export default function AdminPayoutsPage() {
                                                 r.status === 'DISBURSED' ? 'bg-blue-100 text-blue-800' :
                                                     'bg-amber-100 text-amber-800'
                                             }`}>
-                                            {r.status === 'PENDING' ? 'Chờ duyệt' : r.status === 'APPROVED' ? 'Đã duyệt' : r.status === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                                            {r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW' ? 'Chờ duyệt' : r.status === 'APPROVED' ? 'Đã duyệt' : r.status === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
                                         </span>
                                     </td>
                                     <td className="py-6 pr-10 text-right">
@@ -279,7 +308,6 @@ export default function AdminPayoutsPage() {
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-black text-slate-900 leading-tight">Chi tiết yêu cầu giải ngân</h2>
-                                    <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-1">{selectedExp.id}</p>
                                 </div>
                             </div>
                             <button
@@ -330,20 +358,6 @@ export default function AdminPayoutsPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Hạng mục chi tiết</h3>
-                                    <div className="space-y-2">
-                                        {selectedExp.expenditureItems.map((item, idx) => (
-                                            <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl border border-slate-100 text-sm">
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-slate-800">{item.description}</span>
-                                                    <span className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">SL: {item.quantity}</span>
-                                                </div>
-                                                <span className="font-black text-slate-900">{formatVnd(item.price * item.quantity)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Right Column: Disbursement Panel */}

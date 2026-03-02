@@ -175,7 +175,7 @@ export default function ExpenditureDetailPage() {
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                Chi tiết khoản chi #{expenditure.id}
+                                Chi tiết khoản chi
                                 {getStatusBadge(expenditure.status)}
                                 {expenditure.isWithdrawalRequested && (
                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
