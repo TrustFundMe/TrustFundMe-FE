@@ -176,9 +176,9 @@ export default function CampaignCommentsCard({
           borderBottom: "1px solid rgba(0,0,0,0.08)",
         }}
       >
-        <div className="fw-bold">Comments</div>
+        <div className="fw-bold">Bình luận</div>
         <div className="text-sm" style={{ opacity: 0.65 }}>
-          Most Recent
+          Mới nhất
         </div>
       </div>
 
@@ -224,7 +224,7 @@ export default function CampaignCommentsCard({
               opacity: page === 1 ? 0.5 : 1,
             }}
           >
-            Previous
+            Trước
           </button>
 
           <div className="text-sm" style={{ opacity: 0.7 }}>
@@ -243,7 +243,7 @@ export default function CampaignCommentsCard({
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-            Next
+            Sau
           </button>
         </div>
       ) : null}

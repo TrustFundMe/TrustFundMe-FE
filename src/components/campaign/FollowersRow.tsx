@@ -55,7 +55,7 @@ export default function FollowersRow({
         ))}
 
         <span style={{ marginLeft: 6, opacity: 0.75 }}>
-          {followers.length} followers
+          {followers.length} người theo dõi
         </span>
       </div>
     </button>

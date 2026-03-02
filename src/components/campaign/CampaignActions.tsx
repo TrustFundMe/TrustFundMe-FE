@@ -67,7 +67,7 @@ export default function CampaignActions({
           icon="far fa-heart"
           activeIcon="fas fa-heart"
           count={likeCount}
-          label="Like"
+          label="Thích"
           onClick={onToggleLike}
         />
 
@@ -76,7 +76,7 @@ export default function CampaignActions({
           icon="far fa-user-plus"
           activeIcon="fas fa-user-check"
           count={followerCount}
-          label="Follow"
+          label="Theo dõi"
           onClick={onToggleFollow}
         />
 
@@ -84,7 +84,7 @@ export default function CampaignActions({
           active={flagged}
           icon="far fa-flag"
           activeIcon="fas fa-flag"
-          label="Flag"
+          label="Báo cáo"
           onClick={onToggleFlag}
         />
       </div>

@@ -17,20 +17,31 @@ import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 
-const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null, ownerName?: string): Campaign => {
+import { mediaService } from '@/services/mediaService';
+
+const mapCampaignDtoToUi = (
+  dto: CampaignDto,
+  activeGoal: FundraisingGoal | null,
+  owner?: { name: string; avatar: string },
+  galleryUrls: string[] = [],
+  coverUrl?: string
+): Campaign => {
+  // Use coverUrl if provided by API, otherwise fallback to DTO's coverImageUrl string.
+  const finalCover = coverUrl || dto.coverImageUrl || '';
+
   return {
     id: String(dto.id),
     title: dto.title,
-    category: dto.categoryName || dto.category || 'Campaign',
+    category: dto.categoryName || dto.category || 'Chiến dịch',
     description: dto.description ?? '',
-    coverImage: withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg'),
-    galleryImages: [withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg')],
+    coverImage: finalCover,
+    galleryImages: galleryUrls.length > 0 ? galleryUrls : (finalCover ? [finalCover] : []),
     goalAmount: activeGoal ? activeGoal.targetAmount : 0,
     raisedAmount: dto.balance ?? 0,
     creator: {
       id: String(dto.fundOwnerId),
-      name: ownerName || `Fund Owner #${dto.fundOwnerId}`,
-      avatar: '/assets/img/about/01.jpg',
+      name: owner?.name || `Người tạo #${dto.fundOwnerId}`,
+      avatar: owner?.avatar || '/assets/img/about/01.jpg',
     },
     followers: [],
     liked: false,
@@ -39,18 +50,19 @@ const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null
     likeCount: 0,
     followerCount: 0,
     commentCount: 0,
+    type: dto.type || 'general',
   };
 };
 
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const idParam = searchParams.get('id');
-  const campaignId = idParam ? Number(idParam) : NaN;
+  const campaignIdStr = searchParams.get('id');
+  const campaignId = campaignIdStr ? parseInt(campaignIdStr, 10) : null;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [posts] = useState<CampaignPost[]>(mockPosts);
 
@@ -58,15 +70,14 @@ function CampaignDetailsInner() {
 
   useEffect(() => {
     let mounted = true;
+    if (!campaignId) {
+      setLoading(false);
+      setError('ID chiến dịch không hợp lệ');
+      return;
+    }
 
-    const run = async () => {
+    const fetchCampaign = async () => {
       setError('');
-
-      if (!Number.isFinite(campaignId) || campaignId <= 0) {
-        setError('Invalid campaign id');
-        setLoading(false);
-        return;
-      }
 
       try {
         setLoading(true);
@@ -75,28 +86,52 @@ function CampaignDetailsInner() {
           campaignService.getActiveGoalByCampaignId(campaignId),
         ]);
 
-        let ownerName = '';
+        let owner = { name: '', avatar: '/assets/img/about/01.jpg' };
         try {
           const userRes = await userService.getUserById(dto.fundOwnerId);
           if (userRes.success && userRes.data) {
-            ownerName = userRes.data.fullName;
+            owner.name = userRes.data.fullName;
+            owner.avatar = userRes.data.avatarUrl || owner.avatar;
           }
         } catch (uErr) {
           console.warn('Failed to fetch owner info', uErr);
         }
 
+        let galleryUrls: string[] = [];
+        let finalCoverUrl = '';
+
+        try {
+          // Get media by Campaign ID to ensure all campaign images are fetched
+          const mediaList = await mediaService.getMediaByCampaignId(campaignId);
+          if (mediaList && mediaList.length > 0) {
+            // Identify cover image by matching coverImage ID from DTO
+            const coverMedia = mediaList.find(m => m.id === dto.coverImage);
+            finalCoverUrl = coverMedia ? coverMedia.url : mediaList[0].url;
+
+            // Sort to put cover image (coverImage ID) first
+            const sortedMedia = [...mediaList].sort((a, b) => {
+              if (a.id === dto.coverImage) return -1;
+              if (b.id === dto.coverImage) return 1;
+              return 0;
+            });
+            galleryUrls = sortedMedia.map(m => m.url);
+          }
+        } catch (mErr) {
+          console.warn('Failed to fetch media list', mErr);
+        }
+
         if (!mounted) return;
-        setCampaign(mapCampaignDtoToUi(dto, activeGoal, ownerName));
+        setCampaign(mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl));
       } catch {
         if (!mounted) return;
-        setError('Failed to load campaign');
+        setError('Không thể tải thông tin chiến dịch');
       } finally {
         if (!mounted) return;
         setLoading(false);
       }
     };
 
-    run();
+    fetchCampaign();
 
     return () => {
       mounted = false;
@@ -141,15 +176,15 @@ function CampaignDetailsInner() {
 
   // Backward compatibility: old UI used slug-like ids (e.g. community-kitchens-2)
   // If a non-numeric id is provided, fall back to mock data so the page still renders.
-  if (!Number.isFinite(campaignId)) {
+  if (campaignId === null || isNaN(campaignId)) {
     return (
       <DanboxLayout>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div style={{ marginBottom: 12, fontWeight: 700 }}>
-            This campaign id is not numeric, so API fetch is skipped.
+            ID chiến dịch không hợp lệ.
           </div>
           <div style={{ marginBottom: 24 }}>
-            Please open a campaign from the campaigns list to use the real API id.
+            Vui lòng chọn một chiến dịch từ danh sách để xem thông tin thực tế.
           </div>
         </div>
       </DanboxLayout>
@@ -160,7 +195,7 @@ function CampaignDetailsInner() {
     return (
       <DanboxLayout>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
-          <div>{error || 'Campaign not found'}</div>
+          <div>{error || 'Không tìm thấy chiến dịch'}</div>
         </div>
       </DanboxLayout>
     );
@@ -215,38 +250,42 @@ function CampaignDetailsInner() {
 
               <div className="single-sidebar-widgets" style={{ marginTop: 24, marginBottom: 24 }}>
                 <div className="widget-title">
-                  <h4>Followers</h4>
+                  <h4>Người theo dõi</h4>
                 </div>
                 <FollowersRow
                   followers={campaign.followers}
                   onClick={() => {
-                    alert('Go to followers list page (route not implemented)');
+                    alert('Chức năng danh sách người theo dõi chưa thực hiện');
                   }}
                 />
               </div>
 
               <CampaignCommentsCard comments={comments} />
-
-              <CampaignDonateCard
-                raisedAmount={campaign.raisedAmount}
-                goalAmount={campaign.goalAmount}
-                onDonate={(amount) => {
-                  const params = new URLSearchParams({
-                    campaignId: String(campaignId),
-                    amount: String(amount),
-                  });
-                  router.push(`/donation?${params.toString()}`);
-                }}
-              />
             </div>
 
             <div style={{ minWidth: 0, marginTop: 86 }}>
               <div className="casues-sidebar-wrapper">
                 <div style={{ marginBottom: 18 }}>
+                  <CampaignDonateCard
+                    raisedAmount={campaign.raisedAmount}
+                    goalAmount={campaign.goalAmount}
+                    onDonate={(amount) => {
+                      const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
+                      const params = new URLSearchParams({
+                        campaignId: String(campaignId),
+                        amount: String(amount),
+                        fundType,
+                      });
+                      router.push(`/donation?${params.toString()}`);
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 18 }}>
                   <PlansList
                     plans={mockPlans}
                     onOpenPlan={(planId) => {
-                      alert(`Go to plan details page: ${planId} (route not implemented)`);
+                      alert(`Chi tiết kế hoạch: ${planId} (chưa thực hiện)`);
                     }}
                   />
                 </div>
@@ -264,7 +303,7 @@ function CampaignDetailsInner() {
                     style={{ marginBottom: 14 }}
                   >
                     <div className="widget-title" style={{ marginBottom: 0 }}>
-                      <h4 style={{ marginBottom: 0 }}>Posts</h4>
+                      <h4 style={{ marginBottom: 0 }}>Bài viết</h4>
                     </div>
 
                     <button
@@ -277,16 +316,16 @@ function CampaignDetailsInner() {
                         color: '#0F5D51',
                         fontWeight: 700,
                       }}
-                      onClick={() => alert('See more posts (route not implemented)')}
+                      onClick={() => alert('Xem thêm bài viết (tính năng chưa thực hiện)')}
                     >
-                      See more
+                      Xem thêm
                     </button>
                   </div>
 
                   <PostsFeed
                     posts={posts}
                     campaignCreatorId={campaign.creator.id}
-                    onOpenPost={(postId) => alert(`Open post details: ${postId} (route not implemented)`)}
+                    onOpenPost={(postId) => alert(`Chi tiết bài viết: ${postId} (chưa thực hiện)`)}
                   />
                 </div>
               </div>
