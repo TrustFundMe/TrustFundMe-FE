@@ -26,8 +26,7 @@ export interface CampaignDto {
   title: string;
   description?: string | null;
   category?: string | null;
-  coverImage?: string | null; // Keep for backward compat, will map coverImageUrl here
-  mediaId?: number | null;
+  coverImage?: number | null;
   coverImageUrl?: string | null;
   categoryId?: number | null;
   categoryName?: string | null;
@@ -47,7 +46,7 @@ export interface CreateCampaignRequest {
   fundOwnerId: number;
   title: string;
   description?: string;
-  mediaId?: number;
+  coverImage?: number;
   startDate?: string;
   endDate?: string;
   categoryId: number;
@@ -75,7 +74,7 @@ export interface CreateFundraisingGoalRequest {
 export interface UpdateCampaignRequest {
   title?: string;
   description?: string;
-  mediaId?: number;
+  coverImage?: number;
   startDate?: string;
   endDate?: string;
   status?: string;

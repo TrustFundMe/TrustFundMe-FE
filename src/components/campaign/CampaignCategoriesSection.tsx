@@ -39,7 +39,7 @@ function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignC
     type: dto.type || dto.categoryName || dto.category || "Chung",
     raised: dto.balance || 0,
     goal: targetAmount,
-    image: withFallbackImage(dto.coverImageUrl || dto.coverImage, "/assets/img/campaign/1.jpg"),
+    image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.jpg"),
   };
 }
 
@@ -162,28 +162,12 @@ const CategoryCard = ({
   );
 };
 
-const CATEGORY_SECTIONS_PER_PAGE = 3;
-const CAMPAIGNS_PER_SECTION = 5;
-
 export function CampaignCategoriesSection() {
   const [categories, setCategories] = useState<CampaignCategory[]>([]);
   const [categoryCampaigns, setCategoryCampaigns] = useState<Record<number, CampaignCardItem[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
 
-  const totalPages = useMemo(
-    () => Math.ceil(categories.length / CATEGORY_SECTIONS_PER_PAGE),
-    [categories],
-  );
-
-  const visibleCategories = useMemo(() => {
-    const start = pageIndex * CATEGORY_SECTIONS_PER_PAGE;
-    return categories.slice(start, start + CATEGORY_SECTIONS_PER_PAGE);
-  }, [pageIndex, categories]);
-
-  const canPrev = pageIndex > 0;
-  const canNext = pageIndex < totalPages - 1;
   const sectionRef = useRef<HTMLElement>(null);
   const sectionInView = useInView(sectionRef, { once: true, amount: 0.08 });
 
@@ -206,16 +190,16 @@ export function CampaignCategoriesSection() {
     fetchCategories();
   }, []);
 
-  // 2. Fetch Campaigns for visible categories
+  // 2. Fetch Campaigns for all categories
   useEffect(() => {
-    if (visibleCategories.length === 0) return;
+    if (categories.length === 0) return;
 
     const fetchCampaigns = async () => {
       const newCampaigns = { ...categoryCampaigns };
       let changed = false;
 
       await Promise.all(
-        visibleCategories.map(async (cat) => {
+        categories.map(async (cat) => {
           if (!newCampaigns[cat.id]) {
             try {
               const dtos = await campaignService.getByCategory(cat.id);
@@ -242,7 +226,7 @@ export function CampaignCategoriesSection() {
     };
 
     fetchCampaigns();
-  }, [visibleCategories]);
+  }, [categories]);
 
   useEffect(() => {
     const hash = typeof window !== "undefined" ? window.location.hash : "";
@@ -252,50 +236,17 @@ export function CampaignCategoriesSection() {
     const idx = categories.findIndex((c) => c.id.toString() === categoryId);
     if (idx < 0) return;
 
-    const targetPage = Math.floor(idx / CATEGORY_SECTIONS_PER_PAGE);
-    setPageIndex(targetPage);
-
     const t = setTimeout(() => {
       const el = document.getElementById(categoryId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 100;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
     }, 100);
     return () => clearTimeout(t);
   }, [categories]);
 
-  const handleCategoryClick = async (categoryId: string) => {
-    const idx = categories.findIndex((c) => c.id.toString() === categoryId);
-    if (idx < 0) return;
-
-    const cat = categories[idx];
-    let campaigns = categoryCampaigns[cat.id];
-
-    // Fetch if not already fetched
-    if (!campaigns) {
-      try {
-        const dtos = await campaignService.getByCategory(cat.id);
-        campaigns = await Promise.all(dtos.map(async (dto) => {
-          let goalAmount = 0;
-          try {
-            const activeGoal = await campaignService.getActiveGoalByCampaignId(dto.id);
-            if (activeGoal) goalAmount = activeGoal.targetAmount;
-          } catch (err) { }
-          return mapDtoToCardItem(dto, goalAmount);
-        }));
-        setCategoryCampaigns(prev => ({ ...prev, [cat.id]: campaigns }));
-      } catch (e) {
-        console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
-        campaigns = [];
-      }
-    }
-
-    if (campaigns.length === 0) {
-      toast(`Hiện chưa có chiến dịch nào thuộc danh mục "${cat.name}"`, 'info');
-      return;
-    }
-
-    const targetPage = Math.floor(idx / CATEGORY_SECTIONS_PER_PAGE);
-    setPageIndex(targetPage);
-
+  const handleCategoryClick = (categoryId: string) => {
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `#${categoryId}`);
 
@@ -310,16 +261,6 @@ export function CampaignCategoriesSection() {
       };
       tryScroll();
     }
-  };
-
-  const handlePrev = () => {
-    if (!canPrev) return;
-    setPageIndex(pageIndex - 1);
-  };
-
-  const handleNext = () => {
-    if (!canNext) return;
-    setPageIndex(pageIndex + 1);
   };
 
   // Calculate balanced grid: at least 5 per row
@@ -377,50 +318,17 @@ export function CampaignCategoriesSection() {
         </motion.div>
 
         <div className="mt-10 md:mt-14 space-y-10 md:space-y-14">
-          {visibleCategories.map(({ id, name, description }) => {
+          {categories.map(({ id, name, description }) => {
             const all = categoryCampaigns[id] ?? [];
             if (all.length === 0) return null;
 
-            const visible = all.slice(0, CAMPAIGNS_PER_SECTION);
+            const visible = all.slice(0, 5); // CAMPAIGNS_PER_SECTION was 5
 
             return (
               <FeaturedBlock key={id} id={id.toString()} title={name} description={description || ""} visible={visible} />
             );
           })}
         </div>
-
-        {totalPages > 1 && (
-          <motion.div
-            className="mx-auto mt-10 md:mt-14 flex flex-wrap w-full max-w-5xl items-center justify-center gap-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <motion.button
-              type="button"
-              onClick={handlePrev}
-              disabled={!canPrev}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-              whileHover={canPrev ? { scale: 1.03 } : {}}
-              whileTap={canPrev ? { scale: 0.98 } : {}}
-            >
-              Previous
-            </motion.button>
-            <span className="text-sm font-semibold text-slate-700">
-              Page {pageIndex + 1} / {totalPages}
-            </span>
-            <motion.button
-              type="button"
-              onClick={handleNext}
-              disabled={!canNext}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-              whileHover={canNext ? { scale: 1.03 } : {}}
-              whileTap={canNext ? { scale: 0.98 } : {}}
-            >
-              Next
-            </motion.button>
-          </motion.div>
-        )}
       </div>
     </section>
   );

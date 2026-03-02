@@ -45,8 +45,8 @@ function VoteProgress({ approvePct, date }: { approvePct: number; date: string }
         className="d-flex align-items-center justify-content-between"
         style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}
       >
-        <div>Oppose {oppose}%</div>
-        <div>Approve {approve}%</div>
+        <div>Phản đối {oppose}%</div>
+        <div>Đồng ý {approve}%</div>
       </div>
 
       <div className="text-sm" style={{ opacity: 0.7, marginTop: 6 }}>
@@ -102,10 +102,10 @@ function PlanCard({ plan, onOpen }: { plan: CampaignPlan; onOpen: () => void }) 
       ? ["/assets/img/about/02.jpg"]
       : status === "voting"
         ? [
-            "/assets/img/about/02.jpg",
-            "/assets/img/about/03.jpg",
-            "/assets/img/about/04.jpg",
-          ]
+          "/assets/img/about/02.jpg",
+          "/assets/img/about/03.jpg",
+          "/assets/img/about/04.jpg",
+        ]
         : [];
 
   return (
@@ -143,7 +143,7 @@ function PlanCard({ plan, onOpen }: { plan: CampaignPlan; onOpen: () => void }) 
           </div>
 
           <div className="fw-bold" style={{ whiteSpace: "nowrap" }}>
-            ${plan.amount.toLocaleString()}
+            {plan.amount.toLocaleString()} VNĐ
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export default function PlansList({
         style={{ marginBottom: 14 }}
       >
         <div className="widget-title" style={{ marginBottom: 0 }}>
-          <h4 style={{ marginBottom: 0 }}>Spending Plan (Phases)</h4>
+          <h4 style={{ marginBottom: 0 }}>Kế hoạch chi tiêu</h4>
         </div>
 
         <button
@@ -206,9 +206,9 @@ export default function PlansList({
             color: "var(--theme)",
             fontWeight: 700,
           }}
-          onClick={() => alert("See more plans (route not implemented)")}
+          onClick={() => alert("Xem thêm kế hoạch (tính năng chưa thực hiện)")}
         >
-          See more
+          Xem thêm
         </button>
       </div>
 

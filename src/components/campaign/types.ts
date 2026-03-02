@@ -54,4 +54,5 @@ export type Campaign = {
   likeCount: number;
   followerCount: number;
   commentCount: number;
+  type?: string;
 };

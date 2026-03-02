@@ -23,7 +23,7 @@ export default function CreatorInfo({ user }: { user: User }) {
       </div>
       <div>
         <div className="text-sm" style={{ opacity: 0.75 }}>
-          Creator
+          Người tạo
         </div>
         <div className="fw-bold">{user.name}</div>
       </div>
