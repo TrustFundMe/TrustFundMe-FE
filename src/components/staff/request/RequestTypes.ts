@@ -1,4 +1,4 @@
-export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED' | 'WITHDRAWAL_REQUESTED';
 
 export type StaffRequestBase = {
   id: string;

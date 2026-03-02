@@ -85,7 +85,10 @@ export default function CampaignExpendituresPage() {
             case 'REJECTED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-50/50 text-rose-300 border border-rose-100/30"><AlertCircle className="w-3 h-3 mr-1" /> Từ chối</span>;
             case 'CLOSED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 text-slate-600 border border-slate-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã đóng</span>;
+            case 'WITHDRAWAL_REQUESTED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100"><Clock className="w-3 h-3 mr-1" /> Yêu cầu rút tiền</span>;
+            case 'DISBURSED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-100">{status}</span>;
         }
@@ -447,7 +450,7 @@ export default function CampaignExpendituresPage() {
                                                                 </span>
                                                             ) : (
                                                                 <>
-                                                                    {campaign.type === 'ITEMIZED' && exp.status === 'APPROVED' ? (
+                                                                    {(campaign.type === 'ITEMIZED' && (exp.status === 'APPROVED' || (exp.status as string) === 'CLOSED')) ? (
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
