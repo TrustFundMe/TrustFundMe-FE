@@ -4,6 +4,13 @@ export type User = {
   avatar: string;
 };
 
+export type CampaignFollower = {
+  userId: number;
+  userName: string;
+  avatarUrl?: string;
+  followedAt: string;
+};
+
 export type CampaignPostComment = {
   id: string;
   user: User;
@@ -48,10 +55,8 @@ export type Campaign = {
   raisedAmount: number;
   creator: User;
   followers: User[];
-  liked: boolean;
   followed: boolean;
   flagged: boolean;
-  likeCount: number;
   followerCount: number;
   commentCount: number;
   type?: string;

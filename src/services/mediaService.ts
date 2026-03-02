@@ -48,7 +48,11 @@ export const mediaService = {
 
             return res.data;
         } catch (error: any) {
-            console.error(`[mediaService] Upload failed:`, error);
+            if (error.response) {
+                console.error(`[mediaService] Upload failed with status ${error.response.status}:`, error.response.data);
+            } else {
+                console.error(`[mediaService] Upload failed (no response):`, error.message);
+            }
             throw error;
         }
     },

@@ -40,6 +40,7 @@ export type ExpenditureRequest = StaffRequestBase & {
   campaignTitle: string;
   requesterName: string;
   totalAmount: number;
+  totalExpectedAmount?: number;
   expenditureItems: ExpenditureItem[];
   justification: string;
   proofImageUrl?: string;

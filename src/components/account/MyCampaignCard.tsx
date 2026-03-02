@@ -26,11 +26,30 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
         onChatClick(campaign);
     };
 
+    const getStatusLabel = (status: string) => {
+        switch (status?.toUpperCase()) {
+            case 'ACTIVE':
+                return 'Đang hoạt động';
+            case 'PENDING':
+            case 'PENDING_APPROVAL':
+                return 'Chờ duyệt';
+            case 'PENDING_REVIEW':
+                return 'Đang xem xét';
+            case 'PAUSED':
+                return 'Tạm dừng';
+            case 'CLOSED':
+                return 'Đã đóng';
+            default:
+                return status || 'N/A';
+        }
+    };
+
     const getStatusColor = (status: string) => {
         switch (status?.toUpperCase()) {
             case 'ACTIVE':
                 return 'bg-green-100 text-green-800 border-green-200';
             case 'PENDING':
+            case 'PENDING_APPROVAL':
             case 'PENDING_REVIEW':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             case 'PAUSED':
@@ -42,18 +61,20 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
         }
     };
 
+    const isPending = ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(campaign.status?.toUpperCase());
+
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
             <div className="flex flex-col md:flex-row">
                 {/* Campaign Image */}
                 <div className="relative w-full md:w-64 h-48 md:h-auto overflow-hidden">
                     <img
-                        src={withFallbackImage(campaign.coverImage, '/assets/img/campaign/1.jpg')}
+                        src={withFallbackImage(campaign.coverImageUrl || campaign.coverImage, '/assets/img/campaign/1.jpg')}
                         alt={campaign.title}
                         className="w-full h-full object-cover"
                     />
                     <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(campaign.status)}`}>
-                        {campaign.status}
+                        {getStatusLabel(campaign.status)}
                     </div>
                 </div>
 
@@ -103,33 +124,37 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                     </div>
 
                     <div className="flex flex-wrap gap-3 mt-4">
-                        <Link
-                            href={`/campaigns-details?id=${campaign.id}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                        >
-                            <Eye className="w-4 h-4" />
-                            View
-                        </Link>
+                        {!isPending && (
+                            <>
+                                <Link
+                                    href={`/campaigns-details?id=${campaign.id}`}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                                >
+                                    <Eye className="w-4 h-4" />
+                                    Xem
+                                </Link>
+                                <Link
+                                    href={`/account/campaigns/expenditures?campaignId=${campaign.id}`}
+                                    className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
+                                >
+                                    <BarChart className="w-4 h-4" />
+                                    Chi tiêu
+                                </Link>
+                            </>
+                        )}
                         <Link
                             href={`/account/campaigns/edit?id=${campaign.id}`}
                             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                         >
                             <Edit className="w-4 h-4" />
-                            Edit
-                        </Link>
-                        <Link
-                            href={`/account/campaigns/expenditures?campaignId=${campaign.id}`}
-                            className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
-                        >
-                            <BarChart className="w-4 h-4" />
-                            Expenditures
+                            Sửa
                         </Link>
                         <button
                             onClick={handleChatClick}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                         >
                             <MessageSquare className="w-4 h-4" />
-                            Chat
+                            Nhắn tin
                         </button>
                     </div>
                 </div>

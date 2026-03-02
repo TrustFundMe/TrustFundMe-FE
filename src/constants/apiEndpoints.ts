@@ -8,6 +8,15 @@ export const API_ENDPOINTS = {
     BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
   },
+  CAMPAIGN_FOLLOWS: {
+    BASE: "/api/campaign-follows",
+    FOLLOW: (id: number | string) => `/api/campaign-follows/${id}`,
+    UNFOLLOW: (id: number | string) => `/api/campaign-follows/${id}`,
+    FOLLOWERS: (id: number | string) => `/api/campaign-follows/${id}/followers`,
+    COUNT: (id: number | string) => `/api/campaign-follows/${id}/count`,
+    IS_FOLLOWING: (id: number | string) => `/api/campaign-follows/${id}/me`,
+    MY_FOLLOWS: "/api/campaign-follows/me",
+  },
   FUNDRAISING_GOALS: {
     BASE: "/api/fundraising-goals",
     BY_CAMPAIGN: (campaignId: number | string) => `/api/fundraising-goals/campaign/${campaignId}`,

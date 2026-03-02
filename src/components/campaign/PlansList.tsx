@@ -3,19 +3,14 @@
 import Image from "next/image";
 import type { CampaignPlan } from "./types";
 
-type PlanStatus = "approved" | "voting" | "pending";
+type PlanStatus = "disbursed" | "approved" | "voting" | "pending";
 
 function getPlanStatus(planId: string): PlanStatus {
-  if (planId === "plan_01") return "approved";
-  if (planId === "plan_02") return "voting";
-  return "pending";
+  return "disbursed"; // All plans passed from details page are disbursed
 }
 
 function accentForStatus(status: PlanStatus) {
-  // Match footer palette:
-  // - approved: var(--theme) (green)
-  // - pending: var(--theme-3) (yellow)
-  // - voting: keep gray
+  if (status === "disbursed") return "var(--theme)"; // Green
   if (status === "approved") return "var(--theme)";
   if (status === "pending") return "var(--theme-3)";
   return "#6b7280";
@@ -98,7 +93,7 @@ function PlanCard({ plan, onOpen }: { plan: CampaignPlan; onOpen: () => void }) 
   const accent = accentForStatus(status);
 
   const avatars =
-    status === "approved"
+    status === "disbursed" || status === "approved"
       ? ["/assets/img/about/02.jpg"]
       : status === "voting"
         ? [

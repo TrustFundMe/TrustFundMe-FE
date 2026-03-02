@@ -74,6 +74,7 @@ export default function AdminPayoutsPage() {
                     campaignCoverImage: coverImage,
                     requesterName: 'Fund Owner',
                     totalAmount: e.totalAmount,
+                    totalExpectedAmount: e.totalExpectedAmount,
                     expenditureItems: (e.items || []).map(i => ({
                         description: i.category,
                         quantity: i.quantity,
@@ -253,7 +254,7 @@ export default function AdminPayoutsPage() {
                                         </div>
                                     </td>
                                     <td className="py-6 pr-4">
-                                        <span className="text-lg font-black text-slate-900">{formatVnd(r.totalAmount)}</span>
+                                        <span className="text-lg font-black text-slate-900">{formatVnd(r.totalExpectedAmount || r.totalAmount)}</span>
                                     </td>
                                     <td className="py-6 pr-4 text-slate-500 font-medium">
                                         {new Date(r.createdAt).toLocaleDateString('vi-VN')}
@@ -326,8 +327,8 @@ export default function AdminPayoutsPage() {
                                     <h3 className="text-[10px] font-black text-[#F84D43] uppercase tracking-[0.2em] mb-4">Thông tin chung</h3>
                                     <div className="space-y-4">
                                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền yêu cầu</span>
-                                            <span className="text-2xl font-black text-slate-900 mt-1">{formatVnd(selectedExp.totalAmount)}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền muốn rút</span>
+                                            <span className="text-2xl font-black text-slate-900 mt-1">{formatVnd(selectedExp.totalExpectedAmount || selectedExp.totalAmount)}</span>
                                         </div>
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
