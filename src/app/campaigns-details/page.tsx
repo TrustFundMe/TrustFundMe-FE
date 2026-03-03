@@ -311,7 +311,7 @@ function CampaignDetailsInner() {
                     Kiểm tra KYC của chủ chiến dịch
                   </button>
                 </div>
-              )
+              )}
 
               <CampaignCommentsCard comments={comments} />
             </div>

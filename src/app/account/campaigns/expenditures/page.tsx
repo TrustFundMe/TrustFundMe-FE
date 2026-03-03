@@ -448,6 +448,9 @@ export default function CampaignExpendituresPage() {
                             <table className="min-w-full">
                                 <thead className="bg-slate-50 border-b border-black/5">
                                     <tr>
+                                        <th scope="col" className="px-6 py-5 text-left text-[10px] font-black text-red-800/80 uppercase tracking-[2px]">
+                                            STT
+                                        </th>
                                         <th scope="col" className="px-10 py-5 text-left text-[10px] font-black text-red-800/80 uppercase tracking-[2px]">
                                             Mô tả / Kế hoạch
                                         </th>
@@ -489,6 +492,9 @@ export default function CampaignExpendituresPage() {
                                                     className={`cursor-pointer transition-[background-color] duration-300 group ${isExpanded ? 'bg-red-50/10' : 'hover:bg-red-50/10 even:bg-slate-50/30'
                                                         }`}
                                                 >
+                                                    <td className="px-6 py-6 text-center">
+                                                        <span className="text-xs font-black text-black/20">{expenditures.indexOf(exp) + 1}</span>
+                                                    </td>
                                                     <td className="px-10 py-6">
                                                         <div className={`text-sm font-black transition-colors ${isExpanded ? 'text-red-900' : 'text-black group-hover:text-red-900'}`}>
                                                             {exp.plan || 'Chi tiêu không tên'}
@@ -580,7 +586,7 @@ export default function CampaignExpendituresPage() {
                                                                                         <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.status === 'REJECTED' ? 'bg-rose-500 ring-4 ring-rose-50' : (exp.isWithdrawalRequested ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50')}`}></div>
                                                                                         <div className="flex flex-col">
                                                                                             <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 2 ? 'text-red-900' : (exp.status === 'REJECTED' ? 'text-rose-600' : (exp.isWithdrawalRequested ? 'text-emerald-700' : 'text-black/30'))}`}>
-                                                                                                2. {exp.status === 'REJECTED' ? 'Bị từ chối' : 'Yêu cầu rút tiền'}
+                                                                                                2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'Đã duyệt' : 'Yêu cầu rút tiền')}
                                                                                             </span>
                                                                                             <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
                                                                                                 {exp.status === 'REJECTED' ? 'Đã phản hồi' : (exp.isWithdrawalRequested ? 'Đã thực hiện' : 'Chưa thực hiện')}
@@ -588,49 +594,53 @@ export default function CampaignExpendituresPage() {
                                                                                         </div>
                                                                                     </button>
 
-                                                                                    {/* Step 3: Admin chuyển tiền */}
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(3); }}
-                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 3 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
-                                                                                    >
-                                                                                        <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.disbursedAt ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-red-900' : (exp.disbursedAt ? 'text-emerald-700' : 'text-black/30')}`}>
-                                                                                                3. Admin giải ngân
-                                                                                            </span>
-                                                                                            <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                {exp.disbursedAt ? 'Đã chuyển tiền' : 'Đang xử lý'}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    </button>
+                                                                                    {exp.status !== 'REJECTED' && (
+                                                                                        <>
+                                                                                            {/* Step 3: Admin chuyển tiền */}
+                                                                                            <button
+                                                                                                onClick={(e) => { e.stopPropagation(); setSelectedLogStep(3); }}
+                                                                                                className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 3 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                            >
+                                                                                                <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.disbursedAt ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-red-900' : (exp.disbursedAt ? 'text-emerald-700' : 'text-black/30')}`}>
+                                                                                                        3. Admin giải ngân
+                                                                                                    </span>
+                                                                                                    <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
+                                                                                                        {exp.disbursedAt ? 'Đã chuyển tiền' : 'Đang xử lý'}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            </button>
 
-                                                                                    {/* Step 4: Upload bằng chứng */}
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(4); }}
-                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 4 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
-                                                                                    >
-                                                                                        <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-red-900' : 'text-black/30'}`}>
-                                                                                                4. Bằng chứng chi tiêu
-                                                                                            </span>
-                                                                                            <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
-                                                                                        </div>
-                                                                                    </button>
+                                                                                            {/* Step 4: Upload bằng chứng */}
+                                                                                            <button
+                                                                                                onClick={(e) => { e.stopPropagation(); setSelectedLogStep(4); }}
+                                                                                                className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 4 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                            >
+                                                                                                <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-red-900' : 'text-black/30'}`}>
+                                                                                                        4. Bằng chứng chi tiêu
+                                                                                                    </span>
+                                                                                                    <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
+                                                                                                </div>
+                                                                                            </button>
 
-                                                                                    {/* Step 5: Hoàn tiền thừa */}
-                                                                                    <button
-                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(5); }}
-                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 5 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
-                                                                                    >
-                                                                                        <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
-                                                                                        <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 5 ? 'text-red-900' : 'text-black/30'}`}>
-                                                                                                5. Hoàn tiền dư
-                                                                                            </span>
-                                                                                            <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
-                                                                                        </div>
-                                                                                    </button>
+                                                                                            {/* Step 5: Hoàn tiền thừa */}
+                                                                                            <button
+                                                                                                onClick={(e) => { e.stopPropagation(); setSelectedLogStep(5); }}
+                                                                                                className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 5 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                            >
+                                                                                                <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
+                                                                                                <div className="flex flex-col">
+                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 5 ? 'text-red-900' : 'text-black/30'}`}>
+                                                                                                        5. Hoàn tiền dư
+                                                                                                    </span>
+                                                                                                    <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
+                                                                                                </div>
+                                                                                            </button>
+                                                                                        </>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
 
@@ -665,9 +675,11 @@ export default function CampaignExpendituresPage() {
                                                                                     {selectedLogStep === 2 && (
                                                                                         <div className="space-y-8">
                                                                                             <div className="flex items-center justify-between">
-                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">{exp.status === 'REJECTED' ? 'KẾT QUẢ PHẢN HỒI' : 'YÊU CẦU RÚT TIỀN'}</h4>
+                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">{exp.status === 'REJECTED' ? 'KẾT QUẢ PHẢN HỒI' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'XÉT DUYỆT CHI TIÊU' : 'YÊU CẦU RÚT TIỀN')}</h4>
                                                                                                 {exp.status === 'REJECTED' ? (
                                                                                                     <span className="px-3 py-1 bg-rose-50 text-rose-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-rose-100">Từ chối</span>
+                                                                                                ) : (campaign.type === 'AUTHORIZED' && exp.staffReviewId) ? (
+                                                                                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã duyệt</span>
                                                                                                 ) : exp.isWithdrawalRequested ? (
                                                                                                     <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã gửi</span>
                                                                                                 ) : (
@@ -704,12 +716,19 @@ export default function CampaignExpendituresPage() {
                                                                                                                 <CheckCircle className="w-6 h-6" />
                                                                                                             </div>
                                                                                                             <div>
-                                                                                                                <p className="text-sm font-black text-emerald-900">Yêu cầu đã được ghi nhận</p>
-                                                                                                                <p className="text-[10px] font-bold text-emerald-700/60 uppercase">Vào lúc {exp.updatedAt ? new Date(exp.updatedAt).toLocaleString('vi-VN') : '—'}</p>
+                                                                                                                <p className="text-sm font-black text-emerald-900">{campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'Khoản chi đã được xét duyệt' : 'Yêu cầu đã được ghi nhận'}</p>
                                                                                                             </div>
                                                                                                         </div>
+                                                                                                        {campaign.type === 'AUTHORIZED' && exp.staffReviewId && (
+                                                                                                            <div className="flex items-center gap-2 text-[10px] font-bold text-black/40 uppercase tracking-tight ml-2">
+                                                                                                                <User className="w-3.5 h-3.5" />
+                                                                                                                <span>Nhân viên duyệt: Staff #{exp.staffReviewId}</span>
+                                                                                                            </div>
+                                                                                                        )}
                                                                                                         <p className="text-sm font-bold text-black/60 leading-relaxed italic">
-                                                                                                            Hệ thống đang chờ Quản trị viên kiểm tra danh sách vật phẩm và thực hiện chuyển khoản vào tài khoản cá nhân của bạn.
+                                                                                                            {campaign.type === 'AUTHORIZED' && exp.staffReviewId
+                                                                                                                ? 'Kế hoạch chi tiêu của bạn đã được phê duyệt. Hệ thống đang tiến hành các bước giải ngân.'
+                                                                                                                : 'Hệ thống đang chờ Quản trị viên kiểm tra danh sách vật phẩm và thực hiện chuyển khoản vào tài khoản cá nhân của bạn.'}
                                                                                                         </p>
                                                                                                     </div>
                                                                                                 ) : (
