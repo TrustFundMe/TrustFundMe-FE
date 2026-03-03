@@ -1,21 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Campaign } from "./types";
+import type { Campaign, CampaignFollower } from "./types";
 import CampaignActions from "./CampaignActions";
 import CampaignImageSlider from "./CampaignImageSlider";
 import CreatorInfo from "./CreatorInfo";
 
 export default function CampaignHeader({
   campaign,
-  onToggleLike,
   onToggleFollow,
   onToggleFlag,
+  followers = [],
 }: {
   campaign: Campaign;
-  onToggleLike: () => void;
   onToggleFollow: () => void;
   onToggleFlag: () => void;
+  followers?: CampaignFollower[];
 }) {
   const sliderImages = useMemo(() => {
     const list = campaign.galleryImages?.length
@@ -41,7 +41,6 @@ export default function CampaignHeader({
               letterSpacing: 0.2,
             }}
           >
-            <i className="far fa-heart" style={{ opacity: 0.8 }} />
             {campaign.category.toUpperCase()}
           </span>
         </div>
@@ -68,12 +67,10 @@ export default function CampaignHeader({
 
         <div className="mt-4">
           <CampaignActions
-            liked={campaign.liked}
             followed={campaign.followed}
             flagged={campaign.flagged}
-            likeCount={campaign.likeCount}
             followerCount={campaign.followerCount}
-            onToggleLike={onToggleLike}
+            followers={followers}
             onToggleFollow={onToggleFollow}
             onToggleFlag={onToggleFlag}
           />

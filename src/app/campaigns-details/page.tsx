@@ -7,55 +7,67 @@ import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
 import CampaignHeader from '@/components/campaign/CampaignHeader';
 import CampaignCommentsCard from '@/components/campaign/CampaignCommentsCard';
-import FollowersRow from '@/components/campaign/FollowersRow';
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
-import { mockComments, mockPlans, mockPosts } from '@/components/campaign/mock';
-import type { Campaign, CampaignPost } from '@/components/campaign/types';
+import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower } from '@/components/campaign/types';
+import { mockComments, mockPosts } from '@/components/campaign/mock';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 import { usePermissions } from '@/hooks/usePermissions';
+import type { Expenditure } from '@/types/expenditure';
 
-const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null, ownerName?: string): Campaign => {
+import { mediaService } from '@/services/mediaService';
+
+const mapCampaignDtoToUi = (
+  dto: CampaignDto,
+  activeGoal: FundraisingGoal | null,
+  owner?: { name: string; avatar: string },
+  galleryUrls: string[] = [],
+  coverUrl?: string
+): Campaign => {
+  // Use coverUrl if provided by API, otherwise fallback to DTO's coverImageUrl string.
+  const finalCover = coverUrl || dto.coverImageUrl || '';
+
   return {
     id: String(dto.id),
     title: dto.title,
-    category: dto.categoryName || dto.category || 'Campaign',
+    category: dto.categoryName || dto.category || 'Chiến dịch',
     description: dto.description ?? '',
-    coverImage: withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg'),
-    galleryImages: [withFallbackImage(dto.coverImage, '/assets/img/campaign/1.jpg')],
+    coverImage: finalCover,
+    galleryImages: galleryUrls.length > 0 ? galleryUrls : (finalCover ? [finalCover] : []),
     goalAmount: activeGoal ? activeGoal.targetAmount : 0,
     raisedAmount: dto.balance ?? 0,
     creator: {
       id: String(dto.fundOwnerId),
-      name: ownerName || `Fund Owner #${dto.fundOwnerId}`,
-      avatar: '/assets/img/about/01.jpg',
+      name: owner?.name || `Người tạo #${dto.fundOwnerId}`,
+      avatar: owner?.avatar || '/assets/img/about/01.jpg',
     },
     followers: [],
-    liked: false,
     followed: false,
     flagged: false,
-    likeCount: 0,
     followerCount: 0,
     commentCount: 0,
     // forward KYC flag from server
     kycVerified: dto.kycVerified ?? false,
+    type: dto.type || 'general',
   };
 };
 
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const idParam = searchParams.get('id');
-  const campaignId = idParam ? Number(idParam) : NaN;
+  const campaignIdStr = searchParams.get('id');
+  const campaignId = campaignIdStr ? parseInt(campaignIdStr, 10) : null;
 
   const { isStaff, isAdmin } = usePermissions();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const [plans, setPlans] = useState<CampaignPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [followers, setFollowers] = useState<CampaignFollower[]>([]);
 
   const [posts] = useState<CampaignPost[]>(mockPosts);
 
@@ -63,45 +75,116 @@ function CampaignDetailsInner() {
 
   useEffect(() => {
     let mounted = true;
+    if (!campaignId) {
+      setLoading(false);
+      setError('ID chiến dịch không hợp lệ');
+      return;
+    }
 
-    const run = async () => {
+    const fetchCampaign = async () => {
       setError('');
-
-      if (!Number.isFinite(campaignId) || campaignId <= 0) {
-        setError('Invalid campaign id');
-        setLoading(false);
-        return;
-      }
 
       try {
         setLoading(true);
-        const [dto, activeGoal] = await Promise.all([
+        const [dto, activeGoal, expenditures] = await Promise.all([
           campaignService.getById(campaignId),
           campaignService.getActiveGoalByCampaignId(campaignId),
+          campaignService.getExpendituresByCampaignId(campaignId)
         ]);
 
-        let ownerName = '';
-        try {
-          const userRes = await userService.getUserById(dto.fundOwnerId);
-          if (userRes.success && userRes.data) {
-            ownerName = userRes.data.fullName;
-          }
-        } catch (uErr) {
-          console.warn('Failed to fetch owner info', uErr);
-        }
+        // Map expenditures to CampaignPlan (only DISBURSED)
+        const mappedPlans: CampaignPlan[] = (expenditures || [])
+          .filter((exp: Expenditure) => exp.status === 'DISBURSED')
+          .map((exp: Expenditure) => ({
+            id: String(exp.id),
+            title: `Giải ngân: ${exp.plan || 'Chi tiết chi tiêu'}`,
+            amount: exp.totalAmount,
+            description: exp.plan || '',
+            date: exp.disbursedAt ? new Date(exp.disbursedAt).toLocaleDateString('vi-VN') : 'Đã giải ngân'
+          }));
 
         if (!mounted) return;
-        setCampaign(mapCampaignDtoToUi(dto, activeGoal, ownerName));
-      } catch {
+        setPlans(mappedPlans);
+
+        // Fetch owner, media, and follow info in parallel
+        const [ownerResult, mediaResult, followResult, followersResult] = await Promise.all([
+          userService.getUserById(dto.fundOwnerId).catch(() => null),
+          mediaService.getMediaByCampaignId(campaignId).catch(() => []),
+          Promise.all([
+            campaignService.isFollowing(campaignId).catch(() => false),
+            campaignService.getFollowerCount(campaignId).catch(() => 0)
+          ]).catch(() => [false, 0]),
+          campaignService.getFollowers(campaignId).catch(() => [])
+        ]);
+
+        let owner = { name: '', avatar: '/assets/img/about/01.jpg' };
+        if (ownerResult?.success && ownerResult?.data) {
+          owner.name = ownerResult.data.fullName;
+          owner.avatar = ownerResult.data.avatarUrl || owner.avatar;
+        }
+
+        let galleryUrls: string[] = [];
+        let finalCoverUrl = '';
+        const mediaList = mediaResult as any[];
+        if (mediaList && mediaList.length > 0) {
+          const coverMedia = mediaList.find(m => m.id === dto.coverImage);
+          finalCoverUrl = coverMedia ? coverMedia.url : mediaList[0].url;
+          const sortedMedia = [...mediaList].sort((a: any, b: any) => {
+            if (a.id === dto.coverImage) return -1;
+            if (b.id === dto.coverImage) return 1;
+            return 0;
+          });
+          galleryUrls = sortedMedia.map((m: any) => m.url);
+        }
+
+        const followed = (followResult as [boolean, number])[0];
+        const followerCount = (followResult as [boolean, number])[1];
+
+        // Map followers data - fetch user info for each follower
+        const followersList = followersResult as any[];
+        const followersData: CampaignFollower[] = await Promise.all(
+          followersList.map(async (f: any) => {
+            const userId = f.userId || 0;
+            let userName = 'Người dùng';
+            let avatarUrl = undefined;
+
+            try {
+              const userRes = await userService.getUserById(userId);
+              if (userRes.success && userRes.data) {
+                userName = userRes.data.fullName;
+                avatarUrl = userRes.data.avatarUrl;
+              }
+            } catch {
+              // Use default values
+            }
+
+            return {
+              userId,
+              userName,
+              avatarUrl,
+              followedAt: f.followedAt || f.createdAt || new Date().toISOString()
+            };
+          })
+        );
+
         if (!mounted) return;
-        setError('Failed to load campaign');
+
+        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl);
+        campaignData.followed = followed;
+        campaignData.followerCount = followerCount;
+        setCampaign(campaignData);
+        setFollowers(followersData);
+      } catch (err) {
+        console.error('Fetch campaign detail error:', err);
+        if (!mounted) return;
+        setError('Không thể tải thông tin chiến dịch');
       } finally {
         if (!mounted) return;
         setLoading(false);
       }
     };
 
-    run();
+    fetchCampaign();
 
     return () => {
       mounted = false;
@@ -146,15 +229,15 @@ function CampaignDetailsInner() {
 
   // Backward compatibility: old UI used slug-like ids (e.g. community-kitchens-2)
   // If a non-numeric id is provided, fall back to mock data so the page still renders.
-  if (!Number.isFinite(campaignId)) {
+  if (campaignId === null || isNaN(campaignId)) {
     return (
       <DanboxLayout>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div style={{ marginBottom: 12, fontWeight: 700 }}>
-            This campaign id is not numeric, so API fetch is skipped.
+            ID chiến dịch không hợp lệ.
           </div>
           <div style={{ marginBottom: 24 }}>
-            Please open a campaign from the campaigns list to use the real API id.
+            Vui lòng chọn một chiến dịch từ danh sách để xem thông tin thực tế.
           </div>
         </div>
       </DanboxLayout>
@@ -165,7 +248,7 @@ function CampaignDetailsInner() {
     return (
       <DanboxLayout>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
-          <div>{error || 'Campaign not found'}</div>
+          <div>{error || 'Không tìm thấy chiến dịch'}</div>
         </div>
       </DanboxLayout>
     );
@@ -191,30 +274,30 @@ function CampaignDetailsInner() {
             <div style={{ minWidth: 0 }}>
               <CampaignHeader
                 campaign={campaign}
-                onToggleLike={() =>
-                  setCampaign((c) =>
-                    c
-                      ? {
-                        ...c,
-                        liked: !c.liked,
-                        likeCount: c.liked ? Math.max(0, c.likeCount - 1) : c.likeCount + 1,
-                      }
-                      : c
-                  )
-                }
-                onToggleFollow={() =>
-                  setCampaign((c) =>
-                    c
-                      ? {
-                        ...c,
-                        followed: !c.followed,
-                        followerCount: c.followed
-                          ? Math.max(0, c.followerCount - 1)
-                          : c.followerCount + 1,
-                      }
-                      : c
-                  )
-                }
+                followers={followers}
+                onToggleFollow={async () => {
+                  if (!campaignId) return;
+                  try {
+                    if (campaign.followed) {
+                      await campaignService.unfollowCampaign(campaignId);
+                    } else {
+                      await campaignService.followCampaign(campaignId);
+                    }
+                    setCampaign((c) =>
+                      c
+                        ? {
+                          ...c,
+                          followed: !c.followed,
+                          followerCount: c.followed
+                            ? Math.max(0, c.followerCount - 1)
+                            : c.followerCount + 1,
+                        }
+                        : c
+                    );
+                  } catch (error) {
+                    console.error('Error toggling follow:', error);
+                  }
+                }}
                 onToggleFlag={() => setCampaign((c) => (c ? { ...c, flagged: !c.flagged } : c))}
               />
               {/* KYC warning button for staff/admin when campaign owner has not finished KYC */}
@@ -230,40 +313,32 @@ function CampaignDetailsInner() {
                 </div>
               )
 
-              <div className="single-sidebar-widgets" style={{ marginTop: 24, marginBottom: 24 }}>
-                <div className="widget-title">
-                  <h4>Followers</h4>
-                </div>
-                <FollowersRow
-                  followers={campaign.followers}
-                  onClick={() => {
-                    alert('Go to followers list page (route not implemented)');
-                  }}
-                />
-              </div>
-
               <CampaignCommentsCard comments={comments} />
-
-              <CampaignDonateCard
-                raisedAmount={campaign.raisedAmount}
-                goalAmount={campaign.goalAmount}
-                onDonate={(amount) => {
-                  const params = new URLSearchParams({
-                    campaignId: String(campaignId),
-                    amount: String(amount),
-                  });
-                  router.push(`/donation?${params.toString()}`);
-                }}
-              />
             </div>
 
             <div style={{ minWidth: 0, marginTop: 86 }}>
               <div className="casues-sidebar-wrapper">
                 <div style={{ marginBottom: 18 }}>
+                  <CampaignDonateCard
+                    raisedAmount={campaign.raisedAmount}
+                    goalAmount={campaign.goalAmount}
+                    onDonate={(amount) => {
+                      const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
+                      const params = new URLSearchParams({
+                        campaignId: String(campaignId),
+                        amount: String(amount),
+                        fundType,
+                      });
+                      router.push(`/donation?${params.toString()}`);
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 18 }}>
                   <PlansList
-                    plans={mockPlans}
+                    plans={plans}
                     onOpenPlan={(planId) => {
-                      alert(`Go to plan details page: ${planId} (route not implemented)`);
+                      alert(`Chi tiết giải ngân: ${planId} (chưa thực hiện)`);
                     }}
                   />
                 </div>
@@ -281,7 +356,7 @@ function CampaignDetailsInner() {
                     style={{ marginBottom: 14 }}
                   >
                     <div className="widget-title" style={{ marginBottom: 0 }}>
-                      <h4 style={{ marginBottom: 0 }}>Posts</h4>
+                      <h4 style={{ marginBottom: 0 }}>Bài viết</h4>
                     </div>
 
                     <button
@@ -294,16 +369,16 @@ function CampaignDetailsInner() {
                         color: '#0F5D51',
                         fontWeight: 700,
                       }}
-                      onClick={() => alert('See more posts (route not implemented)')}
+                      onClick={() => alert('Xem thêm bài viết (tính năng chưa thực hiện)')}
                     >
-                      See more
+                      Xem thêm
                     </button>
                   </div>
 
                   <PostsFeed
                     posts={posts}
                     campaignCreatorId={campaign.creator.id}
-                    onOpenPost={(postId) => alert(`Open post details: ${postId} (route not implemented)`)}
+                    onOpenPost={(postId) => alert(`Chi tiết bài viết: ${postId} (chưa thực hiện)`)}
                   />
                 </div>
               </div>

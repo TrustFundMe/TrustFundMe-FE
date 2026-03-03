@@ -23,6 +23,7 @@ export interface Expenditure {
     plan?: string;
     status: string;
     disbursementProofUrl?: string;
+    disbursedAt?: string;
     items?: ExpenditureItem[];
     createdAt?: string;
     updatedAt?: string;

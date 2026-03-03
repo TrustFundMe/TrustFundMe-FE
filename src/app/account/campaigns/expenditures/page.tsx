@@ -37,6 +37,7 @@ export default function CampaignExpendituresPage() {
 
     // Expandable Row State
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+    const [selectedLogStep, setSelectedLogStep] = useState<number>(1);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -75,6 +76,42 @@ export default function CampaignExpendituresPage() {
         return expenditures.reduce((sum, exp) => sum + exp.totalAmount, 0);
     }, [expenditures]);
 
+    // === Logic kiểm tra điều kiện tạo expenditure mới ===
+    const { canCreate, blockReason } = useMemo(() => {
+        if (!campaign || expenditures.length === 0) return { canCreate: true, blockReason: null };
+
+        if (campaign.type === 'AUTHORIZED') {
+            // Quỹ ủy quyền: có thể tạo mới nếu tất cả exp đều là DISBURSED+bằng chứng hoặc REJECTED
+            const hasActiveExp = expenditures.some(e =>
+                e.status !== 'DISBURSED' && e.status !== 'REJECTED'
+            );
+            const hasDisbursedWithoutProof = expenditures.some(e =>
+                e.status === 'DISBURSED' && !e.disbursementProofUrl
+            );
+            if (hasActiveExp) {
+                return { canCreate: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã giải ngân và có bằng chứng, hoặc bị từ chối.' };
+            }
+            if (hasDisbursedWithoutProof) {
+                return { canCreate: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
+            }
+        } else if (campaign.type === 'ITEMIZED') {
+            // Quỹ vật phẩm: có thể tạo mới nếu tất cả exp đều là DISBURSED+bằng chứng
+            const hasActiveExp = expenditures.some(e => e.status !== 'DISBURSED');
+            const hasDisbursedWithoutProof = expenditures.some(e =>
+                e.status === 'DISBURSED' && !e.disbursementProofUrl
+            );
+            if (hasActiveExp) {
+                return { canCreate: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã được giải ngân và có bằng chứng.' };
+            }
+            if (hasDisbursedWithoutProof) {
+                return { canCreate: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
+            }
+        }
+
+        return { canCreate: true, blockReason: null };
+    }, [campaign, expenditures]);
+    // === END ===
+
     const getStatusBadge = (status: string) => {
         switch (status.toUpperCase()) {
             case 'APPROVED':
@@ -85,7 +122,10 @@ export default function CampaignExpendituresPage() {
             case 'REJECTED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-50/50 text-rose-300 border border-rose-100/30"><AlertCircle className="w-3 h-3 mr-1" /> Từ chối</span>;
             case 'CLOSED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 text-slate-600 border border-slate-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã đóng</span>;
+            case 'WITHDRAWAL_REQUESTED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100"><Clock className="w-3 h-3 mr-1" /> Yêu cầu rút tiền</span>;
+            case 'DISBURSED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-100">{status}</span>;
         }
@@ -197,13 +237,30 @@ export default function CampaignExpendituresPage() {
                                 </span>
                             </p>
                         </div>
-                        <Link
-                            href={`/account/campaigns/expenditures/create?campaignId=${campaign.id}`}
-                            className="inline-flex items-center px-8 py-3 rounded-full shadow-2xl shadow-red-900/10 text-xs font-black uppercase tracking-[1px] text-white bg-red-800 hover:bg-red-900 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Tạo khoản chi mới
-                        </Link>
+                        {/* Nút Tạo khoản chi mới */}
+                        {canCreate ? (
+                            <Link
+                                href={`/account/campaigns/expenditures/create?campaignId=${campaign.id}`}
+                                className="inline-flex items-center px-8 py-3 rounded-full shadow-2xl shadow-red-900/10 text-xs font-black uppercase tracking-[1px] text-white bg-red-800 hover:bg-red-900 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Tạo khoản chi mới
+                            </Link>
+                        ) : (
+                            <div className="flex flex-col items-end gap-2">
+                                <button
+                                    disabled
+                                    className="inline-flex items-center px-8 py-3 rounded-full text-xs font-black uppercase tracking-[1px] text-white bg-gray-300 cursor-not-allowed opacity-60"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Tạo khoản chi mới
+                                </button>
+                                <p className="text-[10px] font-bold text-amber-600 max-w-xs text-right flex items-start gap-1">
+                                    <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                                    {blockReason}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -419,7 +476,16 @@ export default function CampaignExpendituresPage() {
                                         return (
                                             <Fragment key={exp.id}>
                                                 <tr
-                                                    onClick={() => setExpandedRowId(isExpanded ? null : exp.id)}
+                                                    onClick={() => {
+                                                        const isNowExpanded = !isExpanded;
+                                                        setExpandedRowId(isNowExpanded ? exp.id : null);
+                                                        if (isNowExpanded) {
+                                                            // Tự động chọn bước phù hợp dựa trên trạng thái
+                                                            if (exp.disbursedAt) setSelectedLogStep(3);
+                                                            else if (exp.isWithdrawalRequested) setSelectedLogStep(2);
+                                                            else setSelectedLogStep(1);
+                                                        }
+                                                    }}
                                                     className={`cursor-pointer transition-[background-color] duration-300 group ${isExpanded ? 'bg-red-50/10' : 'hover:bg-red-50/10 even:bg-slate-50/30'
                                                         }`}
                                                 >
@@ -447,7 +513,7 @@ export default function CampaignExpendituresPage() {
                                                                 </span>
                                                             ) : (
                                                                 <>
-                                                                    {campaign.type === 'ITEMIZED' && exp.status === 'APPROVED' ? (
+                                                                    {(campaign.type === 'ITEMIZED' && (exp.status === 'APPROVED' || (exp.status as string) === 'CLOSED')) ? (
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
@@ -481,107 +547,252 @@ export default function CampaignExpendituresPage() {
                                                                 {isExpanded && (
                                                                     <div className="px-10 py-12 bg-gray-50/30 border-t border-black/5">
                                                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-                                                                            {/* Column 1: LOG Timeline */}
+                                                                            {/* Column 1: MASTER - LOG Timeline (Interactive) */}
                                                                             <div>
                                                                                 <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40 mb-10 flex items-center gap-2">
-                                                                                    LOG
+                                                                                    NHẬT KÝ QUY TRÌNH
                                                                                 </h4>
-                                                                                <div className="relative pl-8 space-y-12">
-                                                                                    {/* Vertical Dotted Line */}
-                                                                                    <div className="absolute left-[3.5px] top-2 bottom-6 w-[2px] border-l-2 border-dotted border-gray-200"></div>
+                                                                                <div className="relative pl-8 space-y-6">
+                                                                                    {/* Vertical Line */}
+                                                                                    <div className="absolute left-[3.5px] top-2 bottom-6 w-[2px] bg-gray-100"></div>
 
-                                                                                    {[
-                                                                                        { type: 'green', label: 'Yêu cầu được tạo', time: '20 Th02, 2024 10:30 AM' },
-                                                                                        { type: 'green', label: 'Đã gửi lệnh chuyển tiền', time: '20 Th02, 2024 10:45 AM' },
-                                                                                        { type: 'red', label: 'Bị đánh dấu bất thường', time: '21 Th02, 2024 02:15 PM' },
-                                                                                        { type: 'red', label: 'Chờ Quản trị viên xử lý', time: '21 Th02, 2024 02:30 PM' },
-                                                                                        { type: 'red', label: 'Đang mở cuộc điều tra', time: '22 Th02, 2024 09:00 AM' },
-                                                                                    ].map((log, idx) => (
-                                                                                        <div key={idx} className="relative group/log">
-                                                                                            {/* Timeline Dot */}
-                                                                                            <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full z-10 
-                                                                                                ${log.type === 'green' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-red-600 ring-4 ring-red-50'}`}>
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                <span className={`text-sm font-black block leading-none mb-1.5 transition-colors 
-                                                                                                    ${log.type === 'green' ? 'text-emerald-700' : 'text-red-700'}`}>
-                                                                                                    {log.label}
-                                                                                                </span>
-                                                                                                <span className="text-[10px] font-bold text-black/40 block uppercase tracking-wide">
-                                                                                                    {log.time}
-                                                                                                </span>
-                                                                                            </div>
+                                                                                    {/* Step 1: Tạo khoản chi */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(1); }}
+                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 1 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                    >
+                                                                                        <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-emerald-500 ring-4 ring-emerald-50`}></div>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 1 ? 'text-red-900' : 'text-emerald-700'}`}>
+                                                                                                1. Khởi tạo khoản chi
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
+                                                                                                {exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('vi-VN') : '—'}
+                                                                                            </span>
                                                                                         </div>
-                                                                                    ))}
+                                                                                    </button>
+
+                                                                                    {/* Step 2: Yêu cầu rút tiền */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(2); }}
+                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 2 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                    >
+                                                                                        <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.isWithdrawalRequested ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 2 ? 'text-red-900' : (exp.isWithdrawalRequested ? 'text-emerald-700' : 'text-black/30')}`}>
+                                                                                                2. Yêu cầu rút tiền
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
+                                                                                                {exp.isWithdrawalRequested ? 'Đã thực hiện' : 'Chưa thực hiện'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </button>
+
+                                                                                    {/* Step 3: Admin chuyển tiền */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(3); }}
+                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 3 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                    >
+                                                                                        <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.disbursedAt ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-red-900' : (exp.disbursedAt ? 'text-emerald-700' : 'text-black/30')}`}>
+                                                                                                3. Admin giải ngân
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
+                                                                                                {exp.disbursedAt ? 'Đã chuyển tiền' : 'Đang xử lý'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </button>
+
+                                                                                    {/* Step 4: Upload bằng chứng */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(4); }}
+                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 4 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                    >
+                                                                                        <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-red-900' : 'text-black/30'}`}>
+                                                                                                4. Bằng chứng chi tiêu
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
+                                                                                        </div>
+                                                                                    </button>
+
+                                                                                    {/* Step 5: Hoàn tiền thừa */}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); setSelectedLogStep(5); }}
+                                                                                        className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 5 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
+                                                                                    >
+                                                                                        <div className="absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 bg-gray-200 ring-4 ring-gray-50"></div>
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 5 ? 'text-red-900' : 'text-black/30'}`}>
+                                                                                                5. Hoàn tiền dư
+                                                                                            </span>
+                                                                                            <span className="text-[10px] font-bold text-black/30 uppercase tracking-wide italic">Chưa triển khai</span>
+                                                                                        </div>
+                                                                                    </button>
                                                                                 </div>
                                                                             </div>
 
-                                                                            {/* Column 2: INVESTIGATION & EVIDENCE */}
-                                                                            <div className="flex flex-col gap-12 lg:pl-12 lg:border-l border-black/5">
-                                                                                <div>
-                                                                                    <div className="flex items-center justify-between mb-10">
-                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">
-                                                                                            INVESTIGATION
-                                                                                        </h4>
-                                                                                        {exp.isWithdrawalRequested && (
-                                                                                            <span className="px-3 py-1 bg-red-50 text-red-900 text-[8px] font-black uppercase tracking-widest rounded-full">In Review</span>
-                                                                                        )}
-                                                                                    </div>
-
-                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                                                                                        <div className="space-y-10">
-                                                                                            <div>
-                                                                                                <p className="text-[9px] font-black uppercase tracking-[2px] text-black/20 mb-3">Ngày tạo yêu cầu</p>
-                                                                                                <p className="text-sm font-black text-black">20 Th02, 2024 10:30 AM</p>
+                                                                            {/* Column 2: DETAIL - Nội dung chi tiết */}
+                                                                            <div className="flex flex-col lg:pl-12 lg:border-l border-black/5 min-h-[400px]">
+                                                                                <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                                                                                    {selectedLogStep === 1 && (
+                                                                                        <div className="space-y-8">
+                                                                                            <div className="flex items-center justify-between">
+                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">CHI TIẾT KHỞI TẠO</h4>
+                                                                                                <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Hoàn tất</span>
                                                                                             </div>
-
-                                                                                            <div className="space-y-3">
-                                                                                                <p className="text-[9px] font-black uppercase tracking-[2px] text-black/20">Người phụ trách</p>
-                                                                                                <div className="flex items-center gap-3 group/admin">
-                                                                                                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center border-2 border-white shadow-sm ring-1 ring-black/5 overflow-hidden group-hover/admin:ring-red-900/20 transition-colors">
-                                                                                                        <User className="w-6 h-6 text-black/20 group-hover:text-red-900/40 transition-colors" />
+                                                                                            <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm space-y-6">
+                                                                                                <div>
+                                                                                                    <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-2">Mô tả kế hoạch</label>
+                                                                                                    <p className="text-sm font-bold text-black leading-relaxed">{exp.plan || 'Không có mô tả'}</p>
+                                                                                                </div>
+                                                                                                <div className="grid grid-cols-2 gap-6">
+                                                                                                    <div>
+                                                                                                        <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Ngày tạo</label>
+                                                                                                        <p className="text-xs font-bold text-black">{exp.createdAt ? new Date(exp.createdAt).toLocaleString('vi-VN') : '—'}</p>
                                                                                                     </div>
-                                                                                                    <span className="text-sm font-black text-black group-hover:text-red-900 transition-colors">Staff duyệt bảng này</span>
+                                                                                                    <div>
+                                                                                                        <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Mã hóa đơn</label>
+                                                                                                        <p className="text-xs font-bold text-black">#{exp.id}</p>
+                                                                                                    </div>
                                                                                                 </div>
-                                                                                            </div>
-
-                                                                                            <div className="space-y-4">
-                                                                                                <p className="text-[9px] font-black uppercase tracking-[2px] text-black/20">Trạng thái xử lý</p>
-                                                                                                <div className="flex items-center gap-2">
-                                                                                                    <div className="w-3 h-3 rounded-full bg-red-900"></div>
-                                                                                                    {[1, 2, 3, 4].map(d => (
-                                                                                                        <div key={d} className="w-3 h-3 rounded-full bg-black/5"></div>
-                                                                                                    ))}
-                                                                                                </div>
-                                                                                                <p className="text-xs font-bold leading-relaxed text-black/50 italic font-serif">
-                                                                                                    "Yêu cầu rút tiền đang được xem xét chi tiết do có sự chênh lệch lớn trong các báo cáo minh chứng trước đó."
-                                                                                                </p>
                                                                                             </div>
                                                                                         </div>
+                                                                                    )}
 
-                                                                                        <div className="space-y-4">
-                                                                                            <p className="text-[9px] font-black uppercase tracking-[2px] text-black/20">Minh chứng giao dịch</p>
-                                                                                            <div className="relative aspect-[4/3] rounded-3xl bg-gray-100 border-2 border-white shadow-inner overflow-hidden flex items-center justify-center group/evidence cursor-zoom-in">
-                                                                                                {/* Placeholder for Transaction Screenshot */}
-                                                                                                <div className="absolute inset-0 bg-gradient-to-br from-red-50 to-gray-200 opacity-60"></div>
-                                                                                                <div className="relative z-10 flex flex-col items-center gap-2">
-                                                                                                    <FileText className="w-8 h-8 text-black/10 group-hover/evidence:text-red-900/40 transition-all duration-500 scale-90 group-hover/evidence:scale-110" />
-                                                                                                    <span className="text-[8px] font-black uppercase tracking-widest text-black/30">Transfer Receipt</span>
-                                                                                                </div>
-                                                                                                {/* Mock "Success" Overlay */}
-                                                                                                <div className="absolute top-4 right-4 px-2 py-1 bg-emerald-500 text-white text-[7px] font-black uppercase tracking-widest rounded-lg shadow-lg">Verified</div>
+                                                                                    {selectedLogStep === 2 && (
+                                                                                        <div className="space-y-8">
+                                                                                            <div className="flex items-center justify-between">
+                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">YÊU CẦU RÚT TIỀN</h4>
+                                                                                                {exp.isWithdrawalRequested ? (
+                                                                                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã gửi</span>
+                                                                                                ) : (
+                                                                                                    <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-100">Chờ thực hiện</span>
+                                                                                                )}
                                                                                             </div>
-                                                                                            <p className="text-[9px] font-bold text-black/30 italic text-center">Giao dịch thực hiện vào 21 Th02, 2024</p>
+                                                                                            <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm">
+                                                                                                {exp.isWithdrawalRequested ? (
+                                                                                                    <div className="space-y-6">
+                                                                                                        <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                                                                                            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white">
+                                                                                                                <CheckCircle className="w-6 h-6" />
+                                                                                                            </div>
+                                                                                                            <div>
+                                                                                                                <p className="text-sm font-black text-emerald-900">Yêu cầu đã được ghi nhận</p>
+                                                                                                                <p className="text-[10px] font-bold text-emerald-700/60 uppercase">Vào lúc {exp.updatedAt ? new Date(exp.updatedAt).toLocaleString('vi-VN') : '—'}</p>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                        <p className="text-sm font-bold text-black/60 leading-relaxed italic">
+                                                                                                            Hệ thống đang chờ Quản trị viên kiểm tra danh sách vật phẩm và thực hiện chuyển khoản vào tài khoản cá nhân của bạn.
+                                                                                                        </p>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <div className="text-center py-10 space-y-4">
+                                                                                                        <Clock className="w-12 h-12 text-black/10 mx-auto" />
+                                                                                                        <p className="text-sm font-bold text-black/40">Khoản chi này chưa đóng hoặc chưa gửi yêu cầu rút tiền.</p>
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
                                                                                         </div>
-                                                                                    </div>
+                                                                                    )}
+
+                                                                                    {selectedLogStep === 3 && (
+                                                                                        <div className="space-y-8">
+                                                                                            <div className="flex items-center justify-between">
+                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHUYỂN KHOẢN</h4>
+                                                                                                {exp.status === 'DISBURSED' && (
+                                                                                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã giải ngân</span>
+                                                                                                )}
+                                                                                            </div>
+                                                                                            {exp.disbursementProofUrl ? (
+                                                                                                <div className="space-y-4">
+                                                                                                    <a
+                                                                                                        href={exp.disbursementProofUrl}
+                                                                                                        target="_blank"
+                                                                                                        rel="noopener noreferrer"
+                                                                                                        className="block relative aspect-[4/3] rounded-[2.5rem] bg-gray-100 border-2 border-white shadow-xl overflow-hidden group/evidence cursor-zoom-in"
+                                                                                                    >
+                                                                                                        <Image
+                                                                                                            src={exp.disbursementProofUrl}
+                                                                                                            alt="Minh chứng chuyển khoản"
+                                                                                                            fill
+                                                                                                            className="object-cover transition-transform duration-500 group-hover/evidence:scale-105"
+                                                                                                            unoptimized
+                                                                                                        />
+                                                                                                        <div className="absolute top-6 right-6 px-3 py-1.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-xl shadow-lg">Transaction Verified</div>
+                                                                                                    </a>
+                                                                                                    {exp.disbursedAt && (
+                                                                                                        <p className="text-[10px] font-bold text-black/30 italic text-center">
+                                                                                                            Thực hiện vào {new Date(exp.disbursedAt).toLocaleString('vi-VN')}
+                                                                                                        </p>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            ) : (
+                                                                                                <div className="bg-white p-12 rounded-[2.5rem] border-2 border-dashed border-black/5 flex flex-col items-center text-center space-y-4">
+                                                                                                    <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center">
+                                                                                                        <FileText className="w-8 h-8 text-black/10" />
+                                                                                                    </div>
+                                                                                                    <div>
+                                                                                                        <p className="text-sm font-black text-black/40 uppercase tracking-widest">Chưa có dữ liệu</p>
+                                                                                                        <p className="text-[10px] font-bold text-black/20 uppercase mt-2">
+                                                                                                            {exp.status === 'DISBURSED'
+                                                                                                                ? 'Admin chưa tải lên hình chuyển khoản'
+                                                                                                                : 'Chờ admin thực hiện lệnh chuyển tiền'}
+                                                                                                        </p>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {selectedLogStep === 4 && (
+                                                                                        <div className="space-y-8">
+                                                                                            <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">BẰNG CHỨNG CHI TIÊU</h4>
+                                                                                            <div className="bg-black/5 p-12 rounded-[2.5rem] border-2 border-dashed border-black/10 flex flex-col items-center text-center space-y-6">
+                                                                                                <div className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center shadow-sm">
+                                                                                                    <ShieldCheck className="w-10 h-10 text-red-900/20" />
+                                                                                                </div>
+                                                                                                <div className="max-w-[280px]">
+                                                                                                    <p className="text-[10px] font-black text-red-900 uppercase tracking-[2px] mb-2">Tính năng đang phát triển</p>
+                                                                                                    <p className="text-sm font-bold text-black/40 leading-relaxed">
+                                                                                                        Bạn sẽ tải lên hóa đơn, hình ảnh vật phẩm thực tế tại đây sau khi đã mua sắm xong.
+                                                                                                    </p>
+                                                                                                </div>
+                                                                                                {exp.evidenceDueAt && (
+                                                                                                    <div className="px-4 py-2 bg-red-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                                                                                                        Hạn nộp: {new Date(exp.evidenceDueAt).toLocaleDateString('vi-VN')}
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {selectedLogStep === 5 && (
+                                                                                        <div className="space-y-8">
+                                                                                            <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">HOÀN TIỀN DƯ</h4>
+                                                                                            <div className="bg-gray-50 p-12 rounded-[2.5rem] border-2 border-dashed border-black/5 flex flex-col items-center text-center space-y-6">
+                                                                                                <div className="w-20 h-20 rounded-[2rem] bg-white flex items-center justify-center shadow-sm">
+                                                                                                    <ArrowLeft className="w-10 h-10 text-black/10" />
+                                                                                                </div>
+                                                                                                <div className="max-w-[280px]">
+                                                                                                    <p className="text-[10px] font-black text-black/30 uppercase tracking-[2px] mb-2">Sắp ra mắt</p>
+                                                                                                    <p className="text-sm font-bold text-black/40 leading-relaxed">
+                                                                                                        Số tiền thừa so với thực tế chi tiêu sẽ được hoàn trả lại vào Quỹ chung để tiếp tục hỗ trợ.
+                                                                                                    </p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
 
-                                                                                <div className="mt-auto pt-8 border-t border-black/5 flex gap-4">
+                                                                                <div className="mt-auto pt-10 border-t border-black/5 flex gap-4">
                                                                                     <button
-                                                                                        onClick={() => router.push(`/account/campaigns/expenditures/${exp.id}?campaignId=${campaign.id}`)}
+                                                                                        onClick={(e) => { e.stopPropagation(); router.push(`/account/campaigns/expenditures/${exp.id}?campaignId=${campaign.id}`); }}
                                                                                         className="flex-1 p-6 rounded-[2rem] bg-black text-white hover:bg-red-900 transition-all duration-500 shadow-2xl shadow-black/10 flex items-center justify-between group"
                                                                                     >
-                                                                                        <span className="text-[10px] font-black uppercase tracking-[2.5px]">Xem chi tiết đầy đủ</span>
+                                                                                        <span className="text-[10px] font-black uppercase tracking-[2.5px]">Xem danh sách vật phẩm</span>
                                                                                         <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-all">
                                                                                             <ArrowUpRight className="w-5 h-5 transition-transform group-hover:scale-110" />
                                                                                         </div>
@@ -590,6 +801,7 @@ export default function CampaignExpendituresPage() {
                                                                             </div>
                                                                         </div>
                                                                     </div>
+
                                                                 )}
                                                             </div>
                                                         </div>

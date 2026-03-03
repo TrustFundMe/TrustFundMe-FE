@@ -393,7 +393,7 @@ export default function CampaignCreationPage() {
       // 2. Upload Media Attachments FIRST (before creating campaign, so we have real URLs)
       console.log('DEBUG [STAGE 2: MEDIA UPLOAD]');
       const uploadedAttachments = [...campaign.attachments];
-      let resolvedMediaId: number | undefined = undefined;
+      let resolvedCoverImage: number | undefined = undefined;
 
       if (campaign.attachments && campaign.attachments.length > 0) {
         for (let i = 0; i < campaign.attachments.length; i++) {
@@ -406,6 +406,7 @@ export default function CampaignCreationPage() {
                 undefined,
                 undefined,
                 undefined,
+                undefined, // description
                 attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
               );
 
@@ -417,9 +418,9 @@ export default function CampaignCreationPage() {
                 url: uploadedMedia.url,
               };
 
-              // If this was the chosen cover image, track its mediaId
+              // If this was the chosen cover image, track its id
               if (campaign.coverImage === localUrl) {
-                resolvedMediaId = uploadedMedia.id;
+                resolvedCoverImage = uploadedMedia.id;
               }
             } catch (e) {
               console.error(`Failed to upload local media ${attr.name}:`, e);
@@ -427,13 +428,13 @@ export default function CampaignCreationPage() {
             }
           } else if (attr.id && campaign.coverImage === attr.url) {
             // If already uploaded and is the cover
-            resolvedMediaId = attr.id;
+            resolvedCoverImage = attr.id;
           }
         }
         setCampaign(prev => ({ ...prev, attachments: uploadedAttachments }));
       }
 
-      console.log('DEBUG [MEDIA UPLOAD SUCCESS], mediaId:', resolvedMediaId);
+      console.log('DEBUG [MEDIA UPLOAD SUCCESS], coverImage:', resolvedCoverImage);
 
       // 3. Create / Update Campaign (now we have the real cover image media ID)
       console.log('DEBUG [STAGE 3: CAMPAIGN]');
@@ -443,7 +444,7 @@ export default function CampaignCreationPage() {
         description: campaign.description.trim(),
         categoryId: campaign.categoryId,
         thankMessage: campaign.thankMessage.trim() || undefined,
-        mediaId: resolvedMediaId || undefined,
+        coverImage: resolvedCoverImage || undefined,
         type: campaign.fundType,
         status: 'PENDING_APPROVAL',
       };

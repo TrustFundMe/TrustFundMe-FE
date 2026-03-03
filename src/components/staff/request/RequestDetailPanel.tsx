@@ -52,7 +52,6 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-gray-900">{title}</div>
-              <div className="mt-1 text-xs text-gray-500">ID: {request.id}</div>
             </div>
             <RequestStatusPill status={request.status as RequestStatus} />
           </div>
@@ -80,7 +79,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           )}
 
           {/* Disbursement Proof Section for APPROVED and DISBURSED Expenditures */}
-          {(request.status === 'APPROVED' || request.status === 'DISBURSED') && (request as any).type === 'EXPENDITURE' && (
+          {(request.status === 'APPROVED' || request.status === 'WITHDRAWAL_REQUESTED' || request.status === 'DISBURSED') && (request as any).type === 'EXPENDITURE' && (
             <div className="border-t border-gray-100 pt-4 mt-2">
               <div className="text-[11px] font-bold text-gray-500 mb-2 uppercase tracking-wider">Disbursement Proof (Minh chứng chuyển tiền)</div>
 
@@ -135,7 +134,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                       </label>
                     )}
 
-                    {request.status === 'APPROVED' && onDisburse && (
+                    {(request.status === 'APPROVED' || request.status === 'WITHDRAWAL_REQUESTED') && onDisburse && (
                       <button
                         onClick={onDisburse}
                         className="w-full py-3 bg-[#F84D43] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#D63D35] transition-all shadow-lg shadow-red-200/50 flex items-center justify-center gap-2"

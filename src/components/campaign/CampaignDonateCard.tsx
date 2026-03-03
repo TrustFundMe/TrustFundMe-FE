@@ -54,10 +54,10 @@ function CircularProgress({ value }: { value: number }) {
 
       <div style={{ minWidth: 0 }}>
         <div className="fw-bold" style={{ lineHeight: 1.1 }}>
-          Campaign progress
+          Tiến trình gây quỹ
         </div>
         <div className="text-sm" style={{ opacity: 0.65 }}>
-          Current fundraising status
+          Trạng thái gây quỹ hiện tại
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@ export default function CampaignDonateCard({
     return Math.max(0, Math.min(100, Math.round(p)));
   }, [goalAmount, raisedAmount]);
 
-  const [amount, setAmount] = useState<number>(10);
+  const [amount, setAmount] = useState<number>(50000);
 
   return (
     <div
@@ -97,7 +97,7 @@ export default function CampaignDonateCard({
           className="d-flex align-items-center gap-2 flex-wrap"
           style={{ marginTop: 14 }}
         >
-          {[10, 20, 50, 100].map((v) => (
+          {[50000, 100000, 200000, 500000].map((v) => (
             <button
               key={v}
               type="button"
@@ -108,9 +108,10 @@ export default function CampaignDonateCard({
                 borderRadius: 9999,
                 padding: "8px 12px",
                 fontWeight: 700,
+                fontSize: "12px",
               }}
             >
-              ${v}
+              {v >= 1000 ? `${v / 1000}k` : v}
             </button>
           ))}
 
@@ -127,7 +128,6 @@ export default function CampaignDonateCard({
               background: "#fff",
             }}
           >
-            <span style={{ opacity: 0.7, fontWeight: 700 }}>$</span>
             <input
               type="number"
               value={amount}
@@ -137,8 +137,10 @@ export default function CampaignDonateCard({
                 outline: "none",
                 width: "100%",
                 background: "transparent",
+                textAlign: "right",
               }}
             />
+            <span style={{ opacity: 0.7, fontWeight: 700, fontSize: "12px" }}>VNĐ</span>
           </div>
 
           <button
@@ -166,10 +168,51 @@ export default function CampaignDonateCard({
           style={{ marginTop: 12, opacity: 0.75, fontSize: 14 }}
         >
           <div>
-            <span style={{ fontWeight: 800 }}>${raisedAmount.toLocaleString()}</span> raised
+            <span style={{ fontWeight: 800 }}>{raisedAmount.toLocaleString()} VNĐ</span> đã quyên góp
           </div>
           <div>
-            Goal: <span style={{ fontWeight: 800 }}>${goalAmount.toLocaleString()}</span>
+            Mục tiêu: <span style={{ fontWeight: 800 }}>{goalAmount.toLocaleString()} VNĐ</span>
+          </div>
+        </div>
+
+        {/* Recent Donors Section */}
+        <div style={{ marginTop: 24, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 20 }}>
+          <div className="d-flex align-items-center justify-content-between" style={{ marginBottom: 15 }}>
+            <h5 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#202426" }}>Người vừa ủng hộ</h5>
+            <span style={{ fontSize: 12, color: "#F84D43", fontWeight: 700 }}>Mới nhất</span>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              { name: "Nguyễn Văn A", amount: 500000, time: "2 phút trước", avatar: "/assets/img/about/02.jpg" },
+              { name: "Trần Thị B", amount: 200000, time: "15 phút trước", avatar: "/assets/img/about/03.jpg" },
+              { name: "Lê Văn C", amount: 1000000, time: "45 phút trước", avatar: "/assets/img/about/04.jpg" },
+            ].map((donor, i) => (
+              <div key={i} className="d-flex align-items-center gap-3" style={{
+                padding: "8px",
+                borderRadius: "12px",
+                transition: "background 0.2s",
+                cursor: "default"
+              }}>
+                <div style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  background: "#eee",
+                  flexShrink: 0
+                }}>
+                  <img src={donor.avatar} alt={donor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#202426", marginBottom: 2 }}>{donor.name}</div>
+                  <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)" }}>{donor.time}</div>
+                </div>
+                <div style={{ textAlign: "right", fontWeight: 800, fontSize: 13, color: "#1A685B" }}>
+                  +{donor.amount.toLocaleString()} đ
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

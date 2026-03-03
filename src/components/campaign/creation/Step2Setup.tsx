@@ -1,6 +1,7 @@
 'use client';
 
-import { ImageIcon, Video, FileText, AlertCircle, Paperclip, X, Star, HeartPulse, BookOpen, Leaf, Zap, Home, Users, Baby, Dog, Globe, Utensils, Hammer, Music, ShieldCheck, Flame } from 'lucide-react';
+import { ImageIcon, Video, FileText, AlertCircle, Paperclip, X, Star, HeartPulse, BookOpen, Leaf, Zap, Home, Users, Baby, Dog, Globe, Utensils, Hammer, Music, ShieldCheck, Flame, Sparkles } from 'lucide-react';
+import AIDescriptionModal from './AIDescriptionModal';
 import { mediaService } from '@/services/mediaService';
 import { campaignCategoryService } from '@/services/campaignCategoryService';
 import { formatApiError } from '@/utils/errorUtils';
@@ -27,6 +28,13 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
     const [uploadFilter, setUploadFilter] = useState<string>('*');
     const [categories, setCategories] = useState<CampaignCategory[]>([]);
     const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+
+    const handleAIApply = (title: string, description: string) => {
+        onChange('title', title);
+        onChange('description', description);
+        toast('Đã cập nhật tiêu đề và mô tả từ AI!', 'success');
+    };
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -257,7 +265,17 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-1">Mô tả hoàn cảnh</label>
+                                <div className="flex items-center justify-between ml-1">
+                                    <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Mô tả hoàn cảnh</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAIModalOpen(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 text-[#dc2626] border border-red-100 hover:bg-[#dc2626] hover:text-white transition-all group"
+                                    >
+                                        <Sparkles className="h-3 w-3 group-hover:animate-pulse" />
+                                        <span className="text-[9px] font-black uppercase tracking-wider">AI Generate</span>
+                                    </button>
+                                </div>
                                 <textarea
                                     value={data.description}
                                     onChange={(e) => onChange('description', e.target.value)}
@@ -341,8 +359,8 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                                     onClick={() => setAsCover(item.url)}
                                                     title={data.coverImage === item.url ? 'Đang là ảnh bìa' : 'Đặt làm ảnh bìa'}
                                                     className={`p-2 rounded-lg transition-all shadow-sm ${data.coverImage === item.url
-                                                            ? 'bg-[#ff5a4d] text-white'
-                                                            : 'bg-gray-100 text-gray-400 hover:bg-[#ff5a4d]/20 hover:text-[#ff5a4d]'
+                                                        ? 'bg-[#ff5a4d] text-white'
+                                                        : 'bg-gray-100 text-gray-400 hover:bg-[#ff5a4d]/20 hover:text-[#ff5a4d]'
                                                         }`}
                                                 >
                                                     <Star className={`h-3 w-3 ${data.coverImage === item.url ? 'fill-current' : ''}`} />
@@ -370,6 +388,12 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                     </div>
                 </div>
             </div>
+
+            <AIDescriptionModal
+                open={isAIModalOpen}
+                onOpenChange={setIsAIModalOpen}
+                onApply={handleAIApply}
+            />
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar {

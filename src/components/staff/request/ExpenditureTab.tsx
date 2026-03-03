@@ -24,8 +24,10 @@ const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> =
     PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
     PENDING_REVIEW: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
     APPROVED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
+    CLOSED: { label: 'Yêu cầu rút tiền', color: '#2563eb', bg: '#dbeafe' },
+    WITHDRAWAL_REQUESTED: { label: 'Yêu cầu rút tiền', color: '#2563eb', bg: '#dbeafe' },
     REJECTED: { label: 'Từ chối', color: '#dc2626', bg: '#fee2e2' },
-    WITHDRAWN: { label: 'Đã rút', color: '#7c3aed', bg: '#ede9fe' },
+    DISBURSED: { label: 'Đã giải ngân', color: '#16a34a', bg: '#dcfce7' },
 };
 
 const EVIDENCE_STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
