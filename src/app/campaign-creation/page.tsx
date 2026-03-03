@@ -422,9 +422,10 @@ export default function CampaignCreationPage() {
               if (campaign.coverImage === localUrl) {
                 resolvedCoverImage = uploadedMedia.id;
               }
-            } catch (e) {
+            } catch (e: any) {
               console.error(`Failed to upload local media ${attr.name}:`, e);
-              throw new Error(`Tải lên tệp ${attr.name} thất bại. Vui lòng thử lại.`);
+              const serverMsg = e.response?.data?.message || e.message || '';
+              throw new Error(`Tải lên tệp ${attr.name} thất bại: ${serverMsg}. Vui lòng thử lại.`);
             }
           } else if (attr.id && campaign.coverImage === attr.url) {
             // If already uploaded and is the cover

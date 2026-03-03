@@ -13,6 +13,7 @@ import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
 import { userService } from '@/services/userService';
+import { useAuth } from '@/contexts/AuthContextProxy';
 
 /* ══════════════════════════════ HELPERS ══════════════════════════════ */
 const FMT = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
@@ -216,6 +217,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
     const [loadingItems, setLoadingItems] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [approving, setApproving] = useState(false);
+    const { user } = useAuth();
 
     const loadItems = useCallback(() => {
         if (items.length) return;
@@ -231,7 +233,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
     const handleApprove = async () => {
         setApproving(true);
         try {
-            const updated = await expenditureService.updateStatus(exp.id, 'APPROVED');
+            const updated = await expenditureService.updateStatus(exp.id, 'APPROVED', user?.id);
             setExp(updated);
             toast.success(`Đã duyệt: ${exp.plan}`);
         } catch {
@@ -244,7 +246,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
     const handleReject = async (reason: string) => {
         setShowRejectModal(false);
         try {
-            const updated = await expenditureService.updateStatus(exp.id, 'REJECTED');
+            const updated = await expenditureService.updateStatus(exp.id, 'REJECTED', user?.id, reason);
             setExp(updated);
             toast.success('Đã từ chối');
         } catch {
@@ -293,7 +295,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                     <div className="border-t border-gray-50 bg-gray-50/20">
                         {/* Meta bar */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2 text-[10px] font-medium text-gray-500 border-b border-gray-50">
-                            <span>Dự kiến: <strong className="text-gray-700">{fmt(exp.totalExpectedAmount)}</strong></span>
+                            {/* Dòng Dự kiến đã bị ẩn theo yêu cầu */}
                         </div>
 
                         {/* Status: Pending Review - ONLY for AUTHORIZED campaigns */}
@@ -329,30 +331,33 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                             {loadingItems ? (
                                 <div className="py-4 text-center text-[10px] text-gray-400 animate-pulse">Đang tải...</div>
                             ) : (
-                                <div className="rounded-lg overflow-hidden border border-gray-50 shadow-sm">
+                                <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                     <table className="w-full text-xs bg-white">
-                                        <thead className="bg-gray-50 text-[9px] font-black text-gray-400">
-                                            <tr>
-                                                <th className="py-1.5 px-3 text-left">HẠNG MỤC</th>
-                                                <th className="py-1.5 px-3 text-center">KH</th>
-                                                <th className="py-1.5 px-3 text-center">TT</th>
-                                                <th className="py-1.5 px-3 text-right">ĐƠN GIÁ TT</th>
-                                                <th className="py-1.5 px-3 text-right">CHÊNH LỆCH</th>
+                                        <thead className="bg-gray-50">
+                                            <tr className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                                <th className="py-2 px-3 text-left">Hàng hóa</th>
+                                                <th className="py-2 px-3 text-right text-blue-600 bg-blue-50/50">Kế hoạch</th>
+                                                <th className="py-2 px-3 text-right text-orange-600 bg-orange-50/50">Đã chi (Nhập liệu)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
                                             {items.map(it => (
-                                                <tr key={it.id} className="hover:bg-gray-50/50">
-                                                    <td className="py-1.5 px-3 font-medium text-gray-700">{it.category}</td>
-                                                    <td className="py-1.5 px-3 text-center text-gray-400">{it.quantity}</td>
-                                                    <td className="py-1.5 px-3 text-center text-gray-600 font-bold">{it.actualQuantity ?? '—'}</td>
-                                                    <td className="py-1.5 px-3 text-right text-gray-700">{fmt(it.price)}</td>
-                                                    <td className="py-1.5 px-3 text-right font-bold" style={{ color: (it.actualQuantity ?? it.quantity) * it.price - it.quantity * it.expectedPrice > 0 ? '#db5945' : '#446b5f' }}>
-                                                        {fmt((it.actualQuantity ?? it.quantity) * it.price - it.quantity * it.expectedPrice)}
+                                                <tr key={it.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="py-2.5 px-3">
+                                                        <div className="font-bold text-gray-800 leading-tight">{it.category}</div>
+                                                        {it.note && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.note}</div>}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right bg-blue-50/10">
+                                                        <div className="font-bold text-blue-700 leading-none">{fmt(it.quantity * it.expectedPrice)}</div>
+                                                        <div className="text-[8px] text-gray-400 mt-1 font-medium">{it.quantity} x {fmt(it.expectedPrice)}</div>
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right bg-orange-50/10">
+                                                        <div className="font-bold text-orange-700 leading-none">{fmt((it.actualQuantity || 0) * it.price)}</div>
+                                                        <div className="text-[8px] text-gray-400 mt-1 font-medium">{it.actualQuantity || 0} x {fmt(it.price)}</div>
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {items.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-[10px] text-gray-300 italic">Không có dữ liệu</td></tr>}
+                                            {items.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-[10px] text-gray-300 italic">Không có dữ liệu</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
@@ -383,14 +388,19 @@ function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
 
     useEffect(() => {
         setLoading(true);
+
+        const expPromise = (campaign as any).expenditures
+            ? Promise.resolve((campaign as any).expenditures)
+            : expenditureService.getByCampaignId(campaign.id);
+
         Promise.all([
-            expenditureService.getByCampaignId(campaign.id),
+            expPromise,
             userService.getUserById(campaign.fundOwnerId).then(res => res.success && res.data ? res.data.fullName : `Owner #${campaign.fundOwnerId}`)
         ]).then(([expData, name]) => {
             setExpenditures(expData);
             setOwnerName(name);
         }).finally(() => setLoading(false));
-    }, [campaign.id, campaign.fundOwnerId]);
+    }, [campaign.id, campaign.fundOwnerId, (campaign as any).expenditures]);
 
     if (loading) return <div className="h-full flex items-center justify-center text-[10px] text-gray-400 font-bold tracking-widest uppercase animate-pulse">ĐANG TẢI DỮ LIỆU...</div>;
 
@@ -433,16 +443,12 @@ function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
                         <p className="font-bold text-[#446b5f] text-[11px]">{fmt(totalExpected)}</p>
                     </div>
                     <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
-                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">ĐÃ NHẬN</p>
+                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">THỰC TẾ CHI</p>
                         <p className="font-bold text-[#446b5f] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
                     </div>
                     <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#db5945]/20">
-                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">ĐÃ CHI</p>
-                        <p className="font-black text-[#db5945] text-[11px]">{fmt(totalActual)}</p>
-                    </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#6b7280]/20">
-                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">SỐ DƯ QUỸ</p>
-                        <p className="font-black text-gray-600 text-[11px]">{fmt(campaign.balance)}</p>
+                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">DƯ</p>
+                        <p className="font-black text-[#db5945] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
                     </div>
                 </div>
             )}
@@ -470,15 +476,57 @@ export default function ExpenditureTab() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
-        campaignService.getByStatus('ACTIVE')
-            .then(data => {
-                setCampaigns(data);
-                setFiltered(data);
-                if (data.length > 0) setSelected(data[0]);
-            })
-            .catch(() => toast.error('Lỗi tải danh sách'))
-            .finally(() => setLoading(false));
+        const loadAllData = async () => {
+            setLoading(true);
+            try {
+                // Fetch all campaigns and filter for ACTIVE/APPROVED
+                const allCampaigns = await campaignService.getAll();
+                const relevantCampaigns = allCampaigns.filter(c =>
+                    c.status === 'ACTIVE' || c.status === 'APPROVED'
+                );
+
+                // For each relevant campaign, fetch its expenditures to check for pending stuff
+                const enrichedCampaigns = await Promise.all(
+                    relevantCampaigns.map(async (c) => {
+                        try {
+                            const exps = await expenditureService.getByCampaignId(c.id);
+                            // hasPendingReview: Có kế hoạch chi tiêu mới cần duyệt
+                            // hasEvidenceReview: Có bằng chứng mới cần duyệt
+                            const hasPendingReview = exps.some(e => e.status === 'PENDING_REVIEW' || e.status === 'PENDING');
+                            const hasEvidenceReview = exps.some(e => e.evidenceStatus === 'SUBMITTED');
+
+                            return {
+                                ...c,
+                                expenditures: exps,
+                                hasPendingReview,
+                                hasEvidenceReview,
+                                needsAttention: hasPendingReview || hasEvidenceReview
+                            };
+                        } catch (err) {
+                            console.error(`Error fetching exps for campaign ${c.id}`, err);
+                            return { ...c, expenditures: [], needsAttention: false };
+                        }
+                    })
+                );
+
+                // Sort: Needs attention first, then by createdAt desc
+                const sorted = [...enrichedCampaigns].sort((a: any, b: any) => {
+                    if (a.needsAttention && !b.needsAttention) return -1;
+                    if (!a.needsAttention && b.needsAttention) return 1;
+                    return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+                });
+
+                setCampaigns(sorted);
+                setFiltered(sorted);
+                if (sorted.length > 0) setSelected(sorted[0]);
+            } catch (err) {
+                toast.error('Lỗi tải danh sách chiến dịch');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadAllData();
     }, []);
 
     useEffect(() => {
@@ -546,9 +594,20 @@ export default function ExpenditureTab() {
                                         {c.title[0]?.toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#446b5f]' : 'text-[#db5945]') : 'text-gray-700'}`}>{c.title}</p>
+                                        <div className="flex items-center justify-between">
+                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#446b5f]' : 'text-[#db5945]') : 'text-gray-700'}`}>{c.title}</p>
+                                            {(c as any).needsAttention && (
+                                                <span className="flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" />
+                                            )}
+                                        </div>
                                         <div className="flex items-center justify-between mt-0.5">
-                                            <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter">{c.type}</span>
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${(c as any).needsAttention ? 'text-red-500' : 'text-gray-300'}`}>
+                                                    {(c as any).needsAttention ? 'CẦN DUYỆT' : c.status}
+                                                </span>
+                                                <span className="text-[8px] font-black text-gray-200 uppercase tracking-tighter">•</span>
+                                                <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter">{c.type}</span>
+                                            </div>
                                             <span className="text-[10px] font-black truncate ml-1" style={{ color: isActive ? themeColor : '#db5945' }}>{fmt(c.balance)}</span>
                                         </div>
                                     </div>

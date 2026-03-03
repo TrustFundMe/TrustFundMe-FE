@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3, ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { appointmentService, AppointmentScheduleDto, AppointmentStatus, CreateAppointmentRequest } from '@/services/appointmentService';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
@@ -26,7 +28,7 @@ const WEEKDAYS_FULL = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5
 function formatDateTime(dt: string) {
     const d = new Date(dt);
     return {
-        date: d.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }),
+        date: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         time: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     };
 }
@@ -125,17 +127,41 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.donorId || !form.startTime || !form.endTime) { toast.error('Vui lòng điền đầy đủ thông tin bắt buộc'); return; }
-        if (new Date(form.endTime) <= new Date(form.startTime)) { toast.error('Thời gian kết thúc phải sau thời gian bắt đầu'); return; }
-        const hoursUntilStart = (new Date(form.startTime).getTime() - Date.now()) / 3600000;
-        if (hoursUntilStart < 24) { toast.error(`Lịch hẹn phải được đặt trước tối thiểu 24 tiếng. Hiện tại chỉ còn ${Math.floor(hoursUntilStart)} tiếng đến giờ hẹn.`); return; }
+
+        // Convert Date objects to ISO strings for API
+        const startTimeISO = form.startTime instanceof Date ? form.startTime.toISOString() : form.startTime;
+        const endTimeISO = form.endTime instanceof Date ? form.endTime.toISOString() : form.endTime;
+
+        if (!form.donorId || !startTimeISO || !endTimeISO) {
+            toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+            return;
+        }
+
+        if (new Date(endTimeISO) <= new Date(startTimeISO)) {
+            toast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
+            return;
+        }
+
+        const hoursUntilStart = (new Date(startTimeISO).getTime() - Date.now()) / 3600000;
+        if (hoursUntilStart < 24) {
+            toast.error(`Lịch hẹn phải được đặt trước tối thiểu 24 tiếng. Hiện tại chỉ còn ${Math.floor(hoursUntilStart)} tiếng đến giờ hẹn.`);
+            return;
+        }
+
         setLoading(true);
         try {
-            await appointmentService.create(form);
+            await appointmentService.create({
+                ...form,
+                startTime: startTimeISO,
+                endTime: endTimeISO
+            });
             toast.success('Tạo lịch hẹn thành công!');
             onCreated(); onClose();
-        } catch (err: any) { toast.error(err?.response?.data?.message || 'Không thể tạo lịch hẹn'); }
-        finally { setLoading(false); }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Không thể tạo lịch hẹn');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -188,16 +214,17 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                             filteredCampaigns.map(campaign => {
                                                 const user = users.get(campaign.fundOwnerId);
                                                 return (
-                                                <button
-                                                    key={campaign.id}
-                                                    type="button"
-                                                    onClick={() => handleSelectDonor(campaign.fundOwnerId, campaign.title)}
-                                                    className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition ${form.donorId === campaign.fundOwnerId ? 'bg-red-50' : ''}`}
-                                                >
-                                                    <div className="font-medium text-sm text-gray-900 truncate">{campaign.title}</div>
-                                                    <div className="text-xs text-gray-500 mt-0.5">{user?.fullName || `User #${campaign.fundOwnerId}`}</div>
-                                                </button>
-                                            );})
+                                                    <button
+                                                        key={campaign.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectDonor(campaign.fundOwnerId, campaign.title)}
+                                                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition ${form.donorId === campaign.fundOwnerId ? 'bg-red-50' : ''}`}
+                                                    >
+                                                        <div className="font-medium text-sm text-gray-900 truncate">{campaign.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">{user?.fullName || `User #${campaign.fundOwnerId}`}</div>
+                                                    </button>
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>
@@ -208,11 +235,32 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1.5">Bắt đầu <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" required />
+                            <DatePicker
+                                selected={form.startTime ? new Date(form.startTime) : null}
+                                onChange={(date: Date | null) => setForm(f => ({ ...f, startTime: date ? date.toISOString() : '' }))}
+                                showTimeSelect
+                                timeFormat="HH:mm"
+                                timeIntervals={15}
+                                dateFormat="dd/MM/yyyy HH:mm"
+                                placeholderText="dd/mm/yyyy --:--"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                required
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1.5">Kết thúc <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" required />
+                            <DatePicker
+                                selected={form.endTime ? new Date(form.endTime) : null}
+                                onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? date.toISOString() : '' }))}
+                                showTimeSelect
+                                timeFormat="HH:mm"
+                                timeIntervals={15}
+                                dateFormat="dd/MM/yyyy HH:mm"
+                                placeholderText="dd/mm/yyyy --:--"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                minDate={form.startTime ? new Date(form.startTime) : null}
+                                required
+                            />
                         </div>
                     </div>
                     <div>
@@ -395,7 +443,7 @@ function CalendarView({ appointments, onSelect, selectedId }: CalendarViewProps)
     const goToday = () => setCurrentDate(new Date());
 
     const periodLabel = viewMode === 'week'
-        ? `${weekDays[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} – ${weekDays[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+        ? `${weekDays[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })} – ${weekDays[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
         : currentDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
     return (

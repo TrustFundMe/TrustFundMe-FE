@@ -8,6 +8,7 @@ export interface Conversation {
   staffId?: number;
   fundOwnerId?: number;
   campaignId?: number;
+  campaignTitle?: string;
 }
 
 export interface MessageItem {

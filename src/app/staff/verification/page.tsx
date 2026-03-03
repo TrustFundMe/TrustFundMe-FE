@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { kycService } from '@/services/kycService';
+import { KycResponse } from '@/types/kyc';
 import { userService, UserInfo } from '@/services/userService';
 import KYCInputForm from '@/components/staff/request/KYCInputForm';
 
@@ -48,7 +49,7 @@ export default function VerificationPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (userIdParam && users.length > 0) {
@@ -180,15 +181,14 @@ export default function VerificationPage() {
           {/* Filter & Search */}
           <div className="flex items-center justify-between gap-4 flex-shrink-0">
             <div className="flex items-center gap-2">
-              {(['ALL', 'NO_KYC', 'PENDING', 'SUBMITTED', 'VERIFIED', 'REJECTED'] as const).map((s) => (
+              {(['ALL', 'NO_KYC', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setFilter(s)}
-                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition ${
-                    filter === s
+                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition ${filter === s
                       ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945]'
                       : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {s === 'ALL' ? 'Tất cả' : s === 'NO_KYC' ? 'Chưa có KYC' : statusConfig[s as KycStatus]?.label || s}
                 </button>

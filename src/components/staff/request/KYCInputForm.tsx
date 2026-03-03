@@ -50,14 +50,14 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
             if (data) {
                 setFormData({
                     userId: String(data.userId),
-                    idType: data.idType,
-                    idNumber: data.idNumber,
+                    idType: data.idType || 'CCCD',
+                    idNumber: data.idNumber || '',
                     issueDate: data.issueDate ? new Date(data.issueDate) : null,
                     expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-                    issuePlace: data.issuePlace,
-                    idImageFront: data.idImageFront,
-                    idImageBack: data.idImageBack,
-                    selfieImage: data.selfieImage
+                    issuePlace: data.issuePlace || '',
+                    idImageFront: data.idImageFront || '',
+                    idImageBack: data.idImageBack || '',
+                    selfieImage: data.selfieImage || ''
                 });
                 setIsUpdate(true);
                 toast.success('Found existing KYC record. Updating mode enabled.');
@@ -230,7 +230,10 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
             }
             onSuccess();
         } catch (error: any) {
-            console.error(error);
+            console.error('KYC Submit Error:', error);
+            if (error.response?.data) {
+                console.log('Error Data:', error.response.data);
+            }
             const msg = error.response?.data?.message || error.message || 'Failed to submit KYC';
             toast.error(msg);
         } finally {

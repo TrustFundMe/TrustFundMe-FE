@@ -9,6 +9,9 @@ import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
 import { CreateExpenditureRequest, CreateExpenditureItemRequest } from '@/types/expenditure';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { vi } from 'date-fns/locale';
 
 export default function CreateExpenditurePage() {
     const router = useRouter();
@@ -224,12 +227,14 @@ export default function CreateExpenditurePage() {
                                 <label htmlFor="evidenceDueAt" className="block text-sm font-medium text-gray-700">
                                     Hạn nộp minh chứng <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="date"
+                                <DatePicker
                                     id="evidenceDueAt"
+                                    selected={evidenceDueAt ? new Date(evidenceDueAt) : null}
+                                    onChange={(date) => setEvidenceDueAt(date ? date.toISOString() : '')}
+                                    locale={vi}
+                                    dateFormat="dd/MM/yyyy"
+                                    placeholderText="dd/mm/yyyy"
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm border p-2 mt-1"
-                                    value={evidenceDueAt}
-                                    onChange={(e) => setEvidenceDueAt(e.target.value)}
                                     required
                                 />
                                 <p className="mt-1 text-xs text-gray-500">Ngày bắt buộc phải cung cấp hóa đơn/chứng từ cho kế hoạch này.</p>
