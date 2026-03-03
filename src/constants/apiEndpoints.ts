@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: number | string) => `/api/users/${id}`,
     BAN: (id: number | string) => `/api/users/${id}/ban`,
     UNBAN: (id: number | string) => `/api/users/${id}/unban`,
+    UPGRADE_TO_FUND_OWNER: (id: number | string) => `/api/users/${id}/upgrade-role`,
+    UPGRADE_TO_FUND_DONOR: (id: number | string) => `/api/users/${id}/upgrade-to-fund-donor`,
   },
   GOALS: {
     BASE: "/api/fundraising-goals",

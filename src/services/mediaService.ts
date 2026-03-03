@@ -97,6 +97,10 @@ export const mediaService = {
         await api.patch(`/api/media/${id}`, payload);
     },
 
+    async updateMediaStatus(id: number, status: string): Promise<void> {
+        await api.patch(`/api/media/${id}/status`, null, { params: { status } });
+    },
+
     async getCampaignFirstImage(campaignId: number): Promise<MediaUploadResponse | null> {
         const res = await api.get<MediaUploadResponse>(`/api/media/campaigns/${campaignId}/first-image`);
         return res.data;

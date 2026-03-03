@@ -136,11 +136,25 @@ function EvidenceReviewPanel({ campaignId, evidenceStatus, onAllVerified }:
                                 </span>
                                 {canReview && st === 'PENDING' && (
                                     <div className="flex gap-1 mt-1.5">
-                                        <button onClick={() => setFileStatuses(p => ({ ...p, [m.id]: 'APPROVED' }))}
+                                        <button onClick={async () => {
+                                            try {
+                                                await mediaService.updateMediaStatus(m.id, 'APPROVED');
+                                                setFileStatuses(p => ({ ...p, [m.id]: 'APPROVED' }));
+                                            } catch (err) {
+                                                toast.error('Lỗi duyệt bằng chứng');
+                                            }
+                                        }}
                                             className="flex-1 py-1 rounded-md text-[9px] font-bold text-white bg-green-600">
                                             Duyệt
                                         </button>
-                                        <button onClick={() => setFileStatuses(p => ({ ...p, [m.id]: 'REJECTED' }))}
+                                        <button onClick={async () => {
+                                            try {
+                                                await mediaService.updateMediaStatus(m.id, 'REJECTED');
+                                                setFileStatuses(p => ({ ...p, [m.id]: 'REJECTED' }));
+                                            } catch (err) {
+                                                toast.error('Lỗi từ chối bằng chứng');
+                                            }
+                                        }}
                                             className="flex-1 py-1 rounded-md text-[9px] font-bold text-white bg-red-600">
                                             X
                                         </button>
@@ -297,11 +311,11 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                             </div>
                         )}
 
-                        {/* Note for TARGET campaigns pending */}
-                        {exp.status === 'PENDING' && campaignType === 'TARGET' && (
+                        {/* Note for ITEMIZED campaigns - auto approved, no need for approval */}
+                        {exp.status === 'PENDING' && campaignType === 'ITEMIZED' && (
                             <div className="mx-4 mt-3 rounded-xl border border-blue-50 bg-blue-50/20 p-3 shadow-sm flex items-center gap-2">
                                 <AlertCircle className="h-4 w-4 text-blue-400" />
-                                <p className="text-[10px] text-blue-600 font-medium italic">Kế hoạch chờ chi (Quỹ mục tiêu - Không cần duyệt)</p>
+                                <p className="text-[10px] text-blue-600 font-medium italic">Kế hoạch chờ chi (Quỹ vật phẩm - Tự động duyệt)</p>
                             </div>
                         )}
 
@@ -455,7 +469,7 @@ export default function ExpenditureTab() {
 
     useEffect(() => {
         setLoading(true);
-        campaignService.getByStatus('APPROVED')
+        campaignService.getByStatus('ACTIVE')
             .then(data => {
                 setCampaigns(data);
                 setFiltered(data);

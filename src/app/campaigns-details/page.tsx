@@ -16,6 +16,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null, ownerName?: string): Campaign => {
   return {
@@ -39,6 +40,8 @@ const mapCampaignDtoToUi = (dto: CampaignDto, activeGoal: FundraisingGoal | null
     likeCount: 0,
     followerCount: 0,
     commentCount: 0,
+    // forward KYC flag from server
+    kycVerified: dto.kycVerified ?? false,
   };
 };
 
@@ -47,6 +50,8 @@ function CampaignDetailsInner() {
   const searchParams = useSearchParams();
   const idParam = searchParams.get('id');
   const campaignId = idParam ? Number(idParam) : NaN;
+
+  const { isStaff, isAdmin } = usePermissions();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -212,6 +217,18 @@ function CampaignDetailsInner() {
                 }
                 onToggleFlag={() => setCampaign((c) => (c ? { ...c, flagged: !c.flagged } : c))}
               />
+              {/* KYC warning button for staff/admin when campaign owner has not finished KYC */}
+              {(isStaff || isAdmin) && campaign && campaign.kycVerified === false && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/staff/verification?userId=${campaign.creator.id}`)}
+                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700"
+                  >
+                    Kiểm tra KYC của chủ chiến dịch
+                  </button>
+                </div>
+              )
 
               <div className="single-sidebar-widgets" style={{ marginTop: 24, marginBottom: 24 }}>
                 <div className="widget-title">

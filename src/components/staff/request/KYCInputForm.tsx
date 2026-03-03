@@ -7,11 +7,12 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 interface KYCInputFormProps {
     userId?: number | string;
+    userName?: string;
     onSuccess: () => void;
     onCancel?: () => void;
 }
 
-export default function KYCInputForm({ userId, onSuccess, onCancel }: KYCInputFormProps) {
+export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: KYCInputFormProps) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -280,17 +281,14 @@ export default function KYCInputForm({ userId, onSuccess, onCancel }: KYCInputFo
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm font-medium text-gray-700">User ID</label>
-                <input
-                    type="number"
-                    name="userId"
-                    required
-                    value={formData.userId}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2 bg-gray-50"
-                    placeholder="Enter User ID"
-                    readOnly={!!userId}
-                />
+                <label className="block text-sm font-medium text-gray-700">User</label>
+                <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
+                    {userName ? (
+                        <span className="font-medium text-gray-900">{userName}</span>
+                    ) : (
+                        <span className="text-gray-500">User ID: {userId}</span>
+                    )}
+                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ShieldCheck, Upload, FileText, ExternalLink, Loader2 } from 'lucide-react';
+import { ShieldCheck, Upload, FileText, ExternalLink, Loader2, Shield } from 'lucide-react';
 import type { RequestStatus, StaffRequestBase } from './RequestTypes';
 import RequestStatusPill from './RequestStatusPill';
 
@@ -21,6 +21,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   onUploadProof,
   onDisburse,
   uploading,
+  onVerifyKYC,
 }: {
   request: T | null;
   title: string;
@@ -36,6 +37,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   onUploadProof?: (file: File) => void;
   onDisburse?: () => void;
   uploading?: boolean;
+  onVerifyKYC?: () => void;
 }) {
   const [note, setNote] = useState('');
 
@@ -63,6 +65,19 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               </div>
             ))}
           </div>
+
+          {/* Verify KYC Button - Show when KYC is not verified */}
+          {onVerifyKYC && !(request as any).kycVerified && (
+            <div className="border-t border-gray-100 pt-4 mt-2">
+              <button
+                onClick={onVerifyKYC}
+                className="w-full rounded-xl bg-green-600 py-2.5 text-xs font-bold text-white hover:bg-green-700 flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Verify KYC Now
+              </button>
+            </div>
+          )}
 
           {/* Disbursement Proof Section for APPROVED and DISBURSED Expenditures */}
           {(request.status === 'APPROVED' || request.status === 'DISBURSED') && (request as any).type === 'EXPENDITURE' && (
