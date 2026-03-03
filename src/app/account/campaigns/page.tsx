@@ -11,6 +11,7 @@ import { CampaignDto } from '@/types/campaign';
 import MyCampaignCard from '@/components/account/MyCampaignCard';
 import UserChatModal from '@/components/chat/UserChatModal';
 import { chatService, Conversation } from '@/services/chatService';
+import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 
 export default function CampaignsPage() {
@@ -38,12 +39,25 @@ export default function CampaignsPage() {
         const data = await campaignService.getByFundOwner(user.id);
         console.log('Campaigns data received:', data);
 
-        // Enrich thêm goal cho mỗi campaign (tạm thời mockup hoặc gọi thêm API nếu cần)
-        // Vì API getByFundOwner có thể chưa trả về goal, ta fetch thêm cho từng cái nếu cần
         const enrichedData = await Promise.all(data.map(async (c) => {
           try {
             const goal = await campaignService.getActiveGoalByCampaignId(c.id);
-            return { ...c, activeGoal: goal };
+            let coverImageUrl = c.coverImageUrl;
+
+            // If coverImageUrl is missing but we have a coverImage ID, or even if we don't, 
+            // try to fetch the first image as a resilient fallback
+            if (!coverImageUrl) {
+              try {
+                const firstImage = await mediaService.getCampaignFirstImage(c.id);
+                if (firstImage) {
+                  coverImageUrl = firstImage.url;
+                }
+              } catch (mediaErr) {
+                console.warn(`Failed to fetch first image for campaign ${c.id}:`, mediaErr);
+              }
+            }
+
+            return { ...c, activeGoal: goal, coverImageUrl };
           } catch {
             return c;
           }

@@ -406,6 +406,7 @@ export default function CampaignCreationPage() {
                 undefined,
                 undefined,
                 undefined,
+                undefined, // description
                 attr.type.toUpperCase() === 'IMAGE' ? 'PHOTO' : attr.type.toUpperCase() as any
               );
 

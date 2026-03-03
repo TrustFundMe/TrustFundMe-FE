@@ -69,7 +69,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                 {/* Campaign Image */}
                 <div className="relative w-full md:w-64 h-48 md:h-auto overflow-hidden">
                     <img
-                        src={withFallbackImage((campaign.coverImageUrl || campaign.coverImage) as string, '/assets/img/campaign/1.jpg')}
+                        src={withFallbackImage((campaign.coverImageUrl || campaign.coverImage) as string, '/assets/img/campaign/1.png')}
                         alt={campaign.title}
                         className="w-full h-full object-cover"
                     />
