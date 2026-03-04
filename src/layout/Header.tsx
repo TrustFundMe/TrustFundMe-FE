@@ -6,6 +6,7 @@ import { Fragment, useState } from "react";
 import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
 import { useAuth } from "@/contexts/AuthContextProxy";
+import NotificationBell from "@/components/NotificationBell";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -149,6 +150,7 @@ const Header2 = ({ open }: { open: () => void }) => (
               <Logo logo="black-logo.png" />
             </div>
             <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: '0 0 auto' }}>
+              <NotificationBell />
               <AuthButton />
               <div className="header__hamburger d-xl-none my-auto">
                 <div className="sidebar__toggle" onClick={open}>
@@ -223,6 +225,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
+                  <NotificationBell />
                   <AuthButton />
                   <div className="header__hamburger d-xl-none my-auto">
                     <div className="sidebar__toggle" onClick={open}>

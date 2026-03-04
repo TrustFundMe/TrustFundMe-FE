@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import type { FeedPostComment } from "@/types/feedPost";
 
 interface CommentItemProps {
   comment: FeedPostComment;
   isReply?: boolean;
   onToggleLike?: (commentId: string) => void;
-  onReply?: (commentId: string) => void;
+  onReply?: (commentId: string, authorName: string) => void;
+  isAuthenticated?: boolean;
 }
 
 export default function CommentItem({
@@ -16,10 +19,9 @@ export default function CommentItem({
   isReply = false,
   onToggleLike,
   onReply,
+  isAuthenticated = false,
 }: CommentItemProps) {
-  const [showReplies, setShowReplies] = useState(false);
-  const liked = comment.liked ?? false;
-  const likeCount = comment.likeCount ?? 0;
+  const [likeAnimating, setLikeAnimating] = useState(false);
   const replies = comment.replies || [];
 
   const formatTimeAgo = (date: string) => {
@@ -27,14 +29,21 @@ export default function CommentItem({
     const commentDate = new Date(date);
     const diffInSeconds = Math.floor((now.getTime() - commentDate.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return commentDate.toLocaleDateString("en-US", {
-      month: "short",
+    if (diffInSeconds < 60) return "Vừa xong";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày`;
+    return commentDate.toLocaleDateString("vi-VN", {
+      month: "numeric",
       day: "numeric",
     });
+  };
+
+  const handleLike = () => {
+    if (!isAuthenticated || !onToggleLike) return;
+    setLikeAnimating(true);
+    setTimeout(() => setLikeAnimating(false), 400);
+    onToggleLike(comment.id);
   };
 
   return (
@@ -62,20 +71,17 @@ export default function CommentItem({
           alt={comment.user.name}
           width={isReply ? 32 : 40}
           height={isReply ? 32 : 40}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             padding: "12px 16px",
             borderRadius: 18,
             background: isReply ? "#f0f0f0" : "#f5f5f5",
-            marginBottom: 8,
+            marginBottom: 6,
           }}
         >
           <div
@@ -111,119 +117,86 @@ export default function CommentItem({
             alignItems: "center",
             gap: 16,
             paddingLeft: 4,
-            marginBottom: replies.length > 0 ? 8 : 0,
+            marginBottom: replies.length > 0 ? 4 : 0,
           }}
         >
-          <button
-            type="button"
-            onClick={() => onToggleLike?.(comment.id)}
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "4px 8px",
-              borderRadius: 8,
-              cursor: "pointer",
-              transition: "background 0.2s",
-              color: liked ? "#F84D43" : "rgba(0,0,0,0.6)",
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: "var(--font-dm-sans)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(0,0,0,0.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <i
-              className={liked ? "fas fa-heart" : "far fa-heart"}
-              style={{ fontSize: 12, marginRight: 4 }}
-            />
-            {likeCount > 0 && likeCount}
-          </button>
-
-          {onReply && !isReply && (
-            <button
-              type="button"
-              onClick={() => onReply(comment.id)}
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: "4px 8px",
-                borderRadius: 8,
-                cursor: "pointer",
-                transition: "background 0.2s",
-                color: "rgba(0,0,0,0.6)",
-                fontSize: 12,
-                fontWeight: 600,
-                fontFamily: "var(--font-dm-sans)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(0,0,0,0.05)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              Reply
-            </button>
-          )}
-
           <span
             style={{
               fontSize: 12,
-              color: "rgba(0,0,0,0.5)",
+              color: "rgba(0,0,0,0.45)",
               fontFamily: "var(--font-dm-sans)",
             }}
           >
             {formatTimeAgo(comment.createdAt)}
           </span>
 
-          {replies.length > 0 && (
+          {/* Like button */}
+          <button
+            type="button"
+            onClick={handleLike}
+            disabled={!isAuthenticated}
+            style={{
+              border: "none",
+              background: "transparent",
+              padding: 0,
+              cursor: isAuthenticated ? "pointer" : "default",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              color: comment.liked ? "#F84D43" : "rgba(0,0,0,0.5)",
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: "var(--font-dm-sans)",
+            }}
+            title={isAuthenticated ? "Thích bình luận" : "Đăng nhập để thích"}
+          >
+            <motion.span
+              animate={likeAnimating ? { scale: [1, 1.4, 0.9, 1.1, 1] } : { scale: 1 }}
+              transition={{ duration: 0.35 }}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              <Heart
+                size={13}
+                style={{
+                  fill: comment.liked ? "#F84D43" : "none",
+                  stroke: comment.liked ? "#F84D43" : "currentColor",
+                }}
+              />
+            </motion.span>
+            {(comment.likeCount ?? 0) > 0 ? comment.likeCount : "Thích"}
+          </button>
+
+          {/* Reply button — only for root comments */}
+          {!isReply && onReply && isAuthenticated && (
             <button
               type="button"
-              onClick={() => setShowReplies(!showReplies)}
+              onClick={() => onReply(comment.id, comment.user.name)}
               style={{
                 border: "none",
                 background: "transparent",
-                padding: "4px 8px",
-                borderRadius: 8,
+                padding: 0,
                 cursor: "pointer",
-                transition: "background 0.2s",
-                color: "rgba(0,0,0,0.6)",
                 fontSize: 12,
                 fontWeight: 600,
+                color: "rgba(0,0,0,0.5)",
                 fontFamily: "var(--font-dm-sans)",
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(0,0,0,0.05)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
             >
-              {showReplies ? "Hide" : "View"} {replies.length} {replies.length === 1 ? "reply" : "replies"}
+              Phản hồi
             </button>
           )}
         </div>
 
         {/* Nested Replies */}
-        {showReplies && replies.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              marginTop: 8,
-            }}
-          >
+        {replies.length > 0 && (
+          <div style={{ marginTop: 4 }}>
             {replies.map((reply) => (
               <CommentItem
                 key={reply.id}
                 comment={reply}
-                isReply={true}
+                isReply
                 onToggleLike={onToggleLike}
+                isAuthenticated={isAuthenticated}
               />
             ))}
           </div>

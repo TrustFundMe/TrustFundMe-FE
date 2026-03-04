@@ -24,8 +24,23 @@ export const API_ENDPOINTS = {
   FEED_POSTS: {
     BASE: "/api/feed-posts",
     BY_ID: (id: number | string) => `/api/feed-posts/${id}`,
-    BY_AUTHOR: (authorId: number | string) =>
-      `/api/feed-posts/author/${authorId}`,
+    BY_AUTHOR: (authorId: number | string) => `/api/feed-posts/author/${authorId}`,
+    LIKE: (id: number | string) => `/api/feed-posts/${id}/like`,
+    COMMENTS: (postId: number | string) => `/api/feed-posts/${postId}/comments`,
+    COMMENT_BY_ID: (commentId: number | string) => `/api/feed-posts/comments/${commentId}`,
+    COMMENT_LIKE: (commentId: number | string) => `/api/feed-posts/comments/${commentId}/like`,
+    ADMIN_ALL: "/api/feed-posts/admin",
+    ADMIN_DELETE: (id: number | string) => `/api/feed-posts/admin/${id}`,
+    STATUS: (id: number | string) => `/api/feed-posts/${id}/status`,
+  },
+  FLAGS: {
+    BASE: "/api/flags",
+    PENDING: "/api/flags/pending",
+    BY_POST: (postId: number | string) => `/api/flags/posts/${postId}`,
+    BY_CAMPAIGN: (campaignId: number | string) => `/api/flags/campaigns/${campaignId}`,
+    MY_FLAGS: "/api/flags/me",
+    BY_ID: (id: number | string) => `/api/flags/${id}`,
+    REVIEW: (id: number | string) => `/api/flags/${id}/review`,
   },
   CHAT: {
     CONVERSATIONS: "/api/chat/conversations",

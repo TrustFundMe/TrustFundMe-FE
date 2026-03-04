@@ -9,6 +9,7 @@ import FeedPostDetail from "@/components/feed-post/FeedPostDetail";
 import RelatedPosts from "@/components/feed-post/RelatedPosts";
 import CampaignCard from "@/components/feed-post/CampaignCard";
 import CreateOrEditPostModal from "@/components/feed-post/CreateOrEditPostModal";
+import FlagPostModal from "@/components/feed-post/FlagPostModal";
 import { feedPostService } from "@/services/feedPostService";
 import { forumCategoryService } from "@/services/forumCategoryService";
 import { campaignService } from "@/services/campaignService";
@@ -30,6 +31,7 @@ const FeedPostDetailPage = () => {
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +48,7 @@ const FeedPostDetailPage = () => {
       const dto = await feedPostService.getById(id);
       const feedPost = dtoToFeedPost(dto) as FeedPost & { campaign?: unknown };
       setPost(feedPost);
+
       const authorId = String(dto.authorId);
       try {
         const authorRes = await fetch(`/api/users/${authorId}`, { credentials: "include" });
@@ -65,8 +68,9 @@ const FeedPostDetailPage = () => {
           );
         }
       } catch {
-        // Giữ "Thành viên #id" nếu không lấy được user
+        // keep default name
       }
+
       if (dto.budgetId != null) {
         try {
           const campaign = await campaignService.getById(dto.budgetId);
@@ -88,9 +92,10 @@ const FeedPostDetailPage = () => {
               : null
           );
         } catch {
-          // Giữ không có campaign nếu không lấy được
+          // no campaign
         }
       }
+
       const [listRes, catsRes, campaignsRes] = await Promise.all([
         feedPostService.getAll(),
         forumCategoryService.getAll().catch(() => []),
@@ -124,16 +129,9 @@ const FeedPostDetailPage = () => {
 
   const canEdit = isAuthenticated && user && post && String(user.id) === String(post.author.id);
 
-  const handleToggleLike = () => {
-    // TODO: API like khi backend có
-  };
-
   const handleToggleFlag = () => {
-    // TODO: API báo cáo khi backend có
-  };
-
-  const handleEdit = () => {
-    setEditModalOpen(true);
+    if (!isAuthenticated) return;
+    setFlagModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -160,9 +158,7 @@ const FeedPostDetailPage = () => {
     return (
       <DanboxLayout header={2} footer={2}>
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center text-red-500">
-            {error ?? "Không tìm thấy bài viết"}
-          </div>
+          <div className="text-center text-red-500">{error ?? "Không tìm thấy bài viết"}</div>
         </div>
       </DanboxLayout>
     );
@@ -176,36 +172,20 @@ const FeedPostDetailPage = () => {
       >
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_280px] gap-6 lg:gap-8">
-            {/* Cột 1 (trái): Quay lại + Chủ đề */}
+            {/* Left sidebar: Quay lại + Chủ đề */}
             <aside className="hidden lg:flex flex-col gap-4">
-              <Link
-                href="/post"
-                className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:text-[#ff5e14] font-medium text-sm"
-              >
+              <Link href="/post" className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:text-[#ff5e14] font-medium text-sm">
                 <ArrowLeft className="w-4 h-4" />
                 Quay lại
               </Link>
               <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 shadow-sm">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
-                  Chủ đề
-                </p>
+                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">Chủ đề</p>
                 <nav className="flex flex-col gap-1">
-                  <Link
-                    href="/post"
-                    className="px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                  >
-                    Tất cả
-                  </Link>
+                  <Link href="/post" className="px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700">Tất cả</Link>
                   {categories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={`/post?category=${cat.slug}`}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: cat.color }}
-                      />
+                    <Link key={cat.id} href={`/post?category=${cat.slug}`}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700">
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                       {cat.name}
                     </Link>
                   ))}
@@ -213,32 +193,26 @@ const FeedPostDetailPage = () => {
               </div>
             </aside>
 
-            {/* Cột 2 (giữa): Nội dung bài viết */}
+            {/* Main: Nội dung bài viết */}
             <div className="min-w-0">
               <div className="lg:hidden mb-4">
-                <Link
-                  href="/post"
-                  className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:text-[#ff5e14] font-medium text-sm"
-                >
+                <Link href="/post" className="inline-flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:text-[#ff5e14] font-medium text-sm">
                   <ArrowLeft className="w-4 h-4" />
                   Quay lại
                 </Link>
               </div>
               <FeedPostDetail
                 post={post}
-                onToggleLike={handleToggleLike}
                 onToggleFlag={handleToggleFlag}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                canEdit={canEdit}
+                onEdit={canEdit ? () => setEditModalOpen(true) : undefined}
+                onDelete={canEdit ? handleDelete : undefined}
+                canEdit={!!canEdit}
               />
             </div>
 
-            {/* Cột 3 (phải): Campaign + Bài liên quan */}
+            {/* Right sidebar: Campaign + Bài liên quan */}
             <aside className="flex flex-col gap-6">
-              {post.campaign && (
-                <CampaignCard campaign={post.campaign} compact={false} />
-              )}
+              {post.campaign && <CampaignCard campaign={post.campaign} compact={false} />}
               <RelatedPosts posts={relatedPosts} currentPostId={postId} />
             </aside>
           </div>
@@ -255,6 +229,14 @@ const FeedPostDetailPage = () => {
             campaignTitlesMap={campaignTitlesMap}
             initialData={post}
             onPostUpdated={loadPost}
+          />
+        )}
+        {flagModalOpen && post && (
+          <FlagPostModal
+            isOpen={flagModalOpen}
+            onClose={() => setFlagModalOpen(false)}
+            postId={Number(post.id)}
+            campaignId={post.budgetId ?? undefined}
           />
         )}
       </AnimatePresence>

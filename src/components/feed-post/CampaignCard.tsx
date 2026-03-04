@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { Bell, BellOff, Loader2 } from "lucide-react";
+import { campaignService } from "@/services/campaignService";
+import { useAuth } from "@/contexts/AuthContextProxy";
 
 export type CampaignInfo = {
   id: string;
@@ -21,7 +25,35 @@ export default function CampaignCard({
   campaign,
   compact = true,
 }: CampaignCardProps) {
+  const { isAuthenticated } = useAuth();
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const progress = campaign.progress || Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
+
+  useEffect(() => {
+    if (!isAuthenticated || compact) return;
+    campaignService.isFollowing(Number(campaign.id)).then(setIsFollowing).catch(() => {});
+  }, [campaign.id, isAuthenticated, compact]);
+
+  const handleToggleFollow = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAuthenticated || followLoading) return;
+    setFollowLoading(true);
+    const prev = isFollowing;
+    setIsFollowing(!isFollowing);
+    try {
+      if (prev) {
+        await campaignService.unfollowCampaign(Number(campaign.id));
+      } else {
+        await campaignService.followCampaign(Number(campaign.id));
+      }
+    } catch {
+      setIsFollowing(prev);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   if (compact) {
     return (
