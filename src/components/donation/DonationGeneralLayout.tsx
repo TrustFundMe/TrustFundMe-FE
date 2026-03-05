@@ -1,10 +1,12 @@
 import { CheckCircle2 } from 'lucide-react';
 import { PaymentMethod } from './types';
+import { CampaignDto } from '@/types/campaign';
 import AmountInput from './AmountInput';
 import PaymentSummary from './PaymentSummary';
 import PaymentMethods from './PaymentMethods';
 
 type DonationGeneralLayoutProps = {
+    campaign: CampaignDto | null;
     amount: number;
     isManualMode: boolean;
     tipPercent: number;
@@ -23,6 +25,7 @@ type DonationGeneralLayoutProps = {
 };
 
 export default function DonationGeneralLayout({
+    campaign,
     amount,
     isManualMode,
     tipPercent,
@@ -50,9 +53,11 @@ export default function DonationGeneralLayout({
                 <div className="w-full max-w-md">
                     <div className="flex items-center gap-2 mb-2 justify-center">
                         <div className="w-5 h-1.5 bg-[#dc2626] rounded-full"></div>
-                        <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">TrustFundMe Donation</span>
+                        <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">
+                            {campaign?.type?.toUpperCase() === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Quỹ ủy quyền'}
+                        </span>
                     </div>
-                    <h1 className="text-xl font-black tracking-tight text-gray-900">Trao gửi yêu thương - Quỹ Chung</h1>
+                    <h1 className="text-xl font-black tracking-tight text-gray-900">{campaign?.title || 'Đang tải...'}</h1>
                 </div>
 
                 {/* Amount Input */}

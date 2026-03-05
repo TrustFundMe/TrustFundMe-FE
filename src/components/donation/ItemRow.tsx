@@ -24,12 +24,12 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
             {/* Content */}
             <div className="flex-1 min-w-0 mr-4 flex items-center justify-between">
                 <div>
-                    <div className="font-bold text-gray-900 text-sm">{item.name} <span className="text-gray-400 font-normal">/ {item.unit}</span></div>
+                    <div className="font-bold text-gray-900 text-sm">{item.name}</div>
                     <div className="text-xs text-gray-500">{item.description}</div>
                 </div>
 
                 <div className="text-right">
-                    <div className="font-bold text-gray-900 text-sm">${item.price.toLocaleString('en-US').replace(/,/g, '.')}</div>
+                    <div className="font-bold text-gray-900 text-sm">{item.price.toLocaleString('vi-VN')} ₫</div>
                 </div>
             </div>
 

@@ -21,6 +21,10 @@ export const expenditureService = {
         const response = await axiosInstance.get(`/api/expenditures/${id}/items`);
         return response.data;
     },
+    getItemsByCampaignId: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items`);
+        return response.data;
+    },
 
     updateStatus: async (id: string | number, status: string): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/status`, null, {

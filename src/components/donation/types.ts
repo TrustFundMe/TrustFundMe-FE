@@ -2,7 +2,6 @@ export type ExpenditureItem = {
     id: string;
     name: string;
     description: string;
-    unit: string;
     price: number;
 };
 

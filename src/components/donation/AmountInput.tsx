@@ -15,6 +15,18 @@ export default function AmountInput({
     presets = [20000, 50000, 100000, 200000],
     compact = false
 }: AmountInputProps) {
+    const formatNumber = (val: number) => {
+        if (!val) return '';
+        return val.toLocaleString('vi-VN');
+    };
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Remove all non-digit characters
+        const rawValue = e.target.value.replace(/\D/g, '');
+        const numericValue = Number(rawValue);
+        onAmountChange(numericValue);
+    };
+
     return (
         <div className={compact ? "space-y-2" : "space-y-3"}>
             <div className={`flex ${compact ? "gap-2" : "gap-2"}`}>
@@ -34,9 +46,10 @@ export default function AmountInput({
             <div className="relative group">
                 <span className={`absolute ${compact ? "left-5" : "left-6"} top-1/2 -translate-y-1/2 ${compact ? "text-xl" : "text-2xl"} font-black transition-colors ${amount > 0 ? 'text-[#dc2626]' : 'text-gray-300'}`}>₫</span>
                 <input
-                    type="number"
-                    value={amount || ''}
-                    onChange={(e) => onAmountChange(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatNumber(amount)}
+                    onChange={handleTextChange}
                     placeholder="0"
                     className={`w-full bg-${compact ? 'white' : 'gray-50/50'} border ${compact ? 'border-gray-200' : 'border-gray-100'} ${compact ? 'rounded-2xl' : 'rounded-2xl'} ${compact ? 'py-3' : 'py-2'} ${compact ? 'pl-10' : 'pl-12'} pr-4 ${compact ? 'text-3xl' : 'text-3xl'} font-black focus:outline-none focus:border-[#dc2626] ${compact ? 'focus:ring-2' : 'focus:bg-white'} focus:ring-red-50 transition-all placeholder:text-gray-200`}
                 />
