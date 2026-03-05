@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
@@ -11,27 +12,34 @@ import "swiper/css/pagination";
 import type { FeedPost } from "@/types/feedPost";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import CampaignCard, { type CampaignInfo } from "./CampaignCard";
+import { likeService } from "@/services/likeService";
+import { commentService } from "@/services/commentService";
 
 interface FeedPostCardProps {
   post: FeedPost;
   onOpen?: (postId: string) => void;
   onEdit?: (post: FeedPost) => void;
+  onDelete?: (postId: string) => void;
 }
 
 export default function FeedPostCard({
   post,
   onOpen,
   onEdit,
+  onDelete,
 }: FeedPostCardProps) {
   const { user } = useAuth();
   const router = useRouter();
   const [liked, setLiked] = useState(post.liked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [isLiking, setIsLiking] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [localCommentCount, setLocalCommentCount] = useState(post.replyCount);
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
   const isAuthor = user?.id && String(user.id) === String(post.author.id);
-  // Debug log (remove in production)
-  // console.log(`Post ${post.id}: user=${user?.id}, author=${post.author.id}, isAuthor=${isAuthor}`);
 
   const imageAttachments = (post.attachments || []).filter((a) => a.type === "image");
   const seenUrls = new Set<string>();
@@ -52,10 +60,55 @@ export default function FeedPostCard({
     }
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isLiking) return;
+
+    // Optimistic update
+    const prevLiked = liked;
+    const prevCount = likeCount;
     setLiked(!liked);
     setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+    setIsLiking(true);
+
+    try {
+      const res = await likeService.toggleLike(post.id);
+      setLiked(res.liked);
+      setLikeCount(res.likeCount);
+    } catch {
+      // Rollback on error
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleCommentFocus = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    commentInputRef.current?.focus();
+  };
+
+  const handleSubmitComment = async (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!commentText.trim() || isSubmittingComment) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    const content = commentText.trim();
+    setCommentText("");
+    try {
+      await commentService.createComment(post.id, content);
+      setLocalCommentCount((c) => c + 1);
+    } catch {
+      setCommentText(content);
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   const formatTimeAgo = (date: string) => {
@@ -63,11 +116,11 @@ export default function FeedPostCard({
     const postDate = new Date(date);
     const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
 
-    if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-    return postDate.toLocaleDateString("en-US", {
+    if (diffInSeconds < 60) return "Vừa xong";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+    return postDate.toLocaleDateString("vi-VN", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -87,7 +140,7 @@ export default function FeedPostCard({
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Header Field */}
+      {/* Header */}
       <fieldset
         style={{
           margin: 0,
@@ -173,38 +226,44 @@ export default function FeedPostCard({
                 <MoreHorizontal className="w-5 h-5" />
               </button>
 
-              {showOptions && (
-                <div
-                  className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-100 dark:border-zinc-700 py-1 z-10 w-32 origin-top-right transform transition-all"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => {
-                      if (onEdit) {
-                        onEdit(post);
-                      } else {
-                        router.push(`/post/${post.id}/edit`);
-                      }
-                      setShowOptions(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+              <AnimatePresence>
+                {showOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute right-0 top-full mt-1 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-zinc-100 dark:border-zinc-700 py-1 z-10 w-32"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    Chỉnh sửa
-                  </button>
-                  <button
-                    onClick={() => alert("Delete mocked")}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
-                  >
-                    Xóa
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => {
+                        if (onEdit) onEdit(post);
+                        else router.push(`/post/${post.id}/edit`);
+                        setShowOptions(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors flex items-center gap-2"
+                    >
+                      Chỉnh sửa
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onDelete) onDelete(post.id);
+                        setShowOptions(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-2"
+                    >
+                      Xóa
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
       </fieldset>
 
-      {/* Media Field - 1 ảnh full, nhiều ảnh lưới kiểu Facebook */}
+      {/* Media */}
       {hasMedia && (
         <fieldset
           style={{
@@ -253,7 +312,7 @@ export default function FeedPostCard({
         </fieldset>
       )}
 
-      {/* Content Field */}
+      {/* Content */}
       <fieldset
         style={{
           margin: 0,
@@ -293,7 +352,7 @@ export default function FeedPostCard({
         />
       </fieldset>
 
-      {/* Campaign Field */}
+      {/* Campaign */}
       {campaign && (
         <fieldset
           style={{
@@ -308,7 +367,7 @@ export default function FeedPostCard({
         </fieldset>
       )}
 
-      {/* Actions Field */}
+      {/* Actions */}
       <fieldset
         style={{
           margin: 0,
@@ -318,97 +377,88 @@ export default function FeedPostCard({
           background: "#ffffff",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <button
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Like Button with animation */}
+          <motion.button
             type="button"
             onClick={handleLike}
+            disabled={isLiking}
+            whileTap={{ scale: 0.85 }}
+            animate={liked ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             style={{
               border: "none",
               background: "transparent",
-              cursor: "pointer",
+              cursor: isLiking ? "default" : "pointer",
               padding: 0,
               color: liked ? "#F84D43" : "rgba(0,0,0,0.6)",
-              transition: "transform 0.2s, color 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
             }}
           >
-            {liked ? <Heart className="w-6 h-6 fill-current" /> : <Heart className="w-6 h-6" />}
-          </button>
-          <button
+            <Heart
+              className="w-6 h-6"
+              style={{
+                fill: liked ? "#F84D43" : "none",
+                transition: "fill 0.2s, color 0.2s",
+              }}
+            />
+          </motion.button>
+
+          {/* Comment Button */}
+          <motion.button
             type="button"
-            onClick={handleClick}
+            onClick={handleCommentFocus}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
             style={{
               border: "none",
               background: "transparent",
               cursor: "pointer",
               padding: 0,
               color: "rgba(0,0,0,0.6)",
-              transition: "transform 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             <MessageCircle className="w-6 h-6" />
-          </button>
-          <button
+          </motion.button>
+
+          {/* Share Button */}
+          <motion.button
             type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
             style={{
               border: "none",
               background: "transparent",
               cursor: "pointer",
               padding: 0,
               color: "rgba(0,0,0,0.6)",
-              transition: "transform 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             <Send className="w-6 h-6" />
-          </button>
+          </motion.button>
+
           <div style={{ marginLeft: "auto" }}>
-            <button
+            <motion.button
               type="button"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
               style={{
                 border: "none",
                 background: "transparent",
                 cursor: "pointer",
                 padding: 0,
                 color: "rgba(0,0,0,0.6)",
-                transition: "transform 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.1)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
               }}
             >
               <Bookmark className="w-6 h-6" />
-            </button>
+            </motion.button>
           </div>
         </div>
       </fieldset>
 
-      {/* Engagement Field */}
+      {/* Engagement */}
       <fieldset
         style={{
           margin: 0,
@@ -418,21 +468,28 @@ export default function FeedPostCard({
           background: "#ffffff",
         }}
       >
-        {likeCount > 0 && (
-          <div
-            style={{
-              fontWeight: 600,
-              fontSize: 14,
-              color: "#1a1a1a",
-              marginBottom: 8,
-              fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            {likeCount.toLocaleString()} likes
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {likeCount > 0 && (
+            <motion.div
+              key={likeCount}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: "#1a1a1a",
+                marginBottom: 8,
+                fontFamily: "var(--font-dm-sans)",
+              }}
+            >
+              {likeCount.toLocaleString()} lượt thích
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {post.comments.length > 0 && (
+        {localCommentCount > 0 && (
           <button
             type="button"
             onClick={handleClick}
@@ -444,9 +501,10 @@ export default function FeedPostCard({
               fontSize: 14,
               color: "rgba(0,0,0,0.6)",
               marginTop: 4,
+              fontFamily: "var(--font-dm-sans)",
             }}
           >
-            View all {post.comments.length} comments
+            Xem tất cả {localCommentCount} bình luận
           </button>
         )}
 
@@ -464,7 +522,7 @@ export default function FeedPostCard({
         </div>
       </fieldset>
 
-      {/* Comment Input Field */}
+      {/* Comment Input */}
       <fieldset
         style={{
           margin: 0,
@@ -473,16 +531,24 @@ export default function FeedPostCard({
           background: "#fafafa",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
+        <form
+          onSubmit={handleSubmitComment}
+          onClick={(e) => e.stopPropagation()}
+          style={{ display: "flex", alignItems: "center", gap: 12 }}
         >
           <input
+            ref={commentInputRef}
             type="text"
-            placeholder="Add a comment..."
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmitComment(e);
+              }
+            }}
+            placeholder="Thêm bình luận..."
+            disabled={isSubmittingComment}
             style={{
               flex: 1,
               border: "none",
@@ -492,33 +558,27 @@ export default function FeedPostCard({
               color: "#1a1a1a",
               fontFamily: "var(--font-dm-sans)",
             }}
-            onClick={(e) => e.stopPropagation()}
           />
-          <button
-            type="button"
+          <motion.button
+            type="submit"
+            disabled={!commentText.trim() || isSubmittingComment}
+            whileTap={{ scale: 0.95 }}
             style={{
               border: "none",
               background: "transparent",
-              cursor: "pointer",
+              cursor: commentText.trim() && !isSubmittingComment ? "pointer" : "default",
               padding: 0,
               fontSize: 14,
               color: "#1A685B",
               fontWeight: 600,
-              opacity: 0.7,
+              opacity: commentText.trim() && !isSubmittingComment ? 1 : 0.4,
               transition: "opacity 0.2s",
               fontFamily: "var(--font-dm-sans)",
             }}
-            onClick={(e) => e.stopPropagation()}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "1";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "0.7";
-            }}
           >
-            Post
-          </button>
-        </div>
+            {isSubmittingComment ? "Đang gửi..." : "Đăng"}
+          </motion.button>
+        </form>
       </fieldset>
     </article>
   );
