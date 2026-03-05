@@ -39,7 +39,7 @@ function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignC
     type: dto.type || dto.categoryName || dto.category || "Chung",
     raised: dto.balance || 0,
     goal: targetAmount,
-    image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.jpg"),
+    image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.png"),
   };
 }
 

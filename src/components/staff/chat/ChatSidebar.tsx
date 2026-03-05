@@ -5,6 +5,7 @@ interface Conversation {
   time: string;
   unread?: number;
   avatar?: string;
+  campaignTitle?: string;
 }
 
 interface ChatSidebarProps {
@@ -92,6 +93,14 @@ export default function ChatSidebar({
                       {c.time}
                     </span>
                   </div>
+                  {c.campaignTitle && (
+                    <p
+                      className="truncate text-[10px] font-medium italic mb-0.5"
+                      style={{ color: active ? '#fecaca' : '#dc2626' }}
+                    >
+                      {c.campaignTitle}
+                    </p>
+                  )}
                   <p className={`truncate text-xs`} style={{ color: active ? '#fca5a5' : '#4b5563' }}>
                     {c.lastMessage}
                   </p>

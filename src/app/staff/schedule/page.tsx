@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3 } from 'lucide-react';
+import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3, ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { appointmentService, AppointmentScheduleDto, AppointmentStatus, CreateAppointmentRequest } from '@/services/appointmentService';
+import { campaignService } from '@/services/campaignService';
+import { userService, UserInfo } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
+import type { CampaignDto } from '@/types/campaign';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -23,7 +28,7 @@ const WEEKDAYS_FULL = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5
 function formatDateTime(dt: string) {
     const d = new Date(dt);
     return {
-        date: d.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }),
+        date: d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
         time: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
     };
 }
@@ -61,20 +66,102 @@ interface CreateModalProps { staffId: number; onClose: () => void; onCreated: ()
 function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProps) {
     const [form, setForm] = useState<CreateAppointmentRequest>({ donorId: 0, staffId, startTime: '', endTime: '', location: '', purpose: '' });
     const [loading, setLoading] = useState(false);
+    const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
+    const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
+    const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoadingCampaigns(true);
+            try {
+                // Fetch campaigns
+                const campaignData = await campaignService.getAll();
+                const approvedCampaigns = campaignData.filter(c => c.status === 'APPROVED');
+                setCampaigns(approvedCampaigns);
+
+                // Fetch users for approved campaigns
+                const userIds = [...new Set(approvedCampaigns.map(c => c.fundOwnerId))];
+                const userMap = new Map<number, UserInfo>();
+
+                // Fetch all users and filter
+                const allUsersResult = await userService.getAllUsers();
+                if (allUsersResult.success && allUsersResult.data) {
+                    allUsersResult.data.forEach(user => {
+                        if (userIds.includes(user.id)) {
+                            userMap.set(user.id, user);
+                        }
+                    });
+                }
+                setUsers(userMap);
+            } catch (err) {
+                console.error('Error fetching data:', err);
+            } finally {
+                setLoadingCampaigns(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const filteredCampaigns = useMemo(() => {
+        if (!searchTerm) return campaigns;
+        const term = searchTerm.toLowerCase();
+        return campaigns.filter(c => {
+            const user = users.get(c.fundOwnerId);
+            return (
+                c.title.toLowerCase().includes(term) ||
+                String(c.fundOwnerId).includes(term) ||
+                user?.fullName?.toLowerCase().includes(term)
+            );
+        });
+    }, [campaigns, searchTerm, users]);
+
+    const selectedCampaign = campaigns.find(c => c.fundOwnerId === form.donorId);
+
+    const handleSelectDonor = (fundOwnerId: number, campaignTitle: string) => {
+        setForm(f => ({ ...f, donorId: fundOwnerId }));
+        setShowDropdown(false);
+        setSearchTerm('');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.donorId || !form.startTime || !form.endTime) { toast.error('Vui lòng điền đầy đủ thông tin bắt buộc'); return; }
-        if (new Date(form.endTime) <= new Date(form.startTime)) { toast.error('Thời gian kết thúc phải sau thời gian bắt đầu'); return; }
-        const hoursUntilStart = (new Date(form.startTime).getTime() - Date.now()) / 3600000;
-        if (hoursUntilStart < 24) { toast.error(`Lịch hẹn phải được đặt trước tối thiểu 24 tiếng. Hiện tại chỉ còn ${Math.floor(hoursUntilStart)} tiếng đến giờ hẹn.`); return; }
+
+        // Convert Date objects to ISO strings for API
+        const startTimeISO = form.startTime instanceof Date ? form.startTime.toISOString() : form.startTime;
+        const endTimeISO = form.endTime instanceof Date ? form.endTime.toISOString() : form.endTime;
+
+        if (!form.donorId || !startTimeISO || !endTimeISO) {
+            toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
+            return;
+        }
+
+        if (new Date(endTimeISO) <= new Date(startTimeISO)) {
+            toast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
+            return;
+        }
+
+        const hoursUntilStart = (new Date(startTimeISO).getTime() - Date.now()) / 3600000;
+        if (hoursUntilStart < 24) {
+            toast.error(`Lịch hẹn phải được đặt trước tối thiểu 24 tiếng. Hiện tại chỉ còn ${Math.floor(hoursUntilStart)} tiếng đến giờ hẹn.`);
+            return;
+        }
+
         setLoading(true);
         try {
-            await appointmentService.create(form);
+            await appointmentService.create({
+                ...form,
+                startTime: startTimeISO,
+                endTime: endTimeISO
+            });
             toast.success('Tạo lịch hẹn thành công!');
             onCreated(); onClose();
-        } catch (err: any) { toast.error(err?.response?.data?.message || 'Không thể tạo lịch hẹn'); }
-        finally { setLoading(false); }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Không thể tạo lịch hẹn');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -88,18 +175,92 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                     <button onClick={onClose} className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition"><X className="h-4 w-4 text-white" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Donor ID <span className="text-red-500">*</span></label>
-                        <input type="number" value={form.donorId || ''} onChange={e => setForm(f => ({ ...f, donorId: parseInt(e.target.value) || 0 }))} placeholder="Nhập ID của người dùng" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" required />
+                    <div className="relative">
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Người dùng <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowDropdown(!showDropdown)}
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition bg-white text-left flex items-center justify-between"
+                            >
+                                {selectedCampaign ? (
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-gray-900 truncate">{users.get(form.donorId)?.fullName || `User #${form.donorId}`}</span>
+                                        <span className="text-xs text-gray-500 truncate">{selectedCampaign.title}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-gray-400">Chọn người dùng (có chiến dịch)</span>
+                                )}
+                                <ChevronDown className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
+                            </button>
+                            {showDropdown && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-hidden">
+                                    <div className="p-2 border-b border-gray-100">
+                                        <input
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={e => setSearchTerm(e.target.value)}
+                                            placeholder="Tìm kiếm chiến dịch..."
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="overflow-y-auto max-h-48">
+                                        {loadingCampaigns ? (
+                                            <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
+                                        ) : filteredCampaigns.length === 0 ? (
+                                            <div className="p-4 text-center text-gray-500 text-sm">Không có chiến dịch nào</div>
+                                        ) : (
+                                            filteredCampaigns.map(campaign => {
+                                                const user = users.get(campaign.fundOwnerId);
+                                                return (
+                                                    <button
+                                                        key={campaign.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectDonor(campaign.fundOwnerId, campaign.title)}
+                                                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition ${form.donorId === campaign.fundOwnerId ? 'bg-red-50' : ''}`}
+                                                    >
+                                                        <div className="font-medium text-sm text-gray-900 truncate">{campaign.title}</div>
+                                                        <div className="text-xs text-gray-500 mt-0.5">{user?.fullName || `User #${campaign.fundOwnerId}`}</div>
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <input type="hidden" value={form.donorId} required />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1.5">Bắt đầu <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" required />
+                            <DatePicker
+                                selected={form.startTime ? new Date(form.startTime) : null}
+                                onChange={(date: Date | null) => setForm(f => ({ ...f, startTime: date ? date.toISOString() : '' }))}
+                                showTimeSelect
+                                timeFormat="HH:mm"
+                                timeIntervals={15}
+                                dateFormat="dd/MM/yyyy HH:mm"
+                                placeholderText="dd/mm/yyyy --:--"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                required
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1.5">Kết thúc <span className="text-red-500">*</span></label>
-                            <input type="datetime-local" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" required />
+                            <DatePicker
+                                selected={form.endTime ? new Date(form.endTime) : null}
+                                onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? date.toISOString() : '' }))}
+                                showTimeSelect
+                                timeFormat="HH:mm"
+                                timeIntervals={15}
+                                dateFormat="dd/MM/yyyy HH:mm"
+                                placeholderText="dd/mm/yyyy --:--"
+                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                minDate={form.startTime ? new Date(form.startTime) : null}
+                                required
+                            />
                         </div>
                     </div>
                     <div>
@@ -282,7 +443,7 @@ function CalendarView({ appointments, onSelect, selectedId }: CalendarViewProps)
     const goToday = () => setCurrentDate(new Date());
 
     const periodLabel = viewMode === 'week'
-        ? `${weekDays[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} – ${weekDays[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+        ? `${weekDays[0].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })} – ${weekDays[6].toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
         : currentDate.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
     return (
