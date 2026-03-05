@@ -30,7 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = new FormData();
-    body.append("file", file);
+    formData.forEach((value, key) => {
+      body.append(key, value);
+    });
 
     const response = await fetch(`${BE_API_URL}/api/media/upload`, {
       method: "POST",

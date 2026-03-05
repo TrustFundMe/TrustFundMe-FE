@@ -101,8 +101,9 @@ export default function AdminPayoutsPage() {
 
     const filteredExpenditures = useMemo(() => {
         return expenditureRows.filter((r) => {
-            const matchesStatus = statusFilter === 'ALL' ||
-                (statusFilter === 'PENDING' ? (r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW') : r.status === statusFilter);
+            const matchesStatus = statusFilter === 'ALL' ?
+                ((r.status as string) === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' || r.status === 'DISBURSED') :
+                r.status === statusFilter;
             const matchesSearch = searchQuery === '' ||
                 r.campaignTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -191,14 +192,14 @@ export default function AdminPayoutsPage() {
                 </div>
 
                 <div className="bg-slate-100/50 p-1.5 rounded-[24px] flex items-center gap-1 shadow-inner">
-                    {(['ALL', 'PENDING', 'APPROVED', 'DISBURSED', 'REJECTED'] as const).map((s) => (
+                    {(['ALL', 'WITHDRAWAL_REQUESTED', 'DISBURSED'] as const).map((s) => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
                             className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                            {s === 'ALL' ? 'Tất cả' : s === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' : 'Đã giải ngân'}
                         </button>
                     ))}
                 </div>
@@ -260,12 +261,12 @@ export default function AdminPayoutsPage() {
                                         {new Date(r.createdAt).toLocaleDateString('vi-VN')}
                                     </td>
                                     <td className="py-6 pr-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'APPROVED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
-                                            r.status === 'REJECTED' ? 'bg-[#F84D43]/10 text-[#F84D43]' :
-                                                r.status === 'DISBURSED' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-amber-100 text-amber-800'
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'bg-blue-100 text-blue-700' :
+                                            r.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
+                                                'bg-amber-100 text-amber-800'
                                             }`}>
-                                            {r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW' ? 'Chờ duyệt' : r.status === 'APPROVED' ? 'Đã duyệt' : r.status === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                                            {r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'Chờ giải ngân' :
+                                                r.status === 'DISBURSED' ? 'Đã giải ngân' : r.status}
                                         </span>
                                     </td>
                                     <td className="py-6 pr-10 text-right">

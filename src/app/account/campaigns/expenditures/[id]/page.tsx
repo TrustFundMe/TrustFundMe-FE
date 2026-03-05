@@ -112,7 +112,10 @@ export default function ExpenditureDetailPage() {
             case 'PENDING_REVIEW':
                 return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800"><Clock className="w-4 h-4 mr-1.5" /> Chờ duyệt</span>;
             case 'CLOSED':
-                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã đóng</span>;
+            case 'WITHDRAWAL_REQUESTED':
+                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"><Clock className="w-4 h-4 mr-1.5" /> Yêu cầu rút tiền</span>;
+            case 'DISBURSED':
+                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã giải ngân</span>;
             case 'REJECTED':
                 return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800"><AlertCircle className="w-4 h-4 mr-1.5" /> Từ chối</span>;
             default:
@@ -195,12 +198,14 @@ export default function ExpenditureDetailPage() {
                                     <FileText className="w-4 h-4 mr-1.5" /> Cập nhật Đã chi
                                 </button>
 
-                                {campaign?.type === 'ITEMIZED' && expenditure.status === 'APPROVED' && !expenditure.isWithdrawalRequested && (
+                                {campaign?.type === 'ITEMIZED' && (expenditure.status === 'APPROVED' || expenditure.status === 'CLOSED') && !expenditure.isWithdrawalRequested && (
                                     <button
                                         onClick={handleRequestWithdrawal}
-                                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
+                                        disabled={loading}
+                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
                                     >
-                                        <ArrowLeft className="w-4 h-4 mr-1.5 rotate-180" /> Yêu cầu rút tiền
+                                        <Clock className="w-5 h-5" />
+                                        {loading ? 'Đang xử lý...' : 'Rút tiền'}
                                     </button>
                                 )}
                             </div>

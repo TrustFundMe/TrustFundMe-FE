@@ -14,6 +14,8 @@ import { mockComments, mockPosts } from '@/components/campaign/mock';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
+import { withFallbackImage } from '@/lib/image';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Expenditure } from '@/types/expenditure';
 
 import { mediaService } from '@/services/mediaService';
@@ -47,6 +49,8 @@ const mapCampaignDtoToUi = (
     flagged: false,
     followerCount: 0,
     commentCount: 0,
+    // forward KYC flag from server
+    kycVerified: dto.kycVerified ?? false,
     type: dto.type || 'general',
   };
 };
@@ -56,6 +60,8 @@ function CampaignDetailsInner() {
   const searchParams = useSearchParams();
   const campaignIdStr = searchParams.get('id');
   const campaignId = campaignIdStr ? parseInt(campaignIdStr, 10) : null;
+
+  const { isStaff, isAdmin } = usePermissions();
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [plans, setPlans] = useState<CampaignPlan[]>([]);
@@ -294,6 +300,18 @@ function CampaignDetailsInner() {
                 }}
                 onToggleFlag={() => setCampaign((c) => (c ? { ...c, flagged: !c.flagged } : c))}
               />
+              {/* KYC warning button for staff/admin when campaign owner has not finished KYC */}
+              {(isStaff || isAdmin) && campaign && campaign.kycVerified === false && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/staff/verification?userId=${campaign.creator.id}`)}
+                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700"
+                  >
+                    Kiểm tra KYC của chủ chiến dịch
+                  </button>
+                </div>
+              )}
 
               <CampaignCommentsCard comments={comments} />
             </div>

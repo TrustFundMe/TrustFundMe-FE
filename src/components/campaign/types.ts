@@ -59,5 +59,7 @@ export type Campaign = {
   flagged: boolean;
   followerCount: number;
   commentCount: number;
+  // indicates whether the fund owner has completed KYC; undefined means unknown
+  kycVerified?: boolean;
   type?: string;
 };

@@ -202,4 +202,37 @@ export const userService = {
             };
         }
     },
+
+    /**
+     * Upgrade user to FUND_DONOR (after KYC verification)
+     */
+    async upgradeToFundDonor(id: number | string): Promise<{
+        success: boolean;
+        error?: string;
+    }> {
+        try {
+            const response = await fetch(API_ENDPOINTS.USERS.UPGRADE_TO_FUND_DONOR(id), {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                return {
+                    success: false,
+                    error: data.error || data.message || "Failed to upgrade user role",
+                };
+            }
+
+            return { success: true };
+        } catch (error: any) {
+            console.error("User service error (upgrade to FUND_DONOR):", error);
+            return {
+                success: false,
+                error: error?.message || "Failed to upgrade user role",
+            };
+        }
+    },
 };

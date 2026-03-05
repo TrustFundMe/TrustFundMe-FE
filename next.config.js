@@ -32,6 +32,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'rdfdalbhvpszkyetmraq.supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
     ],
   },
   async rewrites() {

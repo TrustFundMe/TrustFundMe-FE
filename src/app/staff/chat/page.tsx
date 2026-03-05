@@ -66,6 +66,16 @@ export default function ChatWithDonorPage() {
 
               const user = userResult.success && userResult.data ? userResult.data : null;
 
+              let campaignTitle = undefined;
+              if (conv.campaignId) {
+                try {
+                  const campaign = await campaignService.getById(conv.campaignId);
+                  campaignTitle = campaign.title;
+                } catch (err) {
+                  console.error(`Failed to fetch title for campaign ${conv.campaignId}:`, err);
+                }
+              }
+
               return {
                 id: conv.id.toString(),
                 name: user?.fullName || `User ${conv.fundOwnerId}`,
@@ -77,6 +87,7 @@ export default function ChatWithDonorPage() {
                 staffId: conv.staffId,
                 fundOwnerId: conv.fundOwnerId,
                 campaignId: conv.campaignId,
+                campaignTitle: campaignTitle,
               };
             })
           );
