@@ -31,6 +31,9 @@ export const API_ENDPOINTS = {
     COMMENT_LIKE: (commentId: number | string) => `/api/feed-posts/comments/${commentId}/like`,
     ADMIN_ALL: "/api/feed-posts/admin",
     ADMIN_DELETE: (id: number | string) => `/api/feed-posts/admin/${id}`,
+    ADMIN_PIN: (id: number | string) => `/api/feed-posts/admin/${id}/pin`,
+    ADMIN_LOCK: (id: number | string) => `/api/feed-posts/admin/${id}/lock`,
+    ADMIN_STATUS: (id: number | string) => `/api/feed-posts/admin/${id}/status`,
     STATUS: (id: number | string) => `/api/feed-posts/${id}/status`,
   },
   FLAGS: {

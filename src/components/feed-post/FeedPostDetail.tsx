@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -50,7 +50,7 @@ export default function FeedPostDetail({
   onVisibilityChange,
   canEdit = false,
 }: FeedPostDetailProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -61,8 +61,10 @@ export default function FeedPostDetail({
   const [commentCount, setCommentCount] = useState(post.replyCount ?? 0);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
   // Reply state
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
+  const COMMENTS_PREVIEW = 4;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -79,7 +81,13 @@ export default function FeedPostDetail({
   const loadComments = useCallback(async () => {
     try {
       const dtos = await commentService.getComments(post.id);
-      setComments(dtos.map(commentDtoToFeedPostComment));
+      // Sort oldest first (ascending createdAt) so newest appears at the bottom
+      const sorted = [...dtos].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const mapped = sorted.map(commentDtoToFeedPostComment);
+      setComments(mapped);
+      setCommentCount(mapped.length);
       setCommentsLoaded(true);
     } catch {
       // keep existing
@@ -170,7 +178,13 @@ export default function FeedPostDetail({
 
     const tempComment: FeedPostComment = {
       id: tempId,
-      user: { id: "me", name: "Bạn", avatar: "" },
+      user: {
+        id: String(user?.id ?? "me"),
+        name: user?.fullName ?? "Bạn",
+        avatar: user?.avatarUrl
+          ? user.avatarUrl
+          : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName ?? "B")}&background=6366f1&color=fff`,
+      },
       content: commentText.trim(),
       createdAt: new Date().toISOString(),
       liked: false,
@@ -189,7 +203,10 @@ export default function FeedPostDetail({
         )
       );
     } else {
-      setComments((prev) => [tempComment, ...prev]);
+      // Append at bottom — newest last (Facebook style)
+      setComments((prev) => [...prev, tempComment]);
+      // Auto expand so user sees their new comment
+      setShowAllComments(true);
     }
     setCommentCount((c) => c + 1);
 
@@ -237,6 +254,13 @@ export default function FeedPostDetail({
       setIsSubmittingComment(false);
     }
   };
+
+  const visibleComments = useMemo(() => {
+    if (showAllComments || comments.length <= COMMENTS_PREVIEW) return comments;
+    return comments.slice(0, COMMENTS_PREVIEW);
+  }, [comments, showAllComments]);
+
+  const hiddenCount = comments.length - COMMENTS_PREVIEW;
 
   return (
     <article
@@ -418,8 +442,24 @@ export default function FeedPostDetail({
       {/* Comments Field */}
       <fieldset style={{ margin: 0, padding: 20, border: "none", borderBottom: canEdit ? "1px solid rgba(0,0,0,0.08)" : "none", background: "#ffffff" }}>
         <legend style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", color: "#1A685B", padding: "0 8px", marginBottom: 16, fontFamily: "var(--font-dm-sans)" }}>
-          Bình luận ({commentsLoaded ? comments.length : commentCount})
+          Bình luận ({commentCount})
         </legend>
+
+        {/* "Xem thêm" — Facebook style — appears at top when collapsed */}
+        {!showAllComments && hiddenCount > 0 && commentsLoaded && (
+          <button
+            type="button"
+            onClick={() => setShowAllComments(true)}
+            style={{
+              border: "none", background: "none", cursor: "pointer",
+              fontSize: 13, fontWeight: 700, color: "rgba(0,0,0,0.6)",
+              padding: "0 0 12px 0", display: "block",
+              fontFamily: "var(--font-dm-sans)",
+            }}
+          >
+            Xem thêm {hiddenCount} bình luận
+          </button>
+        )}
 
         {comments.length === 0 ? (
           <p style={{ color: "rgba(0,0,0,0.5)", fontSize: 14, margin: 0, fontFamily: "var(--font-dm-sans)" }}>
@@ -428,13 +468,13 @@ export default function FeedPostDetail({
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <AnimatePresence initial={false}>
-              {comments.map((comment) => (
+              {visibleComments.map((comment) => (
                 <motion.div
                   key={comment.id}
-                  initial={{ opacity: 0, y: -12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.2 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.18 }}
                 >
                   <CommentItem
                     comment={comment}

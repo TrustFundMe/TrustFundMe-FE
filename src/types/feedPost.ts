@@ -2,6 +2,8 @@ export type FeedPostDto = {
   id: number;
   budgetId: number | null;
   authorId: number;
+  authorName?: string | null;
+  authorAvatar?: string | null;
   type: string;
   visibility: string;
   title: string | null;
