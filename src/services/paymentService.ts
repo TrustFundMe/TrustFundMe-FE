@@ -12,6 +12,7 @@ export interface CreatePaymentRequest {
     donationAmount: number;
     tipAmount: number;
     description: string;
+    isAnonymous: boolean;
     items: DonationItemRequest[];
 }
 
@@ -23,6 +24,13 @@ export interface PaymentResponse {
     campaignId?: number;
     totalAmount?: number;
     status: string;
+}
+
+export interface CheckItemLimitResponse {
+    canDonateMore: boolean;
+    currentTotal: number;
+    quantityLeft: number;
+    message: string;
 }
 
 export const paymentService = {
@@ -63,6 +71,18 @@ export const paymentService = {
         } catch (err: any) {
             console.error("❌ [Payment] Verification Error:", err);
             // We don't necessarily want to throw here, as the page can still try to show details
+        }
+    },
+    async checkExpenditureItemLimit(id: number, quantity?: number): Promise<CheckItemLimitResponse> {
+        console.log(`🔍 [Payment] Checking limit for Item ID ${id}, requested: ${quantity || 1}`);
+        try {
+            const res = await api.get<CheckItemLimitResponse>(`/api/payments/expenditure-item/${id}/check`, {
+                params: { quantity }
+            });
+            return res.data;
+        } catch (err: any) {
+            console.error("❌ [Payment] Check Limit Error:", err);
+            throw err;
         }
     }
 };

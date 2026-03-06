@@ -22,6 +22,7 @@ type DonationGeneralLayoutProps = {
     onAgreedChange: (checked: boolean) => void;
     onShowTerms: () => void;
     onSubmit: () => void;
+    isGuest?: boolean;
 };
 
 export default function DonationGeneralLayout({
@@ -40,7 +41,8 @@ export default function DonationGeneralLayout({
     onAnonymousChange,
     onAgreedChange,
     onShowTerms,
-    onSubmit
+    onSubmit,
+    isGuest = false
 }: DonationGeneralLayoutProps) {
     const tipAmount = Math.round((amount * tipPercent) / 100);
     const totalAmount = amount + tipAmount;
@@ -88,13 +90,15 @@ export default function DonationGeneralLayout({
 
                 {/* Extra Options */}
                 <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
-                            {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                        </div>
-                        <input type="checkbox" className="hidden" checked={isAnonymous} onChange={e => onAnonymousChange(e.target.checked)} />
-                        <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Quyên góp ẩn danh</span>
-                    </label>
+                    {!isGuest && (
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
+                                {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                            <input type="checkbox" className="hidden" checked={isAnonymous} onChange={e => onAnonymousChange(e.target.checked)} />
+                            <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Quyên góp ẩn danh</span>
+                        </label>
+                    )}
 
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAgreed ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>

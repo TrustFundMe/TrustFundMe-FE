@@ -44,6 +44,7 @@ function DonationContent() {
   const [isAgreed, setIsAgreed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [finalData, setFinalData] = useState<any>(null);
+  const [isGuest, setIsGuest] = useState(true);
 
   useEffect(() => {
     const n = Number(prefillAmount);
@@ -57,6 +58,20 @@ function DonationContent() {
 
       const fetchData = async () => {
         try {
+          // Fetch Session
+          try {
+            const sessionData = await authService.getSession();
+            if (sessionData && sessionData.user) {
+              setIsGuest(false);
+            } else {
+              setIsGuest(true);
+              setIsAnonymous(true); // Default to anonymous for guests
+            }
+          } catch (e) {
+            setIsGuest(true);
+            setIsAnonymous(true);
+          }
+
           // Fetch Campaign Details
           const campaignData = await campaignService.getById(id);
           setCampaign(campaignData);
@@ -178,15 +193,31 @@ function DonationContent() {
       });
 
       const request: CreatePaymentRequest = {
-        donorId: isAnonymous ? null : currentDonorId,
+        donorId: currentDonorId,
         campaignId: campaign.id,
         donationAmount: amount,
         tipAmount: tipAmount,
         description: description,
+        isAnonymous: isAnonymous,
         items: itemsPayload
       };
 
-      // 4. Call Payment API
+      // 4. PRE-CHECK: Check Expenditure Item Limits
+      if (itemsPayload.length > 0) {
+        console.log("🛡️ [Donation] Pre-checking item limits...");
+        for (const item of itemsPayload) {
+          const checkResult = await paymentService.checkExpenditureItemLimit(item.expenditureItemId, item.quantity);
+          if (!checkResult.canDonateMore) {
+            console.warn(`🛑 [Donation] Limit exceeded for item ${item.expenditureItemId}:`, checkResult.message);
+            alert(checkResult.message || "Số lượng vật phẩm đã đạt giới hạn.");
+            setSubmitting(false);
+            return;
+          }
+        }
+        console.log("✅ [Donation] All item limits okay");
+      }
+
+      // 5. Call Payment API
       const response = await paymentService.createPayment(request);
 
       if (response.paymentUrl) {
@@ -256,6 +287,7 @@ function DonationContent() {
           onAgreedChange={setIsAgreed}
           onShowTerms={() => setShowTerms(true)}
           onSubmit={handleSubmit}
+          isGuest={isGuest}
         />
       ) : (
         <DonationItemLayout
@@ -282,6 +314,7 @@ function DonationContent() {
           onAgreedChange={setIsAgreed}
           onShowTerms={() => setShowTerms(true)}
           onSubmit={handleSubmit}
+          isGuest={isGuest}
         />
       )}
 
