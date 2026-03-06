@@ -26,6 +26,9 @@ export interface Expenditure {
     rejectReason?: string;
     disbursementProofUrl?: string;
     disbursedAt?: string;
+    bankCode?: string;
+    accountNumber?: string;
+    accountHolderName?: string;
     items?: ExpenditureItem[];
     createdAt?: string;
     updatedAt?: string;

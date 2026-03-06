@@ -46,6 +46,9 @@ export type ExpenditureRequest = StaffRequestBase & {
   proofImageUrl?: string;
   disbursementProofUrl?: string;
   disbursedAt?: string;
+  bankCode?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 };
 
 export type KycRequest = StaffRequestBase & {

@@ -480,7 +480,7 @@ export default function ExpenditureDetailPage() {
                                                                                     <input
                                                                                         type="number"
                                                                                         min="0"
-                                                                                        step="1000"
+                                                                                        step="1"
                                                                                         className="w-28 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
                                                                                         placeholder="Đơn giá"
                                                                                         value={updateItems[index]?.price}

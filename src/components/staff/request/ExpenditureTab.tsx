@@ -3,9 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
-    Search, ChevronDown, ChevronRight, AlertCircle, ArrowUpRight,
-    Eye, ThumbsUp, ThumbsDown, CheckCheck, Ban, X, CalendarClock,
-    ImageIcon, BadgeCheck, Clock, FileText,
+    Search, ChevronDown, ChevronRight, AlertCircle,
+    X, FileText, CreditCard
 } from 'lucide-react';
 import type { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import type { CampaignDto } from '@/types/campaign';
@@ -79,114 +78,6 @@ function RejectModal({ onConfirm, onCancel }: { onConfirm: (r: string) => void; 
     );
 }
 
-/* ══════════════════════════════ EvidenceReviewPanel ══════════════════════════════ */
-function EvidenceReviewPanel({ campaignId, evidenceStatus, onAllVerified }:
-    { campaignId: number; evidenceStatus: string | null | undefined; onAllVerified: () => void }) {
-    const [lightbox, setLightbox] = useState<string | null>(null);
-    const [fileStatuses, setFileStatuses] = useState<Record<number, 'PENDING' | 'APPROVED' | 'REJECTED'>>({});
-    const [media, setMedia] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        setLoading(true);
-        mediaService.getMediaByCampaignId(campaignId)
-            .then(data => {
-                setMedia(data);
-                const init: Record<number, 'PENDING' | 'APPROVED' | 'REJECTED'> = {};
-                data.forEach(m => { init[m.id] = 'PENDING'; });
-                setFileStatuses(init);
-            })
-            .finally(() => setLoading(false));
-    }, [campaignId]);
-
-    const canReview = evidenceStatus === 'SUBMITTED' || evidenceStatus === 'PENDING';
-
-    if (loading) return <div className="py-2 text-[10px] text-gray-400 animate-pulse">Đang tải bằng chứng…</div>;
-
-    if (!media.length) return (
-        <div className="flex items-center gap-2 py-4 text-gray-400 text-xs text-center justify-center border border-dashed border-gray-100 rounded-xl">
-            Chưa có bằng chứng nào được tải lên
-        </div>
-    );
-
-    return (
-        <>
-            {canReview && (
-                <div className="mb-3 px-3 py-2 rounded-xl bg-[#446b5f]/10 border border-[#446b5f]/20 text-[10px] text-[#446b5f] flex items-center gap-2">
-                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
-                    Fund owner đã nộp bằng chứng — vui lòng kiểm tra từng file bên dưới.
-                </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {media.map(m => {
-                    const st = fileStatuses[m.id] ?? 'PENDING';
-                    return (
-                        <div key={m.id} className="flex items-start gap-2.5 p-2 rounded-xl border border-gray-100 bg-white shadow-sm">
-                            <button className="relative flex-shrink-0 h-14 w-14 rounded-lg overflow-hidden group"
-                                onClick={() => setLightbox(m.url)}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={m.url} alt={m.fileName} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-center justify-center transition-all">
-                                    <Eye className="h-3.5 w-3.5 text-white opacity-0 group-hover:opacity-100" />
-                                </div>
-                            </button>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-medium text-gray-700 truncate">{m.fileName}</p>
-                                <span className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${st === 'APPROVED' ? 'bg-green-50 text-green-600' :
-                                    st === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                                    }`}>
-                                    {st === 'APPROVED' ? 'Đã duyệt' : st === 'REJECTED' ? 'Từ chối' : 'Chờ duyệt'}
-                                </span>
-                                {canReview && st === 'PENDING' && (
-                                    <div className="flex gap-1 mt-1.5">
-                                        <button onClick={async () => {
-                                            try {
-                                                await mediaService.updateMediaStatus(m.id, 'APPROVED');
-                                                setFileStatuses(p => ({ ...p, [m.id]: 'APPROVED' }));
-                                            } catch (err) {
-                                                toast.error('Lỗi duyệt bằng chứng');
-                                            }
-                                        }}
-                                            className="flex-1 py-1 rounded-md text-[9px] font-bold text-white bg-green-600">
-                                            Duyệt
-                                        </button>
-                                        <button onClick={async () => {
-                                            try {
-                                                await mediaService.updateMediaStatus(m.id, 'REJECTED');
-                                                setFileStatuses(p => ({ ...p, [m.id]: 'REJECTED' }));
-                                            } catch (err) {
-                                                toast.error('Lỗi từ chối bằng chứng');
-                                            }
-                                        }}
-                                            className="flex-1 py-1 rounded-md text-[9px] font-bold text-white bg-red-600">
-                                            X
-                                        </button>
-                                    </div>
-                                )}
-                                {canReview && st !== 'PENDING' && (
-                                    <button onClick={() => setFileStatuses(p => ({ ...p, [m.id]: 'PENDING' }))}
-                                        className="mt-0.5 text-[9px] text-gray-400 hover:text-gray-600 underline">Hoàn tác</button>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            {canReview && (
-                <button onClick={onAllVerified}
-                    className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs font-bold text-white bg-green-600 shadow-md">
-                    <CheckCheck className="h-3.5 w-3.5" /> Xác nhận bằng chứng
-                </button>
-            )}
-            {lightbox && (
-                <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={lightbox} alt="evidence" className="max-h-[90vh] max-w-[90vw] rounded-2xl shadow-2xl object-contain" />
-                </div>
-            )}
-        </>
-    );
-}
 
 /* ══════════════════════════════ ExpenditureItemRow ══════════════════════════════ */
 function ExpenditureItemRow({ item }: { item: ExpenditureItem }) {
@@ -254,15 +145,6 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
         }
     };
 
-    const handleAllVerified = async () => {
-        try {
-            const updated = await expenditureService.updateStatus(exp.id, 'VERIFIED');
-            setExp(updated);
-            toast.success('Đã xác nhận bằng chứng!');
-        } catch {
-            toast.error('Lỗi xác nhận');
-        }
-    };
 
     return (
         <>
@@ -364,15 +246,6 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                             )}
                         </div>
 
-                        {/* Evidence review */}
-                        <div className="px-4 pb-4">
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">BẰNG CHỨNG XÁC THỰC</p>
-                            <EvidenceReviewPanel
-                                campaignId={exp.campaignId}
-                                evidenceStatus={exp.evidenceStatus}
-                                onAllVerified={handleAllVerified}
-                            />
-                        </div>
                     </div>
                 )}
             </div>

@@ -83,6 +83,9 @@ export default function AdminPayoutsPage() {
                     justification: e.plan || 'No justification provided',
                     disbursementProofUrl: e.disbursementProofUrl,
                     disbursedAt: (e as any).disbursedAt,
+                    bankCode: e.bankCode,
+                    accountNumber: e.accountNumber,
+                    accountHolderName: e.accountHolderName,
                 };
             }));
 
@@ -359,6 +362,36 @@ export default function AdminPayoutsPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {selectedExp.accountNumber && (
+                                    <div className="bg-[#1A685B]/5 p-6 rounded-[32px] border border-[#1A685B]/10 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                                            <CreditCard className="h-20 w-20 text-[#1A685B]" />
+                                        </div>
+                                        <h3 className="text-[10px] font-black text-[#1A685B] uppercase tracking-[0.2em] mb-4">Tài khoản thụ hưởng (Lịch sử)</h3>
+                                        <div className="space-y-4 relative z-10">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ngân hàng</span>
+                                                    <p className="text-sm font-black text-slate-900">{selectedExp.bankCode}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản</span>
+                                                    <p className="text-sm font-black text-slate-900">{selectedExp.accountNumber}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Chủ tài khoản</span>
+                                                <p className="text-sm font-black text-slate-900">{selectedExp.accountHolderName}</p>
+                                            </div>
+                                            <div className="pt-2">
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1A685B]/10 text-[#1A685B] text-[9px] font-bold uppercase">
+                                                    Thông tin tại thời điểm yêu cầu
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                             </div>
 

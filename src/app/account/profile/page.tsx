@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
+import { useToast } from '@/components/ui/Toast';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,9 +10,13 @@ import DanboxLayout from '@/layout/DanboxLayout';
 import Link from 'next/link';
 import {
   User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
-  CalendarClock, Loader2, ChevronRight,
+  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2,
 } from 'lucide-react';
+import { api } from '@/config/axios';
+import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { appointmentService, AppointmentScheduleDto, AppointmentStatus } from '@/services/appointmentService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { BankAccountDto } from '@/types/bankAccount';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -241,10 +246,9 @@ function AppointmentModal({ appointments, loading, error, onClose, onRetry }: Mo
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Appointment state
@@ -259,6 +263,13 @@ export default function ProfilePage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
+  // Bank Account state
+  const [bankAccount, setBankAccount] = useState<BankAccountDto | null>(null);
+  const [bankCode, setBankCode] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountHolderName, setAccountHolderName] = useState('');
+  const [isBankLoading, setIsBankLoading] = useState(false);
+
   useEffect(() => {
     if (user) {
       const parts = user.fullName?.split(' ') || [];
@@ -269,6 +280,29 @@ export default function ProfilePage() {
       setAvatarPreview(user.avatarUrl || null);
     }
   }, [user]);
+
+  // Fetch Bank Account
+  useEffect(() => {
+    const fetchBankData = async () => {
+      try {
+        setIsBankLoading(true);
+        const banks = await bankAccountService.getMyBankAccounts();
+        if (banks.length > 0) {
+          const mainBank = banks[0];
+          setBankAccount(mainBank);
+          setBankCode(mainBank.bankCode);
+          setAccountNumber(mainBank.accountNumber);
+          setAccountHolderName(mainBank.accountHolderName);
+        }
+      } catch (err) {
+        console.error('Failed to fetch bank account:', err);
+      } finally {
+        setIsBankLoading(false);
+      }
+    };
+
+    if (user?.id) fetchBankData();
+  }, [user?.id]);
 
   const fetchAppts = useCallback(async () => {
     if (!user?.id) return;
@@ -292,13 +326,23 @@ export default function ProfilePage() {
     setLastName(parts.slice(1).join(' ') || '');
     setPhone(user?.phoneNumber || '');
     setAvatarPreview(user?.avatarUrl ?? null);
-    setError(''); setSuccess('');
+
+    // Sync bank state with current bankAccount
+    if (bankAccount) {
+      setBankCode(bankAccount.bankCode);
+      setAccountNumber(bankAccount.accountNumber);
+      setAccountHolderName(bankAccount.accountHolderName);
+    } else {
+      setBankCode('');
+      setAccountNumber('');
+      setAccountHolderName('');
+    }
+
     setIsEditing(true);
   };
 
   const handleAvatarUpload = async (file: File): Promise<{ success: boolean }> => {
     if (!user) throw new Error('Not authenticated');
-    setError('');
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -310,39 +354,73 @@ export default function ProfilePage() {
       updateUser({ avatarUrl });
       setAvatarPreview(avatarUrl);
       try {
-        const res = await fetch(`/api/users/${user.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ userId: user.id, avatarUrl }) });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          updateUser({ avatarUrl: (data as { avatarUrl?: string }).avatarUrl || avatarUrl });
-          setSuccess('Avatar updated successfully');
-          setTimeout(() => setSuccess(''), 3000);
-        } else {
-          setError('Avatar updated locally but could not sync. Try uploading again.');
-        }
-      } catch { setError('Avatar updated locally but could not sync.'); }
+        const res = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), { avatarUrl });
+        const data = res.data;
+        updateUser({ avatarUrl: data.avatarUrl || avatarUrl });
+        toast('Avatar updated successfully', 'success');
+      } catch (err: any) {
+        console.error('Avatar sync failed', err);
+        const detail = err.response?.data?.message || err.response?.data?.error || err.message;
+        toast(`Avatar updated locally but sync failed: ${detail}`, 'error');
+      }
       return { success: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to upload avatar';
-      setError(msg); throw err;
+      toast(msg, 'error');
+      throw err;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true); setError(''); setSuccess('');
+    setSaving(true);
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      if (!user?.id) { setError('User ID is required'); return; }
-      const res = await fetch('/api/users/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ userId: user.id, fullName: fullName || undefined, phoneNumber: phone.trim() }) });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        updateUser({ fullName: data.fullName ?? fullName, phoneNumber: data.phoneNumber ?? phone.trim() });
-        setSuccess('Profile updated successfully');
-        setTimeout(() => setSuccess(''), 3000);
+      if (!user?.id) { toast('User ID is required', 'error'); return; }
+
+      // 1. Update Profile (Base User)
+      try {
+        const profileRes = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), {
+          fullName: fullName || undefined,
+          phoneNumber: phone.trim()
+        });
+        updateUser({ fullName: profileRes.data.fullName ?? fullName, phoneNumber: profileRes.data.phoneNumber ?? phone.trim() });
+      } catch (err: any) {
+        console.error('Profile update 403/error:', err);
+        const detail = err.response?.data?.message || err.response?.data?.error || err.message;
+        throw new Error(`Profile Save Error: ${detail}`);
+      }
+
+      // 2. Handle Bank Account update / create
+      try {
+        const bankPayload = {
+          bankCode: bankCode.trim(),
+          accountNumber: accountNumber.trim(),
+          accountHolderName: accountHolderName.trim()
+        };
+
+        if (bankCode.trim() || accountNumber.trim() || accountHolderName.trim()) {
+          if (bankAccount) {
+            const updatedBank = await bankAccountService.update(bankAccount.id, bankPayload);
+            setBankAccount(updatedBank);
+          } else {
+            const newBank = await bankAccountService.create(bankPayload);
+            setBankAccount(newBank);
+          }
+        }
+      } catch (bankErr: any) {
+        console.error('Bank update 403/error:', bankErr);
+        const detail = bankErr.response?.data?.message || bankErr.response?.data?.error || bankErr.message;
+        toast(`Basic profile saved, but Bank Error: ${detail}`, 'error');
         setIsEditing(false);
-      } else { setError(data.error || 'Failed to update profile'); }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+        return;
+      }
+
+      toast('Profile and bank details updated successfully', 'success');
+      setIsEditing(false);
+    } catch (err: any) {
+      const detail = err.response?.data?.message || err.response?.data?.error || err.message;
+      toast(detail || 'An unexpected error occurred', 'error');
     } finally { setSaving(false); }
   };
 
@@ -369,17 +447,6 @@ export default function ProfilePage() {
           <div className="container">
             <div className="row">
               <div className="col-12">
-
-                {error && (
-                  <div className="mb-4 max-w-3xl mx-auto p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{error}</p>
-                  </div>
-                )}
-                {success && (
-                  <div className="mb-4 max-w-3xl mx-auto p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800">{success}</p>
-                  </div>
-                )}
 
                 {/* ── Profile Card – wider ── */}
                 <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 md:p-10 max-w-3xl mx-auto">
@@ -420,6 +487,48 @@ export default function ProfilePage() {
                         ))}
                       </div>
 
+                      {/* Bank Account */}
+                      <div className="mt-8 pt-6 border-t border-gray-100">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
+                            <Landmark className="w-4 h-4 text-[#ff5e14]" /> Bank Account Detail
+                          </h3>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                          {isBankLoading ? (
+                            <div className="flex items-center gap-2 text-gray-400 text-sm">
+                              <Loader2 className="w-4 h-4 animate-spin" /> Loading bank info...
+                            </div>
+                          ) : bankAccount ? (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Bank Name</p>
+                                  <p className="text-sm font-bold text-gray-800">{bankAccount.bankCode}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                    <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> VERIFIED
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Account Holder</p>
+                                  <p className="text-sm font-black text-gray-900 uppercase">{bankAccount.accountHolderName}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Account Number</p>
+                                  <p className="text-lg font-mono font-black text-[#ff5e14] tracking-widest">{bankAccount.accountNumber}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-400 italic">No bank account linked. Click "Edit" to add one.</div>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Quick access */}
                       <div className="mt-8 pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-semibold text-gray-600 mb-4">Quick access</h3>
@@ -448,7 +557,7 @@ export default function ProfilePage() {
                       <div className="mb-8">
                         <label className="block text-sm font-medium text-gray-600 mb-3">Profile Picture</label>
                         <div className="flex items-center gap-6">
-                          <AvatarUploader onUpload={handleAvatarUpload} onError={setError} maxSizeMB={5} acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}>
+                          <AvatarUploader onUpload={handleAvatarUpload} onError={(m) => toast(m, 'error')} maxSizeMB={5} acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}>
                             <Avatar className="h-28 w-28 cursor-pointer border-2 border-gray-200 shadow-sm hover:opacity-80 transition-opacity">
                               <AvatarImage src={avatarPreview ?? undefined} alt="Avatar" />
                               <AvatarFallback className="bg-gray-100 text-2xl font-bold text-gray-500">
@@ -495,10 +604,51 @@ export default function ProfilePage() {
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
                       </div>
 
+                      {/* Bank Fields */}
+                      <div className="mb-8 p-6 bg-orange-50/30 rounded-2xl border border-orange-100">
+                        <h3 className="text-sm font-bold text-orange-800 mb-6 flex items-center gap-2">
+                          <Landmark className="w-4 h-4" /> Bank Account Information
+                        </h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Bank Name / Code</label>
+                            <input
+                              type="text"
+                              value={bankCode}
+                              onChange={e => setBankCode(e.target.value)}
+                              placeholder="e.g. MB Bank, Vietcombank"
+                              className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-bold"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Account Number</label>
+                              <input
+                                type="text"
+                                value={accountNumber}
+                                onChange={e => setAccountNumber(e.target.value)}
+                                placeholder="038 xxxx xxxx"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-mono font-bold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Account Holder Name</label>
+                              <input
+                                type="text"
+                                value={accountHolderName}
+                                onChange={e => setAccountHolderName(e.target.value)}
+                                placeholder="NGUYEN VAN A"
+                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-bold uppercase"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Actions */}
                       <div className="flex justify-end gap-3 mb-8">
                         <button type="button"
-                          onClick={() => { const p = user.fullName?.split(' ') || []; setFirstName(p[0] || ''); setLastName(p.slice(1).join(' ') || ''); setPhone(user.phoneNumber || ''); setError(''); setSuccess(''); setIsEditing(false); }}
+                          onClick={() => { const p = user.fullName?.split(' ') || []; setFirstName(p[0] || ''); setLastName(p.slice(1).join(' ') || ''); setPhone(user.phoneNumber || ''); setIsEditing(false); }}
                           className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
                           <X className="w-4 h-4 inline mr-1.5" />Cancel
                         </button>
