@@ -86,7 +86,7 @@ function CampaignsListContent() {
           type: c.type || c.categoryName || c.category || "Chung",
           raised: c.balance ?? 0,
           goal: Math.max(1, c.balance ?? 1),
-          image: withFallbackImage(c.coverImage, "/assets/img/campaign/1.jpg"),
+          image: withFallbackImage((c.coverImageUrl || c.coverImage) as any, "/assets/img/campaign/1.png"),
         }));
 
         if (!mounted) return;

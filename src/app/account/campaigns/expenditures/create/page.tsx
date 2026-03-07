@@ -6,9 +6,14 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
+import { bankAccountService } from '@/services/bankAccountService';
 import { CampaignDto } from '@/types/campaign';
+import { BankAccountDto } from '@/types/bankAccount';
 import { CreateExpenditureRequest, CreateExpenditureItemRequest } from '@/types/expenditure';
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { vi } from 'date-fns/locale';
 
 export default function CreateExpenditurePage() {
     const router = useRouter();
@@ -17,6 +22,7 @@ export default function CreateExpenditurePage() {
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     const [campaign, setCampaign] = useState<CampaignDto | null>(null);
+    const [primaryBank, setPrimaryBank] = useState<BankAccountDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -39,20 +45,29 @@ export default function CreateExpenditurePage() {
             return;
         }
 
-        const fetchCampaign = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const data = await campaignService.getById(Number(campaignId));
-                setCampaign(data);
+                const [campaignData, bankAccounts] = await Promise.all([
+                    campaignService.getById(Number(campaignId)),
+                    bankAccountService.getMyBankAccounts()
+                ]);
+
+                setCampaign(campaignData);
+
+                // Prioritize approved bank accounts, then fall back to any available
+                const approvedBank = bankAccounts.find(acc => acc.status === 'APPROVED');
+                const anyBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
+                setPrimaryBank(approvedBank || anyBank || null);
             } catch (err) {
-                console.error('Failed to fetch campaign:', err);
-                setError('Failed to load campaign data.');
+                console.error('Failed to fetch data:', err);
+                setError('Failed to load campaign or bank data.');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchCampaign();
+        fetchData();
     }, [campaignId, isAuthenticated, authLoading, router]);
 
     const handleItemChange = (index: number, field: keyof CreateExpenditureItemRequest, value: string | number) => {
@@ -224,17 +239,85 @@ export default function CreateExpenditurePage() {
                                 <label htmlFor="evidenceDueAt" className="block text-sm font-medium text-gray-700">
                                     Hạn nộp minh chứng <span className="text-red-500">*</span>
                                 </label>
-                                <input
-                                    type="date"
+                                <DatePicker
                                     id="evidenceDueAt"
+                                    selected={evidenceDueAt ? new Date(evidenceDueAt) : null}
+                                    onChange={(date: Date | null) => setEvidenceDueAt(date ? date.toISOString() : '')}
+                                    locale={vi}
+                                    dateFormat="dd/MM/yyyy"
+                                    placeholderText="dd/mm/yyyy"
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm border p-2 mt-1"
-                                    value={evidenceDueAt}
-                                    onChange={(e) => setEvidenceDueAt(e.target.value)}
                                     required
                                 />
                                 <p className="mt-1 text-xs text-gray-500">Ngày bắt buộc phải cung cấp hóa đơn/chứng từ cho kế hoạch này.</p>
                             </div>
                         )}
+
+                        <div className="pt-4 border-t border-gray-100">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Thông tin tài khoản thụ hưởng
+                            </label>
+                            {primaryBank ? (
+                                <div className={`rounded-xl border p-4 flex items-center justify-between ${primaryBank.status === 'APPROVED'
+                                    ? 'bg-green-50 border-green-200'
+                                    : primaryBank.status === 'REJECTED'
+                                        ? 'bg-red-50 border-red-200'
+                                        : 'bg-yellow-50 border-yellow-200'
+                                    }`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${primaryBank.status === 'APPROVED'
+                                            ? 'bg-green-100 text-green-600'
+                                            : primaryBank.status === 'REJECTED'
+                                                ? 'bg-red-100 text-red-600'
+                                                : 'bg-yellow-100 text-yellow-600'
+                                            }`}>
+                                            <CreditCard className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-bold text-gray-900">{primaryBank.bankCode} - {primaryBank.accountNumber}</p>
+                                                {primaryBank.status === 'APPROVED' ? (
+                                                    <span className="px-1.5 py-0.5 rounded bg-green-500 text-[8px] font-black text-white uppercase tracking-wider leading-none">Vượt qua xét duyệt</span>
+                                                ) : primaryBank.status === 'REJECTED' ? (
+                                                    <span className="px-1.5 py-0.5 rounded bg-red-500 text-[8px] font-black text-white uppercase tracking-wider leading-none">Bị từ chối</span>
+                                                ) : (
+                                                    <span className="px-1.5 py-0.5 rounded bg-yellow-500 text-[8px] font-black text-white uppercase tracking-wider leading-none">Đang chờ duyệt</span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400 font-medium uppercase">{primaryBank.accountHolderName}</p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/account/profile"
+                                        className={`text-xs font-bold flex items-center gap-1 ${primaryBank.status === 'APPROVED' ? 'text-green-700 hover:text-green-800' : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                    >
+                                        {primaryBank.status === 'REJECTED' ? 'Sửa lại' : 'Thay đổi'} <ExternalLink className="h-3 w-3" />
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div className="bg-red-50 rounded-xl border border-red-200 p-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                                            <AlertCircle className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-red-900">Chưa cấu hình tài khoản ngân hàng</p>
+                                            <p className="text-xs text-red-500">Bạn cần cập nhật tài khoản đã xác thực để nhận tiền giải ngân.</p>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        href="/account/profile"
+                                        className="text-xs font-bold text-red-700 hover:text-red-800 flex items-center gap-1 underline"
+                                    >
+                                        Cập nhật ngay
+                                    </Link>
+                                </div>
+                            )}
+                            <p className="mt-2 text-[10px] text-gray-400 italic">
+                                * Thông tin ngân hàng tại thời điểm lưu sẽ được ghi lại vĩnh viễn trong chứng từ chi tiêu này.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="p-6 border-t border-b border-gray-200 bg-gray-50 flex justify-between items-center">
@@ -279,7 +362,7 @@ export default function CreateExpenditurePage() {
                                         <input
                                             type="number"
                                             min="0"
-                                            step="1000"
+                                            step="1"
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm border p-2"
                                             value={item.expectedPrice}
                                             onChange={(e) => handleItemChange(index, 'expectedPrice', e.target.value)}

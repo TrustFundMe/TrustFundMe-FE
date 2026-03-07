@@ -16,9 +16,11 @@ function getAvatarSrc(avatarUrl: string | undefined, fullName?: string | null): 
 
 export default function CreatePostTrigger({ onClick }: CreatePostTriggerProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const handleClick = () => (onClick ? onClick() : router.push("/post/create"));
   const avatarSrc = getAvatarSrc(user?.avatarUrl, user?.fullName);
+
+  if (!isAuthenticated) return null;
 
   return (
     <motion.div

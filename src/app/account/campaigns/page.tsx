@@ -11,6 +11,7 @@ import { CampaignDto } from '@/types/campaign';
 import MyCampaignCard from '@/components/account/MyCampaignCard';
 import UserChatModal from '@/components/chat/UserChatModal';
 import { chatService, Conversation } from '@/services/chatService';
+import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 
 export default function CampaignsPage() {
@@ -38,12 +39,25 @@ export default function CampaignsPage() {
         const data = await campaignService.getByFundOwner(user.id);
         console.log('Campaigns data received:', data);
 
-        // Enrich thêm goal cho mỗi campaign (tạm thời mockup hoặc gọi thêm API nếu cần)
-        // Vì API getByFundOwner có thể chưa trả về goal, ta fetch thêm cho từng cái nếu cần
         const enrichedData = await Promise.all(data.map(async (c) => {
           try {
             const goal = await campaignService.getActiveGoalByCampaignId(c.id);
-            return { ...c, activeGoal: goal };
+            let coverImageUrl = c.coverImageUrl;
+
+            // If coverImageUrl is missing but we have a coverImage ID, or even if we don't, 
+            // try to fetch the first image as a resilient fallback
+            if (!coverImageUrl) {
+              try {
+                const firstImage = await mediaService.getCampaignFirstImage(c.id);
+                if (firstImage) {
+                  coverImageUrl = firstImage.url;
+                }
+              } catch (mediaErr) {
+                console.warn(`Failed to fetch first image for campaign ${c.id}:`, mediaErr);
+              }
+            }
+
+            return { ...c, activeGoal: goal, coverImageUrl };
           } catch {
             return c;
           }
@@ -102,14 +116,11 @@ export default function CampaignsPage() {
                   className="inline-flex items-center gap-2 text-gray-500 hover:text-orange-600 mb-4 transition-colors text-sm font-medium"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to Profile
+                  Quay lại hồ sơ
                 </Link>
                 <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-                  My Campaigns
+                  Chiến dịch của tôi
                 </h1>
-                <p className="mt-2 text-lg text-gray-600">
-                  Manage your impact and track fundraising progress (Logged in as ID: {user?.id})
-                </p>
               </div>
               <div className="flex items-center gap-4">
                 <Link
@@ -117,7 +128,7 @@ export default function CampaignsPage() {
                   className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 hover:scale-[1.02] active:scale-[0.98] font-bold"
                 >
                   <Plus className="w-5 h-5" />
-                  Start New Campaign
+                  Tạo chiến dịch mới
                 </Link>
               </div>
             </div>
@@ -130,7 +141,7 @@ export default function CampaignsPage() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search your campaigns..."
+                  placeholder="Tìm kiếm chiến dịch..."
                   className="block w-full pl-11 pr-4 py-3 border border-gray-200 rounded-2xl bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all shadow-sm"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -141,7 +152,7 @@ export default function CampaignsPage() {
                   <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
                     <LayoutGrid className="w-5 h-5" />
                   </div>
-                  <span className="font-semibold text-gray-700">Total</span>
+                  <span className="font-semibold text-gray-700">Tổng số</span>
                 </div>
                 <span className="text-2xl font-bold text-gray-900">{campaigns.length}</span>
               </div>
@@ -152,7 +163,7 @@ export default function CampaignsPage() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <Loader2 className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600 font-medium">Fetching your campaigns...</p>
+                  <p className="text-gray-600 font-medium">Đang tải danh sách chiến dịch...</p>
                 </div>
               </div>
             ) : filteredCampaigns.length > 0 ? (
@@ -176,19 +187,19 @@ export default function CampaignsPage() {
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {searchTerm ? 'No campaigns match your search' : 'Ready to start something amazing?'}
+                  {searchTerm ? 'Không tìm thấy chiến dịch phù hợp' : 'Bạn đã sẵn sàng để bắt đầu chưa?'}
                 </h3>
                 <p className="text-gray-500 mb-8 max-w-md mx-auto text-lg">
                   {searchTerm
-                    ? "Try adjusting your search terms to find what you're looking for."
-                    : "You haven't created any campaigns yet. Start your first fundraising journey today and make a real impact."}
+                    ? "Hãy thử điều chỉnh từ khóa tìm kiếm để tìm thấy chiến dịch bạn cần."
+                    : "Bạn chưa tạo chiến dịch nào. Hãy bắt đầu hành trình ngay hôm nay để tạo nên những thay đổi tuyệt vời."}
                 </p>
                 {!searchTerm && (
                   <Link
                     href="/campaign-creation"
                     className="inline-flex px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all font-bold shadow-xl shadow-orange-100 hover:scale-105"
                   >
-                    Launch My First Campaign
+                    Bắt đầu chiến dịch đầu tiên
                   </Link>
                 )}
               </div>

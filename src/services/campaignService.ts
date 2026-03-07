@@ -48,6 +48,11 @@ export const campaignService = {
     return res.data;
   },
 
+  async getExpendituresByCampaignId(campaignId: number): Promise<any[]> {
+    const res = await api.get<any[]>(API_ENDPOINTS.EXPENDITURES.BY_CAMPAIGN(campaignId));
+    return res.data;
+  },
+
   async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED', rejectionReason?: string): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.REVIEW(id), {
       status,
@@ -61,5 +66,34 @@ export const campaignService = {
       proofUrl
     });
     return res.data;
-  }
+  },
+
+  // Follow/Unfollow campaigns
+  async followCampaign(id: number): Promise<any> {
+    const res = await api.post(API_ENDPOINTS.CAMPAIGN_FOLLOWS.FOLLOW(id));
+    return res.data;
+  },
+
+  async unfollowCampaign(id: number): Promise<any> {
+    const res = await api.delete(API_ENDPOINTS.CAMPAIGN_FOLLOWS.UNFOLLOW(id));
+    return res.data;
+  },
+
+  // Get followers
+  async getFollowers(campaignId: number): Promise<any[]> {
+    const res = await api.get<any[]>(API_ENDPOINTS.CAMPAIGN_FOLLOWS.FOLLOWERS(campaignId));
+    return res.data;
+  },
+
+  // Check if following
+  async isFollowing(campaignId: number): Promise<boolean> {
+    const res = await api.get<{ following: boolean }>(API_ENDPOINTS.CAMPAIGN_FOLLOWS.IS_FOLLOWING(campaignId));
+    return res.data.following;
+  },
+
+  // Get follower count
+  async getFollowerCount(campaignId: number): Promise<number> {
+    const res = await api.get<{ count: number }>(API_ENDPOINTS.CAMPAIGN_FOLLOWS.COUNT(campaignId));
+    return res.data.count;
+  },
 };

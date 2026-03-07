@@ -26,9 +26,11 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateStatus: async (id: string | number, status: string): Promise<Expenditure> => {
-        const response = await axiosInstance.put(`/api/expenditures/${id}/status`, null, {
-            params: { status }
+    updateStatus: async (id: string | number, status: string, staffId?: number, reasonReject?: string): Promise<Expenditure> => {
+        const response = await axiosInstance.put(`/api/expenditures/${id}/status`, {
+            status,
+            staffId,
+            reasonReject
         });
         return response.data;
     },

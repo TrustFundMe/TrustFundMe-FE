@@ -13,7 +13,9 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
-  CreditCard
+  CreditCard,
+  MessageSquare,
+  Flag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RequireRole from '@/components/auth/RequireRole';
@@ -24,6 +26,8 @@ const sidebarNavItems = [
   { href: '/admin/users', label: 'User Central', icon: LayoutGrid },
   { href: '/admin/campaigns', label: 'Campaigns', icon: Box },
   { href: '/admin/payouts', label: 'Payouts', icon: CreditCard },
+  { href: '/admin/feed-posts', label: 'Feed Posts', icon: MessageSquare },
+  { href: '/admin/flags', label: 'Flags', icon: Flag },
 ];
 
 function Sidebar({ isExpanded, setIsExpanded }: { isExpanded: boolean; setIsExpanded: (v: boolean) => void }) {

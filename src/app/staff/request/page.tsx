@@ -1,12 +1,14 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { Megaphone, DollarSign } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Megaphone, DollarSign, Shield } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import ExpenditureTab from '@/components/staff/request/ExpenditureTab';
 import { campaignService } from '@/services/campaignService';
+import { userService, UserInfo } from '@/services/userService';
 import type {
   CampaignRequest,
   RequestStatus,
@@ -14,6 +16,7 @@ import type {
 
 
 export default function StaffRequestPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE'>('CAMPAIGN');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,13 +24,23 @@ export default function StaffRequestPage() {
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
   const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
-
-
+  const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
 
   // Fetch functions moved to component scope
   const fetchCampaigns = async () => {
     try {
       const allCampaigns = await campaignService.getAll();
+
+      // Fetch users for campaign owners
+      const allUsersResult = await userService.getAllUsers();
+      const userMap = new Map<number, UserInfo>();
+      if (allUsersResult.success && allUsersResult.data) {
+        allUsersResult.data.forEach(user => {
+          userMap.set(user.id, user);
+        });
+      }
+      setUsers(userMap);
+
       const mappedCampaigns: CampaignRequest[] = allCampaigns.map(c => {
         // Map Backend Status to Frontend Request Status
         let status: RequestStatus = 'PENDING';
@@ -36,6 +49,8 @@ export default function StaffRequestPage() {
         else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
         else status = c.status as RequestStatus;
 
+        const owner = userMap.get(c.fundOwnerId);
+
         return {
           id: `CAMP_${c.id}`,
           createdAt: c.createdAt || new Date().toISOString(),
@@ -43,7 +58,7 @@ export default function StaffRequestPage() {
           type: 'APPROVE_CAMPAIGN',
           campaignId: c.id,
           campaignTitle: c.title,
-          requesterName: `Owner #${c.fundOwnerId}`,
+          requesterName: owner?.fullName || `Owner #${c.fundOwnerId}`,
           description: c.description || '',
           category: c.category || '',
           rejectionReason: c.rejectionReason || undefined,
@@ -78,7 +93,16 @@ export default function StaffRequestPage() {
     [campaignRows, selectedCampaignId]
   );
 
+  // Navigate to KYC verification page for a user
+  const handleNavigateToKYC = (userId: number) => {
+    router.push(`/staff/verification?userId=${userId}`);
+  };
 
+  // Navigate to KYC page to input/verify KYC for the user
+  const handleVerifyKYC = (fundOwnerId: number) => {
+    if (!fundOwnerId) return;
+    router.push(`/staff/verification?userId=${fundOwnerId}`);
+  };
 
   // Handlers
   const handleReviewCampaign = async (campaignId?: number, reason?: string, isApprove: boolean = true) => {
@@ -221,9 +245,15 @@ export default function StaffRequestPage() {
                                 Verified
                               </span>
                             ) : (
-                              <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
-                                Missing
-                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleNavigateToKYC(r.fundOwnerId);
+                                }}
+                                className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100"
+                              >
+                                Missing – verify
+                              </button>
                             )
                           ),
                         },
@@ -258,17 +288,20 @@ export default function StaffRequestPage() {
                       { label: 'Description', value: selectedCampaign?.description || '-' },
                     ]}
                     approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
-                    rejectDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
+                    rejectDisabled={false}
                     approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
-                      ? "Please complete KYC verification before approving or rejecting this campaign"
+                      ? "Cần xác minh KYC trước khi duyệt chiến dịch"
                       : ""
                     }
-                    rejectDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
-                      ? "Please complete KYC verification before approving or rejecting this campaign"
-                      : ""
-                    }
+                    rejectDisabledReason=""
+                    actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Kiểm tra KYC" : ""}
+                    onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
                     onApprove={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, true)}
                     onReject={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, false)}
+                    onVerifyKYC={selectedCampaign && !selectedCampaign.kycVerified
+                      ? () => handleVerifyKYC(selectedCampaign.fundOwnerId)
+                      : undefined
+                    }
                   />
                 </div>
               </div>

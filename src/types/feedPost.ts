@@ -2,6 +2,8 @@ export type FeedPostDto = {
   id: number;
   budgetId: number | null;
   authorId: number;
+  authorName?: string | null;
+  authorAvatar?: string | null;
   type: string;
   visibility: string;
   title: string | null;
@@ -9,6 +11,16 @@ export type FeedPostDto = {
   status: string;
   createdAt: string;
   updatedAt: string | null;
+  // enriched fields from FeedPostResponse
+  categoryId?: number | null;
+  replyCount?: number;
+  viewCount?: number;
+  likeCount?: number;
+  commentCount?: number;
+  isLiked?: boolean;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  attachments?: { url?: string; name?: string; fileName?: string; type?: string }[];
 };
 
 export type FeedPostAuthor = {
@@ -24,7 +36,8 @@ export type FeedPostComment = {
   createdAt: string;
   liked?: boolean;
   likeCount?: number;
-  replies?: FeedPostComment[]; // Nested comments
+  parentCommentId?: string | null;
+  replies?: FeedPostComment[];
 };
 
 export type FeedPostAttachment = {

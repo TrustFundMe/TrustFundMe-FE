@@ -74,6 +74,7 @@ export default function AdminPayoutsPage() {
                     campaignCoverImage: coverImage,
                     requesterName: 'Fund Owner',
                     totalAmount: e.totalAmount,
+                    totalExpectedAmount: e.totalExpectedAmount,
                     expenditureItems: (e.items || []).map(i => ({
                         description: i.category,
                         quantity: i.quantity,
@@ -82,6 +83,9 @@ export default function AdminPayoutsPage() {
                     justification: e.plan || 'No justification provided',
                     disbursementProofUrl: e.disbursementProofUrl,
                     disbursedAt: (e as any).disbursedAt,
+                    bankCode: e.bankCode,
+                    accountNumber: e.accountNumber,
+                    accountHolderName: e.accountHolderName,
                 };
             }));
 
@@ -100,8 +104,9 @@ export default function AdminPayoutsPage() {
 
     const filteredExpenditures = useMemo(() => {
         return expenditureRows.filter((r) => {
-            const matchesStatus = statusFilter === 'ALL' ||
-                (statusFilter === 'PENDING' ? (r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW') : r.status === statusFilter);
+            const matchesStatus = statusFilter === 'ALL' ?
+                ((r.status as string) === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' || r.status === 'DISBURSED') :
+                r.status === statusFilter;
             const matchesSearch = searchQuery === '' ||
                 r.campaignTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 r.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -190,14 +195,14 @@ export default function AdminPayoutsPage() {
                 </div>
 
                 <div className="bg-slate-100/50 p-1.5 rounded-[24px] flex items-center gap-1 shadow-inner">
-                    {(['ALL', 'PENDING', 'APPROVED', 'DISBURSED', 'REJECTED'] as const).map((s) => (
+                    {(['ALL', 'WITHDRAWAL_REQUESTED', 'DISBURSED'] as const).map((s) => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
                             className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
-                            {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                            {s === 'ALL' ? 'Tất cả' : s === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' : 'Đã giải ngân'}
                         </button>
                     ))}
                 </div>
@@ -253,18 +258,18 @@ export default function AdminPayoutsPage() {
                                         </div>
                                     </td>
                                     <td className="py-6 pr-4">
-                                        <span className="text-lg font-black text-slate-900">{formatVnd(r.totalAmount)}</span>
+                                        <span className="text-lg font-black text-slate-900">{formatVnd(r.totalExpectedAmount || r.totalAmount)}</span>
                                     </td>
                                     <td className="py-6 pr-4 text-slate-500 font-medium">
                                         {new Date(r.createdAt).toLocaleDateString('vi-VN')}
                                     </td>
                                     <td className="py-6 pr-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'APPROVED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
-                                            r.status === 'REJECTED' ? 'bg-[#F84D43]/10 text-[#F84D43]' :
-                                                r.status === 'DISBURSED' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-amber-100 text-amber-800'
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'bg-blue-100 text-blue-700' :
+                                            r.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
+                                                'bg-amber-100 text-amber-800'
                                             }`}>
-                                            {r.status === 'PENDING' || (r.status as string) === 'PENDING_REVIEW' ? 'Chờ duyệt' : r.status === 'APPROVED' ? 'Đã duyệt' : r.status === 'DISBURSED' ? 'Đã giải ngân' : 'Từ chối'}
+                                            {r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'Chờ giải ngân' :
+                                                r.status === 'DISBURSED' ? 'Đã giải ngân' : r.status}
                                         </span>
                                     </td>
                                     <td className="py-6 pr-10 text-right">
@@ -326,8 +331,8 @@ export default function AdminPayoutsPage() {
                                     <h3 className="text-[10px] font-black text-[#F84D43] uppercase tracking-[0.2em] mb-4">Thông tin chung</h3>
                                     <div className="space-y-4">
                                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền yêu cầu</span>
-                                            <span className="text-2xl font-black text-slate-900 mt-1">{formatVnd(selectedExp.totalAmount)}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền muốn rút</span>
+                                            <span className="text-2xl font-black text-slate-900 mt-1">{formatVnd(selectedExp.totalExpectedAmount || selectedExp.totalAmount)}</span>
                                         </div>
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
@@ -357,6 +362,36 @@ export default function AdminPayoutsPage() {
                                         </div>
                                     </div>
                                 </div>
+
+                                {selectedExp.accountNumber && (
+                                    <div className="bg-[#1A685B]/5 p-6 rounded-[32px] border border-[#1A685B]/10 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                                            <CreditCard className="h-20 w-20 text-[#1A685B]" />
+                                        </div>
+                                        <h3 className="text-[10px] font-black text-[#1A685B] uppercase tracking-[0.2em] mb-4">Tài khoản thụ hưởng (Lịch sử)</h3>
+                                        <div className="space-y-4 relative z-10">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ngân hàng</span>
+                                                    <p className="text-sm font-black text-slate-900">{selectedExp.bankCode}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản</span>
+                                                    <p className="text-sm font-black text-slate-900">{selectedExp.accountNumber}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Chủ tài khoản</span>
+                                                <p className="text-sm font-black text-slate-900">{selectedExp.accountHolderName}</p>
+                                            </div>
+                                            <div className="pt-2">
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1A685B]/10 text-[#1A685B] text-[9px] font-bold uppercase">
+                                                    Thông tin tại thời điểm yêu cầu
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                             </div>
 

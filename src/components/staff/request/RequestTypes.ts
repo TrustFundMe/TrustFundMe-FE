@@ -1,4 +1,4 @@
-export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED';
+export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISBURSED' | 'WITHDRAWAL_REQUESTED';
 
 export type StaffRequestBase = {
   id: string;
@@ -40,11 +40,15 @@ export type ExpenditureRequest = StaffRequestBase & {
   campaignTitle: string;
   requesterName: string;
   totalAmount: number;
+  totalExpectedAmount?: number;
   expenditureItems: ExpenditureItem[];
   justification: string;
   proofImageUrl?: string;
   disbursementProofUrl?: string;
   disbursedAt?: string;
+  bankCode?: string;
+  accountNumber?: string;
+  accountHolderName?: string;
 };
 
 export type KycRequest = StaffRequestBase & {
