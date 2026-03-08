@@ -2,6 +2,7 @@
 
 import DanboxLayout from '@/layout/DanboxLayout';
 import { Suspense, useEffect, useMemo, useState } from 'react';
+import { XCircle, Shield } from 'lucide-react';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
@@ -17,9 +18,10 @@ import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { Expenditure } from '@/types/expenditure';
-
 import { mediaService } from '@/services/mediaService';
 import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymentService';
+import { flagService } from '@/services/flagService';
+import toast from 'react-hot-toast';
 
 const mapCampaignDtoToUi = (
   dto: CampaignDto,
@@ -53,6 +55,8 @@ const mapCampaignDtoToUi = (
     // forward KYC flag from server
     kycVerified: dto.kycVerified ?? false,
     type: dto.type || 'general',
+    status: dto.status,
+    rejectionReason: dto.rejectionReason || undefined,
   };
 };
 
@@ -109,14 +113,15 @@ function CampaignDetailsInner() {
         if (!mounted) return;
         setPlans(mappedPlans);
 
-        // Fetch owner, media, and follow info in parallel
+        // Fetch owner, media, follow info, progress, and user's own flags in parallel
         const [
           ownerResult,
           mediaResult,
           followResult,
           followersResult,
           progressData,
-          recentDonorsData
+          recentDonorsData,
+          myFlags
         ] = await Promise.all([
           userService.getUserById(dto.fundOwnerId).catch(() => null),
           mediaService.getMediaByCampaignId(campaignId).catch(() => []),
@@ -126,10 +131,15 @@ function CampaignDetailsInner() {
           ]).catch(() => [false, 0]),
           campaignService.getFollowers(campaignId).catch(() => []),
           paymentService.getCampaignProgress(campaignId).catch(() => null),
-          paymentService.getRecentDonors(campaignId, 3).catch(() => [])
+          paymentService.getRecentDonors(campaignId, 3).catch(() => []),
+          flagService.getMyFlags(0, 100).catch(() => [] as import('@/services/flagService').FlagDto[])
         ]);
 
         console.log("🔍 [CampaignDetails] Data fetched:", { progressData, recentDonorsData });
+
+        // Check if current user already flagged this campaign
+        const alreadyFlagged = (myFlags as import('@/services/flagService').FlagDto[])
+          .some(f => f.campaignId === campaignId);
 
         let owner = { name: '', avatar: '/assets/img/about/01.jpg' };
         if (ownerResult?.success && ownerResult?.data) {
@@ -186,6 +196,7 @@ function CampaignDetailsInner() {
         const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl);
         campaignData.followed = followed;
         campaignData.followerCount = followerCount;
+        campaignData.flagged = alreadyFlagged;   // ← pre-set from existing flags
         setCampaign(campaignData);
         setFollowers(followersData);
         setProgress(progressData);
@@ -315,7 +326,20 @@ function CampaignDetailsInner() {
                   }
                 }}
                 onToggleFlag={() => setCampaign((c) => (c ? { ...c, flagged: !c.flagged } : c))}
+                onSubmitFlag={async (reason: string) => {
+                  if (!campaignId) return;
+                  try {
+                    await flagService.flagCampaign(campaignId, reason);
+                    toast.success('Đã gửi tố cáo thành công! Chúng tôi sẽ xem xét trong thời gian sớm nhất.');
+                  } catch (err: any) {
+                    const msg = err?.response?.data?.message || err?.message || 'Gửi tố cáo thất bại.';
+                    toast.error(msg);
+                    throw err; // re-throw so modal stays open
+                  }
+                }}
               />
+
+
               {/* KYC warning button for staff/admin when campaign owner has not finished KYC */}
               {(isStaff || isAdmin) && campaign && campaign.kycVerified === false && (
                 <div className="mt-4">
@@ -335,21 +359,40 @@ function CampaignDetailsInner() {
             <div style={{ minWidth: 0, marginTop: 86 }}>
               <div className="casues-sidebar-wrapper">
                 <div style={{ marginBottom: 18 }}>
-                  <CampaignDonateCard
-                    raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
-                    goalAmount={progress?.goalAmount || campaign.goalAmount}
-                    progressPercentage={progress?.progressPercentage || 0}
-                    recentDonors={recentDonors}
-                    onDonate={(amount) => {
-                      const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
-                      const params = new URLSearchParams({
-                        campaignId: String(campaignId),
-                        amount: String(amount),
-                        fundType,
-                      });
-                      router.push(`/donation?${params.toString()}`);
-                    }}
-                  />
+                  {campaign.status === 'DISABLED' ? (
+                    <div className="p-8 rounded-3xl bg-red-50 border-2 border-red-200 border-dashed text-center space-y-4 animate-pulse">
+                      <div className="inline-flex p-4 bg-red-100 rounded-full">
+                        <XCircle className="h-8 w-8 text-red-600" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-black text-red-700 uppercase tracking-tight">Chiến dịch tạm dừng</div>
+                        <p className="text-xs font-bold text-red-900/60 mt-1">Hệ thống đã tạm dừng tiếp nhận đóng góp cho chiến dịch này.</p>
+                      </div>
+
+                      {campaign.rejectionReason && (
+                        <div className="pt-4 border-t border-red-200">
+                          <p className="text-[11px] font-bold text-red-800 uppercase tracking-wider mb-1">Lý do:</p>
+                          <p className="text-sm text-red-700 italic">"{campaign.rejectionReason}"</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <CampaignDonateCard
+                      raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
+                      goalAmount={progress?.goalAmount || campaign.goalAmount}
+                      progressPercentage={progress?.progressPercentage || 0}
+                      recentDonors={recentDonors}
+                      onDonate={(amount) => {
+                        const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
+                        const params = new URLSearchParams({
+                          campaignId: String(campaignId),
+                          amount: String(amount),
+                          fundType,
+                        });
+                        router.push(`/donation?${params.toString()}`);
+                      }}
+                    />
+                  )}
                 </div>
 
                 <div style={{ marginBottom: 18 }}>

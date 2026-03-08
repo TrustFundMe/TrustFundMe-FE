@@ -12,6 +12,9 @@ interface BEUserInfo {
   avatarUrl?: string;
   role: import('@/config/roles').UserRole;
   verified?: boolean;
+  isActive?: boolean;
+  banReason?: string;
+  reason?: string;
 }
 
 interface AuthContextType {

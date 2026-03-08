@@ -95,7 +95,9 @@ const ForumPage = () => {
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [authorNamesMap, setAuthorNamesMap] = useState<Record<string, string>>({});
   const [authorAvatarsMap, setAuthorAvatarsMap] = useState<Record<string, string>>({});
+  const [authorStatusMap, setAuthorStatusMap] = useState<Record<string, boolean>>({});
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
+  const [campaignStatusMap, setCampaignStatusMap] = useState<Record<string, string>>({});
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,12 +123,15 @@ const ForumPage = () => {
 
       const campaignsData = campaignsRes.status === "fulfilled" ? campaignsRes.value : [];
       const titles: Record<string, string> = {};
+      const statuses: Record<string, string> = {};
       const list: { id: number; title: string }[] = [];
       campaignsData.forEach((c) => {
         titles[String(c.id)] = c.title ?? "";
+        if (c.status) statuses[String(c.id)] = c.status;
         list.push({ id: c.id, title: c.title ?? "" });
       });
       setCampaignTitlesMap(titles);
+      setCampaignStatusMap(statuses);
       setCampaignsList(list);
 
       if (postsRes.status === "fulfilled") {
@@ -155,16 +160,19 @@ const ForumPage = () => {
 
         const names: Record<string, string> = {};
         const avatars: Record<string, string> = {};
+        const statusMap: Record<string, boolean> = {};
         authorIds.forEach((id, i) => {
           const res = userResults[i];
           if (res.status === "fulfilled" && res.value) {
             const fullName = res.value.fullName ?? res.value.name;
             if (fullName) names[id] = fullName;
             if (res.value.avatarUrl) avatars[id] = res.value.avatarUrl;
+            statusMap[id] = res.value.isActive !== false;
           }
         });
         setAuthorNamesMap(names);
         setAuthorAvatarsMap(avatars);
+        setAuthorStatusMap(statusMap);
       } else {
         setPosts([]);
       }
@@ -379,6 +387,11 @@ const ForumPage = () => {
                             <span className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
                               {authorName}
                             </span>
+                            {authorStatusMap[authorId] === false && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-600 text-[9px] font-bold rounded uppercase">
+                                Đã bị khóa
+                              </span>
+                            )}
                           </div>
 
                           {/* Category badge */}
@@ -408,7 +421,13 @@ const ForumPage = () => {
                       {/* Campaign */}
                       <div className="col-span-2 hidden md:flex justify-center">
                         {post.budgetId != null ? (
-                          <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                          <span
+                            className={
+                              campaignStatusMap[String(post.budgetId)] === "DISABLED"
+                                ? "px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold border border-red-200 dark:border-red-800 line-through opacity-75"
+                                : "px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-semibold max-w-full overflow-hidden text-ellipsis whitespace-nowrap"
+                            }
+                          >
                             {campaignTitlesMap[String(post.budgetId)] || `#${post.budgetId}`}
                           </span>
                         ) : (

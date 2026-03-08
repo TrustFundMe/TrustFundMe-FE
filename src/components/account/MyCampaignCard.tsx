@@ -42,6 +42,8 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                 return 'Đã đóng';
             case 'REJECTED':
                 return 'Bị từ chối';
+            case 'DISABLED':
+                return 'Vô hiệu hóa';
             default:
                 return status || 'N/A';
         }
@@ -60,6 +62,8 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
             case 'CLOSED':
             case 'REJECTED':
                 return 'bg-red-100 text-red-800 border-red-200';
+            case 'DISABLED':
+                return 'bg-red-50 text-red-600 border-red-100';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
         }
@@ -67,6 +71,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
 
     const isPending = ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(campaign.status?.toUpperCase());
     const isRejected = campaign.status?.toUpperCase() === 'REJECTED';
+    const isDisabled = campaign.status?.toUpperCase() === 'DISABLED';
     const [showRejectionReason, setShowRejectionReason] = useState(false);
 
     return (
@@ -77,7 +82,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                     <img
                         src={withFallbackImage((campaign.coverImageUrl || campaign.coverImage) as string, '/assets/img/campaign/1.png')}
                         alt={campaign.title}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full object-cover ${isDisabled ? 'grayscale' : ''}`}
                     />
                     <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(campaign.status)}`}>
                         {getStatusLabel(campaign.status)}
@@ -107,7 +112,19 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                             {campaign.title}
                         </h3>
 
-                        {!isRejected ? (
+                        {isDisabled ? (
+                            <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 mb-4 animate-pulse">
+                                <div className="flex items-center gap-2 text-rose-600 font-bold mb-1 uppercase text-xs">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span>Chiến dịch bị vô hiệu hóa</span>
+                                </div>
+                                <p className="text-rose-800/60 text-xs font-medium">
+                                    {campaign.rejectionReason 
+                                        ? `Lý do: ${campaign.rejectionReason}`
+                                        : "Chiến dịch này đã bị tạm dừng bởi quản trị viên. Mọi hoạt động quyên góp và chi tiêu hiện bị khóa."}
+                                </p>
+                            </div>
+                        ) : !isRejected ? (
                             <>
                                 <p className="text-gray-600 text-sm line-clamp-2 mb-4">
                                     {campaign.description}
@@ -182,16 +199,26 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                                         </Link>
                                     </>
                                 )}
-                                <Link
-                                    href={`/account/campaigns/edit?id=${campaign.id}`}
-                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-                                >
-                                    <Edit className="w-4 h-4" />
-                                    Sửa
-                                </Link>
+                                {!isDisabled && (
+                                    <Link
+                                        href={`/account/campaigns/edit?id=${campaign.id}`}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                        Sửa
+                                    </Link>
+                                )}
                                 <button
-                                    onClick={handleChatClick}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                                    onClick={(e) => {
+                                        if (isDisabled) {
+                                            toast('Chiến dịch đã bị vô hiệu hóa, không thể nhắn tin.', 'error');
+                                            return;
+                                        }
+                                        handleChatClick(e);
+                                    }}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border ${isDisabled 
+                                        ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                        : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
                                 >
                                     <MessageSquare className="w-4 h-4" />
                                     Nhắn tin

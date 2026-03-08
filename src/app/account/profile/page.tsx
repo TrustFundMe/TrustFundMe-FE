@@ -10,13 +10,14 @@ import DanboxLayout from '@/layout/DanboxLayout';
 import Link from 'next/link';
 import {
   User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
-  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2,
+  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag,
 } from 'lucide-react';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { appointmentService, AppointmentScheduleDto, AppointmentStatus } from '@/services/appointmentService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { BankAccountDto } from '@/types/bankAccount';
+import { flagService, FlagDto } from '@/services/flagService';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,144 @@ function AppointmentModal({ appointments, loading, error, onClose, onRetry }: Mo
   );
 }
 
-// ─── Profile Page ────────────────────────────────────────────────────────────
+// ─── Flags Modal ─────────────────────────────────────────────────────────────
+
+
+
+function FlagsModal({
+  flags,
+  loading,
+  onClose,
+}: {
+  flags: FlagDto[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  type FlagTab = 'CAMPAIGN' | 'POST';
+  const [tab, setTab] = useState<FlagTab>('CAMPAIGN');
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', h); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  const campaignFlags = flags.filter(f => f.campaignId != null);
+  const postFlags     = flags.filter(f => f.postId != null);
+  const list          = tab === 'CAMPAIGN' ? campaignFlags : postFlags;
+
+  const renderEmpty = () => (
+    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+      <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-red-50">
+        <Flag className="h-7 w-7 text-red-300" />
+      </div>
+      <p className="font-semibold text-gray-500 text-sm">
+        {tab === 'CAMPAIGN' ? 'Chưa có tố cáo chiến dịch nào' : 'Chưa có tố cáo bài viết nào'}
+      </p>
+    </div>
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
+      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: '90vh', animation: 'apptSlideUp .25s cubic-bezier(.34,1.56,.64,1)' }}
+      >
+        {/* Header */}
+        <div
+          className="relative flex items-center justify-between px-7 pt-6 pb-14"
+          style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)' }}
+        >
+          <div>
+            <h2 className="text-xl font-bold text-white">Tố Cáo Của Tôi</h2>
+            <p className="text-sm text-white/70 mt-0.5">Danh sách tố cáo bạn đã gửi</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 transition-colors"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          {/* Wave */}
+          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1200 50" preserveAspectRatio="none" style={{ display: 'block', height: '36px' }}>
+            <path d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z" fill="white" />
+          </svg>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 px-7 pt-4 pb-3 border-b border-gray-100 bg-white">
+          {(['CAMPAIGN', 'POST'] as FlagTab[]).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all"
+              style={tab === t
+                ? { background: 'linear-gradient(135deg,#ef4444,#f97316)', color: '#fff' }
+                : { background: '#f3f4f6', color: '#6b7280' }}
+            >
+              <Flag className="h-3.5 w-3.5" />
+              {t === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết Feed'}
+              <span
+                className="px-1.5 py-0.5 rounded-full font-bold text-[10px]"
+                style={tab === t ? { background: 'rgba(255,255,255,0.25)', color: '#fff' } : { background: '#e5e7eb', color: '#374151' }}
+              >
+                {t === 'CAMPAIGN' ? campaignFlags.length : postFlags.length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-3">
+          {loading && (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-red-400" />
+            </div>
+          )}
+          {!loading && list.length === 0 && renderEmpty()}
+          {!loading && list.map(flag => {
+            const href = flag.campaignId
+              ? `/campaigns-details?id=${flag.campaignId}`
+              : `/post/${flag.postId}`;
+            const label = flag.campaignId ? 'chiến dịch' : 'bài viết';
+            return (
+              <div key={flag.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4 flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  {/* Sent indicator */}
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    <span className="text-xs font-semibold text-green-600">Tố cáo đã được gửi</span>
+                    <span className="text-xs text-gray-300">·</span>
+                    <span className="text-xs text-gray-400">{new Date(flag.createdAt).toLocaleDateString('vi-VN')}</span>
+                  </div>
+                  {/* Reason */}
+                  <p className="text-sm text-gray-700 truncate" title={flag.reason}>{flag.reason}</p>
+                </div>
+                {/* Link */}
+                <Link
+                  href={href}
+                  className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all"
+                  style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)' }}
+                  onClick={onClose}
+                >
+                  Xem {label}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Profile Page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
@@ -256,6 +394,11 @@ export default function ProfilePage() {
   const [appts, setAppts] = useState<AppointmentScheduleDto[]>([]);
   const [apptsLoading, setApptsLoading] = useState(false);
   const [apptsError, setApptsError] = useState('');
+
+  // Flags state
+  const [showFlags, setShowFlags] = useState(false);
+  const [myFlags, setMyFlags] = useState<FlagDto[]>([]);
+  const [flagsLoading, setFlagsLoading] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -319,6 +462,20 @@ export default function ProfilePage() {
   }, [user?.id]);
 
   const openAppts = () => { setShowAppts(true); fetchAppts(); };
+
+  const fetchFlags = useCallback(async () => {
+    setFlagsLoading(true);
+    try {
+      const data = await flagService.getMyFlags(0, 100);
+      setMyFlags(data);
+    } catch {
+      setMyFlags([]);
+    } finally {
+      setFlagsLoading(false);
+    }
+  }, []);
+
+  const openFlags = () => { setShowFlags(true); fetchFlags(); };
 
   const handleEdit = () => {
     const parts = user?.fullName?.split(' ') || [];
@@ -426,7 +583,7 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  // Quick access "Lịch Hẹn" button – reused in both view and edit mode
+  // Quick access "Lịch Hẹn" button
   const LichHenBtn = () => (
     <button
       onClick={openAppts}
@@ -437,6 +594,20 @@ export default function ProfilePage() {
       </div>
       <span className="text-sm font-medium text-gray-700 flex-1">Lịch Hẹn</span>
       <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#ff5e14] transition-colors" />
+    </button>
+  );
+
+  // Quick access "Tố Cáo" button
+  const MyFlagsBtn = () => (
+    <button
+      onClick={openFlags}
+      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 group w-full text-left"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
+        <Flag className="h-5 w-5 text-red-400" strokeWidth={2} />
+      </div>
+      <span className="text-sm font-medium text-gray-700 flex-1">Tố Cáo Của Tôi</span>
+      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-400 transition-colors" />
     </button>
   );
 
@@ -532,7 +703,7 @@ export default function ProfilePage() {
                       {/* Quick access */}
                       <div className="mt-8 pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-semibold text-gray-600 mb-4">Quick access</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Link href="/account/campaigns"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
@@ -548,6 +719,7 @@ export default function ProfilePage() {
                             <span className="text-sm font-medium text-gray-700">Your Impact</span>
                           </Link>
                           <LichHenBtn />
+                          <MyFlagsBtn />
                         </div>
                       </div>
                     </>
@@ -659,10 +831,10 @@ export default function ProfilePage() {
                         </button>
                       </div>
 
-                      {/* Quick access */}
+                      {/* Quick access (edit mode) */}
                       <div className="pt-6 border-t border-gray-100">
                         <h3 className="text-sm font-semibold text-gray-600 mb-4">Quick access</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Link href="/account/campaigns"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
@@ -678,6 +850,7 @@ export default function ProfilePage() {
                             <span className="text-sm font-medium text-gray-700">Your Impact</span>
                           </Link>
                           <LichHenBtn />
+                          <MyFlagsBtn />
                         </div>
                       </div>
                     </form>
@@ -697,6 +870,13 @@ export default function ProfilePage() {
           error={apptsError}
           onClose={() => setShowAppts(false)}
           onRetry={fetchAppts}
+        />
+      )}
+      {showFlags && (
+        <FlagsModal
+          flags={myFlags}
+          loading={flagsLoading}
+          onClose={() => setShowFlags(false)}
         />
       )}
     </ProtectedRoute>

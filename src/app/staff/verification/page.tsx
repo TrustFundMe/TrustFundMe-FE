@@ -164,7 +164,7 @@ export default function VerificationPage() {
               { label: 'Tổng users', value: stats.total, color: 'from-[#446b5f] to-[#6a8d83]' },
               { label: 'Chưa có KYC', value: stats.noKyc, color: 'from-red-500 to-red-400' },
               { label: 'Chờ duyệt', value: stats.submitted, color: 'from-[#db5945] to-[#f19082]' },
-              { label: 'Đã duyệt', value: stats.verified, color: 'from-green-500 to-green-400' },
+              { label: 'Đã duyệt', value: stats.verified, color: 'from-[#446b5f] to-[#5a8075]' },
               { label: 'Bị từ chối', value: users.filter(u => u.kycStatus === 'REJECTED').length, color: 'from-gray-500 to-gray-400' },
             ].map(s => (
               <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>

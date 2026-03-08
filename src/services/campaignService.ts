@@ -53,12 +53,16 @@ export const campaignService = {
     return res.data;
   },
 
-  async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED', rejectionReason?: string): Promise<CampaignDto> {
+  async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED' | 'DISABLED', rejectionReason?: string): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.REVIEW(id), {
       status,
       rejectionReason
     });
     return res.data;
+  },
+
+  async disableCampaign(id: number, reason: string): Promise<CampaignDto> {
+    return this.reviewCampaign(id, 'DISABLED', reason);
   },
 
   async updateDisbursementProof(id: number, proofUrl: string): Promise<any> {

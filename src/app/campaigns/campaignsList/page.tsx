@@ -87,6 +87,7 @@ function CampaignsListContent() {
           raised: c.balance ?? 0,
           goal: Math.max(1, c.balance ?? 1),
           image: withFallbackImage((c.coverImageUrl || c.coverImage) as any, "/assets/img/campaign/1.png"),
+          status: c.status,
         }));
 
         if (!mounted) return;

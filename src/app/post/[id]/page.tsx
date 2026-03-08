@@ -7,12 +7,13 @@ import { ArrowLeft } from "lucide-react";
 import DanboxLayout from "@/layout/DanboxLayout";
 import FeedPostDetail from "@/components/feed-post/FeedPostDetail";
 import RelatedPosts from "@/components/feed-post/RelatedPosts";
-import CampaignCard from "@/components/feed-post/CampaignCard";
+import CampaignCard, { CampaignInfo } from "@/components/feed-post/CampaignCard";
 import CreateOrEditPostModal from "@/components/feed-post/CreateOrEditPostModal";
 import FlagPostModal from "@/components/feed-post/FlagPostModal";
 import { feedPostService } from "@/services/feedPostService";
 import { forumCategoryService } from "@/services/forumCategoryService";
 import { campaignService } from "@/services/campaignService";
+import { expenditureService } from "@/services/expenditureService";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
 import type { ForumCategory } from "@/types/forumCategory";
@@ -25,7 +26,7 @@ const FeedPostDetailPage = () => {
   const { user, isAuthenticated } = useAuth();
   const postId = params?.id as string;
 
-  const [post, setPost] = useState<(FeedPost & { campaign?: unknown }) | null>(null);
+  const [post, setPost] = useState<(FeedPost & { campaign?: CampaignInfo }) | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<FeedPost[]>([]);
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string }[]>([]);
@@ -46,7 +47,7 @@ const FeedPostDetailPage = () => {
     setError(null);
     try {
       const dto = await feedPostService.getById(id);
-      const feedPost = dtoToFeedPost(dto) as FeedPost & { campaign?: unknown };
+      const feedPost = dtoToFeedPost(dto) as FeedPost & { campaign?: CampaignInfo };
       setPost(feedPost);
 
       const authorId = String(dto.authorId);
@@ -62,6 +63,7 @@ const FeedPostDetailPage = () => {
                     ...prev.author,
                     name: authorData.fullName ?? authorData.name ?? prev.author.name,
                     avatar: authorData.avatarUrl ?? authorData.avatar ?? prev.author.avatar,
+                    isActive: authorData.isActive !== false,
                   },
                 }
               : null
@@ -73,7 +75,16 @@ const FeedPostDetailPage = () => {
 
       if (dto.budgetId != null) {
         try {
-          const campaign = await campaignService.getById(dto.budgetId);
+          // budgetId on evidence posts is an expenditure ID, not campaign ID
+          // So fetch expenditure first to get real campaignId
+          let campaignId: number = dto.budgetId;
+          try {
+            const exp = await expenditureService.getById(dto.budgetId);
+            campaignId = exp.campaignId;
+          } catch {
+            // budgetId might directly be a campaignId (fallback)
+          }
+          const campaign = await campaignService.getById(campaignId);
           const raised = campaign.balance ?? 0;
           const goal = raised > 0 ? raised : 1;
           setPost((prev) =>
@@ -83,11 +94,12 @@ const FeedPostDetailPage = () => {
                   campaign: {
                     id: String(campaign.id),
                     title: campaign.title ?? "",
-                    image: campaign.coverImage ?? "https://placehold.co/400x200?text=Campaign",
+                    image: String(campaign.coverImage ?? "https://placehold.co/400x200?text=Campaign"),
                     raised,
                     goal,
                     progress: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0,
-                  },
+                    status: campaign.status,
+                  } as CampaignInfo,
                 }
               : null
           );

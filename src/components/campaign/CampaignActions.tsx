@@ -3,12 +3,195 @@
 import { useState } from "react";
 import type { CampaignFollower } from "./types";
 
+// ─── Report Modal ─────────────────────────────────────────────────────────────
+const REPORT_REASONS = [
+  "Nội dung gian lận / lừa đảo",
+  "Chiến dịch không hoạt động hoặc bị bỏ rơi",
+  "Thông tin sai lệch về mục tiêu",
+  "Vi phạm điều khoản sử dụng",
+  "Nội dung phản cảm hoặc không phù hợp",
+  "Khác",
+];
+
+function FlagModal({
+  onClose,
+  onSubmit,
+  submitting,
+}: {
+  onClose: () => void;
+  onSubmit: (reason: string) => Promise<void>;
+  submitting: boolean;
+}) {
+  const [selected, setSelected] = useState<string>("");
+  const [custom, setCustom] = useState("");
+
+  const reason = selected === "Khác" ? custom.trim() : selected;
+
+  const handleSubmit = async () => {
+    if (!reason) return;
+    await onSubmit(reason);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md"
+        style={{ maxHeight: "90vh", overflowY: "auto" }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 p-6 border-b border-gray-100">
+          <div
+            style={{
+              width: 40, height: 40, borderRadius: 14,
+              background: "rgba(239,68,68,0.1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <i className="fas fa-flag" style={{ color: "#ef4444" }} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#111", lineHeight: 1.3 }}>
+              Tố cáo chiến dịch
+            </h3>
+            <p style={{ margin: 0, fontSize: 11, color: "#aaa", marginTop: 2 }}>
+              Báo cáo sẽ được gửi đến đội kiểm duyệt
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              marginLeft: "auto", width: 32, height: 32, borderRadius: 10,
+              border: "none", background: "#f5f5f5", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#999", fontSize: 13,
+            }}
+          >
+            <i className="fas fa-times" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 600, color: "#555" }}>
+            Chọn lý do tố cáo:
+          </p>
+          {REPORT_REASONS.map((r) => (
+            <label
+              key={r}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 14px",
+                borderRadius: 14,
+                border: `2px solid ${selected === r ? "#f87171" : "#f0f0f0"}`,
+                background: selected === r ? "rgba(239,68,68,0.05)" : "#fafafa",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              <input
+                type="radio"
+                name="flag-reason"
+                value={r}
+                checked={selected === r}
+                onChange={() => setSelected(r)}
+                style={{ accentColor: "#ef4444" }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 500, color: selected === r ? "#b91c1c" : "#444" }}>
+                {r}
+              </span>
+            </label>
+          ))}
+
+          {selected === "Khác" && (
+            <textarea
+              autoFocus
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              placeholder="Mô tả chi tiết lý do tố cáo..."
+              maxLength={500}
+              rows={3}
+              style={{
+                marginTop: 4,
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: 14,
+                border: "2px solid #f0f0f0",
+                fontSize: 13,
+                fontWeight: 500,
+                color: "#333",
+                background: "#fafafa",
+                outline: "none",
+                resize: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: "flex", gap: 10, padding: "0 24px 24px" }}>
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            style={{
+              flex: 1, padding: "12px 0", borderRadius: 14,
+              border: "2px solid #f0f0f0", background: "#fff",
+              fontSize: 13, fontWeight: 700, color: "#888", cursor: "pointer",
+            }}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!reason || submitting}
+            style={{
+              flex: 1, padding: "12px 0", borderRadius: 14, border: "none",
+              background: !reason || submitting ? "#f0f0f0" : "#ef4444",
+              color: !reason || submitting ? "#ccc" : "#fff",
+              fontSize: 13, fontWeight: 800,
+              cursor: !reason || submitting ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            }}
+          >
+            {submitting ? (
+              <>
+                <span
+                  style={{
+                    width: 14, height: 14,
+                    border: "2px solid rgba(255,255,255,0.3)",
+                    borderTopColor: "#fff",
+                    borderRadius: "50%",
+                    animation: "spin 0.7s linear infinite",
+                    display: "inline-block",
+                  }}
+                />
+                Đang gửi...
+              </>
+            ) : (
+              "Gửi tố cáo"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CampaignActions ──────────────────────────────────────────────────────────
 export default function CampaignActions({
   followed,
   flagged,
   followerCount,
   onToggleFollow,
   onToggleFlag,
+  onSubmitFlag,
   followers = [],
 }: {
   followed: boolean;
@@ -16,138 +199,170 @@ export default function CampaignActions({
   followerCount: number;
   onToggleFollow: () => void;
   onToggleFlag: () => void;
+  onSubmitFlag?: (reason: string) => Promise<void>;
   followers?: CampaignFollower[];
 }) {
   const [showFollowers, setShowFollowers] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleOpenFlag = () => {
+    if (flagged) return;
+    setShowModal(true);
+  };
+
+  const handleSubmitFlag = async (reason: string) => {
+    setSubmitting(true);
+    try {
+      if (onSubmitFlag) await onSubmitFlag(reason);
+      onToggleFlag();
+      setShowModal(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="d-flex align-items-center justify-content-between flex-wrap gap-3" style={{ position: "relative" }}>
-      <div className="d-flex align-items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={onToggleFollow}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: followed ? "rgba(15, 93, 81, 0.1)" : "#fff",
-            color: followed ? "#0F5D51" : "inherit",
-            padding: "10px 16px",
-            borderRadius: 9999,
-            lineHeight: 1,
-            fontWeight: 600,
-            fontSize: 14,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          <i className={followed ? "fas fa-user-check" : "far fa-user-plus"} style={{ opacity: 0.85 }} />
-          {followed ? "Đang theo dõi" : "Theo dõi"}
-        </button>
+    <>
+      <div className="d-flex align-items-center justify-content-between flex-wrap gap-3" style={{ position: "relative" }}>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          {/* Follow button */}
+          <button
+            type="button"
+            onClick={onToggleFollow}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              border: "1px solid rgba(0,0,0,0.08)",
+              background: followed ? "rgba(15, 93, 81, 0.1)" : "#fff",
+              color: followed ? "#0F5D51" : "inherit",
+              padding: "10px 16px",
+              borderRadius: 9999,
+              lineHeight: 1,
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <i className={followed ? "fas fa-user-check" : "far fa-user-plus"} style={{ opacity: 0.85 }} />
+            {followed ? "Đang theo dõi" : "Theo dõi"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setShowFollowers(!showFollowers)}
-          style={{
-            fontSize: 14,
-            color: "#666",
-            fontWeight: 500,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <i className="far fa-user" style={{ opacity: 0.7 }} />
-          {followerCount} người theo dõi
-        </button>
+          {/* Follower count */}
+          <button
+            type="button"
+            onClick={() => setShowFollowers(!showFollowers)}
+            style={{
+              fontSize: 14,
+              color: "#666",
+              fontWeight: 500,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <i className="far fa-user" style={{ opacity: 0.7 }} />
+            {followerCount} người theo dõi
+          </button>
 
-        <button
-          type="button"
-          onClick={onToggleFlag}
-          aria-label="Báo cáo"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: flagged ? "rgba(248, 77, 67, 0.1)" : "#fff",
-            color: flagged ? "#F84D43" : "inherit",
-            padding: "10px 12px",
-            borderRadius: 9999,
-            lineHeight: 1,
-            fontWeight: 500,
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
-          <i className={flagged ? "fas fa-flag" : "far fa-flag"} style={{ opacity: 0.75 }} />
-        </button>
-      </div>
+          {/* Flag / Report button */}
+          <button
+            type="button"
+            onClick={handleOpenFlag}
+            aria-label={flagged ? "Đã tố cáo" : "Tố cáo chiến dịch"}
+            title={flagged ? "Bạn đã gửi tố cáo cho chiến dịch này" : "Tố cáo chiến dịch này"}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              border: `1px solid ${flagged ? "rgba(248,77,67,0.3)" : "rgba(0,0,0,0.08)"}`,
+              background: flagged ? "rgba(248,77,67,0.08)" : "#fff",
+              color: flagged ? "#F84D43" : "#888",
+              padding: "10px 14px",
+              borderRadius: 9999,
+              lineHeight: 1,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: flagged ? "default" : "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <i className={flagged ? "fas fa-flag" : "far fa-flag"} style={{ opacity: 0.85 }} />
+            {flagged ? "Đã tố cáo" : "Tố cáo"}
+          </button>
+        </div>
 
-      {showFollowers && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            marginTop: 8,
-            background: "#fff",
-            borderRadius: 12,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-            padding: 16,
-            minWidth: 280,
-            maxHeight: 320,
-            overflowY: "auto",
-            zIndex: 100,
-          }}
-        >
-          <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>
-            Người theo dõi ({followerCount})
-          </div>
-          {followers.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {followers.map((follower) => (
-                <div
-                  key={follower.userId}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 0",
-                    borderBottom: "1px solid #f0f0f0",
-                  }}
-                >
-                  <img
-                    src={follower.avatarUrl || "/assets/img/about/01.jpg"}
-                    alt={follower.userName}
+        {/* Followers dropdown */}
+        {showFollowers && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              marginTop: 8,
+              background: "#fff",
+              borderRadius: 12,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+              padding: 16,
+              minWidth: 280,
+              maxHeight: 320,
+              overflowY: "auto",
+              zIndex: 100,
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 12, fontSize: 15 }}>
+              Người theo dõi ({followerCount})
+            </div>
+            {followers.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {followers.map((follower) => (
+                  <div
+                    key={follower.userId}
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      objectFit: "cover",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 0",
+                      borderBottom: "1px solid #f0f0f0",
                     }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{follower.userName}</div>
-                    <div style={{ fontSize: 11, color: "#999" }}>
-                      Theo dõi {new Date(follower.followedAt).toLocaleDateString("vi-VN")}
+                  >
+                    <img
+                      src={follower.avatarUrl || "/assets/img/about/01.jpg"}
+                      alt={follower.userName}
+                      style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{follower.userName}</div>
+                      <div style={{ fontSize: 11, color: "#999" }}>
+                        Theo dõi {new Date(follower.followedAt).toLocaleDateString("vi-VN")}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ color: "#999", fontSize: 13, textAlign: "center", padding: 20 }}>
-              Chưa có người theo dõi
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: "#999", fontSize: 13, textAlign: "center", padding: 20 }}>
+                Chưa có người theo dõi
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Flag modal portal */}
+      {showModal && (
+        <FlagModal
+          onClose={() => setShowModal(false)}
+          onSubmit={handleSubmitFlag}
+          submitting={submitting}
+        />
       )}
-    </div>
+    </>
   );
 }

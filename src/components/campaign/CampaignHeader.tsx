@@ -10,11 +10,13 @@ export default function CampaignHeader({
   campaign,
   onToggleFollow,
   onToggleFlag,
+  onSubmitFlag,
   followers = [],
 }: {
   campaign: Campaign;
   onToggleFollow: () => void;
   onToggleFlag: () => void;
+  onSubmitFlag?: (reason: string) => Promise<void>;
   followers?: CampaignFollower[];
 }) {
   const sliderImages = useMemo(() => {
@@ -73,6 +75,7 @@ export default function CampaignHeader({
             followers={followers}
             onToggleFollow={onToggleFollow}
             onToggleFlag={onToggleFlag}
+            onSubmitFlag={onSubmitFlag}
           />
         </div>
 

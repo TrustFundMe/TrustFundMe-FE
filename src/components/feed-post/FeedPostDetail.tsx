@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X } from "lucide-react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -272,6 +272,24 @@ export default function FeedPostDetail({
         boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
       }}
     >
+      {/* Author Banned Warning */}
+      {post.author.isActive === false && (
+        <div style={{
+          background: "#F84D43",
+          color: "#fff",
+          padding: "10px 20px",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 14,
+          fontWeight: 600,
+          fontFamily: "var(--font-dm-sans)",
+        }}>
+          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+          Bài viết này thuộc về một tài khoản đã bị vô hiệu hóa do vi phạm chính sách hoặc báo cáo.
+        </div>
+      )}
+
       {/* Header Field */}
       <fieldset
         style={{

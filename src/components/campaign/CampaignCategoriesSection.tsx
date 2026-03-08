@@ -40,6 +40,7 @@ function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignC
     raised: dto.balance || 0,
     goal: targetAmount,
     image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.png"),
+    status: dto.status,
   };
 }
 

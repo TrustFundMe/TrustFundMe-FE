@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Bell, BellOff, AlertTriangle } from "lucide-react";
 import { campaignService } from "@/services/campaignService";
 import { useAuth } from "@/contexts/AuthContextProxy";
 
@@ -14,6 +14,7 @@ export type CampaignInfo = {
   raised: number;
   goal: number;
   progress: number;
+  status?: string;
 };
 
 interface CampaignCardProps {
@@ -29,6 +30,7 @@ export default function CampaignCard({
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const progress = campaign.progress || Math.min(100, Math.round((campaign.raised / campaign.goal) * 100));
+  const isDisabled = campaign.status === 'DISABLED';
 
   useEffect(() => {
     if (!isAuthenticated || compact) return;
@@ -69,106 +71,125 @@ export default function CampaignCard({
         <div
           style={{
             display: "flex",
-            gap: 12,
-            padding: 12,
+            flexDirection: "column",
             background: "#fafafa",
-            border: "1px solid rgba(0,0,0,0.08)",
+            border: `1px solid ${isDisabled ? "rgba(248, 77, 67, 0.4)" : "rgba(0,0,0,0.08)"}`,
             borderRadius: 8,
+            overflow: "hidden",
             transition: "all 0.2s",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = "#f5f5f5";
-            e.currentTarget.style.borderColor = "rgba(26, 104, 91, 0.2)";
+            e.currentTarget.style.borderColor = isDisabled ? "rgba(248, 77, 67, 0.6)" : "rgba(26, 104, 91, 0.2)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = "#fafafa";
-            e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+            e.currentTarget.style.borderColor = isDisabled ? "rgba(248, 77, 67, 0.4)" : "rgba(0,0,0,0.08)";
           }}
         >
-          <div
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 8,
-              overflow: "hidden",
-              flex: "0 0 auto",
-              background: "#e5e5e5",
-            }}
-          >
-            <Image
-              src={campaign.image}
-              alt={campaign.title}
-              width={80}
-              height={80}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-              }}
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          {isDisabled && (
             <div
               style={{
-                fontSize: 12,
-                fontWeight: 600,
+                background: "#F84D43",
+                color: "#fff",
+                fontSize: 10,
+                fontWeight: 700,
+                textAlign: "center",
+                padding: "2px 4px",
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",
-                color: "#1A685B",
-                marginBottom: 4,
                 fontFamily: "var(--font-dm-sans)",
               }}
             >
-              Related Campaign
+              Vô hiệu hóa
             </div>
+          )}
+          <div style={{ display: "flex", gap: 12, padding: 12 }}>
             <div
               style={{
-                fontSize: 14,
-                fontWeight: 600,
-                lineHeight: 1.3,
-                marginBottom: 8,
+                width: 80,
+                height: 80,
+                borderRadius: 8,
                 overflow: "hidden",
-                textOverflow: "ellipsis",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                fontFamily: "var(--font-dm-sans)",
+                flex: "0 0 auto",
+                background: "#e5e5e5",
               }}
             >
-              {campaign.title}
-            </div>
-            <div
-              style={{
-                height: 4,
-                background: "rgba(0,0,0,0.08)",
-                borderRadius: 2,
-                overflow: "hidden",
-                marginBottom: 6,
-              }}
-            >
-              <div
+              <Image
+                src={campaign.image}
+                alt={campaign.title}
+                width={80}
+                height={80}
                 style={{
+                  width: "100%",
                   height: "100%",
-                  background: "#1A685B",
-                  width: `${progress}%`,
-                  transition: "width 0.3s",
+                  objectFit: "cover",
                 }}
               />
             </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "rgba(0,0,0,0.6)",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontFamily: "var(--font-dm-sans)",
-              }}
-            >
-              {campaign.raised.toLocaleString('vi-VN')} / {campaign.goal.toLocaleString('vi-VN')} VNĐ
-              <span style={{ fontWeight: 600, color: "#1A685B" }}>
-                {progress}%
-              </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  color: "#1A685B",
+                  marginBottom: 4,
+                  fontFamily: "var(--font-dm-sans)",
+                }}
+              >
+                Related Campaign
+              </div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  marginBottom: 8,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
+                  fontFamily: "var(--font-dm-sans)",
+                }}
+              >
+                {campaign.title}
+              </div>
+              <div
+                style={{
+                  height: 4,
+                  background: "rgba(0,0,0,0.08)",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  marginBottom: 6,
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    background: "#1A685B",
+                    width: `${progress}%`,
+                    transition: "width 0.3s",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "rgba(0,0,0,0.6)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontFamily: "var(--font-dm-sans)",
+                }}
+              >
+                {campaign.raised.toLocaleString('vi-VN')} / {campaign.goal.toLocaleString('vi-VN')} VNĐ
+                <span style={{ fontWeight: 600, color: "#1A685B" }}>
+                  {progress}%
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -189,20 +210,41 @@ export default function CampaignCard({
       <div
         style={{
           padding: 16,
+          paddingTop: isDisabled ? 0 : 16,
           background: "#fafafa",
-          border: "1px solid rgba(0,0,0,0.08)",
+          border: `1px solid ${isDisabled ? "rgba(248, 77, 67, 0.4)" : "rgba(0,0,0,0.08)"}`,
           borderRadius: 12,
+          overflow: "hidden",
           transition: "all 0.2s",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = "#f5f5f5";
-          e.currentTarget.style.borderColor = "rgba(26, 104, 91, 0.2)";
+          e.currentTarget.style.borderColor = isDisabled ? "rgba(248, 77, 67, 0.6)" : "rgba(26, 104, 91, 0.2)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = "#fafafa";
-          e.currentTarget.style.borderColor = "rgba(0,0,0,0.08)";
+          e.currentTarget.style.borderColor = isDisabled ? "rgba(248, 77, 67, 0.4)" : "rgba(0,0,0,0.08)";
         }}
       >
+        {isDisabled && (
+          <div
+            style={{
+              background: "#F84D43",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 700,
+              padding: "8px 16px",
+              margin: "0 -16px 16px -16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontFamily: "var(--font-dm-sans)",
+            }}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Chiến dịch đã bị vô hiệu hóa
+          </div>
+        )}
         <div
           style={{
             fontSize: 12,

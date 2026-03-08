@@ -45,7 +45,16 @@ export default function FlagPostModal({ isOpen, onClose, postId, campaignId }: F
       });
       setSubmitted(true);
     } catch (err: unknown) {
-      setError((err as Error)?.message ?? "Gửi báo cáo thất bại. Vui lòng thử lại.");
+      // Axios error: check HTTP status code for friendly messages
+      const axiosErr = err as { response?: { status?: number } };
+      const status = axiosErr?.response?.status;
+      if (status === 403) {
+        setError("Bạn đã gửi báo cáo cho bài viết này rồi.");
+      } else if (status === 401) {
+        setError("Bạn cần đăng nhập để gửi báo cáo.");
+      } else {
+        setError((err as Error)?.message ?? "Gửi báo cáo thất bại. Vui lòng thử lại.");
+      }
     } finally {
       setIsSubmitting(false);
     }
