@@ -10,18 +10,12 @@ import { PaymentResponse } from '@/services/paymentService'; // added for type s
 
 function SuccessContent() {
     const searchParams = useSearchParams();
-    const donationId = searchParams.get('id');
+    // Read the explicit 'donationId' query param we passed in our returnUrl
+    const donationIdParam = searchParams.get('donationId');
     const [amount, setAmount] = useState<number>(0);
     const [campaign, setCampaign] = useState<CampaignDto | null>(null);
 
     useEffect(() => {
-        // PayOS redirects back with ?id=PAYOS_ID&status=PAID&orderCode=OUR_INTERNAL_ID...
-        const payosId = searchParams.get('id');
-        const orderCode = searchParams.get('orderCode');
-
-        // Use orderCode if it exists, otherwise use id
-        const donationIdParam = orderCode || payosId;
-
         if (donationIdParam) {
             const id = parseInt(donationIdParam);
             if (!isNaN(id)) {
@@ -43,7 +37,7 @@ function SuccessContent() {
                 });
             }
         }
-    }, [donationId, searchParams]);
+    }, [donationIdParam]);
 
     return <SuccessPage campaign={campaign} amount={amount} />;
 }

@@ -3,6 +3,7 @@ export interface ExpenditureItem {
     expenditureId: number;
     category: string;
     quantity: number;
+    quantityLeft?: number;
     actualQuantity?: number;
     price: number;
     expectedPrice: number;

@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     BY_ID: (id: number | string) => `/api/bank-accounts/${id}`,
     BY_USER: (userId: number | string) => `/api/bank-accounts/user/${userId}`,
     MY_ACCOUNTS: "/api/bank-accounts",
+    CHECK_EXISTS: "/api/bank-accounts/check-exists",
   },
   EXPENDITURES: {
     BASE: "/api/expenditures",
@@ -87,5 +88,14 @@ export const API_ENDPOINTS = {
   CAMPAIGN_CATEGORIES: {
     BASE: "/api/campaign-categories",
     BY_ID: (id: number | string) => `/api/campaign-categories/${id}`,
+  },
+  PAYMENTS: {
+    BASE: "/api/payments",
+    CREATE: "/api/payments/create",
+    BY_DONATION_ID: (id: number | string) => `/api/payments/donation/${id}`,
+    VERIFY: (id: number | string) => `/api/payments/donation/${id}/verify`,
+    CHECK_ITEM_LIMIT: (id: number | string) => `/api/payments/expenditure-item/${id}/check`,
+    CAMPAIGN_PROGRESS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/progress`,
+    CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
   },
 } as const;

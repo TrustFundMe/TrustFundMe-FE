@@ -78,12 +78,15 @@ function DonationContent() {
 
           // Fetch Expenditure Items
           const itemsData = await expenditureService.getItemsByCampaignId(campaignId);
-          const mappedItems: ExpenditureItem[] = itemsData.map(item => ({
-            id: item.id.toString(),
-            name: item.category,
-            description: item.note || '',
-            price: item.expectedPrice
-          }));
+          const mappedItems: ExpenditureItem[] = itemsData
+            .map(item => ({
+              id: item.id.toString(),
+              name: item.category,
+              description: item.note || '',
+              price: item.expectedPrice,
+              quantityLeft: item.quantityLeft ?? 0
+            }))
+            .filter(item => item.quantityLeft > 0);
           setExpenditureItems(mappedItems);
         } catch (error) {
           console.error('Error fetching data:', error);
@@ -141,7 +144,7 @@ function DonationContent() {
     if (!item) return;
 
     const currentQty = items[itemId] || 0;
-    const newQty = Math.max(0, currentQty + diff);
+    const newQty = Math.min(item.quantityLeft, Math.max(0, currentQty + diff));
 
     const newItems = { ...items, [itemId]: newQty };
     if (newQty === 0) delete newItems[itemId];

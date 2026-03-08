@@ -245,12 +245,12 @@ export default function CampaignCreationPage() {
     else if (desc.length < 50) e.description = 'Mô tả phải từ 50 ký tự trở lên.';
     else if (desc.length > 10000) e.description = 'Mô tả tối đa 10,000 ký tự.';
 
-    if (campaign.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
+    if (campaign.fundType !== 'ITEMIZED' && campaign.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
     if (!campaign.categoryId) e.categoryId = 'Vui lòng chọn danh mục chiến dịch.';
 
     return e;
-  }, [campaign.title, campaign.description, campaign.targetAmount, campaign.categoryId]);
+  }, [campaign.title, campaign.description, campaign.targetAmount, campaign.categoryId, campaign.fundType]);
 
   const campaignBankingErrors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -475,11 +475,17 @@ export default function CampaignCreationPage() {
 
       // 5. Create Fundraising Goal
       console.log('DEBUG [STAGE 5: GOAL]');
-      if (campaign.targetAmount > 0 && !submissionSuccess.goal) {
+
+      let finalTargetAmount = campaign.targetAmount;
+      if (campaign.fundType === 'ITEMIZED') {
+        finalTargetAmount = (campaign.expenditureItems || []).reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0);
+      }
+
+      if (finalTargetAmount > 0 && !submissionSuccess.goal) {
         try {
           await fundraisingGoalService.create({
             campaignId,
-            targetAmount: campaign.targetAmount,
+            targetAmount: finalTargetAmount,
             description: 'Mục tiêu gây quỹ'
           });
           setSubmissionSuccess(prev => ({ ...prev, goal: true }));
@@ -586,8 +592,8 @@ export default function CampaignCreationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans">
-      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-12">
+    <div className="h-screen overflow-hidden bg-white font-sans">
+      <div className="mx-auto grid h-full max-w-6xl grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-12">
         <div className="lg:col-span-3">
           <Stepper activeIndex={activeIndex} onJump={onJump} />
         </div>

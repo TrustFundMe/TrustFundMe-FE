@@ -64,19 +64,36 @@ function CircularProgress({ value }: { value: number }) {
   );
 }
 
+function formatTimeAgo(dateString: string) {
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "Vừa xong";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+
+    return date.toLocaleDateString('vi-VN');
+  } catch (e) {
+    return dateString;
+  }
+}
+
 export default function CampaignDonateCard({
   raisedAmount,
   goalAmount,
+  progressPercentage,
+  recentDonors = [],
   onDonate,
 }: {
   raisedAmount: number;
   goalAmount: number;
+  progressPercentage: number;
+  recentDonors?: any[];
   onDonate: (amount: number) => void;
 }) {
-  const progress = useMemo(() => {
-    const p = (raisedAmount / goalAmount) * 100;
-    return Math.max(0, Math.min(100, Math.round(p)));
-  }, [goalAmount, raisedAmount]);
+  const progress = progressPercentage;
 
   const [amount, setAmount] = useState<number>(50000);
 
@@ -129,15 +146,19 @@ export default function CampaignDonateCard({
             }}
           >
             <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              type="text"
+              value={amount.toLocaleString("vi-VN")}
+              onChange={(e) => {
+                const rawValue = e.target.value.replace(/\./g, "").replace(/\D/g, "");
+                setAmount(Number(rawValue) || 0);
+              }}
               style={{
                 border: "none",
                 outline: "none",
                 width: "100%",
                 background: "transparent",
                 textAlign: "right",
+                fontWeight: 700,
               }}
             />
             <span style={{ opacity: 0.7, fontWeight: 700, fontSize: "12px" }}>VNĐ</span>
@@ -183,36 +204,47 @@ export default function CampaignDonateCard({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[
-              { name: "Nguyễn Văn A", amount: 500000, time: "2 phút trước", avatar: "/assets/img/about/02.jpg" },
-              { name: "Trần Thị B", amount: 200000, time: "15 phút trước", avatar: "/assets/img/about/03.jpg" },
-              { name: "Lê Văn C", amount: 1000000, time: "45 phút trước", avatar: "/assets/img/about/04.jpg" },
-            ].map((donor, i) => (
-              <div key={i} className="d-flex align-items-center gap-3" style={{
-                padding: "8px",
-                borderRadius: "12px",
-                transition: "background 0.2s",
-                cursor: "default"
-              }}>
-                <div style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  background: "#eee",
-                  flexShrink: 0
+            {recentDonors.length === 0 ? (
+              <div className="text-center py-4 text-sm text-gray-400 italic">Chưa có người ủng hộ nào</div>
+            ) : (
+              recentDonors.map((donor, i) => (
+                <div key={i} className="d-flex align-items-center gap-3" style={{
+                  padding: "8px",
+                  borderRadius: "12px",
+                  transition: "background 0.2s",
+                  cursor: "default"
                 }}>
-                  <img src={donor.avatar} alt={donor.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    background: "#eee",
+                    flexShrink: 0
+                  }}>
+                    <img
+                      src={donor.donorAvatar || "/assets/img/about/02.jpg"}
+                      alt={donor.donorName}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/assets/img/about/02.jpg";
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#202426", marginBottom: 2 }}>
+                      {donor.anonymous ? "Người ủng hộ ẩn danh" : donor.donorName}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)" }}>
+                      {formatTimeAgo(donor.createdAt)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right", fontWeight: 800, fontSize: 13, color: "#1A685B" }}>
+                    +{donor.amount.toLocaleString()} đ
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#202426", marginBottom: 2 }}>{donor.name}</div>
-                  <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)" }}>{donor.time}</div>
-                </div>
-                <div style={{ textAlign: "right", fontWeight: 800, fontSize: 13, color: "#1A685B" }}>
-                  +{donor.amount.toLocaleString()} đ
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

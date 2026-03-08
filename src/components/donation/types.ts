@@ -3,6 +3,7 @@ export type ExpenditureItem = {
     name: string;
     description: string;
     price: number;
+    quantityLeft: number;
 };
 
 export type PaymentMethod = 'payos' | 'paypal' | 'cash';

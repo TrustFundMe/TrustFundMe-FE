@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Building2, User, Hash, AlertCircle, Lock } from 'lucide-react';
 import { bankAccountService } from '@/services/bankAccountService';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -22,6 +22,9 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
     const [existingAccounts, setExistingAccounts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [mode, setMode] = useState<'select' | 'create'>('select');
+    const [duplicateError, setDuplicateError] = useState('');
+    const [isChecking, setIsChecking] = useState(false);
+    const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const bankAccount = data.bankAccount || {
         id: undefined,
@@ -58,9 +61,42 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
         fetchBankAccounts();
     }, [user?.id]);
 
+    // Debounced duplicate check
+    const checkDuplicate = useCallback((accountNumber: string, bankCode: string) => {
+        if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
+        setDuplicateError('');
+
+        if (!accountNumber || accountNumber.length < 6 || !bankCode || bankCode.length < 2) {
+            setIsChecking(false);
+            return;
+        }
+
+        setIsChecking(true);
+        checkTimerRef.current = setTimeout(async () => {
+            try {
+                const exists = await bankAccountService.checkExists(accountNumber, bankCode);
+                if (exists) {
+                    setDuplicateError('Số tài khoản này đã được đăng ký bởi người dùng khác trong hệ thống.');
+                } else {
+                    setDuplicateError('');
+                }
+            } catch (err) {
+                console.error('Duplicate check failed:', err);
+            } finally {
+                setIsChecking(false);
+            }
+        }, 800);
+    }, []);
+
     const updateBank = (field: string, value: string) => {
         if (existingAccounts.length > 0) return; // Prevent editing if account exists
-        onChange('bankAccount', { ...bankAccount, [field]: value });
+        const updated = { ...bankAccount, [field]: value };
+        onChange('bankAccount', updated);
+
+        // Trigger duplicate check when accountNumber or bankCode changes
+        if (field === 'accountNumber' || field === 'bankCode') {
+            checkDuplicate(updated.accountNumber, updated.bankCode);
+        }
     };
 
     if (isLoading) {
@@ -119,13 +155,13 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
                     {/* Số tài khoản */}
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-2">Số tài khoản</label>
-                        <div className={`group flex items-center gap-4 px-6 h-14 rounded-2xl border-2 transition-all ${showErrors && errors.accountNumber && !isReadOnly
+                        <div className={`group flex items-center gap-4 px-6 h-14 rounded-2xl border-2 transition-all ${(showErrors && errors.accountNumber && !isReadOnly) || duplicateError
                             ? 'bg-red-50/30 border-red-200 shadow-none'
                             : isReadOnly
                                 ? 'bg-gray-50 border-transparent'
                                 : 'bg-white border-black/5 focus-within:border-[#dc2626]/20 focus-within:shadow-xl focus-within:shadow-red-50'
                             }`}>
-                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${showErrors && errors.accountNumber && !isReadOnly
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all ${(showErrors && errors.accountNumber && !isReadOnly) || duplicateError
                                 ? 'bg-red-100 text-red-600'
                                 : isReadOnly
                                     ? 'bg-black/5 text-black/40'
@@ -141,9 +177,13 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
                                 disabled={isReadOnly}
                                 className="flex-1 bg-transparent border-none p-0 text-sm font-black tracking-widest text-black placeholder:text-black/10 focus:ring-0 disabled:text-black/60"
                             />
+                            {isChecking && <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#dc2626] border-t-transparent shrink-0" />}
                             {isReadOnly && <Lock className="h-4 w-4 text-black/20" />}
                         </div>
                         <ErrorText show={showErrors && !isReadOnly} message={errors.accountNumber} />
+                        {duplicateError && !isReadOnly && (
+                            <div className="mt-1 text-[10px] font-bold text-red-600 ml-2 uppercase tracking-wider">{duplicateError}</div>
+                        )}
                     </div>
 
                     {/* Tên chủ tài khoản */}

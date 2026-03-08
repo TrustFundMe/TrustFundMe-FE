@@ -31,4 +31,11 @@ export const bankAccountService = {
     async delete(id: number): Promise<void> {
         await api.delete(API_ENDPOINTS.BANK_ACCOUNTS.BY_ID(id));
     },
+
+    async checkExists(accountNumber: string, bankCode: string): Promise<boolean> {
+        const res = await api.get<{ exists: boolean }>(API_ENDPOINTS.BANK_ACCOUNTS.CHECK_EXISTS, {
+            params: { accountNumber, bankCode },
+        });
+        return res.data.exists;
+    },
 };

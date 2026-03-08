@@ -19,6 +19,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import type { Expenditure } from '@/types/expenditure';
 
 import { mediaService } from '@/services/mediaService';
+import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymentService';
 
 const mapCampaignDtoToUi = (
   dto: CampaignDto,
@@ -68,6 +69,8 @@ function CampaignDetailsInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followers, setFollowers] = useState<CampaignFollower[]>([]);
+  const [progress, setProgress] = useState<CampaignProgress | null>(null);
+  const [recentDonors, setRecentDonors] = useState<RecentDonor[]>([]);
 
   const [posts] = useState<CampaignPost[]>(mockPosts);
 
@@ -107,15 +110,26 @@ function CampaignDetailsInner() {
         setPlans(mappedPlans);
 
         // Fetch owner, media, and follow info in parallel
-        const [ownerResult, mediaResult, followResult, followersResult] = await Promise.all([
+        const [
+          ownerResult,
+          mediaResult,
+          followResult,
+          followersResult,
+          progressData,
+          recentDonorsData
+        ] = await Promise.all([
           userService.getUserById(dto.fundOwnerId).catch(() => null),
           mediaService.getMediaByCampaignId(campaignId).catch(() => []),
           Promise.all([
             campaignService.isFollowing(campaignId).catch(() => false),
             campaignService.getFollowerCount(campaignId).catch(() => 0)
           ]).catch(() => [false, 0]),
-          campaignService.getFollowers(campaignId).catch(() => [])
+          campaignService.getFollowers(campaignId).catch(() => []),
+          paymentService.getCampaignProgress(campaignId).catch(() => null),
+          paymentService.getRecentDonors(campaignId, 3).catch(() => [])
         ]);
+
+        console.log("🔍 [CampaignDetails] Data fetched:", { progressData, recentDonorsData });
 
         let owner = { name: '', avatar: '/assets/img/about/01.jpg' };
         if (ownerResult?.success && ownerResult?.data) {
@@ -174,6 +188,8 @@ function CampaignDetailsInner() {
         campaignData.followerCount = followerCount;
         setCampaign(campaignData);
         setFollowers(followersData);
+        setProgress(progressData);
+        setRecentDonors(recentDonorsData);
       } catch (err) {
         console.error('Fetch campaign detail error:', err);
         if (!mounted) return;
@@ -320,8 +336,10 @@ function CampaignDetailsInner() {
               <div className="casues-sidebar-wrapper">
                 <div style={{ marginBottom: 18 }}>
                   <CampaignDonateCard
-                    raisedAmount={campaign.raisedAmount}
-                    goalAmount={campaign.goalAmount}
+                    raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
+                    goalAmount={progress?.goalAmount || campaign.goalAmount}
+                    progressPercentage={progress?.progressPercentage || 0}
+                    recentDonors={recentDonors}
                     onDonate={(amount) => {
                       const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
                       const params = new URLSearchParams({
