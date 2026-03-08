@@ -20,7 +20,7 @@ export default function PaymentSummary({ amount, tipPercent, onTipChange, compac
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col items-center justify-center relative overflow-hidden mb-4">
                         <div className="relative z-10 text-center">
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Tổng đóng góp</span>
-                            <span className="text-3xl font-black text-gray-900 tracking-tight block">${totalAmount.toLocaleString('en-US').replace(/,/g, '.')}</span>
+                            <span className="text-3xl font-black text-gray-900 tracking-tight block">{totalAmount.toLocaleString('vi-VN')} ₫</span>
                         </div>
                         <div className="absolute right-[-10px] bottom-[-10px] opacity-[0.03]">
                             <Heart className="w-24 h-24" />

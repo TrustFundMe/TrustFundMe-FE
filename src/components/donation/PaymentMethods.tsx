@@ -8,9 +8,8 @@ type PaymentMethodsProps = {
 };
 
 const paymentOptions = [
-    { id: 'payos' as PaymentMethod, label: 'Thẻ ATM / PayOS', icon: QrCode },
+    { id: 'payos' as PaymentMethod, label: 'PayOS', icon: QrCode },
     { id: 'paypal' as PaymentMethod, label: 'PayPal', icon: Wallet },
-    { id: 'cash' as PaymentMethod, label: 'Tiền mặt', icon: Banknote },
 ];
 
 export default function PaymentMethods({ selected, onChange, compact = false }: PaymentMethodsProps) {

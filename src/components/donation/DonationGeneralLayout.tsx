@@ -1,10 +1,12 @@
 import { CheckCircle2 } from 'lucide-react';
 import { PaymentMethod } from './types';
+import { CampaignDto } from '@/types/campaign';
 import AmountInput from './AmountInput';
 import PaymentSummary from './PaymentSummary';
 import PaymentMethods from './PaymentMethods';
 
 type DonationGeneralLayoutProps = {
+    campaign: CampaignDto | null;
     amount: number;
     isManualMode: boolean;
     tipPercent: number;
@@ -20,9 +22,11 @@ type DonationGeneralLayoutProps = {
     onAgreedChange: (checked: boolean) => void;
     onShowTerms: () => void;
     onSubmit: () => void;
+    isGuest?: boolean;
 };
 
 export default function DonationGeneralLayout({
+    campaign,
     amount,
     isManualMode,
     tipPercent,
@@ -37,7 +41,8 @@ export default function DonationGeneralLayout({
     onAnonymousChange,
     onAgreedChange,
     onShowTerms,
-    onSubmit
+    onSubmit,
+    isGuest = false
 }: DonationGeneralLayoutProps) {
     const tipAmount = Math.round((amount * tipPercent) / 100);
     const totalAmount = amount + tipAmount;
@@ -50,9 +55,11 @@ export default function DonationGeneralLayout({
                 <div className="w-full max-w-md">
                     <div className="flex items-center gap-2 mb-2 justify-center">
                         <div className="w-5 h-1.5 bg-[#dc2626] rounded-full"></div>
-                        <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">TrustFundMe Donation</span>
+                        <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">
+                            {campaign?.type?.toUpperCase() === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Quỹ ủy quyền'}
+                        </span>
                     </div>
-                    <h1 className="text-xl font-black tracking-tight text-gray-900">Trao gửi yêu thương - Quỹ Chung</h1>
+                    <h1 className="text-xl font-black tracking-tight text-gray-900">{campaign?.title || 'Đang tải...'}</h1>
                 </div>
 
                 {/* Amount Input */}
@@ -83,13 +90,15 @@ export default function DonationGeneralLayout({
 
                 {/* Extra Options */}
                 <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
-                            {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                        </div>
-                        <input type="checkbox" className="hidden" checked={isAnonymous} onChange={e => onAnonymousChange(e.target.checked)} />
-                        <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Quyên góp ẩn danh</span>
-                    </label>
+                    {!isGuest && (
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
+                                {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                            </div>
+                            <input type="checkbox" className="hidden" checked={isAnonymous} onChange={e => onAnonymousChange(e.target.checked)} />
+                            <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">Quyên góp ẩn danh</span>
+                        </label>
+                    )}
 
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAgreed ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
