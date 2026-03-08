@@ -1,16 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flag, Search, CheckCircle, XCircle, Clock, MessageSquare, ExternalLink, Loader2, User } from 'lucide-react';
+import { Flag, Search, CheckCircle, XCircle, Clock, MessageSquare, ExternalLink, Loader2, User, Lock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
-import { userService } from '@/services/userService';
+import { userService, UserInfo } from '@/services/userService';
+import { feedPostService } from '@/services/feedPostService';
 import Link from 'next/link';
+import BanUserModal from '@/components/staff/BanUserModal';
 
 type FlagStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED';
 
 interface FlagWithUser extends FlagDto {
   userName?: string;
+  postType?: string;
+  budgetId?: number | null;
+  targetUser?: UserInfo;
 }
 
 const statusConfig = {
@@ -25,6 +30,19 @@ export default function FlagsManagementPage() {
   const [filter, setFilter] = useState<'ALL' | FlagStatus>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({ total: 0, pending: 0, resolved: 0, dismissed: 0 });
+  
+  // Ban Modal State
+  const [banModal, setBanModal] = useState<{
+    isOpen: boolean;
+    userId: number;
+    userName: string;
+    flagId: number;
+  }>({
+    isOpen: false,
+    userId: 0,
+    userName: '',
+    flagId: 0
+  });
 
   useEffect(() => {
     fetchData();
@@ -37,12 +55,46 @@ export default function FlagsManagementPage() {
       const flagList = res.content || [];
       
       const flagsWithUsers = await Promise.all(flagList.map(async (flag) => {
+        let userName = `User #${flag.userId}`;
+        let postType = undefined;
+        let budgetId: number | null = null;
+        let targetUser = undefined;
+
         try {
           const userRes = await userService.getUserById(flag.userId);
-          return { ...flag, userName: userRes.data?.fullName || `User #${flag.userId}` };
-        } catch {
-          return { ...flag, userName: `User #${flag.userId}` };
+          if (userRes.data) {
+            userName = userRes.data.fullName;
+            targetUser = userRes.data;
+          }
+        } catch (e) {
+          console.error("Error fetching user for flag", flag.userId, e);
         }
+
+        if (flag.postId) {
+          try {
+            const post = await feedPostService.getById(flag.postId);
+            postType = post.type;
+            budgetId = post.budgetId ?? null;
+
+            // Target user is the post author
+            if (post.authorId) {
+               const authorRes = await userService.getUserById(post.authorId);
+               if (authorRes.data) {
+                 targetUser = authorRes.data;
+               }
+            }
+          } catch (e) {
+             console.error("Error fetching post for flag", flag.postId, e);
+          }
+        }
+
+        return {
+          ...flag,
+          userName,
+          postType,
+          budgetId,
+          targetUser
+        };
       }));
 
       setFlags(flagsWithUsers);
@@ -73,10 +125,34 @@ export default function FlagsManagementPage() {
     }
   };
 
+  const handleLockAccount = (userId: number, userName: string, flagId: number) => {
+    setBanModal({
+      isOpen: true,
+      userId,
+      userName,
+      flagId
+    });
+  };
+
+  const confirmLockAccount = async (reason: string) => {
+    try {
+      setLoading(true);
+      const { userId, flagId } = banModal;
+      await userService.banUser(userId, reason);
+      await flagService.reviewFlag(flagId, 'RESOLVED');
+      toast.success("Đã khóa tài khoản và giải quyết tố cáo");
+      fetchData();
+    } catch (error: any) {
+      toast.error("Khóa tài khoản thất bại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredFlags = flags.filter(flag => {
     const matchesSearch = searchTerm === '' || 
       flag.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      flag.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (flag.userName && flag.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (flag.campaignId?.toString() === searchTerm) ||
       (flag.postId?.toString() === searchTerm);
     return matchesSearch;
@@ -232,22 +308,43 @@ export default function FlagsManagementPage() {
                                   Xử lý tố cáo
                                   <ExternalLink className="h-3 w-3" />
                                 </Link>
-                              ) : (
-                                <div className="flex items-center gap-1.5">
-                                  <button 
-                                    onClick={() => handleReview(flag.id, 'RESOLVED')}
-                                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
-                                  >
-                                    Đã xử lý
-                                  </button>
-                                  <button 
-                                    onClick={() => handleReview(flag.id, 'DISMISSED')}
-                                    className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                                  >
-                                    Bác bỏ
-                                  </button>
-                                </div>
-                              )}
+                              ) : flag.postType === 'DISCUSSION' ? (
+                                /* Nếu là post tự đăng (DISCUSSION) thì hiện nút khóa tài khoản */
+                                <button
+                                  onClick={() => flag.targetUser && handleLockAccount(flag.targetUser.id, flag.targetUser.fullName, flag.id)}
+                                  disabled={flag.targetUser?.isActive === false}
+                                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                                    flag.targetUser?.isActive === false
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-red-600 text-white hover:bg-red-700 shadow-red-200'
+                                  }`}
+                                >
+                                  <Lock className="h-3 w-3" />
+                                  {flag.targetUser?.isActive === false ? 'Đã khóa' : 'Khóa tài khoản'}
+                                </button>
+                              ) : flag.budgetId ? (
+                                /* Nếu là post minh chứng (POST + budgetId) thì hiện nút dẫn qua expenditure */
+                                <Link
+                                  href={`/staff/request?campaignId=${flag.budgetId || '0'}&tab=EXPENDITURE`}
+                                  className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#446b5f] text-white hover:bg-[#5a8075] transition-all shadow-sm shadow-[#446b5f]/20 flex items-center gap-1.5"
+                                >
+                                  Xem chi tiêu
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              ) : null}
+
+                              <button
+                                onClick={() => handleReview(flag.id, 'RESOLVED')}
+                                className="px-2.5 py-1.5 rounded-md text-[11px] font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                Đã xử lý
+                              </button>
+                              <button
+                                onClick={() => handleReview(flag.id, 'DISMISSED')}
+                                className="px-2.5 py-1.5 rounded-md text-[11px] font-bold bg-white border border-gray-200 text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                Bác bỏ
+                              </button>
                             </div>
                           )}
                         </td>
@@ -260,6 +357,14 @@ export default function FlagsManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Ban User Modal */}
+      <BanUserModal
+        isOpen={banModal.isOpen}
+        onClose={() => setBanModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmLockAccount}
+        userName={banModal.userName}
+      />
     </div>
   );
 }

@@ -14,6 +14,8 @@ import { mediaService } from '@/services/mediaService';
 import { userService } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
 
+import { useSearchParams } from 'next/navigation';
+
 /* ══════════════════════════════ HELPERS ══════════════════════════════ */
 const FMT = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const fmt = (n: number) => FMT.format(n);
@@ -347,6 +349,8 @@ export default function ExpenditureTab() {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [loading, setLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const targetCampaignId = searchParams.get('campaignId');
 
     useEffect(() => {
         const loadAllData = async () => {
@@ -391,7 +395,15 @@ export default function ExpenditureTab() {
 
                 setCampaigns(sorted);
                 setFiltered(sorted);
-                if (sorted.length > 0) setSelected(sorted[0]);
+
+                // If specialized campaign ID is in URL, choose that as the selected campaign
+                if (targetCampaignId) {
+                    const found = sorted.find(c => String(c.id) === targetCampaignId);
+                    if (found) setSelected(found);
+                    else if (sorted.length > 0) setSelected(sorted[0]);
+                } else if (sorted.length > 0) {
+                   setSelected(sorted[0]);
+                }
             } catch (err) {
                 toast.error('Lỗi tải danh sách chiến dịch');
             } finally {
@@ -400,7 +412,7 @@ export default function ExpenditureTab() {
         };
 
         loadAllData();
-    }, []);
+    }, [targetCampaignId]);
 
     useEffect(() => {
         let list = campaigns;

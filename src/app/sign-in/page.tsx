@@ -246,7 +246,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, Suspense } from "react";
+import { useMemo, useState, Suspense, useEffect } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import { authService } from "@/services/authService";
@@ -351,6 +351,14 @@ function SignInContent() {
   const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
   const [confirmNewPassword, setConfirmNewPassword] = useState<string>("");
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState<boolean>(false);
+
+  // Handle external errors (like account disabled redirect)
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'account_disabled') {
+       setError("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+    }
+  }, [searchParams]);
 
   // ==================================================================================
   // EMAIL CHECK (Using Supabase)
@@ -511,6 +519,9 @@ function SignInContent() {
           router.push('/admin');
         } else if (effectiveRole === 'STAFF') {
           router.push('/staff');
+        } else if (loggedInUser && (loggedInUser as any).isActive === false) {
+          // If account is disabled, redirect to home where BannedAccountWrapper will catch it
+          router.push('/');
         } else {
           router.push(returnTo || '/');
         }

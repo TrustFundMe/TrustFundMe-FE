@@ -91,7 +91,7 @@ export const userService = {
     /**
      * Ban/deactivate user
      */
-    async banUser(id: number | string): Promise<{
+    async banUser(id: number | string, reason?: string): Promise<{
         success: boolean;
         data?: UserInfo;
         error?: string;
@@ -102,6 +102,7 @@ export const userService = {
                 headers: {
                     "Content-Type": "application/json",
                 },
+                body: reason ? JSON.stringify({ reason }) : undefined,
             });
 
             const data = await response.json();

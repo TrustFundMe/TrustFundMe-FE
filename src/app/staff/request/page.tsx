@@ -17,14 +17,17 @@ import type {
 
 export default function StaffRequestPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE'>('CAMPAIGN');
+  const searchParams = useSearchParams();
+  const targetTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE'>(
+    targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : 'CAMPAIGN'
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
   const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL' | 'DISABLED'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
-  const searchParams = useSearchParams();
   const targetCampaignId = searchParams.get('campaignId');
   const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
 

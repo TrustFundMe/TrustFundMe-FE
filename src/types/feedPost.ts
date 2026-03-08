@@ -27,6 +27,7 @@ export type FeedPostAuthor = {
   id: string;
   name: string;
   avatar: string;
+  isActive?: boolean;
 };
 
 export type FeedPostComment = {
