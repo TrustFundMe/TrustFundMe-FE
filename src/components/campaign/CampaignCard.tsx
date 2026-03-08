@@ -14,6 +14,7 @@ export type CampaignCardItem = {
   raised: number;
   goal: number;
   image: string;
+  status?: string;
 };
 
 export default function CampaignCard({ item }: { item: CampaignCardItem }) {
@@ -54,11 +55,19 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
             alt={item.title}
             fill
             sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-            className="object-cover"
+            className={`object-cover ${item.status === 'DISABLED' ? 'grayscale' : ''}`}
             priority={false}
           />
           <div className="pointer-events-none absolute inset-0 bg-black/20" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          
+          {item.status === 'DISABLED' && (
+            <div className="absolute top-2 left-2 z-10">
+              <span className="bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-tighter shadow-lg shadow-black/20">
+                ĐÃ VÔ HIỆU HÓA
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="absolute inset-x-0 bottom-0 p-2.5">

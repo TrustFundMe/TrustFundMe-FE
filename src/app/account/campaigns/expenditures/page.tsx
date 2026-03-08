@@ -86,8 +86,18 @@ export default function CampaignExpendituresPage() {
     }, [expenditures]);
 
     // === Logic kiểm tra điều kiện tạo expenditure mới ===
-    const { canCreate, blockReason } = useMemo(() => {
-        if (!campaign || expenditures.length === 0) return { canCreate: true, blockReason: null };
+    const { canCreate, blockReason, isDisabled } = useMemo(() => {
+        if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
+
+        if (campaign.status === 'DISABLED') {
+            return { 
+                canCreate: false, 
+                blockReason: 'Chiến dịch đã bị vô hiệu hóa. Mọi hoạt động quản lý tài chính hiện bị tạm dừng.',
+                isDisabled: true 
+            };
+        }
+
+        if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
 
         if (campaign.type === 'AUTHORIZED') {
             // Quỹ ủy quyền: có thể tạo mới nếu tất cả exp đều là DISBURSED+bằng chứng hoặc REJECTED
@@ -98,10 +108,10 @@ export default function CampaignExpendituresPage() {
                 e.status === 'DISBURSED' && !e.disbursementProofUrl
             );
             if (hasActiveExp) {
-                return { canCreate: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã giải ngân và có bằng chứng, hoặc bị từ chối.' };
+                return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã giải ngân và có bằng chứng, hoặc bị từ chối.' };
             }
             if (hasDisbursedWithoutProof) {
-                return { canCreate: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
+                return { canCreate: false, isDisabled: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
             }
         } else if (campaign.type === 'ITEMIZED') {
             // Quỹ vật phẩm: có thể tạo mới nếu tất cả exp đều là DISBURSED+bằng chứng
@@ -110,14 +120,14 @@ export default function CampaignExpendituresPage() {
                 e.status === 'DISBURSED' && !e.disbursementProofUrl
             );
             if (hasActiveExp) {
-                return { canCreate: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã được giải ngân và có bằng chứng.' };
+                return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi hiện tại chưa hoàn tất. Khoản chi mới chỉ được tạo khi khoản chi hiện tại đã được giải ngân và có bằng chứng.' };
             }
             if (hasDisbursedWithoutProof) {
-                return { canCreate: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
+                return { canCreate: false, isDisabled: false, blockReason: 'Vui lòng nộp bằng chứng cho khoản chi đã giải ngân trước khi tạo khoản chi mới.' };
             }
         }
 
-        return { canCreate: true, blockReason: null };
+        return { canCreate: true, blockReason: null, isDisabled: false };
     }, [campaign, expenditures]);
     // === END ===
 
@@ -289,6 +299,23 @@ export default function CampaignExpendituresPage() {
                     <Link href="/account/campaigns" className="inline-flex items-center text-black/40 hover:text-black mb-6 transition-colors text-[10px] font-black uppercase tracking-[2px]">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back to My Campaigns
                     </Link>
+
+                    {isDisabled && (
+                        <div className="mb-10 p-8 rounded-[3rem] bg-rose-50 border-2 border-rose-100 flex flex-col md:flex-row items-center gap-6 animate-pulse">
+                            <div className="w-16 h-16 rounded-[2rem] bg-rose-500 flex items-center justify-center text-white shrink-0">
+                                <X className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-rose-950 tracking-tight leading-none mb-2">Chiến dịch đã bị vô hiệu hóa</h2>
+                                <p className="text-sm font-bold text-rose-800/60 leading-relaxed">
+                                    {campaign.rejectionReason 
+                                        ? `Lý do: ${campaign.rejectionReason}`
+                                        : 'Chiến dịch này đã bị tạm dừng bởi quản trị viên. Bạn không thể tạo khoản chi mới, rút tiền hoặc cập nhật minh chứng cho đến khi trạng thái được khôi phục.'}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-4xl font-black text-black tracking-tighter leading-none">{campaign.title}</h1>
@@ -588,14 +615,19 @@ export default function CampaignExpendituresPage() {
                                                                         <button
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
+                                                                                if (isDisabled) {
+                                                                                    toast.error('Chiến dịch đã bị vô hiệu hóa, không thể yêu cầu rút tiền.');
+                                                                                    return;
+                                                                                }
                                                                                 handleRequestWithdrawal(exp.id);
                                                                             }}
-                                                                            className="px-4 py-1.5 rounded-lg bg-red-50 text-red-900 text-[10px] font-black uppercase tracking-widest hover:bg-red-900 hover:text-white transition-all shadow-sm"
+                                                                            disabled={isDisabled}
+                                                                            className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-red-50 text-red-900 hover:bg-red-900 hover:text-white'}`}
                                                                         >
                                                                             Rút tiền
                                                                         </button>
                                                                     ) : campaign.type === 'AUTHORIZED' ? (
-                                                                        <span className="text-[10px] font-black uppercase text-amber-600 flex items-center gap-1">
+                                                                        <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isDisabled ? 'text-gray-400' : 'text-amber-600'}`}>
                                                                             <AlertCircle className="w-3.5 h-3.5" /> Chờ báo cáo
                                                                         </span>
                                                                     ) : null}
@@ -940,8 +972,14 @@ export default function CampaignExpendituresPage() {
 
                                                                                                 <div className="pt-4">
                                                                                                     <button
-                                                                                                        onClick={() => handleEvidenceSubmit(exp.id)}
-                                                                                                        disabled={evidenceFiles.length === 0 || uploadingEvidence}
+                                                                                                        onClick={() => {
+                                                                            if (isDisabled) {
+                                                                                toast.error('Chiến dịch đã bị vô hiệu hóa, không thể gửi minh chứng.');
+                                                                                return;
+                                                                            }
+                                                                            handleEvidenceSubmit(exp.id);
+                                                                        }}
+                                                                                                        disabled={evidenceFiles.length === 0 || uploadingEvidence || isDisabled}
                                                                                                         className={`w-full py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl ${evidenceFiles.length === 0 || uploadingEvidence 
                                                                                                             ? 'bg-gray-100 text-black/20 cursor-not-allowed shadow-none' 
                                                                                                             : 'bg-black text-white hover:bg-emerald-900 shadow-emerald-900/10 active:scale-[0.98]'}`}

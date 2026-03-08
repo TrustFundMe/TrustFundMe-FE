@@ -53,6 +53,12 @@ export default function CreateExpenditurePage() {
                     bankAccountService.getMyBankAccounts()
                 ]);
 
+                if (campaignData.status === 'DISABLED') {
+                    setError('Chiến dịch này đã bị vô hiệu hóa. Bạn không thể tạo mới khoản chi tiêu.');
+                    setLoading(false);
+                    return;
+                }
+
                 setCampaign(campaignData);
 
                 // Prioritize approved bank accounts, then fall back to any available
@@ -94,6 +100,11 @@ export default function CreateExpenditurePage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!campaignId) return;
+
+        if (campaign?.status === 'DISABLED') {
+            alert('Chiến dịch đã bị vô hiệu hóa. Không thể thực hiện thao tác này.');
+            return;
+        }
 
         if (!plan.trim()) {
             alert('Vui lòng nhập mô tả/kế hoạch chi tiêu.');

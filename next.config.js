@@ -12,30 +12,17 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // Skip server-side optimization - images from Supabase CDN are already optimized.
+    // Prevents "400 received null" when Next.js server can't proxy external image URLs.
+    unoptimized: true,
     dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'via.placeholder.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'rdfdalbhvpszkyetmraq.supabase.co',
-      },
-      {
-        protocol: 'https',
-        hostname: 'ui-avatars.com',
-      },
+      { protocol: 'https', hostname: 'placehold.co' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'via.placeholder.com' },
+      { protocol: 'https', hostname: 'rdfdalbhvpszkyetmraq.supabase.co', pathname: '/**' },
+      { protocol: 'https', hostname: '*.supabase.co', pathname: '/**' },
+      { protocol: 'https', hostname: 'ui-avatars.com' },
     ],
   },
   async rewrites() {

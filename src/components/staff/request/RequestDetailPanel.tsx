@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ShieldCheck, Upload, FileText, ExternalLink, Loader2, Shield } from 'lucide-react';
+import { ShieldCheck, Upload, FileText, ExternalLink, Loader2, Shield, XCircle } from 'lucide-react';
 import type { RequestStatus, StaffRequestBase } from './RequestTypes';
 import RequestStatusPill from './RequestStatusPill';
 
@@ -22,12 +22,14 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   onDisburse,
   uploading,
   onVerifyKYC,
+  onDisable,
 }: {
   request: T | null;
   title: string;
   fields: Array<{ label: string; value?: React.ReactNode }>;
   onApprove?: (reason?: string) => void;
   onReject?: (reason?: string) => void;
+  onDisable?: (reason?: string) => void;
   onActionClick?: () => void;
   actionLabel?: string;
   approveDisabled?: boolean;
@@ -42,6 +44,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   const [note, setNote] = useState('');
 
   const isPending = request?.status === 'PENDING';
+  const isApproved = request?.status === 'APPROVED';
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -64,6 +67,36 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               </div>
             ))}
           </div>
+
+          {/* Disable Campaign Button - Show for ACTIVE/APPROVED campaigns */}
+          {onDisable && isApproved && (request as any).type === 'APPROVE_CAMPAIGN' && (
+            <div className="border-t border-red-50 pt-4 mt-2 space-y-3">
+               <div className="p-3 bg-red-50 rounded-xl border border-red-100 italic text-[11px] text-red-600">
+                  ⚠️ Lưu ý: Vô hiệu hóa chiến dịch sẽ thông báo cho chủ sở hữu và ngừng tất cả các hoạt động quyên góp.
+               </div>
+               <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Lý do vô hiệu hóa..."
+                  className="w-full rounded-lg border-gray-200 text-xs shadow-sm focus:border-red-500 focus:ring-red-500"
+                  rows={2}
+                />
+               <button
+                onClick={() => {
+                  if (note.trim()) {
+                    onDisable(note);
+                    setNote('');
+                  } else {
+                    toast.error('Vui lòng nhập lý do vô hiệu hóa');
+                  }
+                }}
+                className="w-full rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white hover:bg-red-700 flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-100"
+              >
+                <XCircle className="h-4 w-4" />
+                Vô hiệu hóa chiến dịch
+              </button>
+            </div>
+          )}
 
           {/* Verify KYC Button - Show when KYC is not verified */}
           {onVerifyKYC && !(request as any).kycVerified && (

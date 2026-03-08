@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Megaphone, DollarSign, Shield } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Megaphone, DollarSign, Shield, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -22,8 +22,10 @@ export default function StaffRequestPage() {
 
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
-  const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL'>('ALL');
+  const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL' | 'DISABLED'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  const targetCampaignId = searchParams.get('campaignId');
   const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
 
   // Fetch functions moved to component scope
@@ -47,6 +49,7 @@ export default function StaffRequestPage() {
         if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
         else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
         else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
+        else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
         else status = c.status as RequestStatus;
 
         const owner = userMap.get(c.fundOwnerId);
@@ -69,7 +72,12 @@ export default function StaffRequestPage() {
       });
       setCampaignRows(mappedCampaigns);
 
-      if (mappedCampaigns.length > 0 && !selectedCampaignId) setSelectedCampaignId(mappedCampaigns[0].id);
+      // Auto-select from URL or first item
+      if (targetCampaignId) {
+        setSelectedCampaignId(`CAMP_${targetCampaignId}`);
+      } else if (mappedCampaigns.length > 0 && !selectedCampaignId) {
+        setSelectedCampaignId(mappedCampaigns[0].id);
+      }
 
     } catch (error) {
       console.error('Failed to fetch campaigns', error);
@@ -116,10 +124,27 @@ export default function StaffRequestPage() {
       const status = isApprove ? 'APPROVED' : 'REJECTED';
       await campaignService.reviewCampaign(targetCampaign.campaignId, status, reason);
       setCampaignRows((prev) => prev.map((r) => (r.id === targetCampaign.id ? { ...r, status } : r)));
-      toast.success(`Campaign ${isApprove ? 'approved' : 'rejected'} successfully!`);
+      toast.success(isApprove ? 'Đã duyệt chiến dịch' : 'Đã từ chối chiến dịch');
     } catch (error) {
       console.error('Failed to review campaign:', error);
-      toast.error('Failed to update campaign status');
+      toast.error('Cập nhật trạng thái thất bại');
+    }
+  };
+
+  const handleDisableCampaign = async (campaignId?: number, reason?: string) => {
+    const targetCampaign = campaignId
+      ? campaignRows.find(r => r.campaignId === campaignId)
+      : selectedCampaign;
+
+    if (!targetCampaign || targetCampaign.type !== 'APPROVE_CAMPAIGN') return;
+
+    try {
+      await campaignService.disableCampaign(targetCampaign.campaignId, reason || 'Vi phạm điều khoản');
+      setCampaignRows((prev) => prev.map((r) => (r.id === targetCampaign.id ? { ...r, status: 'DISABLED' as RequestStatus } : r)));
+      toast.success('Đã vô hiệu hóa chiến dịch');
+    } catch (error) {
+      console.error('Failed to disable campaign:', error);
+      toast.error('Vô hiệu hóa thất bại');
     }
   };
 
@@ -189,7 +214,7 @@ export default function StaffRequestPage() {
 
               {/* Campaign Filter Bar */}
               <div className="flex items-center gap-2 flex-shrink-0">
-                {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
+                {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'DISABLED'] as const).map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -199,7 +224,7 @@ export default function StaffRequestPage() {
                       : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                       }`}
                   >
-                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : 'Từ chối'}
+                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Từ chối' : 'Đã vô hiệu'}
                   </button>
                 ))}
               </div>
@@ -261,13 +286,15 @@ export default function StaffRequestPage() {
                           key: 'status',
                           title: 'Status',
                           render: (r: CampaignRequest) => (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${r.status === 'APPROVED'
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'APPROVED'
                               ? 'bg-green-100 text-green-800'
                               : r.status === 'REJECTED'
                                 ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                : r.status === 'DISABLED'
+                                  ? 'bg-gray-100 text-gray-800 border border-gray-200'
+                                  : 'bg-yellow-100 text-yellow-800'
                               }`}>
-                              {r.status}
+                              {r.status === 'DISABLED' ? 'ĐÃ VÔ HIỆU' : r.status}
                             </span>
                           ),
                         },
@@ -298,6 +325,7 @@ export default function StaffRequestPage() {
                     onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
                     onApprove={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, true)}
                     onReject={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, false)}
+                    onDisable={(reason) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
                     onVerifyKYC={selectedCampaign && !selectedCampaign.kycVerified
                       ? () => handleVerifyKYC(selectedCampaign.fundOwnerId)
                       : undefined

@@ -1,4 +1,7 @@
+import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface FlagDto {
   id: number;
@@ -6,6 +9,7 @@ export interface FlagDto {
   campaignId: number | null;
   userId: number;
   reason: string;
+  /** PENDING | RESOLVED | DISMISSED */
   status: "PENDING" | "RESOLVED" | "DISMISSED";
   reviewedBy: number | null;
   createdAt: string;
@@ -17,61 +21,120 @@ export interface SubmitFlagRequest {
   reason: string;
 }
 
-export interface ReviewFlagRequest {
-  status: "RESOLVED" | "DISMISSED";
+export interface PagedFlagResponse {
+  content: FlagDto[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
 }
 
+// ─── Service ──────────────────────────────────────────────────────────────────
+
 export const flagService = {
+  /**
+   * Submit a flag/report for a campaign or post.
+   * Available to any authenticated user (DONOR, FUND_OWNER, etc.)
+   */
   async submitFlag(request: SubmitFlagRequest): Promise<FlagDto> {
-    const res = await fetch(API_ENDPOINTS.FLAGS.BASE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(request),
+    const res = await api.post<FlagDto>(API_ENDPOINTS.FLAGS.BASE, request);
+    return res.data;
+  },
+
+  /**
+   * Get a specific flag by ID. (ADMIN / STAFF only)
+   */
+  async getById(id: number | string): Promise<FlagDto> {
+    const res = await api.get<FlagDto>(API_ENDPOINTS.FLAGS.BY_ID(id));
+    return res.data;
+  },
+
+  /**
+   * Get all flags (with optional status filter). (ADMIN / STAFF only)
+   */
+  async getAllFlags(
+    status?: string,
+    page = 0,
+    size = 20
+  ): Promise<PagedFlagResponse> {
+    const res = await api.get<PagedFlagResponse>(API_ENDPOINTS.FLAGS.BASE, {
+      params: { status, page, size },
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error((err as { message?: string }).message ?? "Flag failed"), {
-        response: { status: res.status },
-      });
-    }
-    return res.json();
+    return res.data;
   },
 
-  async getPendingFlags(): Promise<FlagDto[]> {
-    const res = await fetch(API_ENDPOINTS.FLAGS.PENDING, { credentials: "include" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : (data.content ?? []);
+  /**
+   * Get all PENDING flags. (ADMIN / STAFF only)
+   */
+  async getPendingFlags(page = 0, size = 10): Promise<PagedFlagResponse> {
+    return flagService.getAllFlags("PENDING", page, size);
   },
 
-  async getFlagsByPost(postId: number | string): Promise<FlagDto[]> {
-    const res = await fetch(API_ENDPOINTS.FLAGS.BY_POST(postId), { credentials: "include" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : (data.content ?? []);
+  /**
+   * Get all flags for a specific campaign. (ADMIN / STAFF only)
+   */
+  async getFlagsByCampaign(
+    campaignId: number | string,
+    page = 0,
+    size = 10
+  ): Promise<PagedFlagResponse> {
+    const res = await api.get<PagedFlagResponse>(
+      API_ENDPOINTS.FLAGS.BY_CAMPAIGN(campaignId),
+      { params: { page, size } }
+    );
+    return res.data;
   },
 
-  async getMyFlags(): Promise<FlagDto[]> {
-    const res = await fetch(API_ENDPOINTS.FLAGS.MY_FLAGS, { credentials: "include" });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? data : (data.content ?? []);
+  /**
+   * Get all flags for a specific feed post. (ADMIN / STAFF only)
+   */
+  async getFlagsByPost(
+    postId: number | string,
+    page = 0,
+    size = 10
+  ): Promise<PagedFlagResponse> {
+    const res = await api.get<PagedFlagResponse>(
+      API_ENDPOINTS.FLAGS.BY_POST(postId),
+      { params: { page, size } }
+    );
+    return res.data;
   },
 
-  async reviewFlag(flagId: number | string, status: "RESOLVED" | "DISMISSED"): Promise<FlagDto> {
-    const res = await fetch(API_ENDPOINTS.FLAGS.REVIEW(flagId), {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ status }),
+  /**
+   * Get the current user's own submitted flags.
+   */
+  async getMyFlags(page = 0, size = 20): Promise<FlagDto[]> {
+    const res = await api.get<PagedFlagResponse>(API_ENDPOINTS.FLAGS.MY_FLAGS, {
+      params: { page, size },
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error((err as { message?: string }).message ?? "Review failed"), {
-        response: { status: res.status },
-      });
-    }
-    return res.json();
+    const data = res.data;
+    if (Array.isArray(data)) return data as unknown as FlagDto[];
+    return data.content ?? [];
+  },
+
+  /**
+   * Review (resolve or dismiss) a flag. (ADMIN / STAFF only)
+   * Backend accepts status as a query param, not in body.
+   */
+  async reviewFlag(
+    flagId: number | string,
+    status: "RESOLVED" | "DISMISSED"
+  ): Promise<FlagDto> {
+    const res = await api.patch<FlagDto>(API_ENDPOINTS.FLAGS.REVIEW(flagId), null, {
+      params: { status },
+    });
+    return res.data;
+  },
+
+  // ─── Convenience helpers ─────────────────────────────────────────────────────
+
+  /** Flag a campaign with a reason */
+  async flagCampaign(campaignId: number, reason: string): Promise<FlagDto> {
+    return flagService.submitFlag({ campaignId, reason });
+  },
+
+  /** Flag a feed post with a reason */
+  async flagPost(postId: number, reason: string): Promise<FlagDto> {
+    return flagService.submitFlag({ postId, reason });
   },
 };

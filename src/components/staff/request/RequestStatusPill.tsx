@@ -10,6 +10,7 @@ const map: Record<string, { label: string; className: string }> = {
   WITHDRAWAL_REQUESTED: { label: 'Yêu cầu rút tiền', className: 'bg-blue-50 text-blue-700 ring-blue-100' },
   REJECTED: { label: 'Từ chối', className: 'bg-rose-50 text-rose-700 ring-rose-100' },
   DISBURSED: { label: 'Đã giải ngân', className: 'bg-emerald-50 text-emerald-700 ring-emerald-100' },
+  DISABLED: { label: 'Đã vô hiệu hóa', className: 'bg-gray-50 text-gray-700 ring-gray-100' },
 };
 
 export default function RequestStatusPill({ status }: { status: RequestStatus }) {
