@@ -49,5 +49,11 @@ export const expenditureService = {
 
     deleteItem: async (itemId: string | number): Promise<void> => {
         await axiosInstance.delete(`/api/expenditures/items/${itemId}`);
+    },
+    updateEvidenceStatus: async (id: string | number, status: string): Promise<Expenditure> => {
+        const response = await axiosInstance.patch(`/api/expenditures/${id}/evidence-status`, null, {
+            params: { status }
+        });
+        return response.data;
     }
 };

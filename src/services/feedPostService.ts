@@ -35,71 +35,35 @@ export const feedPostService = {
     return res.data;
   },
 
+  /**
+   * Creates a new feed post using the authenticated axios instance.
+   * Status defaults to 'ACTIVE' so the post is immediately visible on the feed.
+   */
   async create(payload: CreateFeedPostRequest): Promise<FeedPostDto> {
-    const url = "/api/feed-posts";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(err.message ?? "Create post failed"), {
-        response: { status: res.status, data: err },
-      });
-    }
-    return res.json();
+    const body = { ...payload, status: payload.status ?? "ACTIVE" };
+    const res = await api.post<FeedPostDto>("/api/feed-posts", body);
+    return res.data;
   },
 
   async update(
     id: number,
     payload: UpdateFeedPostRequest
   ): Promise<FeedPostDto> {
-    const url = `/api/feed-posts/${id}`;
-    const res = await fetch(url, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(err.message ?? "Update post failed"), {
-        response: { status: res.status, data: err },
-      });
-    }
-    return res.json();
+    const res = await api.put<FeedPostDto>(`/api/feed-posts/${id}`, payload);
+    return res.data;
   },
 
   async delete(id: number): Promise<void> {
-    const res = await fetch(`/api/feed-posts/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error((err as { message?: string }).message ?? "Delete failed"), {
-        response: { status: res.status, data: err },
-      });
-    }
+    await api.delete(`/api/feed-posts/${id}`);
   },
 
   async uploadImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch("/api/media/upload", {
-      method: "POST",
-      credentials: "include",
-      body: formData,
+    const res = await api.post<{ url?: string }>("/api/media/upload", formData, {
+      headers: { "Content-Type": undefined },
+      transformRequest: [(data) => data],
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error(err.message ?? "Upload failed"), {
-        response: { status: res.status, data: err },
-      });
-    }
-    const data = await res.json();
-    return data.url ?? "";
+    return res.data.url ?? "";
   },
 };
