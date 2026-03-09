@@ -5,16 +5,16 @@ import { createClient } from '@supabase/supabase-js';
  * Uses Service Role Key to bypass RLS (e.g. for Storage upload when using BE auth).
  * NEVER import this in client components.
  */
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SHARED_SUPABASE_URL;
 const serviceRoleKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SHARED_SUPABASE_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SHARED_SUPABASE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabaseAdmin =
   url && serviceRoleKey
     ? createClient(url, serviceRoleKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      })
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
     : null;

@@ -182,25 +182,18 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        value={data.fundType === 'ITEMIZED'
-                                            ? ((data.expenditureItems || []).reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0) || 0).toLocaleString('vi-VN')
-                                            : (data.targetAmount === 0 ? '' : data.targetAmount.toLocaleString('vi-VN'))}
+                                        value={data.targetAmount === 0 ? '' : data.targetAmount.toLocaleString('vi-VN')}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/\D/g, '');
                                             onChange('targetAmount', val === '' ? 0 : parseInt(val));
                                         }}
                                         placeholder="0"
-                                        disabled={data.fundType === 'ITEMIZED'}
-                                        className={`w-full h-14 pl-5 pr-12 rounded-2xl border-2 transition-all text-lg font-black outline-none ${data.fundType === 'ITEMIZED' ? 'bg-gray-100/80 border-gray-200 text-gray-500 cursor-not-allowed select-none' : showErrors && errors.targetAmount ? 'bg-red-50/50 border-red-200' : 'bg-gray-50/50 border-transparent focus:border-[#dc2626] focus:bg-white'}`}
+                                        className={`w-full h-14 pl-5 pr-12 rounded-2xl border-2 transition-all text-lg font-black outline-none ${showErrors && errors.targetAmount ? 'bg-red-50/50 border-red-200' : 'bg-gray-50/50 border-transparent focus:border-[#dc2626] focus:bg-white'}`}
                                     />
                                     <span className="absolute right-5 top-1/2 -translate-y-1/2 font-black text-black/20 text-sm">VNĐ</span>
                                 </div>
-                                {data.fundType === 'ITEMIZED' ? (
-                                    <div className="text-[10px] font-bold text-red-500/60 uppercase tracking-widest ml-1 mt-1">Được tính tự động từ tổng các vật phẩm ở bước sau</div>
-                                ) : (
-                                    showErrors && errors.targetAmount && (
-                                        <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1">{errors.targetAmount}</div>
-                                    )
+                                {showErrors && errors.targetAmount && (
+                                    <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1">{errors.targetAmount}</div>
                                 )}
                             </div>
 

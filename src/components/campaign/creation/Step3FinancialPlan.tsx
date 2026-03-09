@@ -288,10 +288,15 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
 
                 {/* Total */}
                 <div className="flex items-center justify-end gap-4 px-6 py-2 border-t border-gray-50/80">
+                    {total > data.targetAmount && (
+                        <span className="text-[10px] font-black text-rose-500 uppercase animate-pulse">
+                            ⚠️ Vượt quá mục tiêu quỹ, hãy giảm bớt vật phẩm hoặc tăng mục tiêu ở bước 2
+                        </span>
+                    )}
                     <span className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Tổng cộng dự chi</span>
                     <div className="flex flex-col items-end">
-                        <span className="text-lg font-black text-[#dc2626]">{total.toLocaleString('vi-VN')}</span>
-                        <span className="text-[9px] font-black text-[#dc2626]/40 uppercase tracking-widest">VNĐ</span>
+                        <span className={`text-lg font-black ${total > data.targetAmount ? 'text-rose-600' : 'text-[#dc2626]'}`}>{total.toLocaleString('vi-VN')}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${total > data.targetAmount ? 'text-rose-600/40' : 'text-[#dc2626]/40'}`}>VNĐ</span>
                     </div>
                 </div>
 

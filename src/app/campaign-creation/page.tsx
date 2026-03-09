@@ -269,6 +269,10 @@ export default function CampaignCreationPage() {
     return e;
   }, [campaign.bankAccount]);
 
+  const totalExpenditure = useMemo(() => {
+    return (campaign.expenditureItems || []).reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  }, [campaign.expenditureItems]);
+
   const campaignScheduleErrors = useMemo(() => {
     const e: Record<string, string> = {};
     // Date requirements removed as requested
@@ -283,7 +287,7 @@ export default function CampaignCreationPage() {
       case 'setup':
         return Object.keys(campaignBasicErrors).length === 0;
       case 'plan':
-        return true;
+        return totalExpenditure <= campaign.targetAmount;
       case 'banking':
         return Object.keys(campaignBankingErrors).length === 0;
       case 'review':

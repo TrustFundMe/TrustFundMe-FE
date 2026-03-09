@@ -249,7 +249,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `${formData.userId}_${fieldName}_${Date.now()}.${fileExt}`;
-            const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'TrustFundMe';
+            const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SHARED_SUPABASE_BUCKET || 'TrustFundMe';
             const filePath = `kyc-documents/${fileName}`;
 
             const { error: uploadError } = await supabase.storage
