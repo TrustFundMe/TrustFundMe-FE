@@ -64,7 +64,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
       },
     ],
-    budgetId: 1,
+    expenditureId: 1,
     campaign: mockCampaigns[0],
   },
   {
@@ -112,7 +112,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
       },
     ],
-    budgetId: 2,
+    expenditureId: 2,
     campaign: mockCampaigns[1],
   },
   {
@@ -216,7 +216,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ],
-    budgetId: 3,
+    expenditureId: 3,
     campaign: mockCampaigns[2],
   },
   {

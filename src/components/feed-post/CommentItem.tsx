@@ -2,27 +2,34 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { Heart, Pencil, Trash2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { FeedPostComment } from "@/types/feedPost";
 
 interface CommentItemProps {
   comment: FeedPostComment;
   isReply?: boolean;
+  currentUserId?: string;
   onToggleLike?: (commentId: string) => void;
   onReply?: (commentId: string, authorName: string) => void;
+  onEdit?: (commentId: string, currentContent: string) => void;
+  onDelete?: (commentId: string) => void;
   isAuthenticated?: boolean;
 }
 
 export default function CommentItem({
   comment,
   isReply = false,
+  currentUserId,
   onToggleLike,
   onReply,
+  onEdit,
+  onDelete,
   isAuthenticated = false,
 }: CommentItemProps) {
   const [likeAnimating, setLikeAnimating] = useState(false);
   const replies = comment.replies || [];
+  const isOwner = !!(currentUserId && (comment.userId === currentUserId || comment.user.id === currentUserId));
 
   const formatTimeAgo = (date: string) => {
     const now = new Date();
@@ -185,6 +192,58 @@ export default function CommentItem({
               Phản hồi
             </button>
           )}
+
+          {/* Edit / Delete — owner only */}
+          {isOwner && (
+            <>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(comment.id, comment.content)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 3,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "rgba(0,0,0,0.45)",
+                    fontFamily: "var(--font-dm-sans)",
+                  }}
+                  title="Chỉnh sửa bình luận"
+                >
+                  <Pencil size={11} />
+                  Sửa
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(comment.id)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 3,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#F84D43",
+                    fontFamily: "var(--font-dm-sans)",
+                  }}
+                  title="Xóa bình luận"
+                >
+                  <Trash2 size={11} />
+                  Xóa
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Nested Replies */}
@@ -195,7 +254,10 @@ export default function CommentItem({
                 key={reply.id}
                 comment={reply}
                 isReply
+                currentUserId={currentUserId}
                 onToggleLike={onToggleLike}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 isAuthenticated={isAuthenticated}
               />
             ))}

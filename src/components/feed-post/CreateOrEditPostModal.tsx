@@ -7,9 +7,9 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { feedPostService } from "@/services/feedPostService";
+import { mediaService } from "@/services/mediaService";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import type { FeedPost } from "@/types/feedPost";
-import type { ForumCategory } from "@/types/forumCategory";
 
 const DRAFT_KEY = "danbox_post_draft";
 /** Từ 3 ảnh trở lên (hoặc flex rớt xuống 2 hàng) thì dùng swipe (scroll ngang) */
@@ -18,11 +18,11 @@ const SWIPE_THRESHOLD = 3;
 export type CreateOrEditPostModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  categories: ForumCategory[];
+  categories?: string[];
   campaignsList: { id: number; title: string }[];
   campaignTitlesMap: Record<string, string>;
   /** Khi có = chế độ chỉnh sửa: pre-fill form, submit gọi update */
-  initialData?: (FeedPost & { budgetId?: number | null; categoryId?: number | null }) | null;
+  initialData?: (FeedPost & { expenditureId?: number | null; category?: string | null }) | null;
   onPostCreated?: () => void;
   onPostUpdated?: () => void;
 };
@@ -44,12 +44,12 @@ export default function CreateOrEditPostModal({
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [campaignId, setCampaignId] = useState("");
-  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
-  /** Ảnh đang upload: preview local, xong thì chuyển URL sang existingImageUrls */
+  const [existingImages, setExistingImages] = useState<{ url: string; mediaId: number }[]>([]);
+  /** Ảnh đang upload: preview local, xong thì chuyển sang existingImages */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inFlightUploadsRef = useRef<Promise<string | void>[]>([]);
+  const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -57,13 +57,9 @@ export default function CreateOrEditPostModal({
     if (initialData) {
       setTitle(initialData.title ?? "");
       setContent(initialData.content ?? "");
-      setCategoryId(initialData.categoryId != null ? String(initialData.categoryId) : "");
-      setCampaignId(initialData.budgetId != null ? String(initialData.budgetId) : "");
-      const urls = (initialData.attachments ?? [])
-        .filter((a) => a.type === "image" && a.url)
-        .map((a) => a.url);
-      const uniqueUrls = Array.from(new Set(urls));
-      setExistingImageUrls(uniqueUrls);
+      setCategoryId(initialData.category ?? "");
+      setCampaignId(initialData.expenditureId != null ? String(initialData.expenditureId) : "");
+      setExistingImages([]);
       setUploadingItems([]);
     } else {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
@@ -83,7 +79,7 @@ export default function CreateOrEditPostModal({
         setCategoryId("");
         setCampaignId("");
       }
-      setExistingImageUrls([]);
+      setExistingImages([]);
       setUploadingItems([]);
     }
   }, [isOpen, initialData]);
@@ -109,11 +105,11 @@ export default function CreateOrEditPostModal({
     newItems.forEach(({ file, preview }) => {
       const p = feedPostService
         .uploadImage(file)
-        .then((url) => {
-          if (url) setExistingImageUrls((prev) => [...prev, url]);
+        .then((result) => {
+          if (result?.url) setExistingImages((prev) => [...prev, result]);
           setUploadingItems((prev) => prev.filter((x) => x.preview !== preview));
           URL.revokeObjectURL(preview);
-          return url;
+          return result;
         })
         .catch((err) => {
           console.error("Upload failed", file.name, err);
@@ -126,7 +122,7 @@ export default function CreateOrEditPostModal({
 
   const removeAt = (kind: "url" | "uploading", index: number) => {
     if (kind === "url") {
-      setExistingImageUrls((prev) => prev.filter((_, i) => i !== index));
+      setExistingImages((prev) => prev.filter((_, i) => i !== index));
     } else {
       setUploadingItems((prev) => {
         const next = [...prev];
@@ -145,48 +141,61 @@ export default function CreateOrEditPostModal({
 
     setIsSubmitting(true);
     try {
-      const baseUrls = [...existingImageUrls];
-      let allAttachmentUrls = baseUrls;
+      const baseImages = [...existingImages];
+      let allImages = baseImages;
       if (inFlightUploadsRef.current.length) {
         const results = await Promise.all(inFlightUploadsRef.current);
-        const newUrls = results.filter((u): u is string => Boolean(u));
+        const newImages = results.filter(
+          (r): r is { url: string; mediaId: number } => Boolean(r?.url)
+        );
         inFlightUploadsRef.current = [];
         setUploadingItems([]);
-        setExistingImageUrls((prev) => [...prev, ...newUrls]);
-        allAttachmentUrls = [...baseUrls, ...newUrls];
+        setExistingImages((prev) => [...prev, ...newImages]);
+        allImages = [...baseImages, ...newImages];
       }
-
-      const seenUrls = new Set<string>();
-      const uniqueUrls = allAttachmentUrls.filter((url) => {
-        if (seenUrls.has(url)) return false;
-        seenUrls.add(url);
-        return true;
-      });
-
-      const attachments = uniqueUrls.length
-        ? uniqueUrls.map((url) => ({ type: "image" as const, url }))
-        : undefined;
 
       if (isEdit && initialData?.id) {
         await feedPostService.update(Number(initialData.id), {
           title: title || content.slice(0, 50),
           content,
           status: "ACTIVE",
-          budgetId: campaignId ? Number(campaignId) : null,
-          attachments,
+          campaignId: campaignId ? Number(campaignId) : null,
+          expenditureId: campaignId ? Number(campaignId) : null,
+          category: categoryId || undefined,
         });
+        // Link any newly uploaded media to this post
+        const postId = Number(initialData.id);
+        await Promise.all(
+          allImages
+            .filter(({ mediaId }) => mediaId != null && !Number.isNaN(mediaId))
+            .map(({ mediaId }) =>
+              mediaService.updateMedia(mediaId, { postId }).catch(() => {})
+            )
+        );
         if (!initialData.title && title) localStorage.removeItem(DRAFT_KEY);
         onPostUpdated?.();
       } else {
-        await feedPostService.create({
+        const newPost = await feedPostService.create({
           type: "DISCUSSION",
           visibility: "PUBLIC",
           title: title || content.slice(0, 50),
           content,
           status: "ACTIVE",
-          budgetId: campaignId ? Number(campaignId) : null,
-          attachments,
+          campaignId: campaignId ? Number(campaignId) : null,
+          expenditureId: campaignId ? Number(campaignId) : null,
+          category: categoryId || undefined,
         });
+        // Link all uploaded media to the newly created post
+        if (newPost?.id && allImages.length > 0) {
+          const postId = Number(newPost.id);
+          await Promise.all(
+            allImages
+              .filter(({ mediaId }) => mediaId != null && !Number.isNaN(mediaId))
+              .map(({ mediaId }) =>
+                mediaService.updateMedia(mediaId, { postId }).catch(() => {})
+              )
+          );
+        }
         localStorage.removeItem(DRAFT_KEY);
         onPostCreated?.();
       }
@@ -196,7 +205,7 @@ export default function CreateOrEditPostModal({
       setContent("");
       setCategoryId("");
       setCampaignId("");
-      setExistingImageUrls([]);
+      setExistingImages([]);
       setUploadingItems((prev) => {
         prev.forEach((item) => URL.revokeObjectURL(item.preview));
         return [];
@@ -258,18 +267,21 @@ export default function CreateOrEditPostModal({
             <div>
               <div className="font-semibold text-zinc-900 dark:text-white">{user?.fullName || "Người dùng"}</div>
               <div className="flex gap-2">
-                <select
+                <input
+                  type="text"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="mt-0.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded px-2 py-1 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
-                >
-                  <option value="">Chọn chủ đề...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Tag..."
+                  list="category-suggestions"
+                  className="mt-0.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded px-2 py-1 border-none focus:ring-1 focus:ring-[#ff5e14] outline-none"
+                />
+                {categories && categories.length > 0 && (
+                  <datalist id="category-suggestions">
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
+                )}
                 <select
                   value={campaignId}
                   onChange={(e) => setCampaignId(e.target.value)}
@@ -307,8 +319,8 @@ export default function CreateOrEditPostModal({
           />
 
           {/* Ảnh: grid nếu ≤ SWIPE_THRESHOLD, swipe (scroll ngang) nếu nhiều hơn */}
-          {(existingImageUrls.length > 0 || uploadingItems.length > 0) && (() => {
-            const totalCount = existingImageUrls.length + uploadingItems.length;
+          {(existingImages.length > 0 || uploadingItems.length > 0) && (() => {
+            const totalCount = existingImages.length + uploadingItems.length;
             const useSwipe = totalCount >= SWIPE_THRESHOLD;
             const thumbClass =
               "relative aspect-[3/4] w-[120px] sm:w-[140px] rounded-lg overflow-hidden bg-black border border-zinc-200 dark:border-zinc-700 flex-shrink-0";
@@ -334,9 +346,9 @@ export default function CreateOrEditPostModal({
                 <button
                   type="button"
                   onClick={() =>
-                    globalIndex < existingImageUrls.length
+                    globalIndex < existingImages.length
                       ? removeAt("url", globalIndex)
-                      : removeAt("uploading", globalIndex - existingImageUrls.length)
+                      : removeAt("uploading", globalIndex - existingImages.length)
                   }
                   className={removeBtnClass}
                 >
@@ -348,7 +360,7 @@ export default function CreateOrEditPostModal({
             );
 
             const items: ({ type: "url"; url: string } | { type: "uploading"; preview: string })[] = [
-              ...existingImageUrls.map((url) => ({ type: "url" as const, url })),
+              ...existingImages.map(({ url }) => ({ type: "url" as const, url })),
               ...uploadingItems.map((item) => ({ type: "uploading" as const, preview: item.preview })),
             ];
 

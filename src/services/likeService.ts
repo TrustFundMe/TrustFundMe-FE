@@ -7,16 +7,13 @@ export interface ToggleLikeResponse {
 
 export const likeService = {
   async toggleLike(postId: number | string): Promise<ToggleLikeResponse> {
+    // Call Next.js proxy so access_token cookie is forwarded (same as flags/media)
     const res = await fetch(API_ENDPOINTS.FEED_POSTS.LIKE(postId), {
       method: "POST",
       credentials: "include",
+      headers: { "Content-Type": "application/json" },
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error((err as { message?: string }).message ?? "Like failed"), {
-        response: { status: res.status },
-      });
-    }
+    if (!res.ok) throw new Error(`toggleLike failed: ${res.status}`);
     return res.json();
   },
 };

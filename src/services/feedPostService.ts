@@ -5,6 +5,7 @@ import type {
   CreateFeedPostRequest,
   UpdateFeedPostRequest,
 } from "@/types/feedPost";
+import { mediaService } from "@/services/mediaService";
 
 /** Backend returns Page<FeedPostResponse> = { content, totalElements, totalPages, ... } */
 function unwrapPage<T>(data: T[] | { content?: T[] }): T[] {
@@ -16,11 +17,26 @@ function unwrapPage<T>(data: T[] | { content?: T[] }): T[] {
 }
 
 export const feedPostService = {
-  async getAll(): Promise<FeedPostDto[]> {
+  async getAll(params?: { page?: number; size?: number; sort?: string }): Promise<FeedPostDto[]> {
     const res = await api.get<FeedPostDto[] | { content: FeedPostDto[] }>(
-      API_ENDPOINTS.FEED_POSTS.BASE
+      API_ENDPOINTS.FEED_POSTS.BASE,
+      { params }
     );
     return unwrapPage(res.data);
+  },
+
+  async getByCampaignId(
+    campaignId: number,
+    params?: { page?: number; size?: number }
+  ): Promise<{ content: FeedPostDto[]; totalElements: number; totalPages: number }> {
+    const res = await api.get<{ content: FeedPostDto[]; totalElements: number; totalPages: number }>(
+      API_ENDPOINTS.FEED_POSTS.BASE,
+      { params: { campaignId, page: params?.page ?? 0, size: params?.size ?? 10 } }
+    );
+    if (Array.isArray(res.data)) {
+      return { content: res.data, totalElements: res.data.length, totalPages: 1 };
+    }
+    return res.data;
   },
 
   async getById(id: number): Promise<FeedPostDto> {
@@ -57,13 +73,8 @@ export const feedPostService = {
     await api.delete(`/api/feed-posts/${id}`);
   },
 
-  async uploadImage(file: File): Promise<string> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await api.post<{ url?: string }>("/api/media/upload", formData, {
-      headers: { "Content-Type": undefined },
-      transformRequest: [(data) => data],
-    });
-    return res.data.url ?? "";
+  async uploadImage(file: File): Promise<{ url: string; mediaId: number }> {
+    const result = await mediaService.uploadMedia(file, undefined, undefined, undefined, undefined, "PHOTO");
+    return { url: result.url ?? "", mediaId: result.id };
   },
 };

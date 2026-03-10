@@ -1,0 +1,48 @@
+```mermaid
+classDiagram
+
+class "SEP490.GFA25SE67.APIs" as APIs
+class "SEP490.GFA25SE67.Services" as Services
+class "SEP490.GFA25SE67.Repositories" as Repositories
+class "SEP490.GFA25SE67.Cores" as Cores
+
+class "Middleware" as Middleware
+class "Controllers" as Controllers
+class "Hubs" as Hubs
+
+class "Interfaces" as Interfaces
+class "ServicesPkg" as ServicesPkg
+class "ViewModels" as ViewModels
+class "BackgroundJobs" as BackgroundJobs
+
+class "Entities" as Entities
+class "DBContext" as DBContext
+class "Migrations" as Migrations
+class "UnitOfWork" as UnitOfWork
+
+class "Bases" as Bases
+class "Enums" as Enums
+class "Utils" as Utils
+
+APIs ..> Services : <<import>>
+Services ..> Repositories : <<import>>
+Repositories ..> Cores : <<import>>
+
+APIs *-- Middleware
+APIs *-- Controllers
+APIs *-- Hubs
+
+Services *-- Interfaces
+Services *-- ServicesPkg
+Services *-- ViewModels
+Services *-- BackgroundJobs
+
+Repositories *-- Entities
+Repositories *-- DBContext
+Repositories *-- Migrations
+Repositories *-- UnitOfWork
+
+Cores *-- Bases
+Cores *-- Enums
+Cores *-- Utils
+```

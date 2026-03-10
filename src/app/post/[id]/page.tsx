@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -11,12 +11,12 @@ import CampaignCard, { CampaignInfo } from "@/components/feed-post/CampaignCard"
 import CreateOrEditPostModal from "@/components/feed-post/CreateOrEditPostModal";
 import FlagPostModal from "@/components/feed-post/FlagPostModal";
 import { feedPostService } from "@/services/feedPostService";
-import { forumCategoryService } from "@/services/forumCategoryService";
 import { campaignService } from "@/services/campaignService";
 import { expenditureService } from "@/services/expenditureService";
+import { flagService } from "@/services/flagService";
+import { mediaService } from "@/services/mediaService";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
-import type { ForumCategory } from "@/types/forumCategory";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import { AnimatePresence } from "framer-motion";
 
@@ -24,11 +24,13 @@ const FeedPostDetailPage = () => {
   const router = useRouter();
   const params = useParams();
   const { user, isAuthenticated } = useAuth();
+  const isAuthRef = useRef(isAuthenticated);
+  useEffect(() => { isAuthRef.current = isAuthenticated; }, [isAuthenticated]);
   const postId = params?.id as string;
 
   const [post, setPost] = useState<(FeedPost & { campaign?: CampaignInfo }) | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<FeedPost[]>([]);
-  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -49,6 +51,27 @@ const FeedPostDetailPage = () => {
       const dto = await feedPostService.getById(id);
       const feedPost = dtoToFeedPost(dto) as FeedPost & { campaign?: CampaignInfo };
       setPost(feedPost);
+
+      // Fetch media attachments for this post from media-service
+      mediaService.getMediaByPostId(id).then((mediaList) => {
+        if (!mediaList?.length) return;
+        const attachments = mediaList.map((m) => ({
+          type: "image" as const,
+          url: m.url,
+          name: m.fileName,
+        }));
+        setPost((prev) => (prev ? { ...prev, attachments } : null));
+      }).catch(() => { /* no media is fine */ });
+
+      // Pre-load flagged state so the report button stays correct on refresh
+      if (isAuthRef.current) {
+        flagService.getMyFlags(0, 50).then((myFlags) => {
+          const alreadyFlagged = myFlags.some((f) => f.postId === id);
+          if (alreadyFlagged) {
+            setPost((prev) => (prev ? { ...prev, flagged: true } : null));
+          }
+        }).catch(() => { /* ignore */ });
+      }
 
       const authorId = String(dto.authorId);
       try {
@@ -73,16 +96,15 @@ const FeedPostDetailPage = () => {
         // keep default name
       }
 
-      if (dto.budgetId != null) {
+      if (dto.expenditureId != null) {
         try {
-          // budgetId on evidence posts is an expenditure ID, not campaign ID
-          // So fetch expenditure first to get real campaignId
-          let campaignId: number = dto.budgetId;
+          // expenditureId links the post to an expenditure record
+          let campaignId: number = dto.expenditureId;
           try {
-            const exp = await expenditureService.getById(dto.budgetId);
+            const exp = await expenditureService.getById(dto.expenditureId);
             campaignId = exp.campaignId;
           } catch {
-            // budgetId might directly be a campaignId (fallback)
+            // expenditureId might directly be a campaignId (fallback)
           }
           const campaign = await campaignService.getById(campaignId);
           const raised = campaign.balance ?? 0;
@@ -108,14 +130,14 @@ const FeedPostDetailPage = () => {
         }
       }
 
-      const [listRes, catsRes, campaignsRes] = await Promise.all([
+      const [listRes, campaignsRes] = await Promise.all([
         feedPostService.getAll(),
-        forumCategoryService.getAll().catch(() => []),
         campaignService.getAll().catch(() => []),
       ]);
       const list = Array.isArray(listRes) ? listRes : [];
-      setRelatedPosts(list.map((p) => dtoToFeedPost(p)).filter((p) => p.id !== postId).slice(0, 4));
-      setCategories(Array.isArray(catsRes) ? catsRes : []);
+      const feedPosts = list.map((p) => dtoToFeedPost(p));
+      setRelatedPosts(feedPosts.filter((p) => p.id !== postId).slice(0, 4));
+      setCategories([...new Set(feedPosts.map((p) => p.category).filter((c): c is string => Boolean(c)))]);
       const campaigns = Array.isArray(campaignsRes) ? campaignsRes : [];
       const titles: Record<string, string> = {};
       const cList: { id: number; title: string }[] = [];
@@ -195,10 +217,9 @@ const FeedPostDetailPage = () => {
                 <nav className="flex flex-col gap-1">
                   <Link href="/post" className="px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700">Tất cả</Link>
                   {categories.map((cat) => (
-                    <Link key={cat.id} href={`/post?category=${cat.slug}`}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                      {cat.name}
+                    <Link key={cat} href={`/post?category=${encodeURIComponent(cat)}`}
+                      className="px-3 py-2 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700">
+                      {cat}
                     </Link>
                   ))}
                 </nav>
@@ -248,7 +269,7 @@ const FeedPostDetailPage = () => {
             isOpen={flagModalOpen}
             onClose={() => setFlagModalOpen(false)}
             postId={Number(post.id)}
-            campaignId={post.budgetId ?? undefined}
+            campaignId={post.expenditureId ?? undefined}
           />
         )}
       </AnimatePresence>

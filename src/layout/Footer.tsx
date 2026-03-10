@@ -6,6 +6,8 @@ import { Fragment } from "react";
 
 const Footer = ({ footer }: { footer: number }) => {
   switch (footer) {
+    case 0:
+      return null;
     case 1:
       return <Footer1 />;
     case 2:

@@ -1,3 +1,4 @@
+import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 
 export interface CommentDto {
@@ -86,17 +87,9 @@ export const commentService = {
   async toggleCommentLike(
     commentId: number | string
   ): Promise<{ likeCount: number; isLiked: boolean }> {
-    const res = await fetch(API_ENDPOINTS.FEED_POSTS.COMMENT_LIKE(commentId), {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw Object.assign(new Error((err as { message?: string }).message ?? "Like failed"), {
-        response: { status: res.status },
-      });
-    }
-    const data: CommentDto = await res.json();
+    // Use api axios instance — automatically adds Authorization: Bearer <token> from localStorage
+    const res = await api.post<CommentDto>(API_ENDPOINTS.FEED_POSTS.COMMENT_LIKE(commentId));
+    const data = res.data;
     return { likeCount: data.likeCount ?? 0, isLiked: data.isLiked ?? false };
   },
 };

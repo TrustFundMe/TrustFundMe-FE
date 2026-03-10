@@ -14,7 +14,7 @@ type FlagStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED';
 interface FlagWithUser extends FlagDto {
   userName?: string;
   postType?: string;
-  budgetId?: number | null;
+  expenditureId?: number | null;
   targetUser?: UserInfo;
 }
 
@@ -57,7 +57,7 @@ export default function FlagsManagementPage() {
       const flagsWithUsers = await Promise.all(flagList.map(async (flag) => {
         let userName = `User #${flag.userId}`;
         let postType = undefined;
-        let budgetId: number | null = null;
+        let expenditureId: number | null = null;
         let targetUser = undefined;
 
         try {
@@ -74,7 +74,7 @@ export default function FlagsManagementPage() {
           try {
             const post = await feedPostService.getById(flag.postId);
             postType = post.type;
-            budgetId = post.budgetId ?? null;
+            expenditureId = post.expenditureId ?? null;
 
             // Target user is the post author
             if (post.authorId) {
@@ -92,7 +92,7 @@ export default function FlagsManagementPage() {
           ...flag,
           userName,
           postType,
-          budgetId,
+          expenditureId,
           targetUser
         };
       }));
@@ -322,10 +322,10 @@ export default function FlagsManagementPage() {
                                   <Lock className="h-3 w-3" />
                                   {flag.targetUser?.isActive === false ? 'Đã khóa' : 'Khóa tài khoản'}
                                 </button>
-                              ) : flag.budgetId ? (
-                                /* Nếu là post minh chứng (POST + budgetId) thì hiện nút dẫn qua expenditure */
+                              ) : flag.expenditureId ? (
+                                /* Nếu là post minh chứng (POST + expenditureId) thì hiện nút dẫn qua expenditure */
                                 <Link
-                                  href={`/staff/request?campaignId=${flag.budgetId || '0'}&tab=EXPENDITURE`}
+                                  href={`/staff/request?campaignId=${flag.expenditureId || '0'}&tab=EXPENDITURE`}
                                   className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#446b5f] text-white hover:bg-[#5a8075] transition-all shadow-sm shadow-[#446b5f]/20 flex items-center gap-1.5"
                                 >
                                   Xem chi tiêu

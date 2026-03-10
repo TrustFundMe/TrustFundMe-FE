@@ -1,4 +1,12 @@
 import { api } from "@/config/axios";
+import axios from "axios";
+
+// Separate axios for multipart uploads — uses relative URL to go through Next.js proxy.
+// withCredentials ensures the access_token cookie is sent so the proxy can authenticate
+// with the BE identity token (not the Supabase token from localStorage).
+const uploadApi = axios.create({
+  withCredentials: true,
+});
 
 export interface MediaUploadResponse {
     id: number;
@@ -31,12 +39,10 @@ export const mediaService = {
         if (mediaType) formData.append("mediaType", mediaType);
 
         try {
-            console.log(`[mediaService] Sending POST /api/media/upload with campaignId: ${campaignId || 'MISSING'}`);
-
-            const res = await api.post<MediaUploadResponse>("/api/media/upload", formData, {
-                headers: {
-                    "Content-Type": undefined,
-                },
+            // Use relative URL → Next.js proxy at /api/media/upload
+            // This bypasses the API Gateway which can't properly forward multipart/form-data
+            const res = await uploadApi.post<MediaUploadResponse>("/api/media/upload", formData, {
+                headers: { "Content-Type": undefined },
                 transformRequest: [(data) => data],
                 onUploadProgress: (progressEvent) => {
                     if (progressEvent.total && onProgress) {
@@ -98,7 +104,13 @@ export const mediaService = {
     },
 
     async updateMedia(id: number, payload: { postId?: number; campaignId?: number; description?: string }): Promise<void> {
-        await api.patch(`/api/media/${id}`, payload);
+        const res = await fetch(`/api/media/${id}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`updateMedia failed: ${res.status}`);
     },
 
     async updateMediaStatus(id: number, status: string): Promise<void> {
@@ -118,5 +130,12 @@ export const mediaService = {
     async getMediaByCampaignId(campaignId: number): Promise<MediaUploadResponse[]> {
         const res = await api.get<MediaUploadResponse[]>(`/api/media/campaigns/${campaignId}`);
         return res.data;
+    },
+
+    async getMediaByPostId(postId: number): Promise<MediaUploadResponse[]> {
+        const res = await fetch(`/api/media/posts/${postId}`, { credentials: "include" });
+        if (!res.ok) throw new Error(`getMediaByPostId failed: ${res.status}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : (data.content ?? []);
     }
 };

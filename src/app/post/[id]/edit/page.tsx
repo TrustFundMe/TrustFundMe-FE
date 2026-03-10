@@ -73,7 +73,7 @@ const EditFeedPostPage = () => {
         type: data.type,
         visibility: data.visibility,
         status: data.status,
-        budgetId: data.budgetId,
+        expenditureId: data.expenditureId,
         attachments: data.attachments,
       });
 

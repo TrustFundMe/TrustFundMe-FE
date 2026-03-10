@@ -1,8 +1,8 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { XCircle, Shield } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { XCircle } from 'lucide-react';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
@@ -11,7 +11,9 @@ import CampaignCommentsCard from '@/components/campaign/CampaignCommentsCard';
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower } from '@/components/campaign/types';
-import { mockComments, mockPosts } from '@/components/campaign/mock';
+import { mockComments } from '@/components/campaign/mock';
+import { feedPostService } from '@/services/feedPostService';
+import type { FeedPostDto } from '@/types/feedPost';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
@@ -60,6 +62,32 @@ const mapCampaignDtoToUi = (
   };
 };
 
+function mapFeedPostDtoToCampaignPost(dto: FeedPostDto): CampaignPost {
+  return {
+    id: String(dto.id),
+    author: {
+      id: String(dto.authorId),
+      name: dto.authorName || `Người dùng #${dto.authorId}`,
+      avatar: dto.authorAvatar || '/assets/img/about/01.jpg',
+    },
+    content: dto.content,
+    createdAt: dto.createdAt
+      ? new Date(dto.createdAt).toLocaleDateString('vi-VN')
+      : '',
+    attachments: (dto.attachments || [])
+      .filter((a) => a.url)
+      .map((a) => ({
+        type: (a.type?.toUpperCase() === 'IMAGE' ? 'image' : 'file') as 'image' | 'file',
+        url: a.url!,
+        name: a.fileName || a.name,
+      })),
+    liked: dto.isLiked ?? false,
+    likeCount: dto.likeCount ?? 0,
+    flagged: false,
+    comments: [],
+  };
+}
+
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,7 +104,9 @@ function CampaignDetailsInner() {
   const [progress, setProgress] = useState<CampaignProgress | null>(null);
   const [recentDonors, setRecentDonors] = useState<RecentDonor[]>([]);
 
-  const [posts] = useState<CampaignPost[]>(mockPosts);
+  const [posts, setPosts] = useState<CampaignPost[]>([]);
+  const [postsTotal, setPostsTotal] = useState(0);
+  const postsLoadedRef = useRef(false);
 
   const comments = useMemo(() => [...mockComments], []);
 
@@ -217,6 +247,22 @@ function CampaignDetailsInner() {
       mounted = false;
     };
   }, [campaignId]);
+
+  const loadCampaignPosts = useCallback(async () => {
+    if (!campaignId) return;
+    try {
+      const result = await feedPostService.getByCampaignId(campaignId, { size: 4 });
+      setPosts(result.content.map(mapFeedPostDtoToCampaignPost));
+      setPostsTotal(result.totalElements);
+      postsLoadedRef.current = true;
+    } catch {
+      // silently fail - posts section stays empty
+    }
+  }, [campaignId]);
+
+  useEffect(() => {
+    loadCampaignPosts();
+  }, [loadCampaignPosts]);
 
   if (loading) {
     return (
@@ -417,30 +463,41 @@ function CampaignDetailsInner() {
                     style={{ marginBottom: 14 }}
                   >
                     <div className="widget-title" style={{ marginBottom: 0 }}>
-                      <h4 style={{ marginBottom: 0 }}>Bài viết</h4>
+                      <h4 style={{ marginBottom: 0 }}>
+                        Bài viết{postsTotal > 0 ? ` (${postsTotal})` : ''}
+                      </h4>
                     </div>
 
-                    <button
-                      type="button"
-                      className="text-sm"
-                      style={{
-                        border: 'none',
-                        background: 'transparent',
-                        padding: 0,
-                        color: '#0F5D51',
-                        fontWeight: 700,
-                      }}
-                      onClick={() => alert('Xem thêm bài viết (tính năng chưa thực hiện)')}
-                    >
-                      Xem thêm
-                    </button>
+                    {postsTotal > 4 && (
+                      <button
+                        type="button"
+                        className="text-sm"
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          color: '#0F5D51',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => router.push(`/post?campaignId=${campaignId}`)}
+                      >
+                        Xem thêm
+                      </button>
+                    )}
                   </div>
 
-                  <PostsFeed
-                    posts={posts}
-                    campaignCreatorId={campaign.creator.id}
-                    onOpenPost={(postId) => alert(`Chi tiết bài viết: ${postId} (chưa thực hiện)`)}
-                  />
+                  {posts.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '16px 0', opacity: 0.5, fontSize: 14 }}>
+                      Chưa có bài viết nào
+                    </div>
+                  ) : (
+                    <PostsFeed
+                      posts={posts}
+                      campaignCreatorId={campaign.creator.id}
+                      onOpenPost={(postId) => router.push(`/post/${postId}`)}
+                    />
+                  )}
                 </div>
               </div>
             </div>

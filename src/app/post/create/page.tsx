@@ -31,7 +31,7 @@ const CreateFeedPostPage = () => {
           type: data.type || "POST",
           visibility: data.visibility || "PUBLIC",
           status: data.status,
-          budgetId: data.budgetId,
+          expenditureId: data.expenditureId,
           attachments: data.attachments,
         },
         user

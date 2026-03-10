@@ -104,12 +104,13 @@ export const flagService = {
    * Get the current user's own submitted flags.
    */
   async getMyFlags(page = 0, size = 20): Promise<FlagDto[]> {
-    const res = await api.get<PagedFlagResponse>(API_ENDPOINTS.FLAGS.MY_FLAGS, {
-      params: { page, size },
+    const res = await fetch(`/api/flags/me?page=${page}&size=${size}`, {
+      credentials: "include",
     });
-    const data = res.data;
-    if (Array.isArray(data)) return data as unknown as FlagDto[];
-    return data.content ?? [];
+    if (!res.ok) throw new Error(`getMyFlags failed: ${res.status}`);
+    const data: PagedFlagResponse | FlagDto[] = await res.json();
+    if (Array.isArray(data)) return data;
+    return (data as PagedFlagResponse).content ?? [];
   },
 
   /**
