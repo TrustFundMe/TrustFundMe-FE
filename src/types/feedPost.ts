@@ -21,6 +21,7 @@ export type FeedPostDto = {
   isLiked?: boolean;
   isPinned?: boolean;
   isLocked?: boolean;
+  attachments?: { id?: number; type?: string; url: string; fileName?: string; fileSize?: number; mimeType?: string; displayOrder?: number }[];
 };
 
 export type FeedPostAuthor = {

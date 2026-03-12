@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const FLAG_SERVICE_URL = process.env.FLAG_SERVICE_URL || "http://localhost:8085";
+const BE_API_URL = process.env.BE_API_GATEWAY_URL || "http://localhost:8080";
 
 function getAccessToken(request: NextRequest): string {
   const cookieToken = request.cookies.get("access_token")?.value;
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const size = searchParams.get("size") ?? "20";
 
     const response = await fetch(
-      `${FLAG_SERVICE_URL}/api/flags/me?page=${page}&size=${size}`,
+      `${BE_API_URL}/api/flags/me?page=${page}&size=${size}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,

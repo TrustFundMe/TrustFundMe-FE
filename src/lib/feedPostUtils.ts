@@ -29,5 +29,10 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     viewCount: dto.viewCount ?? 0,
     isPinned: dto.isPinned ?? false,
     isLocked: dto.isLocked ?? false,
+    attachments: dto.attachments?.map((att) => ({
+      type: (att.type?.toLowerCase() === "image" ? "image" : "file") as "image" | "file",
+      url: att.url,
+      name: att.fileName ?? undefined,
+    })),
   };
 }
