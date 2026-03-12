@@ -3,17 +3,11 @@
 import { useMemo, useState, useEffect } from 'react';
 import {
     CreditCard,
-    DollarSign,
-    Loader2,
     Search,
     Eye,
-    CheckCircle2,
     X,
-    Clock,
     ExternalLink,
     ChevronRight,
-    TrendingUp,
-    AlertCircle,
     Tag
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -42,6 +36,10 @@ export default function AdminPayoutsPage() {
     const [expenditureRows, setExpenditureRows] = useState<ExpenditureRequest[]>([]);
     const [selectedExp, setSelectedExp] = useState<ExpenditureRequest | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Pagination
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 7;
 
     const fetchExpenditures = async () => {
         setIsLoading(true);
@@ -114,6 +112,23 @@ export default function AdminPayoutsPage() {
         });
     }, [expenditureRows, statusFilter, searchQuery]);
 
+    const totalPages = useMemo(() => Math.ceil(filteredExpenditures.length / ITEMS_PER_PAGE), [filteredExpenditures, ITEMS_PER_PAGE]);
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredExpenditures.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredExpenditures, currentPage, ITEMS_PER_PAGE]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter]);
+
+    const hasActiveFilters = searchQuery !== '' || statusFilter !== 'ALL';
+
+    const clearFilters = () => {
+        setSearchQuery('');
+        setStatusFilter('ALL');
+    };
+
     const handleUpdateStatus = async (id: string, next: RequestStatus) => {
         const expId = id.replace('EXP_', '');
         try {
@@ -181,89 +196,86 @@ export default function AdminPayoutsPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto pb-20">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                <div>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
-                        <CreditCard className="h-4 w-4 text-[#F84D43]" />
-                        <ChevronRight className="h-3 w-3" />
-                        <span>Quản trị hệ thống</span>
-                    </div>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Quản lý Giải ngân</h1>
-                    <p className="text-slate-500 mt-2 font-medium">Theo dõi các yêu cầu chi tiêu và thực hiện chuyển tiền giải ngân quỹ.</p>
-                </div>
-
-                <div className="bg-slate-100/50 p-1.5 rounded-[24px] flex items-center gap-1 shadow-inner">
-                    {(['ALL', 'WITHDRAWAL_REQUESTED', 'DISBURSED'] as const).map((s) => (
-                        <button
-                            key={s}
-                            onClick={() => setStatusFilter(s)}
-                            className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                        >
-                            {s === 'ALL' ? 'Tất cả' : s === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' : 'Đã giải ngân'}
-                        </button>
-                    ))}
-                </div>
-            </div>
+        <div className="flex flex-col flex-1 min-h-0 gap-4">
 
             {/* Filters Area */}
-            <div className="flex flex-col md:flex-row items-center gap-4 mb-8">
-                <div className="relative group/search flex-1 w-full">
+            <div className="flex flex-col md:flex-row items-center gap-4 mb-3 flex-shrink-0">
+                <div className="relative group/search flex-[2] max-w-2xl w-full">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
                     <input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Tìm theo mã yêu cầu hoặc tên chiến dịch..."
-                        className="w-full bg-white border-2 border-slate-100 rounded-[32px] pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-2xl shadow-slate-200/30"
+                        className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50"
                     />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto flex-shrink-0">
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
+                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
+                    >
+                        <option value="ALL">Trạng thái</option>
+                        <option value="WITHDRAWAL_REQUESTED">Chờ giải ngân</option>
+                        <option value="DISBURSED">Đã giải ngân</option>
+                    </select>
+
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            className="px-6 py-3.5 rounded-3xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-200 hover:text-slate-900 transition-all ml-auto"
+                        >
+                            Xóa lọc
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Table Section */}
-            <div className="rounded-[40px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 overflow-hidden relative min-h-[400px]">
+            <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/50 relative flex-1 min-h-0 overflow-hidden">
                 {isLoading && expenditureRows.length === 0 && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
-                        <Loader2 className="h-10 w-10 text-[#F84D43] animate-spin" />
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                        <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
                     </div>
                 )}
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                        <thead>
-                            <tr className="text-left bg-slate-50/50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
-                                <th className="py-6 pl-10 pr-4">Chiến dịch</th>
-                                <th className="py-6 pr-4">Số tiền</th>
-                                <th className="py-6 pr-4">Ngày tạo</th>
-                                <th className="py-6 pr-4">Trạng thái</th>
-                                <th className="py-6 pr-10 text-right">Thao tác</th>
+                <div className="h-full overflow-auto custom-scrollbar">
+                    <table className="min-w-full text-sm border-separate border-spacing-0">
+                        <thead className="bg-slate-50">
+                            <tr className="text-left">
+                                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Chiến dịch</th>
+                                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Số tiền</th>
+                                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Ngày tạo</th>
+                                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Trạng thái</th>
+                                <th className="py-3.5 pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right border-b border-slate-100">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {filteredExpenditures.map((r) => (
-                                <tr key={r.id} className="group hover:bg-slate-50/40 transition-colors">
-                                    <td className="py-6 pl-10 pr-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-12 w-12 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-4 ring-white">
+                            {paginatedData.map((r) => (
+                                <tr key={r.id} className="h-[68px] group hover:bg-slate-50/30 transition-colors">
+                                    <td className="py-2 pl-8 pr-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-2 ring-white">
                                                 {r.campaignCoverImage ? (
                                                     <img src={r.campaignCoverImage} alt={r.campaignTitle} className="h-full w-full object-cover" />
                                                 ) : (
                                                     <div className="h-full w-full flex items-center justify-center text-slate-300">
-                                                        <Tag className="h-5 w-5" />
+                                                        <Tag className="h-4 w-4" />
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors line-clamp-1 max-w-[200px]">{r.campaignTitle}</div>
+                                            <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">{r.campaignTitle}</div>
                                         </div>
                                     </td>
-                                    <td className="py-6 pr-4">
-                                        <span className="text-lg font-black text-slate-900">{formatVnd(r.totalExpectedAmount || r.totalAmount)}</span>
+                                    <td className="py-2 pr-4">
+                                        <span className="text-sm font-black text-slate-900">{formatVnd(r.totalExpectedAmount || r.totalAmount)}</span>
                                     </td>
-                                    <td className="py-6 pr-4 text-slate-500 font-medium">
+                                    <td className="py-2 pr-4 text-slate-500 font-medium text-xs">
                                         {new Date(r.createdAt).toLocaleDateString('vi-VN')}
                                     </td>
-                                    <td className="py-6 pr-4">
+                                    <td className="py-2 pr-4">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'bg-blue-100 text-blue-700' :
                                             r.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
                                                 'bg-amber-100 text-amber-800'
@@ -272,31 +284,76 @@ export default function AdminPayoutsPage() {
                                                 r.status === 'DISBURSED' ? 'Đã giải ngân' : r.status}
                                         </span>
                                     </td>
-                                    <td className="py-6 pr-10 text-right">
+                                    <td className="py-2 pr-8 text-right">
                                         <button
                                             onClick={() => openDetail(r)}
-                                            className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-slate-900 hover:shadow-xl transition-all inline-flex items-center gap-2 font-black text-[10px] uppercase tracking-wider"
+                                            className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
+                                            title="Chi tiết"
                                         >
                                             <Eye className="h-4 w-4" />
-                                            Chi tiết
                                         </button>
                                     </td>
                                 </tr>
                             ))}
-                            {!isLoading && filteredExpenditures.length === 0 && (
+                            {!isLoading && paginatedData.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="py-32 text-center text-slate-400">
-                                        <div className="flex flex-col items-center">
-                                            <div className="bg-slate-50 p-6 rounded-[32px] mb-4 shadow-inner">
-                                                <CreditCard className="h-10 w-10 text-slate-200" />
+                                    <td colSpan={5} className="py-24 text-center">
+                                        <div className="flex flex-col items-center justify-center text-slate-400">
+                                            <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                                <CreditCard className="h-8 w-8 text-slate-300" />
                                             </div>
                                             <p className="font-bold text-slate-500">Không tìm thấy yêu cầu chi tiêu nào.</p>
                                         </div>
                                     </td>
                                 </tr>
                             )}
+                            {!isLoading && paginatedData.length < ITEMS_PER_PAGE && paginatedData.length > 0 && (
+                                Array.from({ length: ITEMS_PER_PAGE - paginatedData.length }).map((_, i) => (
+                                    <tr key={`spacer-${i}`} className="h-[68px] border-none">
+                                        <td colSpan={5}></td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Pagination Section */}
+                <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-3 flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        Trang {currentPage} / {totalPages || 1} (Tổng {filteredExpenditures.length})
+                    </span>
+                    <div className="flex items-center gap-2">
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
+                        >
+                            <ChevronRight className="h-4 w-4 rotate-180" />
+                        </button>
+                        <div className="flex gap-1">
+                            {Array.from({ length: totalPages || 1 }, (_, i) => i + 1)
+                                .filter(p => p === 1 || p === (totalPages || 1) || Math.abs(p - currentPage) <= 1)
+                                .map((p, i, arr) => (
+                                    <div key={p} className="flex items-center">
+                                        {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
+                                        <button
+                                            onClick={() => setCurrentPage(p)}
+                                            className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            {p}
+                                        </button>
+                                    </div>
+                                ))}
+                        </div>
+                        <button
+                            disabled={currentPage === (totalPages || 1)}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
