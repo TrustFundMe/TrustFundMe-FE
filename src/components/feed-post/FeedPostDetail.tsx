@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -27,6 +27,7 @@ interface FeedPostDetailProps {
 function commentDtoToFeedPostComment(dto: CommentDto): FeedPostComment {
   return {
     id: String(dto.id),
+    userId: String(dto.userId),
     user: {
       id: String(dto.userId),
       name: dto.authorName ?? `Thành viên #${dto.userId}`,
@@ -64,6 +65,11 @@ export default function FeedPostDetail({
   const [showAllComments, setShowAllComments] = useState(false);
   // Reply state
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
+  // Inline edit state
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
   const COMMENTS_PREVIEW = 4;
 
   useEffect(() => {
@@ -167,6 +173,56 @@ export default function FeedPostDetail({
   const handleCancelReply = () => {
     setReplyingTo(null);
     setCommentText("");
+  };
+
+  const handleEditComment = (commentId: string, currentContent: string) => {
+    setEditingCommentId(commentId);
+    setEditingContent(currentContent);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null);
+    setEditingContent("");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCommentId || !editingContent.trim() || isSavingEdit) return;
+    setIsSavingEdit(true);
+    const prevComments = comments;
+    const updateContent = (list: FeedPostComment[]): FeedPostComment[] =>
+      list.map((c) => {
+        if (c.id === editingCommentId) return { ...c, content: editingContent.trim() };
+        if (c.replies?.length) return { ...c, replies: updateContent(c.replies) };
+        return c;
+      });
+    setComments(updateContent(comments));
+    try {
+      await commentService.updateComment(editingCommentId, editingContent.trim());
+      setEditingCommentId(null);
+      setEditingContent("");
+    } catch {
+      setComments(prevComments);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Bạn có chắc muốn xóa bình luận này?")) return;
+    const prevComments = comments;
+    const removeComment = (list: FeedPostComment[]): FeedPostComment[] =>
+      list
+        .filter((c) => c.id !== commentId)
+        .map((c) => ({ ...c, replies: c.replies ? removeComment(c.replies) : [] }));
+    setComments(removeComment(comments));
+    setCommentCount((c) => Math.max(0, c - 1));
+    try {
+      await commentService.deleteComment(commentId);
+    } catch {
+      setComments(prevComments);
+      setCommentCount((c) => c + 1);
+    }
   };
 
   const handleSubmitComment = async () => {
@@ -494,12 +550,40 @@ export default function FeedPostDetail({
                   exit={{ opacity: 0, y: 4 }}
                   transition={{ duration: 0.18 }}
                 >
+                  {editingCommentId === comment.id ? (
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", flex: "0 0 auto", background: "rgba(0,0,0,0.05)" }}>
+                        <img src={comment.user.avatar || "/assets/img/about/01.jpg"} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                      <div style={{ flex: 1, background: "#f0faf8", border: "1px solid rgba(26,104,91,0.25)", borderRadius: 12, padding: "10px 14px" }}>
+                        <textarea
+                          ref={editInputRef}
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); } if (e.key === "Escape") handleCancelEdit(); }}
+                          style={{ width: "100%", border: "none", outline: "none", background: "transparent", fontSize: 14, lineHeight: 1.5, resize: "none", fontFamily: "var(--font-dm-sans)", color: "#1a1a1a", minHeight: 56 }}
+                        />
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+                          <button type="button" onClick={handleCancelEdit} style={{ border: "1px solid rgba(0,0,0,0.12)", background: "#fff", borderRadius: 8, padding: "4px 12px", fontSize: 12, cursor: "pointer", color: "rgba(0,0,0,0.5)", fontFamily: "var(--font-dm-sans)" }}>Hủy</button>
+                          <button type="button" onClick={handleSaveEdit} disabled={isSavingEdit || !editingContent.trim()}
+                            style={{ border: "none", background: "#1A685B", color: "#fff", borderRadius: 8, padding: "4px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "var(--font-dm-sans)", opacity: isSavingEdit || !editingContent.trim() ? 0.6 : 1 }}>
+                            <Check size={11} />
+                            {isSavingEdit ? "Đang lưu..." : "Lưu"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                   <CommentItem
                     comment={comment}
+                    currentUserId={user ? String(user.id) : undefined}
                     onToggleLike={handleToggleCommentLike}
                     onReply={handleReply}
+                    onEdit={isAuthenticated ? handleEditComment : undefined}
+                    onDelete={isAuthenticated ? handleDeleteComment : undefined}
                     isAuthenticated={isAuthenticated}
                   />
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>

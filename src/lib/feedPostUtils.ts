@@ -22,16 +22,12 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     likeCount: dto.likeCount ?? 0,
     flagged: false,
     comments: [],
-    budgetId: dto.budgetId ?? null,
-    categoryId: dto.categoryId ?? null,
+    campaignId: dto.campaignId ?? null,
+    expenditureId: dto.expenditureId ?? null,
+    category: dto.category ?? null,
     replyCount: Math.max(dto.commentCount ?? 0, dto.replyCount ?? 0),
     viewCount: dto.viewCount ?? 0,
     isPinned: dto.isPinned ?? false,
     isLocked: dto.isLocked ?? false,
-    attachments: dto.attachments?.map((a) => ({
-      type: (a.type?.toLowerCase() === "file" ? "file" : "image") as "image" | "file",
-      url: a.url ?? "",
-      name: a.name ?? a.fileName,
-    })),
   };
 }

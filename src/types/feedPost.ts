@@ -1,6 +1,7 @@
 export type FeedPostDto = {
   id: number;
-  budgetId: number | null;
+  campaignId?: number | null;
+  expenditureId?: number | null;
   authorId: number;
   authorName?: string | null;
   authorAvatar?: string | null;
@@ -12,7 +13,7 @@ export type FeedPostDto = {
   createdAt: string;
   updatedAt: string | null;
   // enriched fields from FeedPostResponse
-  categoryId?: number | null;
+  category?: string | null;
   replyCount?: number;
   viewCount?: number;
   likeCount?: number;
@@ -20,7 +21,6 @@ export type FeedPostDto = {
   isLiked?: boolean;
   isPinned?: boolean;
   isLocked?: boolean;
-  attachments?: { url?: string; name?: string; fileName?: string; type?: string }[];
 };
 
 export type FeedPostAuthor = {
@@ -32,6 +32,7 @@ export type FeedPostAuthor = {
 
 export type FeedPostComment = {
   id: string;
+  userId?: string;
   user: FeedPostAuthor;
   content: string;
   createdAt: string;
@@ -57,13 +58,15 @@ export type FeedPost = {
   status: string;
   createdAt: string;
   updatedAt?: string | null;
+  /** Images fetched from media-service by postId */
   attachments?: FeedPostAttachment[];
   liked: boolean;
   likeCount: number;
   flagged: boolean;
   comments: FeedPostComment[];
-  budgetId?: number | null;
-  categoryId?: number | null;
+  campaignId?: number | null;
+  expenditureId?: number | null;
+  category?: string | null;
   parentPostId?: number | null;
   replyCount: number;
   viewCount: number;
@@ -72,22 +75,23 @@ export type FeedPost = {
 };
 
 export type CreateFeedPostRequest = {
-  budgetId?: number | null;
+  campaignId?: number | null;
+  expenditureId?: number | null;
+  category?: string | null;
   type: string;
   visibility: string;
   title?: string | null;
   content: string;
   status?: string;
-  /** For FE-only or when BE supports: image URLs (blob or uploaded) */
-  attachments?: { type: "image"; url: string }[];
 };
 
 export type UpdateFeedPostRequest = {
-  budgetId?: number | null;
+  campaignId?: number | null;
+  expenditureId?: number | null;
+  category?: string | null;
   type?: string;
   visibility?: string;
   title?: string | null;
   content?: string;
   status?: string;
-  attachments?: { type: "image"; url: string }[];
 };

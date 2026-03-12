@@ -1,4 +1,4 @@
-import type { FeedPost, FeedPostAttachment } from "@/types/feedPost";
+import type { FeedPost } from "@/types/feedPost";
 
 type CreateData = {
   title?: string | null;
@@ -6,22 +6,17 @@ type CreateData = {
   type: string;
   visibility: string;
   status?: string;
-  budgetId?: number | null;
-  attachments?: { type: "image"; url: string }[];
+  expenditureId?: number | null;
 };
 
 type UserLike = { id?: string | number; fullName?: string | null; avatarUrl?: string | null };
 
 /**
  * Tạo post giả khi BE không chạy (FE-only). Dùng để test/create thử.
- * Post chỉ tồn tại trong session; refresh sẽ mất (ảnh blob URL cũng mất).
+ * Post chỉ tồn tại trong session; refresh sẽ mất.
  */
 export function createPostFeOnly(data: CreateData, user: UserLike | null): FeedPost {
   const uid = user?.id != null ? String(user.id) : "anon";
-  const atts: FeedPostAttachment[] = (data.attachments || []).map((a) => ({
-    type: "image",
-    url: a.url,
-  }));
 
   return {
     id: `fe-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -37,12 +32,15 @@ export function createPostFeOnly(data: CreateData, user: UserLike | null): FeedP
     status: data.status || "PUBLISHED",
     createdAt: new Date().toISOString(),
     updatedAt: null,
-    attachments: atts.length ? atts : undefined,
     liked: false,
     likeCount: 0,
     flagged: false,
     comments: [],
-    budgetId: data.budgetId ?? null,
+    expenditureId: data.expenditureId ?? null,
+    replyCount: 0,
+    viewCount: 0,
+    isPinned: false,
+    isLocked: false,
   };
 }
 
@@ -52,18 +50,13 @@ export type UpdateData = {
   type?: string;
   visibility?: string;
   status?: string;
-  budgetId?: number | null;
-  attachments?: { type: "image"; url: string }[];
+  expenditureId?: number | null;
 };
 
 /**
  * Cập nhật post giả (FE-only).
  */
 export function updatePostFeOnly(original: FeedPost, data: UpdateData): FeedPost {
-  const atts: FeedPostAttachment[] | undefined = data.attachments
-    ? data.attachments.map((a) => ({ type: "image", url: a.url }))
-    : original.attachments;
-
   return {
     ...original,
     title: data.title !== undefined ? (data.title?.trim() || null) : original.title,
@@ -71,8 +64,7 @@ export function updatePostFeOnly(original: FeedPost, data: UpdateData): FeedPost
     type: data.type !== undefined ? data.type : original.type,
     visibility: data.visibility !== undefined ? data.visibility : original.visibility,
     status: data.status !== undefined ? data.status : original.status,
-    budgetId: data.budgetId !== undefined ? (data.budgetId ?? null) : original.budgetId,
+    expenditureId: data.expenditureId !== undefined ? (data.expenditureId ?? null) : original.expenditureId,
     updatedAt: new Date().toISOString(),
-    attachments: atts,
   };
 }

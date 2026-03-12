@@ -30,5 +30,5 @@ export type FeedPostComponentProps = {
     content: string;
     createdAt: string;
   }>;
-  budgetId?: number | null;
+  expenditureId?: number | null;
 };

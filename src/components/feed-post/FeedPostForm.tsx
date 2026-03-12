@@ -4,12 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { FeedPost, CreateFeedPostRequest, UpdateFeedPostRequest } from "@/types/feedPost";
 import type { CampaignDto } from "@/types/campaign";
-import type { ForumCategory } from "@/types/forumCategory";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import { campaignService } from "@/services/campaignService";
-import { forumCategoryService } from "@/services/forumCategoryService";
 import { RichTextEditor } from "./RichTextEditor";
 
 interface FeedPostFormProps {
@@ -32,7 +30,7 @@ export default function FeedPostForm({
   const { user } = useAuth();
   const [myCampaigns, setMyCampaigns] = useState<CampaignDto[]>([]);
   const [otherCampaigns, setOtherCampaigns] = useState<CampaignDto[]>([]);
-  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: initialData?.title || "",
@@ -40,8 +38,8 @@ export default function FeedPostForm({
     type: initialData?.type || "UPDATE",
     visibility: initialData?.visibility || "PUBLIC",
     status: initialData?.status || "PUBLISHED",
-    budgetId: initialData?.budgetId || null,
-    categoryId: initialData?.categoryId || null,
+    expenditureId: initialData?.expenditureId || null,
+    category: initialData?.category || "",
   });
 
   const [files, setFiles] = useState<string[]>(
@@ -57,17 +55,15 @@ export default function FeedPostForm({
     setCampaignsLoading(true);
     const run = async () => {
       try {
-        const [mine, all, cats] = await Promise.all([
+        const [mine, all] = await Promise.all([
           user?.id ? campaignService.getByFundOwner(Number(user.id)).catch(() => []) : [] as CampaignDto[],
           campaignService.getAll().catch(() => []),
-          forumCategoryService.getAll().catch(() => []),
         ]);
         if (cancelled) return;
         const mineList = Array.isArray(mine) ? mine : [];
         const allList = Array.isArray(all) ? all : [];
         setMyCampaigns(mineList);
         setOtherCampaigns(allList.filter((c) => c.fundOwnerId !== user?.id).slice(0, 50));
-        setCategories(Array.isArray(cats) ? cats : []);
       } finally {
         if (!cancelled) setCampaignsLoading(false);
       }
@@ -93,8 +89,8 @@ export default function FeedPostForm({
         type: formData.type,
         visibility: formData.visibility,
         status: formData.status,
-        ...(formData.budgetId && { budgetId: formData.budgetId }),
-        ...(formData.categoryId && { categoryId: formData.categoryId }),
+        ...(formData.expenditureId && { expenditureId: formData.expenditureId }),
+        ...(formData.category && { category: formData.category }),
         attachments: files.length ? files.map((url) => ({ type: "image" as const, url })) : undefined,
       };
 
@@ -239,16 +235,13 @@ export default function FeedPostForm({
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
               Category
             </label>
-            <select
-              value={formData.categoryId != null ? String(formData.categoryId) : ""}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value ? Number(e.target.value) : null })}
-              className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
-            >
-              <option value="">No category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              placeholder="e.g. Chung, Chiến dịch, Hỏi đáp..."
+              className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
+            />
           </div>
 
           {/* Campaign Selector */}
@@ -257,8 +250,8 @@ export default function FeedPostForm({
               Link to campaign
             </label>
             <select
-              value={formData.budgetId != null ? String(formData.budgetId) : ""}
-              onChange={(e) => setFormData({ ...formData, budgetId: e.target.value ? Number(e.target.value) : null })}
+              value={formData.expenditureId != null ? String(formData.expenditureId) : ""}
+              onChange={(e) => setFormData({ ...formData, expenditureId: e.target.value ? Number(e.target.value) : null })}
               className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
             >
               <option value="">Don&apos;t link to a campaign</option>

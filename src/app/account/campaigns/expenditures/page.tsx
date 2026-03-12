@@ -247,7 +247,7 @@ export default function CampaignExpendituresPage() {
                 title: `Cập nhật minh chứng chi tiêu: ${campaign?.title}`,
                 content: evidenceDescription || `Tôi vừa cập nhật minh chứng cho hoạt động chi tiêu thuộc chiến dịch "${campaign?.title}". Mời mọi người cùng theo dõi sự minh bạch của dự án!`,
                 attachments: attachments,
-                budgetId: Number(campaignId)  // store campaign ID so the forum can display the campaign name
+                expenditureId: Number(campaignId)  // store campaign ID so the forum can display the campaign name
             });
 
             // 3. Update status locally in Expenditure
