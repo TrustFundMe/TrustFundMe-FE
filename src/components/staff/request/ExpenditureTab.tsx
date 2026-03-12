@@ -356,10 +356,10 @@ export default function ExpenditureTab() {
         const loadAllData = async () => {
             setLoading(true);
             try {
-                // Fetch all campaigns and filter for ACTIVE/APPROVED
+                // Fetch all campaigns and filter for APPROVED
                 const allCampaigns = await campaignService.getAll();
                 const relevantCampaigns = allCampaigns.filter(c =>
-                    c.status === 'ACTIVE' || c.status === 'APPROVED'
+                    c.status === 'APPROVED'
                 );
 
                 // For each relevant campaign, fetch its expenditures to check for pending stuff

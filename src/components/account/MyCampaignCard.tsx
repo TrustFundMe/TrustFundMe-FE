@@ -29,6 +29,8 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
 
     const getStatusLabel = (status: string) => {
         switch (status?.toUpperCase()) {
+            case 'APPROVED':
+                return 'Đang hoạt động';
             case 'ACTIVE':
                 return 'Đang hoạt động';
             case 'PENDING':
@@ -51,6 +53,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
 
     const getStatusColor = (status: string) => {
         switch (status?.toUpperCase()) {
+            case 'APPROVED':
             case 'ACTIVE':
                 return 'bg-green-100 text-green-800 border-green-200';
             case 'PENDING':

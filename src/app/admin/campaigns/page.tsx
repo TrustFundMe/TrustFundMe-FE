@@ -35,6 +35,7 @@ function StatusPill({ status }: { status: string }) {
   const base = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider';
 
   switch (status) {
+    case 'APPROVED':
     case 'ACTIVE':
       return (
         <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}>
