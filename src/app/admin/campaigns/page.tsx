@@ -3,28 +3,21 @@
 import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  BadgeCheck,
-  Ban,
   Eye,
   Folder,
-  Pencil,
-  Plus,
   Search,
   Tag,
   History,
   X,
-  CreditCard,
   Calendar,
   User as UserIcon,
   ChevronRight,
-  ChevronLeft,
   Loader2,
   AlertCircle,
   TrendingUp,
 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
-import { mediaService } from '@/services/mediaService';
 import { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 function formatVnd(value: number) {
@@ -95,6 +88,10 @@ export default function AdminCampaignsPage() {
   const [historyGoals, setHistoryGoals] = useState<FundraisingGoal[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 7;
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -120,26 +117,16 @@ export default function AdminCampaignsPage() {
       const enriched = await Promise.all(
         campaignRes.map(async (c) => {
           let goals: FundraisingGoal[] = [];
-          let coverImage: string | null = null;
           try {
-            const [goalsData, mediaData] = await Promise.all([
-              campaignService.getGoalsByCampaignId(c.id),
-              mediaService.getMediaByCampaignId(c.id)
-            ]);
+            const goalsData = await campaignService.getGoalsByCampaignId(c.id);
             goals = goalsData;
-            // Get the first image as cover image
-            if (mediaData && mediaData.length > 0) {
-              const firstImage = mediaData.find(m => m.mediaType === 'PHOTO') || mediaData[0];
-              coverImage = firstImage.url;
-            }
           } catch (err) {
-            console.warn(`Failed to fetch goals or media for campaign ${c.id}`, err);
+            console.warn(`Failed to fetch goals for campaign ${c.id}`, err);
           }
           return {
             ...c,
             ownerName: userMap[c.fundOwnerId] || `User #${c.fundOwnerId}`,
             activeGoal: goals.find((g) => g.isActive) || null,
-            coverImage: coverImage
           };
         })
       );
@@ -174,6 +161,24 @@ export default function AdminCampaignsPage() {
     return Array.from(set).sort();
   }, [campaigns]);
 
+  const totalPages = useMemo(() => Math.ceil(filtered.length / ITEMS_PER_PAGE), [filtered, ITEMS_PER_PAGE]);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage, ITEMS_PER_PAGE]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, statusFilter, categoryFilter]);
+
+  const hasActiveFilters = query !== '' || statusFilter !== 'ALL' || categoryFilter !== 'ALL';
+
+  const clearFilters = () => {
+    setQuery('');
+    setStatusFilter('ALL');
+    setCategoryFilter('ALL');
+  };
+
   const updateStatus = async (id: number, status: string) => {
     if (!confirm(`Bạn có chắc muốn chuyển trạng thái sang ${status}?`)) return;
 
@@ -200,169 +205,146 @@ export default function AdminCampaignsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
-            <Folder className="h-4 w-4" />
-            <ChevronRight className="h-3 w-3" />
-            <span>Quản lý nội dung</span>
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Chiến dịch Gây quỹ</h1>
-          <p className="text-slate-500 mt-2 font-medium">Theo dõi và phê duyệt các chiến dịch đang diễn ra trên hệ thống.</p>
-        </div>
-
-        <div className="bg-slate-100/50 p-1.5 rounded-[24px] flex items-center gap-1 shadow-inner">
-          {(['ALL', 'PENDING', 'ACTIVE', 'PAUSED', 'CLOSED'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-xl shadow-slate-200/50' : 'text-slate-400 hover:text-slate-600'
-                }`}
-            >
-              {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'ACTIVE' ? 'Đang chạy' : s === 'PAUSED' ? 'Dừng' : 'Đã đóng'}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="flex flex-col flex-1 min-h-0 gap-4">
 
       {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-10">
-        <div className="relative group/search flex-1 w-full">
+      <div className="flex flex-col md:flex-row items-center gap-4 mb-3 flex-shrink-0">
+        <div className="relative group/search flex-[2] max-w-2xl w-full">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tìm theo tên chiến dịch, ID hoặc người tạo..."
-            className="w-full bg-white border-2 border-slate-100 rounded-[32px] pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-2xl shadow-slate-200/30"
+            className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50"
           />
         </div>
 
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-full md:w-56 rounded-[32px] border-2 border-slate-100 bg-white px-6 py-4 text-sm font-black text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-2xl shadow-slate-200/30 cursor-pointer appearance-none"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right 1.5rem center',
-            backgroundSize: '1rem',
-          }}
-        >
-          <option value="ALL">Tất cả danh mục</option>
-          {categories.map((c) => (
-            <option key={c} value={c || ''}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 w-full md:w-auto flex-shrink-0">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
+            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
+          >
+            <option value="ALL">Trạng thái</option>
+            <option value="PENDING">Chờ duyệt</option>
+            <option value="ACTIVE">Đang chạy</option>
+            <option value="PAUSED">Tạm dừng</option>
+            <option value="CLOSED">Đã đóng</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="px-6 py-3.5 rounded-3xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-200 hover:text-slate-900 transition-all ml-auto"
+            >
+              Xóa lọc
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table Section */}
-      <div className="rounded-[40px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 overflow-hidden relative">
+      <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/50 relative flex-1 min-h-0 overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center">
-            <Loader2 className="h-10 w-10 text-[#F84D43] animate-spin" />
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
+            <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left bg-slate-50/50">
-                <th className="py-6 pl-10 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Chiến dịch</th>
-                <th className="py-6 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Người đại diện</th>
-                <th className="py-6 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tiến độ (Active Goal)</th>
-                <th className="py-6 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Trạng thái</th>
-                <th className="py-6 pr-10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Thao tác</th>
+        <div className="h-full overflow-auto custom-scrollbar">
+          <table className="min-w-full text-sm border-separate border-spacing-0">
+            <thead className="bg-slate-50">
+              <tr className="text-left">
+                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Chiến dịch</th>
+                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Người đại diện</th>
+                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Tiến độ</th>
+                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Trạng thái</th>
+                <th className="py-3.5 pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right border-b border-slate-100">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((c) => {
+              {paginatedData.map((c) => {
                 const target = c.activeGoal?.targetAmount || 0;
                 const balance = c.balance || 0;
                 const pct = target > 0 ? Math.min(100, Math.round((balance / target) * 100)) : 0;
 
                 return (
-                  <tr key={c.id} className="group hover:bg-slate-50/40 transition-colors">
-                    <td className="py-6 pl-10 pr-4">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-4 ring-white">
-                          {c.coverImage ? (
-                            <img src={c.coverImage} alt={c.title} className="h-full w-full object-cover" />
+                  <tr key={c.id} className="h-[68px] group hover:bg-slate-50/30 transition-colors">
+                    <td className="py-2 pl-8 pr-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-2 ring-white">
+                          {c.coverImageUrl ? (
+                            <img src={c.coverImageUrl} alt={c.title} className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-slate-300">
-                              <Tag className="h-6 w-6" />
+                              <Tag className="h-4 w-4" />
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-black text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[200px]">{c.title}</div>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.category || 'Chưa phân loại'}</span>
-                          </div>
+                        <div className="leading-tight">
+                          <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">{c.title}</div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{c.category || 'Chưa phân loại'}</span>
                         </div>
                       </div>
                     </td>
 
-                    <td className="py-6 pr-4">
-                      <div className="flex items-center gap-2.5">
+                    <td className="py-2 pr-4">
+                      <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm border border-white">
                           <UserIcon className="h-3.5 w-3.5" />
                         </div>
-                        <span className="font-bold text-slate-700">{c.ownerName}</span>
+                        <span className="font-bold text-slate-700 text-xs">{c.ownerName}</span>
                       </div>
                     </td>
 
-                    <td className="py-6 pr-4">
-                      <div className="w-56">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                    <td className="py-2 pr-4">
+                      <div className="w-40">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">
                             {formatVnd(balance)} / <span className="text-slate-900">{target > 0 ? formatVnd(target) : '??'}</span>
                           </span>
-                          <span className="text-[10px] font-black text-[#F84D43] leading-none">{pct}%</span>
+                          <span className="text-[9px] font-black text-[#F84D43] leading-none">{pct}%</span>
                         </div>
-                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
                           <div
                             className="h-full bg-gradient-to-r from-[#F84D43] to-[#F84D43]/60 rounded-full transition-all duration-1000"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        {!c.activeGoal && <div className="mt-1 text-[9px] font-bold text-[#F84D43]/80 italic">Chưa có mục tiêu hoạt động</div>}
+                        {!c.activeGoal && <div className="mt-0.5 text-[8px] font-bold text-[#F84D43]/80 italic">Chưa có mục tiêu</div>}
                       </div>
                     </td>
 
-                    <td className="py-6 pr-4">
+                    <td className="py-2 pr-4">
                       <StatusPill status={c.status} />
                     </td>
 
-                    <td className="py-6 pr-10 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Link
+                    <td className="py-2 pr-8 text-right">
+                      <div className="flex justify-end gap-1 transition-all">
+                        {/* <Link
                           href={`/campaigns-details?id=${c.id}`}
-                          className="p-2.5 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-xl transition-all"
+                          className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
                           title="Xem thực tế"
                         >
-                          <Eye className="h-5 w-5" />
-                        </Link>
+                          <Eye className="h-4 w-4" />
+                        </Link> */}
 
                         <button
                           onClick={() => openHistory(c)}
-                          className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-xl transition-all"
+                          className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-lg transition-all"
                           title="Lịch sử mục tiêu"
                         >
-                          <History className="h-5 w-5" />
+                          <History className="h-4 w-4" />
                         </button>
 
-                        <div className="w-px h-6 bg-slate-100 mx-1 self-center" />
+                        <div className="w-px h-5 bg-slate-100 mx-1 self-center" />
 
-                        <div className="relative group/status ml-1">
+                        <div className="relative group/status">
                           <select
                             value={c.status}
                             onChange={(e) => updateStatus(c.id, e.target.value)}
-                            className="appearance-none bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-600 outline-none focus:ring-2 focus:ring-[#F84D43]/20 focus:border-[#F84D43] transition-all cursor-pointer pr-8 hover:bg-white hover:shadow-lg"
+                            className="appearance-none bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-slate-600 outline-none focus:ring-2 focus:ring-[#F84D43]/20 focus:border-[#F84D43] transition-all cursor-pointer pr-6 hover:bg-white hover:shadow-md"
                             style={{
                               backgroundImage:
                                 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")',
@@ -383,20 +365,65 @@ export default function AdminCampaignsPage() {
                 );
               })}
 
-              {!loading && filtered.length === 0 && (
+              {!loading && paginatedData.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-32 text-center text-slate-400">
-                    <div className="flex flex-col items-center">
-                      <div className="bg-slate-50 p-6 rounded-[32px] mb-4 shadow-inner">
-                        <Folder className="h-10 w-10 text-slate-200" />
+                  <td colSpan={5} className="py-24 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400">
+                      <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                        <Folder className="h-8 w-8 text-slate-300" />
                       </div>
                       <p className="font-bold text-slate-500">Không tìm thấy chiến dịch nào.</p>
                     </div>
                   </td>
                 </tr>
               )}
+              {!loading && paginatedData.length < ITEMS_PER_PAGE && paginatedData.length > 0 && (
+                Array.from({ length: ITEMS_PER_PAGE - paginatedData.length }).map((_, i) => (
+                  <tr key={`spacer-${i}`} className="h-[68px] border-none">
+                    <td colSpan={5}></td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Section */}
+        <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-3 flex items-center justify-between">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+            Trang {currentPage} / {totalPages} (Tổng {filtered.length})
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
+            >
+              <ChevronRight className="h-4 w-4 rotate-180" />
+            </button>
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((p, i, arr) => (
+                  <div key={p} className="flex items-center">
+                    {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
+                    <button
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                    >
+                      {p}
+                    </button>
+                  </div>
+                ))}
+            </div>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -457,7 +484,7 @@ export default function AdminCampaignsPage() {
                           </div>
                           {goal.isActive && (
                             <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                              Active
+                              Đang hoạt động
                             </span>
                           )}
                         </div>

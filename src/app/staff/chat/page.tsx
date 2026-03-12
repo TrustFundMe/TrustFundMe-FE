@@ -13,6 +13,7 @@ import { webSocketService } from '@/services/websocketService';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useToast } from '@/components/ui/Toast';
 import type { CampaignDto } from '@/types/campaign';
+import { appointmentService } from '@/services/appointmentService';
 
 // Keep some mocks for message details/appointments/media since those APIs aren't implemented yet
 const mockMessages: MessageItem[] = [];
@@ -31,6 +32,8 @@ export default function ChatWithDonorPage() {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+  const [detectedScheduleText, setDetectedScheduleText] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const hasFetchedRef = useRef<boolean>(false);
   const { user } = useAuth();
@@ -232,6 +235,69 @@ export default function ChatWithDonorPage() {
 
     fetchMedia();
   }, [activeId]);
+
+  // Handle schedule detection
+  useEffect(() => {
+    if (!inputMessage.trim()) {
+      // Don't reset if it's already shown, only if input is actually changed to empty by typing
+      return;
+    }
+
+    const scheduleRegex = /(?:vào|lúc|ngày|thứ|mai|mốt|\d{1,2}[\/\-]\d{1,2})|(\d{2,})/;
+    const match = inputMessage.match(scheduleRegex);
+
+    if (match && inputMessage.length > 3) {
+      setDetectedScheduleText(inputMessage);
+      setShowSchedulePopup(true);
+    } else {
+      setShowSchedulePopup(false);
+    }
+  }, [inputMessage]);
+
+  // Handle schedule confirmation
+  const handleScheduleConfirm = async () => {
+    if (!user || !activeConversation || !activeConversation.fundOwnerId) {
+      toast("Không tìm thấy thông tin người dùng để tạo lịch!", "error");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+
+      const endHour = new Date(tomorrow);
+      endHour.setHours(10, 0, 0, 0);
+
+      const res = await appointmentService.create({
+        donorId: Number(activeConversation.fundOwnerId),
+        staffId: Number(user.id),
+        startTime: tomorrow.toISOString(),
+        endTime: endHour.toISOString(),
+        location: 'Trao đổi qua chat / Online',
+        purpose: `Staff đặt lịch hẹn thảo luận. Nội dung gợi ý: "${detectedScheduleText}"`
+      });
+
+      if (res) {
+        toast('Đã tạo lịch hẹn thành công!', 'success');
+        setShowSchedulePopup(false);
+
+        // Optionally send a message notify
+        webSocketService.sendMessage(`/app/chat/${activeId}`, {
+          conversationId: Number(activeId),
+          content: `[HỆ THỐNG] Staff đã tạo một lịch hẹn mới vào lúc 9:00 AM ngày ${tomorrow.toLocaleDateString('vi-VN')}. Vui lòng kiểm tra lịch của bạn.`,
+          senderId: Number(user.id),
+          senderRole: 'ROLE_STAFF'
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create appointment:", error);
+      toast("Có lỗi xảy ra khi tạo lịch!", "error");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   // Subscribe to WebSocket topic when active conversation changes
   useEffect(() => {
@@ -446,6 +512,10 @@ export default function ChatWithDonorPage() {
           selectedFiles={selectedImages}
           hasActiveConversation={!!activeConversation}
           campaignInfo={activeCampaignInfo}
+          showSchedulePopup={showSchedulePopup}
+          detectedScheduleText={detectedScheduleText}
+          onScheduleConfirm={handleScheduleConfirm}
+          onScheduleCancel={() => setShowSchedulePopup(false)}
         />
 
         {showDetails && activeConversation && (

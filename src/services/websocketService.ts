@@ -2,7 +2,11 @@ import { Client, StompSubscription, IFrame } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
 // Use gateway URL via proxy to avoid CORS, or environment variable
-const BROKER_URL = process.env.NEXT_PUBLIC_WS_URL || '/api-backend/ws';
+const RAW_WS_URL = process.env.NEXT_PUBLIC_WS_URL || '/api-backend/ws';
+// SockJS expects http/https, not ws/wss. Convert if necessary.
+const BROKER_URL = RAW_WS_URL.replace(/^ws:\/\/|^wss:\/\//, (match) => match === 'ws://' ? 'http://' : 'https://');
+
+console.log('[WS] Initializing with URL:', BROKER_URL, '(Original:', RAW_WS_URL, ')');
 
 export type MessageHandler = (message: any) => void;
 
@@ -10,7 +14,7 @@ class WebSocketService {
     private client: Client;
     private subscriptions: Map<string, StompSubscription> = new Map();
     private pendingSubscriptions: Array<{ topic: string, callback: MessageHandler }> = [];
-    private isConnected: boolean = false;
+    public isConnected: boolean = false;
 
     constructor() {
         this.client = new Client({
@@ -20,7 +24,7 @@ class WebSocketService {
             heartbeatOutgoing: 4000,
             debug: (str) => {
                 // Reduce noise in production
-                // console.log('[WS Debug]:', str);
+                console.log('[WS Debug]:', str);
             },
         });
 

@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Send, MessageSquare, Loader2, Camera } from 'lucide-react';
+import { X, Send, MessageSquare, Loader2, Camera, Calendar, ChevronDown } from 'lucide-react';
 import { chatService } from '@/services/chatService';
 import { webSocketService } from '@/services/websocketService';
+import { appointmentService } from '@/services/appointmentService';
+import QuickSchedulePopup from '@/components/staff/chat/QuickSchedulePopup';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useToast } from '@/components/ui/Toast';
 import { CampaignDto } from '@/types/campaign';
@@ -28,16 +30,36 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
     const [isSending, setIsSending] = useState(false);
     const [inputMessage, setInputMessage] = useState('');
     const [staffInfo, setStaffInfo] = useState<UserInfo | null>(null);
+    const [isWsConnected, setIsWsConnected] = useState(webSocketService.isConnected);
+    const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+    const [detectedScheduleText, setDetectedScheduleText] = useState('');
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const [showScrollButton, setShowScrollButton] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const staffId = campaign.approvedByStaff || 1;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setShowScrollButton(false);
+    };
+
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+        setIsAtBottom(atBottom);
+        if (atBottom) setShowScrollButton(false);
     };
 
     useEffect(() => {
-        scrollToBottom();
+        if (isAtBottom) {
+            scrollToBottom();
+        } else {
+            // If new message comes and we are not at bottom, show button
+            setShowScrollButton(true);
+        }
     }, [messages]);
 
     // 1. Load or Create Conversation
@@ -139,13 +161,51 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
         };
 
         webSocketService.subscribe(topic, handleNewMessage);
-        return () => { webSocketService.unsubscribe(topic); };
+
+        // Check connection status periodically
+        const interval = setInterval(() => {
+            setIsWsConnected(webSocketService.isConnected);
+        }, 1000);
+
+        return () => {
+            webSocketService.unsubscribe(topic);
+            clearInterval(interval);
+        };
     }, [conversation?.id, user, staffInfo?.fullName]);
 
-    // 3. Send
+    // 3. Detect schedule keywords
+    useEffect(() => {
+        if (!inputMessage.trim()) {
+            setShowSchedulePopup(false);
+            return;
+        }
+
+        // Logic: detect numbers or date keywords (ngày, lúc, vào, mai, mốt, thứ...)
+        const scheduleRegex = /(?:vào|lúc|ngày|thứ|mai|mốt|\d{1,2}[\/\-]\d{1,2})|(\d{2,})/;
+        const match = inputMessage.match(scheduleRegex);
+
+        if (match && inputMessage.length > 3) {
+            setDetectedScheduleText(inputMessage);
+            setShowSchedulePopup(true);
+        } else {
+            setShowSchedulePopup(false);
+        }
+    }, [inputMessage]);
+
+    // 4. Send
     const handleSend = async () => {
         if (!inputMessage.trim() || !conversation || !user || isSending) return;
         setIsSending(true);
+
+        setIsSending(true);
+
+        if (!webSocketService.isConnected) {
+            toast('Đang kết nối lại WebSocket...', 'info');
+            webSocketService.connect();
+            setIsSending(false);
+            return;
+        }
+
         try {
             webSocketService.sendMessage(`/app/chat/${conversation.id}`, {
                 conversationId: conversation.id,
@@ -157,6 +217,48 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
         } catch (error) {
             console.error('Send Error:', error);
             toast('Không thể gửi tin nhắn', 'error');
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    const handleScheduleConfirm = async () => {
+        if (!user || !campaign || !staffId) return;
+
+        setIsSending(true);
+        try {
+            // Pre-fill appointment info
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(9, 0, 0, 0); // Default 9 AM tomorrow
+
+            const endHour = new Date(tomorrow);
+            endHour.setHours(10, 0, 0, 0); // 1 hour duration
+
+            const res = await appointmentService.create({
+                donorId: Number(user.id),
+                staffId: Number(staffId),
+                startTime: tomorrow.toISOString(),
+                endTime: endHour.toISOString(),
+                location: 'Trao đổi qua chat / Online',
+                purpose: `Hẹn gặp thảo luận về: ${campaign.title}. Nội dung gợi ý: "${detectedScheduleText}"`
+            });
+
+            if (res) {
+                toast('Đã tạo lịch hẹn thành công! Staff sẽ sớm xác nhận nha.', 'success');
+                setShowSchedulePopup(false);
+
+                // Optionally send a message to notify staff
+                webSocketService.sendMessage(`/app/chat/${conversation?.id}`, {
+                    conversationId: conversation?.id,
+                    content: `[Hệ thống] Tôi vừa yêu cầu một lịch hẹn thảo luận về chiến dịch này vào lúc ${tomorrow.toLocaleTimeString()} ngày ${tomorrow.toLocaleDateString()}.`,
+                    senderId: Number(user.id),
+                    senderRole: 'ROLE_FUND_OWNER',
+                });
+            }
+        } catch (error: any) {
+            console.error('Schedule Create Error:', error);
+            toast(error?.response?.data?.message || 'Không thể tạo lịch hẹn tự động', 'error');
         } finally {
             setIsSending(false);
         }
@@ -208,7 +310,7 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
             }}>
                 {/* Cover image */}
                 <img
-                    src={campaign.coverImage || '/assets/img/campaign/1.jpg'}
+                    src={campaign.coverImageUrl || '/assets/img/campaign/1.jpg'}
                     alt={campaign.title}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -255,6 +357,8 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
 
             {/* Messages */}
             <div
+                ref={scrollRef}
+                onScroll={handleScroll}
                 className="mini-chat-messages"
                 style={{
                     flex: 1,
@@ -284,6 +388,56 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                     ))
                 )}
                 <div ref={messagesEndRef} />
+            </div>
+
+            {/* Small Scroll to Bottom Button - MOVED OUTSIDE SCROLLABLE DIV */}
+            <div style={{ position: 'relative', height: 0, overflow: 'visible', zIndex: 100 }}>
+                {showScrollButton && (
+                    <button
+                        onClick={scrollToBottom}
+                        style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '20px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 4px 15px rgba(239,68,68,0.4)',
+                            cursor: 'pointer',
+                            animation: 'chatBounceJump 1.5s ease-in-out infinite',
+                            whiteSpace: 'nowrap',
+                            zIndex: 100,
+                        }}
+                    >
+                        <ChevronDown size={14} className="animate-bounce" />
+                        Tin nhắn mới
+                    </button>
+                )}
+            </div>
+
+            <style>{`
+                @keyframes chatBounceJump {
+                    0%, 100% { transform: translateX(-50%) translateY(0); }
+                    50% { transform: translateX(-50%) translateY(-8px); }
+                }
+            `}</style>
+
+            {/* Quick Schedule Suggestion */}
+            <div style={{ background: '#f0f4f8' }}>
+                <QuickSchedulePopup
+                    isVisible={showSchedulePopup}
+                    detectedText={detectedScheduleText}
+                    onConfirm={handleScheduleConfirm}
+                    onCancel={() => setShowSchedulePopup(false)}
+                />
             </div>
 
             {/* Input */}
@@ -350,7 +504,7 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                 {/* Dark circular send button */}
                 <button
                     onClick={handleSend}
-                    disabled={!inputMessage.trim() || isLoading || !conversation || isSending}
+                    disabled={!inputMessage.trim() || isLoading || !conversation || isSending || !isWsConnected}
                     style={{
                         background: '#1e293b',
                         border: 'none',
@@ -360,8 +514,8 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        cursor: inputMessage.trim() && !isLoading && conversation && !isSending ? 'pointer' : 'not-allowed',
-                        opacity: inputMessage.trim() && !isLoading && conversation && !isSending ? 1 : 0.4,
+                        cursor: inputMessage.trim() && !isLoading && conversation && !isSending && isWsConnected ? 'pointer' : 'not-allowed',
+                        opacity: inputMessage.trim() && !isLoading && conversation && !isSending && isWsConnected ? 1 : 0.4,
                         transition: 'opacity 0.2s',
                         flexShrink: 0,
                     }}
@@ -372,7 +526,7 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                     }
                 </button>
             </div>
-        </div>
+        </div >
     );
 
     if (typeof window === 'undefined') return null;
