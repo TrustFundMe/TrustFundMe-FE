@@ -134,15 +134,9 @@ export default function CampaignExpendituresPage() {
     const getStatusBadge = (status: string) => {
         switch (status.toUpperCase()) {
             case 'APPROVED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Duyệt</span>;
-            case 'PENDING':
-            case 'PENDING_REVIEW':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-100"><Clock className="w-3 h-3 mr-1" /> Chờ duyệt</span>;
-            case 'REJECTED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-50/50 text-rose-300 border border-rose-100/30"><AlertCircle className="w-3 h-3 mr-1" /> Từ chối</span>;
-            case 'CLOSED':
             case 'WITHDRAWAL_REQUESTED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100"><Clock className="w-3 h-3 mr-1" /> Yêu cầu rút tiền</span>;
+            case 'CLOSED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã duyệt</span>;
             case 'DISBURSED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
             default:
@@ -577,7 +571,7 @@ export default function CampaignExpendituresPage() {
                                                         setExpandedRowId(isNowExpanded ? exp.id : null);
                                                         if (isNowExpanded) {
                                                             // Tự động chọn bước phù hợp dựa trên trạng thái
-                                                            if (exp.disbursedAt) setSelectedLogStep(3);
+                                                            if (exp.disbursedAt || exp.status === 'DISBURSED') setSelectedLogStep(3);
                                                             else if (exp.isWithdrawalRequested) setSelectedLogStep(2);
                                                             else setSelectedLogStep(1);
                                                         }
@@ -699,13 +693,13 @@ export default function CampaignExpendituresPage() {
                                                                                                 onClick={(e) => { e.stopPropagation(); setSelectedLogStep(3); }}
                                                                                                 className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 3 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
                                                                                             >
-                                                                                                <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.disbursedAt ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
+                                                                                                <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${(exp.disbursedAt || exp.status === 'DISBURSED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-gray-200 ring-4 ring-gray-50'}`}></div>
                                                                                                 <div className="flex flex-col">
-                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-red-900' : (exp.disbursedAt ? 'text-emerald-700' : 'text-black/30')}`}>
+                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-red-900' : ((exp.disbursedAt || exp.status === 'DISBURSED') ? 'text-emerald-700' : 'text-black/30')}`}>
                                                                                                         3. Admin giải ngân
                                                                                                     </span>
                                                                                                     <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                        {exp.disbursedAt ? 'Đã chuyển tiền' : 'Đang xử lý'}
+                                                                                                        { (exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : 'Đang xử lý'}
                                                                                                     </span>
                                                                                                 </div>
                                                                                             </button>

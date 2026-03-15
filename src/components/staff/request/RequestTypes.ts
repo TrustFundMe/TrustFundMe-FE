@@ -49,6 +49,7 @@ export type ExpenditureRequest = StaffRequestBase & {
   bankCode?: string;
   accountNumber?: string;
   accountHolderName?: string;
+  transactions?: any[];
 };
 
 export type KycRequest = StaffRequestBase & {

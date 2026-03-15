@@ -26,8 +26,8 @@ const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> =
     PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
     PENDING_REVIEW: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
     APPROVED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
-    CLOSED: { label: 'Yêu cầu rút tiền', color: '#2563eb', bg: '#dbeafe' },
-    WITHDRAWAL_REQUESTED: { label: 'Yêu cầu rút tiền', color: '#2563eb', bg: '#dbeafe' },
+    CLOSED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
+    WITHDRAWAL_REQUESTED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
     REJECTED: { label: 'Từ chối', color: '#dc2626', bg: '#fee2e2' },
     DISBURSED: { label: 'Đã giải ngân', color: '#16a34a', bg: '#dcfce7' },
 };
@@ -182,10 +182,10 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                             {/* Dòng Dự kiến đã bị ẩn theo yêu cầu */}
                         </div>
 
-                        {/* Status: Pending Review - ONLY for AUTHORIZED campaigns */}
-                        {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && campaignType === 'AUTHORIZED' && (
+                        {/* Status: Pending Review - for AUTHORIZED and ITEMIZED campaigns */}
+                        {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (campaignType === 'AUTHORIZED' || campaignType === 'ITEMIZED') && (
                             <div className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 shadow-sm">
-                                <p className="text-[10px] font-black text-amber-700 mb-2.5 uppercase tracking-wider">Đang chờ phê duyệt (Quỹ ủy quyền)</p>
+                                <p className="text-[10px] font-black text-amber-700 mb-2.5 uppercase tracking-wider">Đang chờ phê duyệt</p>
                                 <div className="flex gap-2">
                                     <button onClick={handleApprove} disabled={approving}
                                         className="flex-1 py-1.5 rounded-lg text-xs font-black text-white bg-green-600 shadow-sm transition-all hover:brightness-105 active:scale-95">
@@ -196,14 +196,6 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
                                         TỪ CHỐI
                                     </button>
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Note for ITEMIZED campaigns - auto approved, no need for approval */}
-                        {exp.status === 'PENDING' && campaignType === 'ITEMIZED' && (
-                            <div className="mx-4 mt-3 rounded-xl border border-blue-50 bg-blue-50/20 p-3 shadow-sm flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-blue-400" />
-                                <p className="text-[10px] text-blue-600 font-medium italic">Kế hoạch chờ chi (Quỹ vật phẩm - Tự động duyệt)</p>
                             </div>
                         )}
 

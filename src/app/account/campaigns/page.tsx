@@ -2,9 +2,9 @@
 
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Heart, Plus, ArrowLeft, Loader2, LayoutGrid, Search } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
@@ -19,6 +19,8 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const { toast } = useToast();
 
   // Chat Modal State
@@ -74,9 +76,22 @@ export default function CampaignsPage() {
     fetchCampaigns();
   }, [user?.id]);
 
-  const filteredCampaigns = campaigns.filter(c =>
-    c.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCampaigns = useMemo(() =>
+    campaigns.filter(c =>
+      c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [campaigns, searchTerm]
   );
+
+  const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
+  const paginatedCampaigns = filteredCampaigns.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleChatClick = async (campaign: CampaignDto) => {
     setSelectedCampaign(campaign);
@@ -167,17 +182,60 @@ export default function CampaignsPage() {
                 </div>
               </div>
             ) : filteredCampaigns.length > 0 ? (
-              <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                {filteredCampaigns.map((campaign) => (
-                  <MyCampaignCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    onChatClick={() => {
-                      console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
-                      handleChatClick(campaign);
-                    }}
-                  />
-                ))}
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="grid grid-cols-1 gap-6">
+                  {paginatedCampaigns.map((campaign) => (
+                    <MyCampaignCard
+                      key={campaign.id}
+                      campaign={campaign}
+                      onChatClick={() => {
+                        console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
+                        handleChatClick(campaign);
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-gray-100">
+                    <p className="text-sm font-medium text-gray-500">
+                      Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, filteredCampaigns.length)}</span> trong tổng số <span className="text-gray-900">{filteredCampaigns.length}</span> chiến dịch
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === page
+                                ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
+                                : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
+                              }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 p-12 text-center animate-in zoom-in duration-500">

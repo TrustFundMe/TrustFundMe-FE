@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
+import { useAuth } from '@/contexts/AuthContextProxy';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import type {
     RequestStatus,
@@ -30,6 +31,7 @@ function formatVnd(value: number) {
 }
 
 export default function AdminPayoutsPage() {
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [statusFilter, setStatusFilter] = useState<RequestStatus | 'ALL'>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
@@ -81,9 +83,10 @@ export default function AdminPayoutsPage() {
                     justification: e.plan || 'No justification provided',
                     disbursementProofUrl: e.disbursementProofUrl,
                     disbursedAt: (e as any).disbursedAt,
-                    bankCode: e.bankCode,
-                    accountNumber: e.accountNumber,
-                    accountHolderName: e.accountHolderName,
+                    bankCode: e.bankCode || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toBankCode || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toBankCode,
+                    accountNumber: e.accountNumber || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountNumber || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountNumber,
+                    accountHolderName: e.accountHolderName || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountHolderName || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountHolderName,
+                    transactions: e.transactions
                 };
             }));
 
@@ -173,16 +176,14 @@ export default function AdminPayoutsPage() {
         const expId = Number(selectedExp.id.replace('EXP_', ''));
         setIsLoading(true);
         try {
-            // Apply proof URL to DB first
-            await campaignService.updateDisbursementProof(expId, selectedExp.disbursementProofUrl);
-            // Then update status to DISBURSED
-            await expenditureService.updateStatus(expId, 'DISBURSED' as any);
+            // Then update status to DISBURSED with proofUrl and staffId (admin)
+            await expenditureService.updateStatus(expId, 'DISBURSED', user?.id ? Number(user.id) : undefined, undefined, selectedExp.disbursementProofUrl);
 
             setExpenditureRows(prev => prev.map(r =>
                 r.id === selectedExp.id ? { ...r, status: 'DISBURSED' as any } : r
             ));
             setSelectedExp(prev => prev ? { ...prev, status: 'DISBURSED' as any } : null);
-            toast.success('Đã xác nhận giải ngân thành công!');
+            toast.success('Chuyển tiền thành công!');
         } catch (error) {
             toast.error('Xác nhận giải ngân thất bại');
         } finally {

@@ -1,3 +1,21 @@
+export interface ExpenditureTransaction {
+    id: number;
+    expenditureId: number;
+    fromUserId?: number;
+    toUserId?: number;
+    amount: number;
+    fromBankCode?: string;
+    fromAccountNumber?: string;
+    fromAccountHolderName?: string;
+    toBankCode?: string;
+    toAccountNumber?: string;
+    toAccountHolderName?: string;
+    type: string;
+    status: string;
+    proofUrl?: string;
+    createdAt?: string;
+}
+
 export interface ExpenditureItem {
     id: number;
     expenditureId: number;
@@ -31,6 +49,7 @@ export interface Expenditure {
     accountNumber?: string;
     accountHolderName?: string;
     items?: ExpenditureItem[];
+    transactions?: ExpenditureTransaction[];
     createdAt?: string;
     updatedAt?: string;
 }

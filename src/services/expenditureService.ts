@@ -26,11 +26,12 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateStatus: async (id: string | number, status: string, staffId?: number, reasonReject?: string): Promise<Expenditure> => {
+    updateStatus: async (id: string | number, status: string, staffId?: number, reasonReject?: string, proofUrl?: string): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/status`, {
             status,
             staffId,
-            reasonReject
+            reasonReject,
+            proofUrl
         });
         return response.data;
     },
