@@ -115,7 +115,7 @@ export default function NotificationBell() {
         onClick={() => setOpen((v) => !v)}
         style={{
           position: "relative", background: "rgba(0,0,0,0.05)", border: "none",
-          borderRadius: "50%", width: 38, height: 38, cursor: "pointer",
+          borderRadius: "50%", width: 36, height: 36, cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
           transition: "background 0.2s",
         }}
@@ -127,10 +127,10 @@ export default function NotificationBell() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             style={{
-              position: "absolute", top: 4, right: 4, background: "#F84D43",
-              color: "#fff", borderRadius: "50%", width: 16, height: 16,
-              fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center",
-              justifyContent: "center", border: "2px solid #fff",
+              position: "absolute", top: 2, right: 2, background: "#F84D43",
+              color: "#fff", borderRadius: "50%", width: 14, height: 14,
+              fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center",
+              justifyContent: "center", border: "1.5px solid #fff",
             }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}

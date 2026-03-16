@@ -18,8 +18,11 @@ export default function CampaignsPage() {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const itemsPerPage = 6;
   const { toast } = useToast();
 
@@ -29,23 +32,27 @@ export default function CampaignsPage() {
   const [existingConversation, setExistingConversation] = useState<Conversation | null>(null);
   const [isCheckingChat, setIsCheckingChat] = useState(false);
 
-  // Fetch base campaign list
+  // Fetch campaigns for the current page
   useEffect(() => {
-    const fetchBaseCampaigns = async () => {
+    const fetchCampaigns = async () => {
       if (!user?.id) return;
       try {
         setLoading(true);
-        const data = await campaignService.getByFundOwner(user.id);
-        setCampaigns(data);
+        const data = await campaignService.getUserCampaignsPaginated(user.id, currentPage - 1, itemsPerPage);
+        setCampaigns(data.content);
+        setTotalPages(data.totalPages);
+        setTotalElements(data.totalElements);
       } catch (error) {
         console.error('Failed to fetch user campaigns:', error);
       } finally {
         setLoading(false);
+        setIsInitialLoad(false);
       }
     };
-    fetchBaseCampaigns();
-  }, [user?.id]);
+    fetchCampaigns();
+  }, [user?.id, currentPage]);
 
+  // When using server-side pagination, filtered campaigns are just the campaigns on the current page
   const filteredCampaigns = useMemo(() =>
     campaigns.filter(c =>
       c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,18 +60,12 @@ export default function CampaignsPage() {
     ), [campaigns, searchTerm]
   );
 
-  const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
-
-  // Enrich only paginated campaigns when page changes
+  // States for enriched data (goals, images)
   const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
   const [enriching, setEnriching] = useState<Record<number, boolean>>({});
 
-  const paginatedCampaigns = useMemo(() =>
-    filteredCampaigns.slice(
-      (currentPage - 1) * itemsPerPage,
-      currentPage * itemsPerPage
-    ), [filteredCampaigns, currentPage]
-  );
+  // paginatedCampaigns is directly the filtered results since we fetch by page
+  const paginatedCampaigns = useMemo(() => filteredCampaigns, [filteredCampaigns]);
 
   useEffect(() => {
     const enrichVisible = async () => {
@@ -190,21 +191,32 @@ export default function CampaignsPage() {
                   </div>
                   <span className="font-semibold text-gray-700">Tổng số</span>
                 </div>
-                <span className="text-2xl font-bold text-gray-900">{campaigns.length}</span>
+                <span className="text-2xl font-bold text-gray-900">{totalElements}</span>
               </div>
             </div>
 
             {/* Main Content */}
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <Loader2 className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600 font-medium">Đang tải danh sách chiến dịch...</p>
+            <div className="relative min-h-[400px]">
+              {/* Subtle loading indicator for pagination */}
+              {loading && !isInitialLoad && (
+                <div className="absolute inset-x-0 -top-6 flex justify-center z-20">
+                  <div className="bg-white shadow-xl rounded-full px-5 py-1.5 flex items-center gap-2 border border-orange-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <Loader2 className="w-4 h-4 text-orange-600 animate-spin" />
+                    <span className="text-xs font-bold text-gray-700">Đang cập nhật danh sách...</span>
+                  </div>
                 </div>
-              </div>
-            ) : filteredCampaigns.length > 0 ? (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="grid grid-cols-1 gap-6">
+              )}
+
+              {loading && isInitialLoad ? (
+                <div className="flex items-center justify-center py-24">
+                  <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-5" />
+                    <p className="text-gray-600 font-bold text-lg">Đang tải chiến dịch...</p>
+                  </div>
+                </div>
+              ) : filteredCampaigns.length > 0 ? (
+                <div className={`space-y-10 animate-in fade-in duration-700 ${loading ? 'opacity-40 pointer-events-none transition-opacity duration-300' : 'opacity-100 transition-opacity duration-500'}`}>
+                  <div className="grid grid-cols-1 gap-6">
                   {displayCampaigns.map((campaign) => (
                     <MyCampaignCard
                       key={campaign.id}
@@ -221,7 +233,7 @@ export default function CampaignsPage() {
                 {totalPages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-gray-100">
                     <p className="text-sm font-medium text-gray-500">
-                      Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, filteredCampaigns.length)}</span> trong tổng số <span className="text-gray-900">{filteredCampaigns.length}</span> chiến dịch
+                      Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, totalElements)}</span> trong tổng số <span className="text-gray-900">{totalElements}</span> chiến dịch
                     </p>
                     <div className="flex items-center gap-2">
                       <button
@@ -285,6 +297,7 @@ export default function CampaignsPage() {
             )}
           </div>
         </div>
+      </div>
 
         {selectedCampaign && (
           <UserChatModal

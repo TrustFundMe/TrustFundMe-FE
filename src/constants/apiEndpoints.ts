@@ -4,6 +4,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: number | string) => `/api/campaigns/${id}`,
     BY_FUND_OWNER: (fundOwnerId: number | string) =>
       `/api/campaigns/fund-owner/${fundOwnerId}`,
+    BY_FUND_OWNER_PAGINATED: (fundOwnerId: number | string) =>
+      `/api/campaigns/fund-owner/${fundOwnerId}/paginated`,
     BY_STATUS: (status: string) => `/api/campaigns/status/${status}`,
     BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,

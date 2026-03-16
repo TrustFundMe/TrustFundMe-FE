@@ -38,10 +38,12 @@ const Logo = ({
   <Link href="/" className={className}>
     <Image
       src={`/assets/img/logo/${logo}`}
-      width={220}
-      height={67}
+      width={180}
+      height={54}
       alt="logo-img"
       style={{
+        height: '40px',
+        width: 'auto',
         filter: logo.includes('white')
           ? 'brightness(0) invert(1)'
           : 'none'
@@ -112,7 +114,7 @@ const Header1 = ({ open }: { open: () => void }) => (
 
 const Header2 = ({ open }: { open: () => void }) => (
   <Fragment>
-    <div className="header-top-section-3">
+    <div className="header-top-section-3" style={{ display: 'none' }}>
       <div className="container">
         <div className="header-top-wrapper-2 style-3">
           <ContactList
@@ -137,24 +139,30 @@ const Header2 = ({ open }: { open: () => void }) => (
         </div>
       </div>
     </div>
-    <header id="header-sticky" className="header-3">
-      <div className="container">
+    <header id="header-sticky" className="header-3 shadow-sm border-b border-gray-100 bg-white sticky top-0" style={{ zIndex: 1000 }}>
+      <div className="container px-4 max-w-4xl mx-auto">
         <div className="mega-menu-wrapper">
-          <div className="header-main style-2">
-            <div className="header-left">
-              <div className="mean__menu-wrapper">
+          <div className="header-main style-2 py-0 d-flex align-items-center justify-content-between" style={{ height: '60px', minHeight: '60px' }}>
+            {/* 1. Left Section: Logo */}
+            <div className="logo d-flex align-items-center" style={{ flex: '0 0 auto', minWidth: '150px' }}>
+              <Logo logo="black-logo.png" />
+            </div>
+            
+            {/* 2. Middle Section: Nav (xl only) */}
+            <div className="mean__menu-wrapper d-none d-xl-block d-flex align-items-center justify-content-center" style={{ flex: '1' }}>
+              <div style={{ paddingLeft: '20px' }}>
                 <Nav />
               </div>
             </div>
-            <div className="logo">
-              <Logo logo="black-logo.png" />
-            </div>
+
+            {/* 3. Right Section: Icons & Hamburger */}
             <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: '0 0 auto' }}>
               <NotificationBell />
               <AuthButton />
-              <div className="header__hamburger d-xl-none my-auto">
-                <div className="sidebar__toggle" onClick={open}>
-                  <i className="fas fa-bars" />
+              
+              <div className="header__hamburger d-xl-none d-flex align-items-center">
+                <div onClick={open} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <i className="fas fa-bars" style={{ fontSize: '20px' }} />
                 </div>
               </div>
             </div>
@@ -340,18 +348,18 @@ const HomeMenuItem = ({ n }: { n: number }) => (
 const Nav = () => (
   <div className="main-menu d-none d-xl-block">
     <nav id="mobile-menu">
-      <ul>
-        <li>
-          <Link href="/">Home</Link>
+      <ul className="d-flex align-items-center gap-4 mb-0">
+        <li className="m-0">
+          <Link href="/" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Home</Link>
         </li>
-        <li>
-          <Link href="/about">About</Link>
+        <li className="m-0">
+          <Link href="/about" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">About</Link>
         </li>
-        <li>
-          <Link href="/campaigns">Campaign</Link>
+        <li className="m-0">
+          <Link href="/campaigns" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Campaign</Link>
         </li>
-        <li>
-          <Link href="/post">Communication</Link>
+        <li className="m-0">
+          <Link href="/post" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Communication</Link>
         </li>
       </ul>
     </nav>

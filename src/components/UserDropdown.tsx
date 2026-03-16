@@ -62,7 +62,7 @@ export function UserDropdown() {
     <div className="relative" ref={dropdownRef} style={{ zIndex: 1000 }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-2 px-2.5 py-1 rounded-lg hover:bg-gray-100 transition-colors"
         aria-label="User menu"
         aria-expanded={isOpen}
       >
@@ -70,19 +70,19 @@ export function UserDropdown() {
           <Image
             src={user.avatarUrl}
             alt={displayName}
-            width={32}
-            height={32}
+            width={28}
+            height={28}
             className="rounded-full object-cover"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium text-gray-700">
+          <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-700">
             {getInitials()}
           </div>
         )}
-        <span className="hidden md:block text-sm font-medium text-gray-700">
+        <span className="hidden md:block text-sm font-semibold text-gray-700">
           {displayName}
         </span>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (

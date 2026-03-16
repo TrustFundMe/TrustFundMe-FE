@@ -18,6 +18,18 @@ export const campaignService = {
     return res.data;
   },
 
+  async getUserCampaignsPaginated(userId: number, page: number = 0, size: number = 6): Promise<{
+    content: CampaignDto[];
+    totalPages: number;
+    totalElements: number;
+    number: number;
+  }> {
+    const res = await api.get(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER_PAGINATED(userId), {
+      params: { page, size }
+    });
+    return res.data;
+  },
+
   async create(payload: CreateCampaignRequest): Promise<CampaignDto> {
     const res = await api.post<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.BASE, payload);
     return res.data;
