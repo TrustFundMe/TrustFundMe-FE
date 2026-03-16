@@ -400,6 +400,9 @@ export default function CampaignCreationPage() {
       let resolvedCoverImage: number | undefined = undefined;
 
       if (campaign.attachments && campaign.attachments.length > 0) {
+        // Auto-select first image as cover if none is picked
+        const effectiveCoverImage = campaign.coverImage || campaign.attachments.find(a => a.type === 'image' || a.type === 'PHOTO')?.url;
+
         for (let i = 0; i < campaign.attachments.length; i++) {
           const attr = campaign.attachments[i];
           if (attr.isLocal && attr.file) {
@@ -423,7 +426,7 @@ export default function CampaignCreationPage() {
               };
 
               // If this was the chosen cover image, track its id
-              if (campaign.coverImage === localUrl) {
+              if (effectiveCoverImage === localUrl) {
                 resolvedCoverImage = uploadedMedia.id;
               }
             } catch (e: any) {
@@ -431,7 +434,7 @@ export default function CampaignCreationPage() {
               const serverMsg = e.response?.data?.message || e.message || '';
               throw new Error(`Tải lên tệp ${attr.name} thất bại: ${serverMsg}. Vui lòng thử lại.`);
             }
-          } else if (attr.id && campaign.coverImage === attr.url) {
+          } else if (attr.id && effectiveCoverImage === attr.url) {
             // If already uploaded and is the cover
             resolvedCoverImage = attr.id;
           }
@@ -439,7 +442,7 @@ export default function CampaignCreationPage() {
         setCampaign(prev => ({ ...prev, attachments: uploadedAttachments }));
       }
 
-      console.log('DEBUG [MEDIA UPLOAD SUCCESS], coverImage:', resolvedCoverImage);
+      console.log('DEBUG [MEDIA UPLOAD SUCCESS], coverImage ID:', resolvedCoverImage);
 
       // 3. Create / Update Campaign (now we have the real cover image media ID)
       console.log('DEBUG [STAGE 3: CAMPAIGN]');
@@ -450,6 +453,7 @@ export default function CampaignCreationPage() {
         categoryId: campaign.categoryId,
         thankMessage: campaign.thankMessage.trim() || undefined,
         coverImage: resolvedCoverImage || undefined,
+        attachments: uploadedAttachments.map(a => ({ id: a.id, type: a.type, url: a.url, name: a.name })),
         type: campaign.fundType,
         status: 'PENDING_APPROVAL',
       };
