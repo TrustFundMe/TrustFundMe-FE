@@ -10,13 +10,12 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { Toaster } from 'react-hot-toast';
 
 const sidebarNavItems = [
-  { href: '/staff', label: 'Dashboard', icon: LayoutGrid },
-  { href: '/staff/request', label: 'Requests', icon: ClipboardList },
-  { href: '/staff/verification', label: 'Verification', icon: ShieldCheck },
-  { href: '/staff/flags', label: 'Flags', icon: Flag },
-  { href: '/staff/feed-post', label: 'Feed Posts', icon: MessageSquare },
-  { href: '/staff/schedule', label: 'Schedule', icon: Calendar },
-  { href: '/staff/chat', label: 'Chat', icon: MessageCircle },
+  { href: '/staff', label: 'Tổng quan', icon: LayoutGrid },
+  { href: '/staff/request', label: 'Nhiệm vụ', icon: ClipboardList },
+  { href: '/staff/flags', label: 'Báo cáo', icon: Flag },
+  { href: '/staff/feed-post', label: 'Bài đăng', icon: MessageSquare },
+  { href: '/staff/schedule', label: 'Lịch', icon: Calendar },
+  { href: '/staff/chat', label: 'Trò chuyện', icon: MessageCircle },
 ];
 
 function Sidebar() {

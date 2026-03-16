@@ -262,7 +262,7 @@ function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
 
         Promise.all([
             expPromise,
-            userService.getUserById(campaign.fundOwnerId).then(res => res.success && res.data ? res.data.fullName : `Owner #${campaign.fundOwnerId}`)
+            userService.getUserById(campaign.fundOwnerId).then(res => res.success && res.data ? res.data.fullName : `Chủ quỹ #${campaign.fundOwnerId}`)
         ]).then(([expData, name]) => {
             setExpenditures(expData);
             setOwnerName(name);
@@ -385,7 +385,7 @@ export default function ExpenditureTab() {
                                 needsAttention: hasPendingReview || hasEvidenceReview
                             };
                         } catch (err) {
-                            console.error(`Error fetching exps for campaign ${c.id}`, err);
+                            console.error(`Lỗi khi tải chi tiêu cho chiến dịch ${c.id}`, err);
                             return null;
                         }
                     })
@@ -435,7 +435,7 @@ export default function ExpenditureTab() {
 
     if (loading) return (
         <div className="flex h-64 items-center justify-center text-[10px] font-black text-gray-300 tracking-[0.2em] uppercase">
-            LOADING...
+            ĐANG TẢI...
         </div>
     );
 

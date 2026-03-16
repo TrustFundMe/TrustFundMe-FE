@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import ExpenditureTab from '@/components/staff/request/ExpenditureTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
+import KYCTab from '@/components/staff/request/KYCTab';
+import HistoryTab from '@/components/staff/request/HistoryTab';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -21,12 +23,15 @@ export default function StaffRequestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE'>(
-    targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : 'CAMPAIGN'
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'KYC' | 'HISTORY'>(
+    targetTab === 'KYC' ? 'KYC' : targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : 'CAMPAIGN'
   );
   const [isLoading, setIsLoading] = useState(false);
 
   const { user: currentUser } = useAuth();
+  const [selectedUserIdForKyc, setSelectedUserIdForKyc] = useState<number | null>(
+    searchParams.get('userId') ? Number(searchParams.get('userId')) : null
+  );
 
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
@@ -77,7 +82,7 @@ export default function StaffRequestPage() {
             type: 'APPROVE_CAMPAIGN',
             campaignId: c.id,
             campaignTitle: c.title,
-            requesterName: owner?.fullName || `Owner #${c.fundOwnerId}`,
+            requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
             description: c.description || '',
             category: c.category || '',
             rejectionReason: c.rejectionReason || undefined,
@@ -108,6 +113,15 @@ export default function StaffRequestPage() {
     }
   }, [currentUser]);
 
+  // Handle tab from URL
+  useEffect(() => {
+    if (targetTab === 'KYC') {
+      setActiveTab('KYC');
+      const uid = searchParams.get('userId');
+      if (uid) setSelectedUserIdForKyc(Number(uid));
+    }
+  }, [targetTab, searchParams]);
+
   // Memoized Data
   const filteredCampaigns = useMemo(() => {
     if (campaignStatus === 'ALL') return campaignRows;
@@ -119,15 +133,11 @@ export default function StaffRequestPage() {
     [campaignRows, selectedCampaignId]
   );
 
-  // Navigate to KYC verification page for a user
+  // Navigate to KYC verification tab
   const handleNavigateToKYC = (userId: number) => {
-    router.push(`/staff/verification?userId=${userId}`);
-  };
-
-  // Navigate to KYC page to input/verify KYC for the user
-  const handleVerifyKYC = (fundOwnerId: number) => {
-    if (!fundOwnerId) return;
-    router.push(`/staff/verification?userId=${fundOwnerId}`);
+    setSelectedUserIdForKyc(userId);
+    setActiveTab('KYC');
+    router.replace(`/staff/request?tab=KYC&userId=${userId}`);
   };
 
   // Handlers
@@ -167,57 +177,41 @@ export default function StaffRequestPage() {
   };
 
 
-
   return (
     <div className="flex flex-col h-full bg-[#f1f5f9]">
       {/* Folder Tabs Headers */}
       <div className="flex items-end px-6 gap-2 h-14">
-        <button
-          onClick={() => setActiveTab('CAMPAIGN')}
-          className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeTab === 'CAMPAIGN'
-            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
-            : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <Megaphone className={`h-4 w-4 ${activeTab === 'CAMPAIGN' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-            <span className="whitespace-nowrap">Campaign Requests</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'CAMPAIGN' ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'
-              }`}>
-              {campaignRows.length}
-            </span>
-          </div>
-          {activeTab === 'CAMPAIGN' && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('EXPENDITURE')}
-          className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeTab === 'EXPENDITURE'
-            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
-            : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <DollarSign className={`h-4 w-4 ${activeTab === 'EXPENDITURE' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-            <span className="whitespace-nowrap">Expenditure Requests</span>
-
-          </div>
-          {activeTab === 'EXPENDITURE' && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('EVIDENCE')}
-          className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeTab === 'EVIDENCE'
-            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
-            : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <Shield className={`h-4 w-4 ${activeTab === 'EVIDENCE' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-            <span className="whitespace-nowrap">Evidence Verification</span>
-          </div>
-          {activeTab === 'EVIDENCE' && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
-        </button>
+        {[
+          { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
+          { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
+          { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
+          { id: 'KYC', label: 'Xác thực người dùng (KYC)', icon: ShieldCheck },
+          { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
+        ].map((tab) => {
+          const Icon = (tab as any).icon || Shield;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
+                ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
+                }`}
+            >
+              <div className="flex items-center gap-2">
+                <Icon className={`h-4 w-4 ${isActive ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                <span className="whitespace-nowrap">{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
+                    {tab.count}
+                  </span>
+                )}
+              </div>
+              {isActive && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
+            </button>
+          );
+        })}
       </div>
 
       {/* Folder Body Container */}
@@ -225,38 +219,21 @@ export default function StaffRequestPage() {
         <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6">
           {activeTab === 'CAMPAIGN' ? (
             <>
-              {/* Stats Row */}
-              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-                {[
-                  { label: 'Tổng cộng', value: campaignRows.length, color: 'from-[#446b5f] to-[#6a8d83]' },
-                  { label: 'Chờ duyệt', value: campaignRows.filter(r => r.status === 'PENDING').length, color: 'from-[#db5945] to-[#f19082]' },
-                  { label: 'Đã duyệt', value: campaignRows.filter(r => r.status === 'APPROVED').length, color: 'from-[#446b5f] to-[#5a8075]' },
-                  { label: 'Từ chối', value: campaignRows.filter(r => r.status === 'REJECTED').length, color: 'from-gray-500 to-gray-400' },
-                ].map(s => (
-                  <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
-                    <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
-                    <p className="text-2xl font-black relative z-10">{s.value}</p>
-                    <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill="white" fillOpacity="0.1" />
-                      <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill="white" fillOpacity="0.05" />
-                    </svg>
-                  </div>
-                ))}
-              </div>
+
 
               {/* Campaign Filter Bar */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                 {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'DISABLED'] as const).map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => setCampaignStatus(s)}
-                    className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition ${campaignStatus === s
-                      ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945]'
-                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                    className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${campaignStatus === s
+                      ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >
-                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Từ chối' : 'Đã vô hiệu'}
+                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Đang chờ' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Đã loại' : 'Vô hiệu hóa'}
                   </button>
                 ))}
               </div>
@@ -264,8 +241,8 @@ export default function StaffRequestPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 overflow-hidden">
                 <div className="lg:col-span-8 overflow-hidden flex flex-col gap-3">
                   <div className="flex items-center justify-between flex-shrink-0">
-                    <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Campaign Requests</h2>
-                    <span className="text-xs font-medium text-gray-400">{filteredCampaigns.length} items</span>
+                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest">Danh sách nhiệm vụ duyệt chiến dịch</h2>
+                    <span className="text-[10px] font-black text-gray-400 uppercase">{filteredCampaigns.length} kết quả</span>
                   </div>
                   <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm">
                     <RequestTable
@@ -275,31 +252,31 @@ export default function StaffRequestPage() {
                       columns={[
                         {
                           key: 'campaign',
-                          title: 'Campaign',
+                          title: 'Chiến dịch',
                           render: (r: CampaignRequest) => (
                             <div>
-                              <div className="font-semibold text-gray-900 line-clamp-1">{r.campaignTitle}</div>
-                              <div className="text-[10px] text-gray-500">ID: {r.campaignId}</div>
+                              <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.campaignTitle}</div>
+                              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã: #{r.campaignId}</div>
                             </div>
                           ),
                         },
                         {
                           key: 'category',
-                          title: 'Category',
-                          render: (r: CampaignRequest) => <span className="text-gray-700">{r.category || '-'}</span>,
+                          title: 'Lĩnh vực',
+                          render: (r: CampaignRequest) => <span className="text-[10px] font-black text-gray-700 uppercase">{r.category || '-'}</span>,
                         },
                         {
                           key: 'requester',
-                          title: 'Requester',
-                          render: (r: CampaignRequest) => <span className="text-gray-700">{r.requesterName}</span>,
+                          title: 'Người tạo',
+                          render: (r: CampaignRequest) => <span className="text-xs font-bold text-gray-700">{r.requesterName}</span>,
                         },
                         {
                           key: 'kyc',
-                          title: 'KYC',
+                          title: 'Xác thực KYC',
                           render: (r: CampaignRequest) => (
                             r.kycVerified ? (
-                              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                                Verified
+                              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-[10px] font-black text-green-700 uppercase tracking-wider ring-1 ring-inset ring-green-600/20 shadow-sm border border-white">
+                                Đã xác thực
                               </span>
                             ) : (
                               <button
@@ -307,26 +284,26 @@ export default function StaffRequestPage() {
                                   e.stopPropagation();
                                   handleNavigateToKYC(r.fundOwnerId);
                                 }}
-                                className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 hover:bg-red-100"
+                                className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-[10px] font-black text-red-700 uppercase tracking-wider ring-1 ring-inset ring-red-600/10 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-white"
                               >
-                                Missing – verify
+                                Thư xác minh
                               </button>
                             )
                           ),
                         },
                         {
                           key: 'status',
-                          title: 'Status',
+                          title: 'Trạng thái',
                           render: (r: CampaignRequest) => (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${r.status === 'APPROVED'
-                              ? 'bg-green-100 text-green-800'
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border border-white ${r.status === 'APPROVED'
+                              ? 'bg-green-50 text-green-600'
                               : r.status === 'REJECTED'
-                                ? 'bg-red-100 text-red-800'
+                                ? 'bg-red-50 text-red-600'
                                 : r.status === 'DISABLED'
-                                  ? 'bg-gray-100 text-gray-800 border border-gray-200'
-                                  : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-gray-50 text-gray-400'
+                                  : 'bg-amber-50 text-amber-600'
                               }`}>
-                              {r.status === 'DISABLED' ? 'ĐÃ VÔ HIỆU' : r.status}
+                              {r.status === 'DISABLED' ? 'Đã vô hiệu' : r.status === 'PENDING' ? 'Đang chờ' : r.status === 'APPROVED' ? 'Đã duyệt' : 'Đã loại'}
                             </span>
                           ),
                         },
@@ -335,16 +312,16 @@ export default function StaffRequestPage() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-4 overflow-auto pb-4">
+                <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar">
                   <RequestDetailPanel
                     request={selectedCampaign}
-                    title={selectedCampaign ? `Campaign · #${selectedCampaign.campaignId}` : 'Request details'}
+                    title={selectedCampaign ? `Chiến dịch · #${selectedCampaign.campaignId}` : 'Chi tiết nhiệm vụ'}
                     fields={[
-                      { label: 'Created at', value: selectedCampaign?.createdAt },
-                      { label: 'Campaign', value: selectedCampaign?.campaignTitle },
-                      { label: 'Owner', value: selectedCampaign?.requesterName },
-                      { label: 'Category', value: selectedCampaign?.category || '-' },
-                      { label: 'Description', value: selectedCampaign?.description || '-' },
+                      { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : '-' },
+                      { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },
+                      { label: 'Chủ quản', value: selectedCampaign?.requesterName },
+                      { label: 'Lĩnh vực', value: selectedCampaign?.category || '-' },
+                      { label: 'Mô tả', value: selectedCampaign?.description || '-' },
                     ]}
                     approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
                     rejectDisabled={false}
@@ -353,23 +330,23 @@ export default function StaffRequestPage() {
                       : ""
                     }
                     rejectDisabledReason=""
-                    actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Kiểm tra KYC" : ""}
+                    actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
                     onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
                     onApprove={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, true)}
                     onReject={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, false)}
                     onDisable={(reason) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
-                    onVerifyKYC={selectedCampaign && !selectedCampaign.kycVerified
-                      ? () => handleVerifyKYC(selectedCampaign.fundOwnerId)
-                      : undefined
-                    }
                   />
                 </div>
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
             <ExpenditureTab />
-          ) : (
+          ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
+          ) : activeTab === 'KYC' ? (
+            <KYCTab initialUserId={selectedUserIdForKyc} />
+          ) : (
+            <HistoryTab />
           )}
         </div>
       </div>

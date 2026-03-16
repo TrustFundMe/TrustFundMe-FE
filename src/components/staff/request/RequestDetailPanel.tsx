@@ -23,6 +23,8 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   uploading,
   onVerifyKYC,
   onDisable,
+  readOnly,
+  hideActions,
 }: {
   request: T | null;
   title: string;
@@ -40,6 +42,8 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   onDisburse?: () => void;
   uploading?: boolean;
   onVerifyKYC?: () => void;
+  readOnly?: boolean;
+  hideActions?: boolean;
 }) {
   const [note, setNote] = useState('');
 
@@ -49,7 +53,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       {!request ? (
-        <div className="text-sm text-gray-500">Select a request to view details.</div>
+        <div className="text-sm text-gray-500 italic">Chọn một yêu cầu để xem chi tiết.</div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-3">
@@ -69,7 +73,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           </div>
 
           {/* Disable Campaign Button - Show for ACTIVE/APPROVED campaigns */}
-          {onDisable && isApproved && (request as any).type === 'APPROVE_CAMPAIGN' && (
+          {onDisable && isApproved && (request as any).type === 'APPROVE_CAMPAIGN' && !hideActions && (
             <div className="border-t border-red-50 pt-4 mt-2 space-y-3">
                <div className="p-3 bg-red-50 rounded-xl border border-red-100 italic text-[11px] text-red-600">
                   ⚠️ Lưu ý: Vô hiệu hóa chiến dịch sẽ thông báo cho chủ sở hữu và ngừng tất cả các hoạt động quyên góp.
@@ -99,14 +103,14 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           )}
 
           {/* Verify KYC Button - Show when KYC is not verified */}
-          {onVerifyKYC && !(request as any).kycVerified && (
+          {onVerifyKYC && !(request as any).kycVerified && !hideActions && (
             <div className="border-t border-gray-100 pt-4 mt-2">
               <button
                 onClick={onVerifyKYC}
                 className="w-full rounded-xl bg-green-600 py-2.5 text-xs font-bold text-white hover:bg-green-700 flex items-center justify-center gap-2"
               >
                 <ShieldCheck className="h-4 w-4" />
-                Verify KYC Now
+                Xác thực KYC ngay
               </button>
             </div>
           )}
@@ -151,7 +155,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    {request.status !== 'DISBURSED' && (
+                    {request.status !== 'DISBURSED' && !readOnly && (
                       <label className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-xs font-bold cursor-pointer transition-colors w-fit">
                         <Upload className="h-4 w-4" />
                         <span>Thay đổi minh chứng</span>
@@ -167,7 +171,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                       </label>
                     )}
 
-                    {(request.status === 'APPROVED' || request.status === 'WITHDRAWAL_REQUESTED') && onDisburse && (
+                    {(request.status === 'APPROVED' || request.status === 'WITHDRAWAL_REQUESTED') && onDisburse && !hideActions && (
                       <button
                         onClick={onDisburse}
                         className="w-full py-3 bg-[#F84D43] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#D63D35] transition-all shadow-lg shadow-red-200/50 flex items-center justify-center gap-2"
@@ -217,7 +221,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
           )}
 
           {/* Action Buttons for Pending Requests */}
-          {isPending && (
+          {isPending && !hideActions && (
             <div className="border-t border-gray-100 pt-4 space-y-3">
               {actionLabel && onActionClick && (
                 <button
@@ -237,14 +241,14 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                           onReject(note);
                           setNote('');
                         } else {
-                          toast.error('Vui lòng nhập lý do từ chối vào ô Review Note bên dưới.');
+                          toast.error('Vui lòng nhập lý do từ chối vào ô Ghi chú bên dưới.');
                         }
                       }}
                       disabled={rejectDisabled}
                       title={rejectDisabledReason}
                       className="w-full rounded-xl bg-red-50 py-2.5 text-xs font-bold text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Reject
+                      Từ chối
                     </button>
                   </div>
                 )}
@@ -255,7 +259,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                     title={approveDisabledReason}
                     className="flex-[2] rounded-xl bg-gray-900 py-2.5 text-xs font-bold text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
-                    Approve
+                    Duyệt
                   </button>
                 )}
               </div>
@@ -267,11 +271,11 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                   Let's add a small textarea for "Review Note" to be safe.
               */}
               <div className="pt-2">
-                <label className="text-[10px] font-semibold text-gray-500">Review Note <span className="text-red-500">(Bắt buộc khi từ chối)</span></label>
+                <label className="text-[10px] font-semibold text-gray-500">Ghi chú Review <span className="text-red-500">(Bắt buộc khi từ chối)</span></label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Enter reason for rejection..."
+                  placeholder="Nhập lý do từ chối..."
                   className="w-full mt-1 rounded-lg border-gray-200 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                   rows={2}
                 />

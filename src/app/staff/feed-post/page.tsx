@@ -20,9 +20,9 @@ function StatusPill({ status }: { status: string }) {
   const base = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider';
   switch (status) {
     case 'ACTIVE':
-      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Active</span>;
+      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Hoạt động</span>;
     case 'DRAFT':
-      return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Draft</span>;
+      return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Bản nháp</span>;
     default:
       return <span className={`${base} bg-zinc-100 text-zinc-500`}>{status}</span>;
   }
@@ -31,8 +31,8 @@ function StatusPill({ status }: { status: string }) {
 function TypePill({ type }: { type: string }) {
   const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider';
   return type === 'CAMPAIGN'
-    ? <span className={`${base} bg-blue-50 text-blue-700`}>Campaign</span>
-    : <span className={`${base} bg-zinc-100 text-zinc-500`}>General</span>;
+    ? <span className={`${base} bg-blue-50 text-blue-700`}>Chiến dịch</span>
+    : <span className={`${base} bg-zinc-100 text-zinc-500`}>Chung</span>;
 }
 
 function formatDate(str: string) {

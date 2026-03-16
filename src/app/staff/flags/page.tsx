@@ -165,7 +165,7 @@ export default function FlagsManagementPage() {
         <button className="relative px-6 py-2.5 text-sm font-bold transition-all duration-200 bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11">
           <div className="flex items-center gap-2">
             <Flag className="h-4 w-4 text-[#db5945]" />
-            <span className="whitespace-nowrap">Flag Management</span>
+            <span className="whitespace-nowrap">Quản lý Báo cáo</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#db5945]/10 text-[#db5945]">
               {stats.pending}
             </span>

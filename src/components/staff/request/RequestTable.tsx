@@ -34,7 +34,7 @@ export default function RequestTable<T extends StaffRequestBase>({
                 {c.title}
               </th>
             ))}
-            <th className="px-4 py-3 text-left font-semibold">Status</th>
+            <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
@@ -61,7 +61,7 @@ export default function RequestTable<T extends StaffRequestBase>({
           ) : (
             <tr>
               <td className="px-4 py-10 text-center text-sm text-gray-500" colSpan={columns.length + 1}>
-                No requests found.
+                Không tìm thấy yêu cầu nào.
               </td>
             </tr>
           )}

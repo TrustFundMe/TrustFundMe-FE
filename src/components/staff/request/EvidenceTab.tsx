@@ -15,6 +15,14 @@ import type { EvidenceRequest } from './RequestTypes';
 const FMT = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const fmt = (n: number) => FMT.format(n);
 
+const EVIDENCE_STATUS_MAP: Record<string, string> = {
+    PENDING: 'CHỜ BẰNG CHỨNG',
+    SUBMITTED: 'CHỜ DUYỆT',
+    VERIFIED: 'ĐÃ XÁC NHẬN',
+    APPROVED: 'ĐÃ DUYỆT',
+    REJECTED: 'TỪ CHỐI'
+};
+
 export default function EvidenceTab() {
     const [requests, setRequests] = useState<EvidenceRequest[]>([]);
     const [filtered, setFiltered] = useState<EvidenceRequest[]>([]);
@@ -123,7 +131,7 @@ export default function EvidenceTab() {
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className="text-[10px] font-black text-[#db5945]">{fmt(r.totalAmount)}</span>
                                         <span className="text-[10px] text-gray-300">•</span>
-                                        <span className="text-[9px] font-bold text-blue-500 uppercase">{r.evidenceStatus}</span>
+                                        <span className="text-[9px] font-bold text-blue-500 uppercase">{EVIDENCE_STATUS_MAP[r.evidenceStatus] || r.evidenceStatus}</span>
                                     </div>
                                 </div>
                             </div>

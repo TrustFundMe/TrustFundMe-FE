@@ -10,9 +10,10 @@ interface KYCInputFormProps {
     userName?: string;
     onSuccess: () => void;
     onCancel?: () => void;
+    readOnly?: boolean;
 }
 
-export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: KYCInputFormProps) {
+export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly }: KYCInputFormProps) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -60,7 +61,6 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                     selfieImage: data.selfieImage || ''
                 });
                 setIsUpdate(true);
-                toast.success('Found existing KYC record. Updating mode enabled.');
             }
         } catch (error: any) {
             // 404 is expected if no KYC exists, so we don't log it
@@ -68,7 +68,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                 console.error('Error fetching KYC:', error);
                 // Only show error toast for actual server errors, not for "not found"
                 if (error.response?.status === 500) {
-                    toast.error('Server error while checking KYC. Please try again later.');
+                    toast.error('Lỗi máy chủ khi kiểm tra KYC. Vui lòng thử lại sau.');
                 }
             }
             setIsUpdate(false);
@@ -278,38 +278,39 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
     };
 
     if (fetching) {
-        return <div className="p-4 text-center">Checking for existing KYC record...</div>;
+        return <div className="p-4 text-center">Đang kiểm tra hồ sơ KYC hiện có...</div>;
     }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm font-medium text-gray-700">User</label>
+                <label className="block text-sm font-medium text-gray-700">Người dùng</label>
                 <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
                     {userName ? (
                         <span className="font-medium text-gray-900">{userName}</span>
                     ) : (
-                        <span className="text-gray-500">User ID: {userId}</span>
+                        <span className="text-gray-500">Mã người dùng (ID): {userId}</span>
                     )}
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">ID Type</label>
+                    <label className="block text-sm font-medium text-gray-700">Loại định danh</label>
                     <select
                         name="idType"
                         value={formData.idType}
                         onChange={handleChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                        disabled={readOnly}
                     >
                         <option value="CCCD">CCCD</option>
-                        <option value="PASSPORT">Passport</option>
-                        <option value="DRIVER_LICENSE">Driver License</option>
+                        <option value="PASSPORT">Hộ chiếu (Passport)</option>
+                        <option value="DRIVER_LICENSE">Bằng lái xe</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">ID Number</label>
+                    <label className="block text-sm font-medium text-gray-700">Số định danh/CCCD</label>
                     <input
                         type="text"
                         name="idNumber"
@@ -318,8 +319,9 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                         onChange={handleChange}
                         className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
                             }`}
-                        placeholder={formData.idType === 'CCCD' ? '12 digits' : formData.idType === 'PASSPORT' ? '8-9 characters' : '12 digits'}
+                        placeholder={formData.idType === 'CCCD' ? '12 chữ số' : formData.idType === 'PASSPORT' ? '8-9 ký tự' : '12 chữ số'}
                         maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
+                        disabled={readOnly}
                     />
                     {errors.idNumber && (
                         <p className="mt-1 text-xs text-red-600">{errors.idNumber}</p>
@@ -329,7 +331,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Issue Date</label>
+                    <label className="block text-sm font-medium text-gray-700">Ngày cấp</label>
                     <DatePicker
                         selected={formData.issueDate}
                         onChange={(date: Date | null) => handleDateChange('issueDate', date)}
@@ -342,13 +344,14 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                         dropdownMode="select"
                         maxDate={new Date()}
                         required
+                        disabled={readOnly}
                     />
                     {errors.issueDate && (
                         <p className="mt-1 text-xs text-red-600">{errors.issueDate}</p>
                     )}
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
+                    <label className="block text-sm font-medium text-gray-700">Ngày hết hạn</label>
                     <DatePicker
                         selected={formData.expiryDate}
                         onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
@@ -361,6 +364,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                         dropdownMode="select"
                         minDate={formData.issueDate || undefined}
                         required
+                        disabled={readOnly}
                     />
                     {errors.expiryDate && (
                         <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p>
@@ -369,7 +373,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">Issue Place</label>
+                <label className="block text-sm font-medium text-gray-700">Nơi cấp</label>
                 <input
                     type="text"
                     name="issuePlace"
@@ -378,7 +382,8 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                     onChange={handleChange}
                     className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
                         }`}
-                    placeholder="e.g., Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
+                    placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
+                    disabled={readOnly}
                 />
                 {errors.issuePlace && (
                     <p className="mt-1 text-xs text-red-600">{errors.issuePlace}</p>
@@ -386,11 +391,11 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
             </div>
 
             <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">Documents</label>
+                <label className="block text-sm font-medium text-gray-700">Tài liệu đính kèm</label>
 
                 {/* Front ID */}
                 <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Front ID Image</p>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh mặt trước</p>
                     <div className="flex items-center gap-4">
                         <input
                             type="file"
@@ -402,7 +407,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                                 file:text-sm file:font-semibold
                                 file:bg-indigo-50 file:text-indigo-700
                                 hover:file:bg-indigo-100"
-                            disabled={uploading}
+                            disabled={uploading || readOnly}
                         />
                         {formData.idImageFront && (
                             <img src={formData.idImageFront} alt="Front ID" className="h-12 w-20 object-cover rounded border" />
@@ -412,7 +417,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
 
                 {/* Back ID */}
                 <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Back ID Image</p>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh mặt sau</p>
                     <div className="flex items-center gap-4">
                         <input
                             type="file"
@@ -424,7 +429,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                                 file:text-sm file:font-semibold
                                 file:bg-indigo-50 file:text-indigo-700
                                 hover:file:bg-indigo-100"
-                            disabled={uploading}
+                            disabled={uploading || readOnly}
                         />
                         {formData.idImageBack && (
                             <img src={formData.idImageBack} alt="Back ID" className="h-12 w-20 object-cover rounded border" />
@@ -434,7 +439,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
 
                 {/* Selfie */}
                 <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Selfie Image</p>
+                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh chân dung (Selfie)</p>
                     <div className="flex items-center gap-4">
                         <input
                             type="file"
@@ -446,14 +451,14 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                                 file:text-sm file:font-semibold
                                 file:bg-indigo-50 file:text-indigo-700
                                 hover:file:bg-indigo-100"
-                            disabled={uploading}
+                            disabled={uploading || readOnly}
                         />
                         {formData.selfieImage && (
                             <img src={formData.selfieImage} alt="Selfie" className="h-12 w-12 object-cover rounded-full border" />
                         )}
                     </div>
                 </div>
-                {uploading && <p className="text-xs text-blue-600 animate-pulse">Uploading...</p>}
+                {uploading && <p className="text-xs text-blue-600 animate-pulse">Đang tải lên...</p>}
                 {errors.images && (
                     <p className="text-xs text-red-600 font-semibold">{errors.images}</p>
                 )}
@@ -467,16 +472,18 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel }: 
                         className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         disabled={uploading || loading || fetching}
                     >
-                        Cancel
+                        Đóng
                     </button>
                 )}
-                <button
-                    type="submit"
-                    disabled={loading || uploading || fetching || Object.values(errors).some(error => error !== undefined)}
-                    className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? 'Submitting...' : uploading ? 'Uploading...' : isUpdate ? 'Update KYC' : 'Submit KYC'}
-                </button>
+                {!readOnly && (
+                    <button
+                        type="submit"
+                        disabled={loading || uploading || fetching || Object.values(errors).some(error => error !== undefined)}
+                        className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? 'Đang gửi...' : uploading ? 'Đang tải lên...' : isUpdate ? 'Cập nhật KYC' : 'Gửi KYC'}
+                    </button>
+                )}
             </div>
         </form>
     );
