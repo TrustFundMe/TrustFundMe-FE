@@ -319,7 +319,10 @@ export default function ForumPage() {
       campsData.forEach(c => {
         titles[String(c.id)]  = c.title ?? "";
         if (c.status) statuses[String(c.id)] = c.status;
-        list.push({ id: c.id, title: c.title ?? "" });
+        // Only add user's own campaigns to the create-post dropdown
+        if (user?.id && Number(c.fundOwnerId) === Number(user.id)) {
+          list.push({ id: c.id, title: c.title ?? "" });
+        }
       });
       setCampaignTitles(titles);
       setCampaignStatuses(statuses);
@@ -435,6 +438,21 @@ export default function ForumPage() {
   }, []);
 
   const handleToggleLike = useCallback(async (postId: string) => {
+    let snapshot: { liked: boolean; likeCount: number } | null = null;
+    // Optimistic update
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === postId) {
+          snapshot = { liked: p.liked ?? false, likeCount: p.likeCount ?? 0 };
+          return {
+            ...p,
+            liked: !p.liked,
+            likeCount: Math.max(0, (p.likeCount ?? 0) + (p.liked ? -1 : 1)),
+          };
+        }
+        return p;
+      })
+    );
     try {
       const res = await likeService.toggleLike(postId);
       setPosts((prev) =>
@@ -443,7 +461,13 @@ export default function ForumPage() {
         )
       );
     } catch {
-      // ignore; keep current state
+      // Rollback on error
+      if (snapshot) {
+        const { liked, likeCount } = snapshot as { liked: boolean; likeCount: number };
+        setPosts((prev) =>
+          prev.map((p) => (p.id === postId ? { ...p, liked, likeCount } : p))
+        );
+      }
     }
   }, []);
 
@@ -472,7 +496,7 @@ export default function ForumPage() {
   }
 
   const q = search.trim().toLowerCase();
-  const visible = q
+  const filtered = q
     ? base.filter(p => {
         const t = (p.title ?? "").toLowerCase();
         const c = p.content.replace(/<[^>]*>/g, "").toLowerCase();
@@ -480,6 +504,17 @@ export default function ForumPage() {
         return t.includes(q) || c.includes(q) || a.includes(q);
       })
     : base;
+
+  // Prioritize unread posts first (using initialSeenIds snapshot so positions don't jump)
+  const visible = [...filtered].sort((a, b) => {
+    if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+    const aUnseen = !initialSeenIds.has(String(a.id));
+    const bUnseen = !initialSeenIds.has(String(b.id));
+    if (aUnseen !== bUnseen) return aUnseen ? -1 : 1;
+    const ta = new Date(a.updatedAt ?? a.createdAt).getTime();
+    const tb = new Date(b.updatedAt ?? b.createdAt).getTime();
+    return tb - ta;
+  });
 
   return (
     <DanboxLayout footer={0}>
