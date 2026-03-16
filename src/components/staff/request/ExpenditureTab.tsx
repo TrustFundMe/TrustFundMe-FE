@@ -341,13 +341,21 @@ export default function ExpenditureTab() {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
     const searchParams = useSearchParams();
     const targetCampaignId = searchParams.get('campaignId');
 
     useEffect(() => {
         const loadAllData = async () => {
+            if (!user) return;
             setLoading(true);
             try {
+                // 1. Fetch tasks assigned to this staff
+                const tasks = await campaignService.getTasksByStaff(user.id);
+                const expenditureTaskIds = new Set(
+                    tasks.filter(t => t.type === 'EXPENDITURE' && t.status !== 'COMPLETED').map(t => t.targetId)
+                );
+
                 // Fetch all campaigns and filter for APPROVED
                 const allCampaigns = await campaignService.getAll();
                 const relevantCampaigns = allCampaigns.filter(c =>
@@ -359,27 +367,35 @@ export default function ExpenditureTab() {
                     relevantCampaigns.map(async (c) => {
                         try {
                             const exps = await expenditureService.getByCampaignId(c.id);
+                            // Only keep expenditures that are assigned to this staff in tasks
+                            const assignedExps = exps.filter(e => expenditureTaskIds.has(e.id));
+
+                            if (assignedExps.length === 0) return null;
+
                             // hasPendingReview: Có kế hoạch chi tiêu mới cần duyệt
                             // hasEvidenceReview: Có bằng chứng mới cần duyệt
-                            const hasPendingReview = exps.some(e => e.status === 'PENDING_REVIEW' || e.status === 'PENDING');
-                            const hasEvidenceReview = exps.some(e => e.evidenceStatus === 'SUBMITTED');
+                            const hasPendingReview = assignedExps.some(e => e.status === 'PENDING_REVIEW' || e.status === 'PENDING');
+                            const hasEvidenceReview = assignedExps.some(e => e.evidenceStatus === 'SUBMITTED');
 
                             return {
                                 ...c,
-                                expenditures: exps,
+                                expenditures: assignedExps,
                                 hasPendingReview,
                                 hasEvidenceReview,
                                 needsAttention: hasPendingReview || hasEvidenceReview
                             };
                         } catch (err) {
                             console.error(`Error fetching exps for campaign ${c.id}`, err);
-                            return { ...c, expenditures: [], needsAttention: false };
+                            return null;
                         }
                     })
                 );
 
+                // Filter out nulls
+                const validCampaigns = (enrichedCampaigns.filter(Boolean) as any[]);
+
                 // Sort: Needs attention first, then by createdAt desc
-                const sorted = [...enrichedCampaigns].sort((a: any, b: any) => {
+                const sorted = [...validCampaigns].sort((a: any, b: any) => {
                     if (a.needsAttention && !b.needsAttention) return -1;
                     if (!a.needsAttention && b.needsAttention) return 1;
                     return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
@@ -394,7 +410,7 @@ export default function ExpenditureTab() {
                     if (found) setSelected(found);
                     else if (sorted.length > 0) setSelected(sorted[0]);
                 } else if (sorted.length > 0) {
-                   setSelected(sorted[0]);
+                    setSelected(sorted[0]);
                 }
             } catch (err) {
                 toast.error('Lỗi tải danh sách chiến dịch');
@@ -403,8 +419,10 @@ export default function ExpenditureTab() {
             }
         };
 
-        loadAllData();
-    }, [targetCampaignId]);
+        if (user) {
+            loadAllData();
+        }
+    }, [targetCampaignId, user]);
 
     useEffect(() => {
         let list = campaigns;

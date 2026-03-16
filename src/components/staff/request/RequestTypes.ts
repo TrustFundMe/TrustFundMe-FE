@@ -86,6 +86,19 @@ export type UnverifiedOwnerRequest = StaffRequestBase & {
   bankVerified: boolean;
 };
 
-export type TabType = 'CAMPAIGN' | 'EXPENDITURE' | 'USER_VERIFICATION';
+export type EvidenceRequest = StaffRequestBase & {
+  type: 'EVIDENCE';
+  expenditureId: number;
+  campaignId: number;
+  campaignTitle: string;
+  requesterName: string;
+  plan: string;
+  totalAmount: number;
+  evidenceStatus: string;
+  evidencePhotos: string[];
+  phoneNumber?: string; // Để staff gọi điện xác nhận
+};
+
+export type TabType = 'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'USER_VERIFICATION';
 
 

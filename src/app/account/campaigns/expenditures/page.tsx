@@ -139,6 +139,8 @@ export default function CampaignExpendituresPage() {
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã duyệt</span>;
             case 'DISBURSED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
+            case 'REJECTED':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100"><X className="w-3 h-3 mr-1" /> Bị từ chối</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-100">{status}</span>;
         }
@@ -622,9 +624,15 @@ export default function CampaignExpendituresPage() {
                                                                             Rút tiền
                                                                         </button>
                                                                     ) : campaign.type === 'AUTHORIZED' ? (
-                                                                        <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isDisabled ? 'text-gray-400' : 'text-amber-600'}`}>
-                                                                            <AlertCircle className="w-3.5 h-3.5" /> Chờ báo cáo
-                                                                        </span>
+                                                                        exp.status === 'REJECTED' ? (
+                                                                            <span className="text-[10px] font-black uppercase text-rose-600 flex items-center gap-1">
+                                                                                <X className="w-3.5 h-3.5" /> Kết thúc
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${isDisabled ? 'text-gray-400' : 'text-amber-600'}`}>
+                                                                                <AlertCircle className="w-3.5 h-3.5" /> Chờ báo cáo
+                                                                            </span>
+                                                                        )
                                                                     ) : null}
                                                                 </>
                                                             )}

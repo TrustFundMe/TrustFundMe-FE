@@ -137,5 +137,10 @@ export const mediaService = {
         if (!res.ok) throw new Error(`getMediaByPostId failed: ${res.status}`);
         const data = await res.json();
         return Array.isArray(data) ? data : (data.content ?? []);
+    },
+
+    async getMediaByExpenditureId(expenditureId: number): Promise<MediaUploadResponse[]> {
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/expenditures/${expenditureId}`);
+        return res.data;
     }
 };

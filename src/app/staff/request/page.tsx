@@ -7,8 +7,10 @@ import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import ExpenditureTab from '@/components/staff/request/ExpenditureTab';
+import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
+import { useAuth } from '@/contexts/AuthContextProxy';
 import type {
   CampaignRequest,
   RequestStatus,
@@ -19,10 +21,12 @@ export default function StaffRequestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE'>(
-    targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : 'CAMPAIGN'
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE'>(
+    targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : 'CAMPAIGN'
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  const { user: currentUser } = useAuth();
 
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
@@ -33,7 +37,14 @@ export default function StaffRequestPage() {
 
   // Fetch functions moved to component scope
   const fetchCampaigns = async () => {
+    if (!currentUser) return;
     try {
+      // 1. Fetch tasks assigned to this staff
+      const tasks = await campaignService.getTasksByStaff(currentUser.id);
+      const campaignTaskIds = new Set(
+        tasks.filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED').map(t => t.targetId)
+      );
+
       const allCampaigns = await campaignService.getAll();
 
       // Fetch users for campaign owners
@@ -46,33 +57,35 @@ export default function StaffRequestPage() {
       }
       setUsers(userMap);
 
-      const mappedCampaigns: CampaignRequest[] = allCampaigns.map(c => {
-        // Map Backend Status to Frontend Request Status
-        let status: RequestStatus = 'PENDING';
-        if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
-        else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
-        else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
-        else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
-        else status = c.status as RequestStatus;
+      const mappedCampaigns: CampaignRequest[] = allCampaigns
+        .filter(c => campaignTaskIds.has(c.id))
+        .map(c => {
+          // Map Backend Status to Frontend Request Status
+          let status: RequestStatus = 'PENDING';
+          if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
+          else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
+          else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
+          else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
+          else status = c.status as RequestStatus;
 
-        const owner = userMap.get(c.fundOwnerId);
+          const owner = userMap.get(c.fundOwnerId);
 
-        return {
-          id: `CAMP_${c.id}`,
-          createdAt: c.createdAt || new Date().toISOString(),
-          status: status,
-          type: 'APPROVE_CAMPAIGN',
-          campaignId: c.id,
-          campaignTitle: c.title,
-          requesterName: owner?.fullName || `Owner #${c.fundOwnerId}`,
-          description: c.description || '',
-          category: c.category || '',
-          rejectionReason: c.rejectionReason || undefined,
-          kycVerified: c.kycVerified,
-          bankVerified: c.bankVerified,
-          fundOwnerId: c.fundOwnerId,
-        };
-      });
+          return {
+            id: `CAMP_${c.id}`,
+            createdAt: c.createdAt || new Date().toISOString(),
+            status: status,
+            type: 'APPROVE_CAMPAIGN',
+            campaignId: c.id,
+            campaignTitle: c.title,
+            requesterName: owner?.fullName || `Owner #${c.fundOwnerId}`,
+            description: c.description || '',
+            category: c.category || '',
+            rejectionReason: c.rejectionReason || undefined,
+            kycVerified: c.kycVerified,
+            bankVerified: c.bankVerified,
+            fundOwnerId: c.fundOwnerId,
+          };
+        });
       setCampaignRows(mappedCampaigns);
 
       // Auto-select from URL or first item
@@ -89,9 +102,11 @@ export default function StaffRequestPage() {
 
   // Fetch ALL data from BE
   useEffect(() => {
-    setIsLoading(true);
-    fetchCampaigns().finally(() => setIsLoading(false));
-  }, []);
+    if (currentUser) {
+      setIsLoading(true);
+      fetchCampaigns().finally(() => setIsLoading(false));
+    }
+  }, [currentUser]);
 
   // Memoized Data
   const filteredCampaigns = useMemo(() => {
@@ -188,6 +203,20 @@ export default function StaffRequestPage() {
 
           </div>
           {activeTab === 'EXPENDITURE' && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('EVIDENCE')}
+          className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${activeTab === 'EVIDENCE'
+            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+            : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <Shield className={`h-4 w-4 ${activeTab === 'EVIDENCE' ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+            <span className="whitespace-nowrap">Evidence Verification</span>
+          </div>
+          {activeTab === 'EVIDENCE' && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
         </button>
       </div>
 
@@ -337,8 +366,10 @@ export default function StaffRequestPage() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'EXPENDITURE' ? (
             <ExpenditureTab />
+          ) : (
+            <EvidenceTab />
           )}
         </div>
       </div>

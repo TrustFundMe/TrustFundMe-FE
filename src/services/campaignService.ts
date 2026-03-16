@@ -100,4 +100,21 @@ export const campaignService = {
     const res = await api.get<{ count: number }>(API_ENDPOINTS.CAMPAIGN_FOLLOWS.COUNT(campaignId));
     return res.data.count;
   },
+
+  async getTasksByStaff(staffId: number): Promise<any[]> {
+    const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BY_STAFF(staffId));
+    return res.data;
+  },
+
+  async getAllTasks(): Promise<any[]> {
+    const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
+    return res.data;
+  },
+
+  async reassignTask(taskId: number, newStaffId: number): Promise<any> {
+    const res = await api.put(API_ENDPOINTS.TASKS.REASSIGN(taskId), null, {
+      params: { newStaffId }
+    });
+    return res.data;
+  },
 };

@@ -98,4 +98,9 @@ export const API_ENDPOINTS = {
     CAMPAIGN_PROGRESS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/progress`,
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
   },
+  TASKS: {
+    BASE: "/api/admin/tasks",
+    BY_STAFF: (staffId: number | string) => `/api/admin/tasks/staff/${staffId}`,
+    REASSIGN: (taskId: number | string) => `/api/admin/tasks/${taskId}/reassign`,
+  },
 } as const;

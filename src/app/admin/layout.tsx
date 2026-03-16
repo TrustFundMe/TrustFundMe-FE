@@ -27,6 +27,7 @@ const sidebarNavItems = [
   { href: '/admin/campaigns', label: 'Chiến dịch', icon: Box },
   { href: '/admin/payouts', label: 'Giải ngân', icon: CreditCard },
   { href: '/admin/feed-posts', label: 'Bảng tin', icon: MessageSquare },
+  { href: '/admin/tasks', label: 'Nhiệm vụ', icon: Users },
   // { href: '/admin/flags', label: 'Báo cáo', icon: Flag },
 ];
 
