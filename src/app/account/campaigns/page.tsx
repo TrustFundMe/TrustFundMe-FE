@@ -29,51 +29,21 @@ export default function CampaignsPage() {
   const [existingConversation, setExistingConversation] = useState<Conversation | null>(null);
   const [isCheckingChat, setIsCheckingChat] = useState(false);
 
+  // Fetch base campaign list
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchBaseCampaigns = async () => {
       if (!user?.id) return;
-
       try {
         setLoading(true);
-        console.log('Fetching campaigns for user ID:', user.id);
-
-        // Lấy danh sách chiến dịch của Fund Owner hiện tại
         const data = await campaignService.getByFundOwner(user.id);
-        console.log('Campaigns data received:', data);
-
-        const enrichedData = await Promise.all(data.map(async (c) => {
-          try {
-            const goal = await campaignService.getActiveGoalByCampaignId(c.id);
-            let coverImageUrl = c.coverImageUrl;
-
-            // If coverImageUrl is missing but we have a coverImage ID, or even if we don't, 
-            // try to fetch the first image as a resilient fallback
-            if (!coverImageUrl) {
-              try {
-                const firstImage = await mediaService.getCampaignFirstImage(c.id);
-                if (firstImage) {
-                  coverImageUrl = firstImage.url;
-                }
-              } catch (mediaErr) {
-                console.warn(`Failed to fetch first image for campaign ${c.id}:`, mediaErr);
-              }
-            }
-
-            return { ...c, activeGoal: goal, coverImageUrl };
-          } catch {
-            return c;
-          }
-        }));
-
-        setCampaigns(enrichedData);
+        setCampaigns(data);
       } catch (error) {
         console.error('Failed to fetch user campaigns:', error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchCampaigns();
+    fetchBaseCampaigns();
   }, [user?.id]);
 
   const filteredCampaigns = useMemo(() =>
@@ -84,10 +54,61 @@ export default function CampaignsPage() {
   );
 
   const totalPages = Math.ceil(filteredCampaigns.length / itemsPerPage);
-  const paginatedCampaigns = filteredCampaigns.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+
+  // Enrich only paginated campaigns when page changes
+  const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
+  const [enriching, setEnriching] = useState<Record<number, boolean>>({});
+
+  const paginatedCampaigns = useMemo(() =>
+    filteredCampaigns.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    ), [filteredCampaigns, currentPage]
   );
+
+  useEffect(() => {
+    const enrichVisible = async () => {
+      const toEnrich = paginatedCampaigns.filter(c => c.id && !enrichedCampaigns[c.id] && !enriching[c.id]);
+      if (toEnrich.length === 0) return;
+
+      // Mark as enriching
+      setEnriching(prev => {
+        const next = { ...prev };
+        toEnrich.forEach(c => { if(c.id) next[c.id] = true; });
+        return next;
+      });
+
+      await Promise.all(toEnrich.map(async (c) => {
+        if (!c.id) return;
+        try {
+          const goal = await campaignService.getActiveGoalByCampaignId(c.id).catch(() => null);
+          let coverImageUrl = c.coverImageUrl;
+          if (!coverImageUrl) {
+            const firstImage = await mediaService.getCampaignFirstImage(c.id).catch(() => null);
+            coverImageUrl = firstImage?.url || c.coverImageUrl;
+          }
+          setEnrichedCampaigns(prev => ({
+            ...prev,
+            [c.id!]: { ...c, activeGoal: goal, coverImageUrl }
+          }));
+        } catch (err) {
+          console.error(`Failed to enrich ${c.id}`, err);
+        } finally {
+          setEnriching(prev => {
+            const next = { ...prev };
+            if (c.id) delete next[c.id];
+            return next;
+          });
+        }
+      }));
+    };
+
+    enrichVisible();
+  }, [paginatedCampaigns, enrichedCampaigns, enriching]);
+
+  const displayCampaigns = useMemo(() => 
+    paginatedCampaigns.map(c => (c.id && enrichedCampaigns[c.id]) ? enrichedCampaigns[c.id] : c)
+  , [paginatedCampaigns, enrichedCampaigns]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -184,7 +205,7 @@ export default function CampaignsPage() {
             ) : filteredCampaigns.length > 0 ? (
               <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="grid grid-cols-1 gap-6">
-                  {paginatedCampaigns.map((campaign) => (
+                  {displayCampaigns.map((campaign) => (
                     <MyCampaignCard
                       key={campaign.id}
                       campaign={campaign}

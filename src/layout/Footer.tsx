@@ -53,7 +53,7 @@ const Footer1 = () => {
                   <div className="single-post-items">
                     <div
                       className="post-img bg-cover"
-                      style={{ backgroundImage: 'url("assets/img/post1.jpg")' }}
+                      style={{ backgroundImage: 'url("/assets/img/post1.jpg")' }}
                     />
                     <div className="post-content">
                       <span>
@@ -472,7 +472,7 @@ const Footer4 = () => {
                       <div
                         className="post-img bg-cover"
                         style={{
-                          backgroundImage: 'url("assets/img/post2.jpg")',
+                          backgroundImage: 'url("/assets/img/post2.jpg")',
                         }}
                       />
                       <div className="post-content">
@@ -585,7 +585,7 @@ const LinksCol = ({
           <ul>
             {links.map((e, i) => (
               <li key={i}>
-                <a href={e.link}>{e.text}</a>
+                <Link href={e.link.startsWith('http') || e.link.startsWith('#') ? e.link : `/${e.link.replace(/^\//, '')}`}>{e.text}</Link>
               </li>
             ))}
           </ul>
@@ -594,7 +594,7 @@ const LinksCol = ({
           <ul>
             {links2.map((e, i) => (
               <li key={i}>
-                <a href={e.link}>{e.text}</a>
+                <Link href={e.link.startsWith('http') || e.link.startsWith('#') ? e.link : `/${e.link.replace(/^\//, '')}`}>{e.text}</Link>
               </li>
             ))}
           </ul>
@@ -604,10 +604,10 @@ const LinksCol = ({
       <ul className="list-area">
         {links.map((e, i) => (
           <li key={i}>
-            <a href={e.link}>
+            <Link href={e.link.startsWith('http') || e.link.startsWith('#') ? e.link : `/${e.link.replace(/^\//, '')}`}>
               {layout == 1 && <i className="far fa-chevron-double-right" />}
               {e.text}
-            </a>
+            </Link>
           </li>
         ))}
       </ul>

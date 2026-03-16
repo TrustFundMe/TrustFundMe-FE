@@ -10,13 +10,21 @@ const Preloader = () => {
       setIsLoaded(true);
       setTimeout(() => {
         setShouldHide(true);
-      }, 900);
+      }, 300);
     };
+
+    // If window is already loaded
     if (document.readyState === "complete") {
       handleLoad();
     } else {
+      // Use a faster fallback: Hide preloader if it takes too long even if some assets aren't done
+      const fallbackTimer = setTimeout(handleLoad, 1500); // Max 1.5s wait
+      
       window.addEventListener("load", handleLoad);
-      return () => window.removeEventListener("load", handleLoad);
+      return () => {
+        window.removeEventListener("load", handleLoad);
+        clearTimeout(fallbackTimer);
+      };
     }
   }, []);
 

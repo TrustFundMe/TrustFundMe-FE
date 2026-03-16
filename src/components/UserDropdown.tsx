@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, LogOut, ChevronDown, Heart, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 
 export function UserDropdown() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -66,10 +67,12 @@ export function UserDropdown() {
         aria-expanded={isOpen}
       >
         {user.avatarUrl ? (
-          <img
+          <Image
             src={user.avatarUrl}
             alt={displayName}
-            className="w-8 h-8 rounded-full object-cover"
+            width={32}
+            height={32}
+            className="rounded-full object-cover"
           />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium text-gray-700">

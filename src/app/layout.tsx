@@ -1,8 +1,6 @@
 
 import "@css/swiper-bundle.min.css";
 import "@css/animate.css";
-import "@css/bootstrap.min.css";
-import "@css/font-awesome.css";
 import "@css/magnific-popup.css";
 import "@css/meanmenu.css";
 import "@css/nice-select.css";
@@ -48,6 +46,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css"
+          integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/fuEnw=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+          integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
+      </head>
       <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
         <AuthProvider>
           <BannedAccountWrapper>

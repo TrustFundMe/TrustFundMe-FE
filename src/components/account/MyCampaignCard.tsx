@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast';
 import UserChatModal from '@/components/chat/UserChatModal';
 import { withFallbackImage } from '@/lib/image';
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, ModalTitle } from '@/components/ui/modal';
+import Image from 'next/image';
 
 interface MyCampaignCardProps {
     campaign: CampaignDto;
@@ -82,12 +83,14 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
             <div className="flex flex-col md:flex-row">
                 {/* Campaign Image */}
                 <div className="relative w-full md:w-64 h-48 md:h-auto overflow-hidden">
-                    <img
+                    <Image
                         src={withFallbackImage((campaign.coverImageUrl || campaign.coverImage) as string, '/assets/img/campaign/1.png')}
                         alt={campaign.title}
-                        className={`w-full h-full object-cover ${isDisabled ? 'grayscale' : ''}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 256px"
+                        className={`object-cover ${isDisabled ? 'grayscale' : ''}`}
                     />
-                    <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(campaign.status)}`}>
+                    <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold border z-10 ${getStatusColor(campaign.status)}`}>
                         {getStatusLabel(campaign.status)}
                     </div>
                 </div>

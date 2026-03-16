@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, LogOut, Heart, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 
 export function UserMenuMobile() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -47,10 +48,12 @@ export function UserMenuMobile() {
       {/* User Info */}
       <div className="d-flex align-items-center mb-4 p-3 bg-gray-50 rounded-lg">
         {user.avatarUrl ? (
-          <img
+          <Image
             src={user.avatarUrl}
             alt={displayName}
-            className="w-12 h-12 rounded-full object-cover me-3"
+            width={48}
+            height={48}
+            className="rounded-full object-cover me-3"
             style={{ flexShrink: 0 }}
           />
         ) : (

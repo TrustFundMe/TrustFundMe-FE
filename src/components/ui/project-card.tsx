@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface ProjectCardProps {
   imageSrc: string
@@ -71,11 +72,13 @@ export default function ProjectCard({
       )}
     >
       <div className={cn("relative w-full overflow-hidden", featured ? "h-[500px]" : "h-40")}>
-        <img
+        <Image
           src={imageSrc}
           alt={title}
+          fill
+          sizes={featured ? "100vw" : "(max-width: 768px) 100vw, 50vw"}
           className={cn(
-            "w-full h-full object-cover hover:scale-110 transition-all duration-700",
+            "object-cover hover:scale-110 transition-all duration-700",
             isVisible ? "scale-100 opacity-100" : "scale-110 opacity-0"
           )}
         />

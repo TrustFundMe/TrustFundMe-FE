@@ -100,7 +100,7 @@ export const Projects1 = () => {
   const allProjects = [
     {
       id: 1,
-      imageSrc: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?fit=crop&w=800&h=600",
+      imageSrc: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?fit=crop&w=600&h=450",
       title: "Education for All",
       description: "Building Schools in Rural Areas",
       raised: 125000,
