@@ -6,58 +6,58 @@ import { motion } from "motion/react";
 
 const testimonials = [
   {
-    text: "This platform made fundraising so easy! I raised $15,000 for my medical expenses in just 3 weeks. The support team was incredibly helpful throughout.",
+    text: "Nền tảng này giúp gây quỹ dễ hơn rất nhiều! Tôi đã gây quỹ được 15.000$ cho chi phí điều trị chỉ trong 3 tuần. Đội ngũ hỗ trợ cực kỳ tận tâm.",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-    name: "Sarah Johnson",
-    role: "Medical Campaign",
+    name: "Nguyễn Thu Trang",
+    role: "Chiến dịch y tế",
   },
   {
-    text: "We successfully funded our community center renovation. The transparent fee structure and easy withdrawal process made everything smooth.",
+    text: "Chúng tôi đã gây quỹ thành công để sửa lại nhà sinh hoạt cộng đồng. Phí nền tảng minh bạch và quy trình rút tiền đơn giản giúp mọi thứ rất trơn tru.",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-    name: "Michael Chen",
-    role: "Community Project",
+    name: "Lê Hoàng Minh",
+    role: "Dự án cộng đồng",
   },
   {
-    text: "Amazing experience! The platform's reach helped us get donations from people worldwide. We exceeded our goal by 150%.",
+    text: "Trải nghiệm tuyệt vời! Nền tảng giúp chiến dịch tiếp cận được người ủng hộ khắp nơi. Chúng tôi vượt mục tiêu hơn 150%.",
     image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-    name: "Emily Rodriguez",
-    role: "Education Fund",
+    name: "Phạm Hà My",
+    role: "Quỹ giáo dục",
   },
   {
-    text: "Starting a fundraiser was incredibly simple. Within hours, we were receiving donations. The social sharing features really amplified our reach.",
+    text: "Tạo chiến dịch gây quỹ cực kỳ đơn giản. Chỉ sau vài giờ đã có những khoản ủng hộ đầu tiên. Tính năng chia sẻ mạng xã hội giúp lan tỏa rất nhanh.",
     image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-    name: "David Thompson",
-    role: "Emergency Relief",
+    name: "Trần Quang Huy",
+    role: "Cứu trợ khẩn cấp",
   },
   {
-    text: "The platform's credibility helped us gain trust from donors. We raised $50,000 for our animal shelter in just 2 months!",
+    text: "Sự uy tín của nền tảng giúp chúng tôi tạo được niềm tin với nhà hảo tâm. Chỉ trong 2 tháng, trạm cứu hộ động vật đã gây quỹ được 50.000$. ",
     image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-    name: "Jessica Martinez",
-    role: "Animal Welfare",
+    name: "Vũ Thảo Nhi",
+    role: "Bảo vệ động vật",
   },
   {
-    text: "Fantastic platform! The mobile app made it easy to update supporters on the go. Our campaign went viral and exceeded expectations.",
+    text: "Nền tảng tuyệt vời! Ứng dụng di động giúp chúng tôi cập nhật cho người ủng hộ mọi lúc. Chiến dịch lan tỏa mạnh hơn cả mong đợi.",
     image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
-    name: "James Wilson",
-    role: "Disaster Relief",
+    name: "Đinh Quốc Bảo",
+    role: "Hỗ trợ thiên tai",
   },
   {
-    text: "I was skeptical at first, but this platform proved to be the best choice. Transparent fees, quick payouts, and excellent customer support.",
+    text: "Ban đầu tôi còn phân vân, nhưng nền tảng này thực sự là lựa chọn tốt nhất: phí minh bạch, giải ngân nhanh, đội ngũ hỗ trợ nhiệt tình.",
     image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop",
-    name: "Amanda Lee",
-    role: "Small Business",
+    name: "Lâm Anh Thư",
+    role: "Hộ kinh doanh nhỏ",
   },
   {
-    text: "Our nonprofit raised over $100,000 thanks to this platform. The analytics dashboard helped us optimize our campaign strategy.",
+    text: "Tổ chức phi lợi nhuận của chúng tôi đã gây quỹ hơn 100.000$ nhờ nền tảng này. Bảng thống kê giúp tối ưu chiến lược truyền thông rất hiệu quả.",
     image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-    name: "Robert Garcia",
-    role: "Nonprofit Director",
+    name: "Ngô Đức Khánh",
+    role: "Giám đốc tổ chức phi lợi nhuận",
   },
   {
-    text: "The best fundraising platform out there! Easy to use, great features, and the team genuinely cares about your success.",
+    text: "Nền tảng gây quỹ tốt nhất mà tôi từng dùng! Dễ sử dụng, nhiều tính năng hữu ích và đội ngũ thực sự quan tâm đến thành công của chiến dịch.",
     image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop",
-    name: "Lisa Anderson",
-    role: "Personal Cause",
+    name: "Bùi Minh Ngọc",
+    role: "Chiến dịch cá nhân",
   },
 ];
 
@@ -119,14 +119,14 @@ export const TestimonialsNew = () => {
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            What Our Community Says
+            Cộng đồng nói gì về TrustFundMe
           </h2>
           <p 
             className={`text-center mt-5 opacity-75 transition-all duration-700 delay-200 ${
               isVisible ? 'opacity-75 translate-y-0' : 'opacity-0 translate-y-10'
             }`}
           >
-            Real stories from people who've successfully raised funds and made a difference through our platform.
+            Những câu chuyện có thật từ các chiến dịch đã gây quỹ thành công và tạo ra thay đổi tích cực thông qua nền tảng TrustFundMe.
           </p>
         </motion.div>
 

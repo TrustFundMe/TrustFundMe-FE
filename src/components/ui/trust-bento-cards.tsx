@@ -7,29 +7,29 @@ import { motion } from "framer-motion"
 
 const cardContents = [
   {
-    title: "Real-time Transparency",
+    title: "Minh bạch theo thời gian thực",
     description:
-      "No more waiting for end-of-month reports. Every donation and expense is updated instantly via Webhooks, allowing you to track money flow in real-time 24/7.",
+      "Không còn chờ báo cáo cuối tháng. Mọi khoản quyên góp và chi tiêu được cập nhật ngay lập tức qua Webhook, cho phép bạn theo dõi dòng tiền 24/7.",
   },
   {
-    title: "AI-Powered Verification",
+    title: "Xác thực bằng AI",
     description:
-      "We eliminate manual errors with AI OCR technology. Every expense receipt is automatically extracted and verified by AI, ensuring every dollar you donate is used for the right purpose and amount.",
+      "Hạn chế sai sót thủ công với công nghệ AI OCR. Mỗi hóa đơn chi tiêu được trích xuất và đối soát tự động, đảm bảo từng đồng bạn ủng hộ được dùng đúng mục đích và số tiền.",
   },
   {
-    title: "Community Governance",
+    title: "Cộng đồng cùng giám sát",
     description:
-      "You're not just a donor, you're a supervisor. With weighted voting mechanism, the community approves major expenses together, creating a democratic and fair charity ecosystem. From donation tracking to expense approval, every stakeholder has a voice in how funds are managed and distributed.",
+      "Bạn không chỉ là người ủng hộ mà còn là người giám sát. Cơ chế bỏ phiếu theo trọng số giúp cộng đồng duyệt các khoản chi lớn, tạo nên một hệ sinh thái thiện nguyện dân chủ và công bằng.",
   },  
   {
-    title: "Blockchain Verified",
+    title: "Ghi nhận trên Blockchain",
     description:
-      "Every transaction is recorded on blockchain for immutable transparency and audit trails.",
+      "Mỗi giao dịch được ghi lại trên blockchain, khó có thể sửa đổi, phục vụ kiểm toán và truy vết minh bạch.",
   },
   {
-    title: "100% Fund Transparency",
+    title: "100% minh bạch dòng tiền",
     description:
-      "Track exactly where your money goes with detailed breakdowns and real-time updates on fund allocation.",
+      "Theo dõi chính xác tiền được phân bổ đi đâu với bảng phân tích chi tiết và cập nhật theo thời gian thực.",
   },
 ]
 
@@ -110,7 +110,7 @@ export default function TrustBentoCards() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#202426] dark:text-white mb-4">
-            Donors • Recipients • Transparency
+            Người quyên góp • Người nhận • Minh bạch
           </h2>
         </motion.div>
 
@@ -132,10 +132,10 @@ export default function TrustBentoCards() {
           transition={{ duration: 0.6, delay: 0.3 }}
         >
           <h2 className="text-4xl md:text-6xl font-bold text-[#202426] dark:text-white mb-4">
-            Built for trust. Designed for impact.
+            Xây cho niềm tin. Thiết kế vì tác động.
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-lg">
-            TrustFundMe gives you complete visibility into every donation. Each feature is thoughtfully designed to ensure transparency, accountability, and maximum social impact.
+            TrustFundMe giúp bạn nhìn thấy toàn bộ hành trình của từng khoản quyên góp. Mọi tính năng đều được thiết kế để đảm bảo minh bạch, trách nhiệm và tối đa hóa tác động xã hội.
           </p>
         </motion.div>
 
@@ -151,13 +151,13 @@ export default function TrustBentoCards() {
             href="/causes" 
             className="px-8 py-4 bg-gradient-to-r from-[#F84D43] to-[#FF6B6B] text-white rounded-lg font-bold hover:shadow-xl hover:scale-105 transition-all duration-300"
           >
-            Explore Projects
+            Khám phá chiến dịch
           </Link>
           <Link 
             href="/about" 
             className="px-8 py-4 border-2 border-[#1A685B] text-[#1A685B] rounded-lg font-bold hover:bg-[#1A685B] hover:text-white transition-all duration-300"
           >
-            Learn More
+            Tìm hiểu thêm
           </Link>
         </motion.div>
       </div>

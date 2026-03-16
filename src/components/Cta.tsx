@@ -52,10 +52,10 @@ export const Cta2 = () => {
         <div className="cta-banner-wrapper-3">
           <div className="section-title mb-0">
             <span className="sub-title text-white wow fadeInUp">
-              <i className="far fa-heart" /> Join TrustFundMe
+              <i className="far fa-heart" /> Tham gia TrustFundMe
             </span>
             <h2 className="mt-char-animation text-white">
-              Start Making <br /> a Difference Today
+              Bắt đầu tạo ra <br /> khác biệt ngay hôm nay
             </h2>
           </div>
           <form
@@ -69,7 +69,7 @@ export const Cta2 = () => {
                 type="text"
                 name="email"
                 id="email"
-                placeholder="Enter Your Email"
+                placeholder="Nhập email của bạn"
               />
               <button
                 className="theme-btn wow fadeInUp"
@@ -77,7 +77,7 @@ export const Cta2 = () => {
                 type="submit"
               >
                 <span>
-                  Get Started <i className="far fa-arrow-right" />
+                  Bắt đầu ngay <i className="far fa-arrow-right" />
                 </span>
               </button>
             </div>

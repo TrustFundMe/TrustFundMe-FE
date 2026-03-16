@@ -14,7 +14,7 @@ export function UserMenuMobile() {
     return (
       <Link href="/sign-in" className="theme-btn text-center w-full">
         <span>
-          Sign In
+          Đăng nhập
           <i className="fa-solid fa-arrow-right-long ms-2" />
         </span>
       </Link>
@@ -78,7 +78,7 @@ export function UserMenuMobile() {
             className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
           >
             <User className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Profile</span>
+            <span>Hồ sơ cá nhân</span>
           </Link>
         </li>
 
@@ -88,7 +88,7 @@ export function UserMenuMobile() {
             className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
           >
             <Heart className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Your fundraisers</span>
+            <span>Chiến dịch của bạn</span>
           </Link>
         </li>
 
@@ -98,18 +98,21 @@ export function UserMenuMobile() {
             className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
           >
             <TrendingUp className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Your impact</span>
+            <span>Tác động của bạn</span>
           </Link>
         </li>
 
         <li className="mt-3 pt-3 border-top">
           <button
             onClick={handleLogout}
-            className="w-100 d-flex align-items-center py-3 px-3 text-red-600 hover:bg-red-50 transition-colors rounded-lg border-0 bg-transparent text-start"
-            style={{ cursor: 'pointer' }}
+            className="w-100 d-flex align-items-center justify-between py-3 px-3 rounded-lg border-0 bg-transparent text-start"
+            style={{ cursor: 'pointer', backgroundColor: '#fef2f2', color: '#b91c1c' }}
           >
-            <LogOut className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Sign Out</span>
+            <span className="d-flex align-items-center">
+              <LogOut className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
+              <span>Đăng xuất</span>
+            </span>
+            <span className="text-xs text-red-400">Thoát tài khoản an toàn</span>
           </button>
         </li>
       </ul>

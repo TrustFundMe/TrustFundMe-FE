@@ -13,7 +13,7 @@ interface ActionProps {
 
 interface HeroSectionProps {
   title: React.ReactNode;
-  subtitle: string;
+  subtitle?: string;
   actions: ActionProps[];
   images: string[];
   className?: string;
@@ -105,9 +105,11 @@ const HeroSection = ({ title, subtitle, actions, images, className }: HeroSectio
           >
             {title}
           </motion.h1>
-          <motion.p className="mt-6 max-w-md text-lg text-gray-600 leading-relaxed text-justify" variants={itemVariants}>
-            {subtitle}
-          </motion.p>
+          {subtitle && (
+            <motion.p className="mt-6 max-w-md text-lg text-gray-600 leading-relaxed text-justify" variants={itemVariants}>
+              {subtitle}
+            </motion.p>
+          )}
           <motion.div className="mt-8 flex flex-wrap justify-center gap-6 lg:justify-start" variants={itemVariants}>
             {actions.map((action, index) => (
               <motion.div

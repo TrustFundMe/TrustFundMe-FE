@@ -8,25 +8,27 @@ const HeroSection9 = () => {
   const heroData = {
     title: (
       <>
-        Radical Transparency <br /> in Every Donation
+        Minh bạch{' '}
+        <span className="text-[#F84D43]">trong từng</span>{' '}
+        khoản quyên góp
       </>
     ),
-    subtitle: 'Track your impact in real-time with Vietnam\'s first AI-powered charity management platform. 100% financial disclosure, no exceptions.',
+    subtitle: '',
     actions: [
       {
-        text: 'Donate Now',
+        text: 'Quyên góp ngay',
         onClick: () => window.location.href = '/donation-details',
         variant: 'default' as const,
         className: 'bg-[#F84D43] hover:bg-[#1A685B] text-white border-none shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',
       },
       {
-        text: 'View Communication',
+        text: 'Xem cộng đồng',
         onClick: () => window.location.href = '/post',
         variant: 'outline' as const,
         className: 'border-2 border-[#1A685B] text-[#1A685B] hover:bg-[#1A685B] hover:text-white shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',
       },
       {
-        text: 'Start a Campaign',
+        text: 'Tạo chiến dịch',
         onClick: () => window.location.href = '/causes',
         variant: 'outline' as const,
         className: 'border-2 border-[#1A685B] text-[#1A685B] hover:bg-[#1A685B] hover:text-white shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',

@@ -7,6 +7,7 @@ import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import NotificationBell from "@/components/NotificationBell";
+import { Menu } from "lucide-react";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -140,30 +141,32 @@ const Header2 = ({ open }: { open: () => void }) => (
       </div>
     </div>
     <header id="header-sticky" className="header-3 shadow-sm border-b border-gray-100 bg-white sticky top-0" style={{ zIndex: 1000 }}>
-      <div className="container px-4 max-w-4xl mx-auto">
+      <div className="container">
         <div className="mega-menu-wrapper">
-          <div className="header-main style-2 py-0 d-flex align-items-center justify-content-between" style={{ height: '60px', minHeight: '60px' }}>
-            {/* 1. Left Section: Logo */}
-            <div className="logo d-flex align-items-center" style={{ flex: '0 0 auto', minWidth: '150px' }}>
-              <Logo logo="black-logo.png" />
-            </div>
-            
-            {/* 2. Middle Section: Nav (xl only) */}
-            <div className="mean__menu-wrapper d-none d-xl-block d-flex align-items-center justify-content-center" style={{ flex: '1' }}>
-              <div style={{ paddingLeft: '20px' }}>
+          <div className="header-main style-2 py-0 d-flex align-items-center justify-content-between" style={{ height: '64px', minHeight: '64px' }}>
+            {/* Left: logo + main nav (căn trái, không đụng logo) */}
+            <div className="d-flex align-items-center gap-4 flex-grow-1">
+              <div className="logo d-flex align-items-center">
+                <Logo logo="black-logo.png" />
+              </div>
+              <div className="mean__menu-wrapper d-none d-lg-block">
                 <Nav />
               </div>
             </div>
 
-            {/* 3. Right Section: Icons & Hamburger */}
+            {/* Right: notification + auth + hamburger */}
             <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: '0 0 auto' }}>
               <NotificationBell />
               <AuthButton />
-              
-              <div className="header__hamburger d-xl-none d-flex align-items-center">
-                <div onClick={open} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <i className="fas fa-bars" style={{ fontSize: '20px' }} />
-                </div>
+
+              <div className="header__hamburger d-lg-none d-flex align-items-center ms-2">
+                <button
+                  onClick={open}
+                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', background: 'none', border: 'none', padding: '4px' }}
+                  aria-label="Open menu"
+                >
+                  <Menu size={24} color="#202426" />
+                </button>
               </div>
             </div>
           </div>
@@ -346,20 +349,20 @@ const HomeMenuItem = ({ n }: { n: number }) => (
 );
 
 const Nav = () => (
-  <div className="main-menu d-none d-xl-block">
+  <div className="main-menu d-none d-lg-block">
     <nav id="mobile-menu">
-      <ul className="d-flex align-items-center gap-4 mb-0">
+      <ul className="d-flex align-items-center mb-0" style={{ gap: '2rem' }}>
         <li className="m-0">
-          <Link href="/" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Home</Link>
+          <Link href="/" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Trang chủ</Link>
         </li>
         <li className="m-0">
-          <Link href="/about" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">About</Link>
+          <Link href="/about" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Giới thiệu</Link>
         </li>
         <li className="m-0">
-          <Link href="/campaigns" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Campaign</Link>
+          <Link href="/campaigns" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Chiến dịch</Link>
         </li>
         <li className="m-0">
-          <Link href="/post" className="text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors">Communication</Link>
+          <Link href="/post" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Cộng đồng</Link>
         </li>
       </ul>
     </nav>
@@ -483,7 +486,7 @@ const AuthButton = () => {
   return (
     <div className="header-button d-none d-xl-block">
       <Link href="/sign-in" className="theme-btn transparent-btn">
-        Sign In
+        Đăng nhập
       </Link>
     </div>
   );

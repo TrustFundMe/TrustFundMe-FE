@@ -375,7 +375,7 @@ export default function ResetPasswordPage() {
 
           <div className="mt-6 text-center">
             <Link href="/sign-in" className="text-sm text-gray-600 hover:underline">
-              Back to Sign In
+              Quay lại trang đăng nhập
             </Link>
           </div>
         </div>

@@ -514,11 +514,11 @@ export default function ProfilePage() {
         const res = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), { avatarUrl });
         const data = res.data;
         updateUser({ avatarUrl: data.avatarUrl || avatarUrl });
-        toast('Avatar updated successfully', 'success');
+        toast('Cập nhật ảnh đại diện thành công', 'success');
       } catch (err: any) {
         console.error('Avatar sync failed', err);
         const detail = err.response?.data?.message || err.response?.data?.error || err.message;
-        toast(`Avatar updated locally but sync failed: ${detail}`, 'error');
+        toast(`Ảnh đại diện đã được cập nhật cục bộ nhưng đồng bộ lên máy chủ thất bại: ${detail}`, 'error');
       }
       return { success: true };
     } catch (err: unknown) {
@@ -573,7 +573,7 @@ export default function ProfilePage() {
         return;
       }
 
-      toast('Profile and bank details updated successfully', 'success');
+      toast('Cập nhật hồ sơ và thông tin ngân hàng thành công', 'success');
       setIsEditing(false);
     } catch (err: any) {
       const detail = err.response?.data?.message || err.response?.data?.error || err.message;
@@ -634,7 +634,7 @@ export default function ProfilePage() {
 
                       {/* Avatar */}
                       <div className="mb-8">
-                        <p className="text-sm font-medium text-gray-500 mb-3">Profile Picture</p>
+                        <p className="text-sm font-medium text-gray-500 mb-3">Ảnh đại diện</p>
                         <Avatar className="h-28 w-28 border-2 border-gray-200 shadow-sm">
                           <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
                           <AvatarFallback className="bg-gray-100 text-2xl font-bold text-gray-500">
@@ -646,10 +646,10 @@ export default function ProfilePage() {
                       {/* Info */}
                       <div className="divide-y divide-gray-100">
                         {[
-                          { label: 'Full Name', value: user.fullName || '—' },
-                          { label: 'Email Address', value: user.email || '—', icon: <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
-                          { label: 'Phone Number', value: user.phoneNumber || '—', icon: <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
-                          { label: 'Email Verified', value: user.verified ? 'Yes' : 'No', icon: <ShieldCheck className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
+                          { label: 'Họ và tên', value: user.fullName || '—' },
+                          { label: 'Email', value: user.email || '—', icon: <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
+                          { label: 'Số điện thoại', value: user.phoneNumber || '—', icon: <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
+                          { label: 'Trạng thái email', value: user.verified ? 'Đã xác minh' : 'Chưa xác minh', icon: <ShieldCheck className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
                         ].map(row => (
                           <div key={row.label} className="flex flex-col sm:flex-row sm:items-center py-4 gap-1">
                             <span className="text-sm text-gray-500 min-w-[160px]">{row.icon}{row.label}</span>
@@ -662,7 +662,7 @@ export default function ProfilePage() {
                       <div className="mt-8 pt-6 border-t border-gray-100">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                            <Landmark className="w-4 h-4 text-[#ff5e14]" /> Bank Account Detail
+                            <Landmark className="w-4 h-4 text-[#ff5e14]" /> Tài khoản ngân hàng
                           </h3>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
@@ -674,7 +674,7 @@ export default function ProfilePage() {
                             <div className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Bank Name</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Ngân hàng</p>
                                   <p className="text-sm font-bold text-gray-800">{bankAccount.bankCode}</p>
                                 </div>
                                 <div className="text-right">
@@ -685,38 +685,38 @@ export default function ProfilePage() {
                               </div>
                               <div className="grid grid-cols-1 gap-4">
                                 <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Account Holder</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Chủ tài khoản</p>
                                   <p className="text-sm font-black text-gray-900 uppercase">{bankAccount.accountHolderName}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Account Number</p>
+                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Số tài khoản</p>
                                   <p className="text-lg font-mono font-black text-[#ff5e14] tracking-widest">{bankAccount.accountNumber}</p>
                                 </div>
                               </div>
                             </div>
                           ) : (
-                            <div className="text-sm text-gray-400 italic">No bank account linked. Click "Edit" to add one.</div>
+                            <div className="text-sm text-gray-400 italic">Chưa liên kết tài khoản ngân hàng. Nhấn "Chỉnh sửa" để thêm.</div>
                           )}
                         </div>
                       </div>
 
                       {/* Quick access */}
                       <div className="mt-8 pt-6 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Quick access</h3>
+                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Truy cập nhanh</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Link href="/account/campaigns"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
                               <FolderOpen className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
                             </div>
-                            <span className="text-sm font-medium text-gray-700">My Campaigns</span>
+                            <span className="text-sm font-medium text-gray-700">Chiến dịch của tôi</span>
                           </Link>
                           <Link href="/account/impact"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
                               <Heart className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
                             </div>
-                            <span className="text-sm font-medium text-gray-700">Your Impact</span>
+                            <span className="text-sm font-medium text-gray-700">Tác động của bạn</span>
                           </Link>
                           <LichHenBtn />
                           <MyFlagsBtn />
@@ -727,7 +727,7 @@ export default function ProfilePage() {
                     <form onSubmit={handleSubmit}>
                       {/* Avatar upload */}
                       <div className="mb-8">
-                        <label className="block text-sm font-medium text-gray-600 mb-3">Profile Picture</label>
+                          <label className="block text-sm font-medium text-gray-600 mb-3">Ảnh đại diện</label>
                         <div className="flex items-center gap-6">
                           <AvatarUploader onUpload={handleAvatarUpload} onError={(m) => toast(m, 'error')} maxSizeMB={5} acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}>
                             <Avatar className="h-28 w-28 cursor-pointer border-2 border-gray-200 shadow-sm hover:opacity-80 transition-opacity">
@@ -737,21 +737,21 @@ export default function ProfilePage() {
                               </AvatarFallback>
                             </Avatar>
                           </AvatarUploader>
-                          <p className="text-sm text-gray-400">Click avatar to upload.<br />JPG, PNG, WebP or GIF. Max 5MB.</p>
+                          <p className="text-sm text-gray-400">Nhấn vào ảnh để tải lên.<br />Hỗ trợ JPG, PNG, WebP hoặc GIF. Tối đa 5MB.</p>
                         </div>
                       </div>
 
                       {/* Name */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
-                          <label htmlFor="firstName" className="block text-sm font-medium text-gray-600 mb-2">
-                            <User className="w-4 h-4 inline mr-2 text-[#ff5e14]" />First Name
+                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-600 mb-2">
+                            <User className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Họ
                           </label>
                           <input id="firstName" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
                         </div>
                         <div>
-                          <label htmlFor="lastName" className="block text-sm font-medium text-gray-600 mb-2">Last Name</label>
+                          <label htmlFor="lastName" className="block text-sm font-medium text-gray-600 mb-2">Tên</label>
                           <input id="lastName" type="text" value={lastName} onChange={e => setLastName(e.target.value)} required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
                         </div>
@@ -760,17 +760,17 @@ export default function ProfilePage() {
                       {/* Email */}
                       <div className="mb-6">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-2">
-                          <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Email Address
+                          <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Email
                         </label>
                         <input id="email" type="email" value={email} disabled
                           className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed" />
-                        <p className="mt-1 text-xs text-gray-400">Email cannot be changed</p>
+                        <p className="mt-1 text-xs text-gray-400">Email không thể thay đổi</p>
                       </div>
 
                       {/* Phone */}
                       <div className="mb-8">
                         <label htmlFor="phone" className="block text-sm font-medium text-gray-600 mb-2">
-                          <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Phone Number
+                          <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Số điện thoại
                         </label>
                         <input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+84 123 456 789"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
@@ -779,22 +779,22 @@ export default function ProfilePage() {
                       {/* Bank Fields */}
                       <div className="mb-8 p-6 bg-orange-50/30 rounded-2xl border border-orange-100">
                         <h3 className="text-sm font-bold text-orange-800 mb-6 flex items-center gap-2">
-                          <Landmark className="w-4 h-4" /> Bank Account Information
+                          <Landmark className="w-4 h-4" /> Thông tin tài khoản ngân hàng
                         </h3>
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Bank Name / Code</label>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Ngân hàng / Mã</label>
                             <input
                               type="text"
                               value={bankCode}
                               onChange={e => setBankCode(e.target.value)}
-                              placeholder="e.g. MB Bank, Vietcombank"
+                              placeholder="Ví dụ: MB Bank, Vietcombank"
                               className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-bold"
                             />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Account Number</label>
+                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Số tài khoản</label>
                               <input
                                 type="text"
                                 value={accountNumber}
@@ -804,7 +804,7 @@ export default function ProfilePage() {
                               />
                             </div>
                             <div>
-                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Account Holder Name</label>
+                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Tên chủ tài khoản</label>
                               <input
                                 type="text"
                                 value={accountHolderName}
@@ -822,32 +822,32 @@ export default function ProfilePage() {
                         <button type="button"
                           onClick={() => { const p = user.fullName?.split(' ') || []; setFirstName(p[0] || ''); setLastName(p.slice(1).join(' ') || ''); setPhone(user.phoneNumber || ''); setIsEditing(false); }}
                           className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                          <X className="w-4 h-4 inline mr-1.5" />Cancel
+                          <X className="w-4 h-4 inline mr-1.5" />Hủy
                         </button>
                         <button type="submit" disabled={saving}
                           className="px-6 py-2.5 bg-[#ff5e14] text-white rounded-lg text-sm font-semibold hover:bg-[#e04e08] transition-colors disabled:opacity-50">
                           {saving ? <Loader2 className="w-4 h-4 inline mr-1.5 animate-spin" /> : <Save className="w-4 h-4 inline mr-1.5" />}
-                          {saving ? 'Saving...' : 'Save Changes'}
+                          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                         </button>
                       </div>
 
                       {/* Quick access (edit mode) */}
                       <div className="pt-6 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Quick access</h3>
+                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Truy cập nhanh</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <Link href="/account/campaigns"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
                               <FolderOpen className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
                             </div>
-                            <span className="text-sm font-medium text-gray-700">My Campaigns</span>
+                            <span className="text-sm font-medium text-gray-700">Chiến dịch của tôi</span>
                           </Link>
                           <Link href="/account/impact"
                             className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
                               <Heart className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
                             </div>
-                            <span className="text-sm font-medium text-gray-700">Your Impact</span>
+                            <span className="text-sm font-medium text-gray-700">Tác động của bạn</span>
                           </Link>
                           <LichHenBtn />
                           <MyFlagsBtn />

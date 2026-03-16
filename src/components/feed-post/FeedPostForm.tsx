@@ -23,7 +23,7 @@ export default function FeedPostForm({
   initialData,
   onSubmit,
   onCancel,
-  submitLabel = "Post",
+  submitLabel = "Đăng bài",
   isEdit = false,
   showFullEditorLink = false,
 }: FeedPostFormProps) {
@@ -77,7 +77,7 @@ export default function FeedPostForm({
     setError(null);
     const textOnly = formData.content.replace(/<[^>]+>/g, "").trim();
     if (!textOnly) {
-      setError("Please write something to post.");
+      setError("Vui lòng viết nội dung cho bài đăng.");
       return;
     }
 
@@ -160,9 +160,9 @@ export default function FeedPostForm({
             onChange={(e) => setFormData({ ...formData, visibility: e.target.value })}
             className="appearance-none px-4 pr-8 py-2 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none"
           >
-            <option value="PUBLIC">🌐 Public</option>
-            <option value="PRIVATE">🔒 Private</option>
-            <option value="FOLLOWERS">👥 Followers</option>
+            <option value="PUBLIC">🌐 Công khai</option>
+            <option value="PRIVATE">🔒 Riêng tư</option>
+            <option value="FOLLOWERS">👥 Người theo dõi</option>
           </select>
 
           <select
@@ -170,17 +170,17 @@ export default function FeedPostForm({
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
             className="appearance-none px-4 pr-8 py-2 rounded-full bg-[#ff5e14]/10 text-[#ff5e14] text-sm font-medium hover:bg-[#ff5e14]/20 transition-colors cursor-pointer border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none"
           >
-            <option value="UPDATE">📝 Update</option>
-            <option value="ANNOUNCEMENT">📢 Announcement</option>
-            <option value="NEWS">📰 News</option>
+            <option value="UPDATE">📝 Cập nhật</option>
+            <option value="ANNOUNCEMENT">📢 Thông báo</option>
+            <option value="NEWS">📰 Tin tức</option>
           </select>
         </div>
 
         <div className="space-y-4">
-          {/* Title Input */}
+            {/* Title Input */}
           <input
             type="text"
-            placeholder="Post Title (Optional)"
+            placeholder="Tiêu đề bài viết (không bắt buộc)"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             className="w-full bg-transparent text-xl font-bold placeholder:text-zinc-400 border-none px-0 focus:ring-0 p-0"
@@ -190,7 +190,7 @@ export default function FeedPostForm({
           <RichTextEditor
             value={formData.content}
             onChange={(html) => setFormData((s) => ({ ...s, content: html }))}
-            placeholder="What's on your mind?"
+            placeholder="Bạn đang muốn chia sẻ điều gì?"
             minHeight="100px"
           />
 
@@ -233,13 +233,13 @@ export default function FeedPostForm({
           {/* Category Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
-              Category
+              Chủ đề
             </label>
             <input
               type="text"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="e.g. Chung, Chiến dịch, Hỏi đáp..."
+              placeholder="Ví dụ: Chung, Chiến dịch, Hỏi đáp..."
               className="w-full px-4 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
             />
           </div>
@@ -247,27 +247,27 @@ export default function FeedPostForm({
           {/* Campaign Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider ml-1">
-              Link to campaign
+              Gắn với chiến dịch
             </label>
             <select
               value={formData.expenditureId != null ? String(formData.expenditureId) : ""}
               onChange={(e) => setFormData({ ...formData, expenditureId: e.target.value ? Number(e.target.value) : null })}
               className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
             >
-              <option value="">Don&apos;t link to a campaign</option>
+              <option value="">Không gắn với chiến dịch nào</option>
               {campaignsLoading ? (
-                <option disabled>Loading campaigns…</option>
+                <option disabled>Đang tải danh sách chiến dịch…</option>
               ) : (
                 <>
                   {myCampaigns.length > 0 && (
-                    <optgroup label="My campaigns">
+                    <optgroup label="Chiến dịch của tôi">
                       {myCampaigns.map((c) => (
                         <option key={c.id} value={c.id}>{c.title}</option>
                       ))}
                     </optgroup>
                   )}
                   {otherCampaigns.length > 0 && (
-                    <optgroup label="Other campaigns">
+                    <optgroup label="Chiến dịch khác">
                       {otherCampaigns.map((c) => (
                         <option key={c.id} value={c.id}>{c.title}</option>
                       ))}
@@ -288,13 +288,13 @@ export default function FeedPostForm({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </label>
-            <span className="text-xs text-zinc-400">Max {MAX_IMAGES} images</span>
+            <span className="text-xs text-zinc-400">Tối đa {MAX_IMAGES} ảnh</span>
             {showFullEditorLink && (
               <Link
                 href="/post/create"
                 className="text-sm text-zinc-500 hover:text-[#ff5e14] transition-colors"
               >
-                Full editor
+                Trình soạn thảo đầy đủ
               </Link>
             )}
           </div>

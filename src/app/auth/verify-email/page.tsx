@@ -253,7 +253,7 @@ function VerifyEmailContent() {
               className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Sign In
+              Quay lại trang đăng nhập
             </Link>
           </div>
         </div>

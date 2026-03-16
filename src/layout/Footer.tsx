@@ -33,13 +33,13 @@ const Footer1 = () => {
               className="col-xl-3 col-lg-4 col-md-6 ps-lg-5  wow fadeInUp"
               data-wow-delay=".4s"
             >
-              <LinksCol heading="Useful Link" links={usefulLink} />
+              <LinksCol heading="Liên kết hữu ích" links={usefulLink} />
             </div>
             <div
               className="col-xl-3 col-lg-4 col-md-6 ps-lg-5  wow fadeInUp"
               data-wow-delay=".6s"
             >
-              <LinksCol heading="Legal" links={legalLink} />
+              <LinksCol heading="Điều khoản & pháp lý" links={legalLink} />
             </div>
             <div
               className="col-xl-3 col-lg-4 col-md-6   wow fadeInUp"
@@ -47,7 +47,7 @@ const Footer1 = () => {
             >
               <div className="single-footer-widget">
                 <div className="widget-head">
-                  <h4 className="text-white">Contact Us</h4>
+                  <h4 className="text-white">Liên hệ</h4>
                 </div>
                 <div className="popularspost-area">
                   <div className="single-post-items">
@@ -154,13 +154,13 @@ const Footer2 = () => {
               className="col-xl-3 col-lg-4 col-md-6 ps-lg-5  wow fadeInUp"
               data-wow-delay=".3s"
             >
-              <LinksCol heading="Useful Link" links={usefulLink} />
+              <LinksCol heading="Liên kết hữu ích" links={usefulLink} />
             </div>
             <div
               className="col-xl-3 col-lg-4 col-md-6 ps-lg-5  wow fadeInUp"
               data-wow-delay=".3s"
             >
-              <LinksCol heading="Legal" links={legalLink} />
+              <LinksCol heading="Điều khoản & pháp lý" links={legalLink} />
             </div>
             <div
               className="col-xl-3 col-lg-4 col-md-6 ps-lg-5  wow fadeInUp"
@@ -168,32 +168,18 @@ const Footer2 = () => {
             >
               <div className="single-footer-widget">
                 <div className="widget-head">
-                  <h4 className="text-white">Contact Us</h4>
+                  <h4 className="text-white">Liên hệ</h4>
                 </div>
                 <div className="footer-content">
                   <div className="contact-info-area">
-                    <div className="contact-items">
-                      <div className="icon" style={{ backgroundColor: '#ff5e14' }}>
-                        <i className="fal fa-phone" />
-                      </div>
-                      <div className="content">
-                        <h6>
-                          <a href="tel:00012345688">+000 (123) 456 88</a>
-                          <a href="tel:00012345688">+000 (123) 456 88</a>
-                        </h6>
-                      </div>
-                    </div>
                     <div className="contact-items">
                       <div className="icon" style={{ backgroundColor: '#ff5e14' }}>
                         <i className="fal fa-envelope" />
                       </div>
                       <div className="content">
                         <h6>
-                          <a href="mailto:info@example.com" className="link">
-                            info@example.com
-                          </a>
-                          <a href="mailto:jobs@example.com" className="link">
-                            jobs@example.com
+                          <a href="mailto:trustfundme@co.vn" className="link">
+                            trustfundme@co.vn
                           </a>
                         </h6>
                       </div>
@@ -204,8 +190,8 @@ const Footer2 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          55 Main Street, 2nd block <br />
-                          Malborne, Australia
+                          FPT University, Long Thạnh Mỹ <br />
+                          Thủ Đức, TP. Hồ Chí Minh
                         </h6>
                       </div>
                     </div>
@@ -241,7 +227,7 @@ const Footer3 = () => {
             >
               <div className="single-footer-widget">
                 <div className="widget-head">
-                  <h4 className="text-white">Get In Touch</h4>
+                  <h4 className="text-white">Kết nối với chúng tôi</h4>
                 </div>
                 <div className="footer-content">
                   <div className="contact-info-area">
@@ -305,7 +291,7 @@ const Footer3 = () => {
               data-wow-delay=".5s"
             >
               <LinksCol
-                heading="About Us"
+                heading="Về chúng tôi"
                 links={aboutLink}
                 links2={specialLink}
                 layout={3}
@@ -316,7 +302,7 @@ const Footer3 = () => {
               data-wow-delay=".7s"
             >
               <LinksCol
-                heading="Popular Causes"
+                heading="Chiến dịch nổi bật"
                 links={popularlLink}
                 layout={2}
               />
@@ -424,7 +410,7 @@ const Footer4 = () => {
                 data-wow-delay=".3s"
               >
                 <LinksCol
-                  heading="About Us"
+                heading="Về chúng tôi"
                   links={aboutLink}
                   links2={specialLink}
                   layout={3}
@@ -435,7 +421,7 @@ const Footer4 = () => {
                 data-wow-delay=".5s"
               >
                 <LinksCol
-                  heading="Popular Causes"
+                heading="Chiến dịch nổi bật"
                   links={popularlLink}
                   layout={2}
                 />
@@ -616,31 +602,31 @@ const LinksCol = ({
 );
 
 const usefulLink = [
-  { link: "about", text: "About Us" },
-  { link: "causes", text: "Popular Causes" },
-  { link: "events", text: "Upcoming Event" },
-  { link: "team", text: "Our Volunteers" },
-  { link: "news", text: "Latest News" },
+  { link: "about", text: "Về TrustFundMe" },
+  { link: "campaigns", text: "Danh sách chiến dịch" },
+  { link: "news", text: "Tin tức & cập nhật" },
+  { link: "post", text: "Cộng đồng" },
+  { link: "contact", text: "Liên hệ" },
 ];
 const legalLink = [
-  { link: "terms", text: "Terms of Use" },
-  { link: "privacy", text: "Privacy Policy" },
-  { link: "report", text: "Report Violation" },
-  { link: "cookies", text: "Cookies" },
+  { link: "#", text: "Điều khoản sử dụng" },
+  { link: "#", text: "Chính sách bảo mật" },
+  { link: "#", text: "Báo cáo vi phạm" },
+  { link: "#", text: "Cookie & dữ liệu" },
 ];
 const aboutLink = [
-  { link: "/", text: "Home" },
-  { link: "/about", text: "About" },
-  { link: "/causes", text: "Our Causes" },
-  { link: "/events", text: "Our Events" },
-  { link: "/contact", text: "Contact" },
-  { link: "/team", text: "Team" },
+  { link: "/", text: "Trang chủ" },
+  { link: "/about", text: "Giới thiệu" },
+  { link: "/campaigns", text: "Chiến dịch" },
+  { link: "/post", text: "Cộng đồng" },
+  { link: "/contact", text: "Liên hệ" },
+  { link: "/team", text: "Đội ngũ" },
 ];
 const specialLink = [
-  { link: "/faq", text: "FAQ" },
-  { link: "/news", text: "News" },
-  { link: "/account/impact", text: "Your Impact" },
-  { link: "/sign-in", text: "Sign In" },
+  { link: "/faq", text: "Câu hỏi thường gặp" },
+  { link: "/news", text: "Tin tức" },
+  { link: "/account/impact", text: "Tác động của bạn" },
+  { link: "/sign-in", text: "Đăng nhập" },
 ];
 const popularlLink = [
   { link: "/causes-details", text: "Water Purify" },

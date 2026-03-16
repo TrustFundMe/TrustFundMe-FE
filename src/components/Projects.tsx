@@ -101,8 +101,8 @@ export const Projects1 = () => {
     {
       id: 1,
       imageSrc: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?fit=crop&w=600&h=450",
-      title: "Education for All",
-      description: "Building Schools in Rural Areas",
+      title: "Giáo dục cho mọi trẻ em",
+      description: "Xây trường học tại vùng nông thôn",
       raised: 125000,
       goal: 200000,
       votes: 1543,
@@ -111,8 +111,8 @@ export const Projects1 = () => {
     {
       id: 2,
       imageSrc: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?fit=crop&w=400&h=300",
-      title: "Clean Water Initiative",
-      description: "Wells for Communities",
+      title: "Nước sạch cho cộng đồng",
+      description: "Khoan giếng và lắp hệ thống lọc",
       raised: 78500,
       goal: 100000,
       votes: 892,
@@ -121,8 +121,8 @@ export const Projects1 = () => {
     {
       id: 3,
       imageSrc: "https://images.unsplash.com/photo-1593113598332-cd288d649433?fit=crop&w=400&h=300",
-      title: "Healthcare Access",
-      description: "Mobile Clinics",
+      title: "Chăm sóc y tế lưu động",
+      description: "Xe y tế lưu động về vùng sâu",
       raised: 95000,
       goal: 150000,
       votes: 1205,
@@ -131,8 +131,8 @@ export const Projects1 = () => {
     {
       id: 4,
       imageSrc: "https://images.unsplash.com/photo-1509099836639-18ba1795216d?fit=crop&w=400&h=300",
-      title: "Food Security",
-      description: "Community Gardens",
+      title: "Bữa ăn cho học sinh",
+      description: "Bếp ăn bán trú cho trường vùng cao",
       raised: 42000,
       goal: 75000,
       votes: 634,
@@ -141,8 +141,8 @@ export const Projects1 = () => {
     {
       id: 5,
       imageSrc: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?fit=crop&w=400&h=300",
-      title: "Youth Empowerment",
-      description: "Skills Training Programs",
+      title: "Trao quyền cho thanh niên",
+      description: "Khoá đào tạo kỹ năng & nghề nghiệp",
       raised: 68000,
       goal: 120000,
       votes: 978,
@@ -151,8 +151,8 @@ export const Projects1 = () => {
     {
       id: 6,
       imageSrc: "https://images.unsplash.com/photo-1509099652299-30938b0aeb63?fit=crop&w=400&h=300",
-      title: "Women Empowerment",
-      description: "Supporting Women Entrepreneurs",
+      title: "Phụ nữ khởi nghiệp",
+      description: "Hỗ trợ vốn xoay vòng cho hộ gia đình",
       raised: 55000,
       goal: 100000,
       votes: 721,
@@ -161,8 +161,8 @@ export const Projects1 = () => {
     {
       id: 7,
       imageSrc: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?fit=crop&w=400&h=300",
-      title: "Technology Access",
-      description: "Computers for Rural Schools",
+      title: "Tiếp cận công nghệ",
+      description: "Trang bị máy tính cho trường vùng xa",
       raised: 32000,
       goal: 80000,
       votes: 456,
@@ -171,8 +171,8 @@ export const Projects1 = () => {
     {
       id: 8,
       imageSrc: "https://images.unsplash.com/photo-1509099863731-ef4bff19e808?fit=crop&w=400&h=300",
-      title: "Environmental Protection",
-      description: "Reforestation Initiative",
+      title: "Bảo vệ môi trường",
+      description: "Trồng rừng và bảo tồn nguồn nước",
       raised: 15000,
       goal: 50000,
       votes: 289,
@@ -181,11 +181,11 @@ export const Projects1 = () => {
   ]
 
   const filters = [
-    { id: "all", label: "Happening worldwide", Icon: Globe },
-    { id: "close-to-goal", label: "Close to goal", Icon: Target },
-    { id: "just-launched", label: "Just launched", Icon: Rocket },
-    { id: "needs-momentum", label: "Needs momentum", Icon: Zap },
-    { id: "worldwide", label: "High donor activity", Icon: TrendingUp },
+    { id: "all", label: "Tất cả chiến dịch", Icon: Globe },
+    { id: "close-to-goal", label: "Gần đạt mục tiêu", Icon: Target },
+    { id: "just-launched", label: "Vừa khởi động", Icon: Rocket },
+    { id: "needs-momentum", label: "Cần thêm ủng hộ", Icon: Zap },
+    { id: "worldwide", label: "Được ủng hộ nhiều", Icon: TrendingUp },
   ]
 
   const filteredProjects = selectedFilter === "all" 
@@ -247,9 +247,12 @@ export const Projects1 = () => {
         >
           <span className="sub-title color-2">
             <i className="far fa-heart" />
-            Our Impact
+            Tác động của cộng đồng
           </span>
-          <h2 className="mt-char-animation">Discover fundraisers inspired by what you care about</h2>
+          <h2 className="mt-char-animation">
+            Khám phá những chiến dịch gây quỹ<br />
+            dựa trên điều bạn quan tâm nhất
+          </h2>
         </div>
 
         {/* Filter Dropdown */}

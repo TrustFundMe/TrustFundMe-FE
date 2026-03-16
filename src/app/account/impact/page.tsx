@@ -18,11 +18,11 @@ export default function ImpactPage() {
                 className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Profile
+                Quay lại hồ sơ
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Your Impact</h1>
-                <p className="mt-2 text-gray-600">Track your contributions and the difference you've made</p>
+                <h1 className="text-3xl font-bold text-gray-900">Tác động của bạn</h1>
+                <p className="mt-2 text-gray-600">Theo dõi những đóng góp và thay đổi mà bạn đã tạo ra</p>
               </div>
             </div>
 
@@ -30,7 +30,7 @@ export default function ImpactPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-600">Total Donated</h3>
+                  <h3 className="text-sm font-medium text-gray-600">Tổng số tiền đã ủng hộ</h3>
                   <Wallet className="w-5 h-5 text-orange-600" />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">$0.00</p>
@@ -38,7 +38,7 @@ export default function ImpactPage() {
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-600">Campaigns Supported</h3>
+                  <h3 className="text-sm font-medium text-gray-600">Chiến dịch đã ủng hộ</h3>
                   <TrendingUp className="w-5 h-5 text-green-600" />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">0</p>
@@ -46,7 +46,7 @@ export default function ImpactPage() {
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-600">This Month</h3>
+                  <h3 className="text-sm font-medium text-gray-600">Tháng này</h3>
                   <TrendingUp className="w-5 h-5 text-blue-600" />
                 </div>
                 <p className="text-2xl font-bold text-gray-900">$0.00</p>
@@ -55,15 +55,15 @@ export default function ImpactPage() {
 
             {/* Impact Details */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Donation History</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Lịch sử ủng hộ</h2>
               <div className="text-center py-12">
                 <div className="flex justify-center mb-4">
                   <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
                     <Wallet className="w-8 h-8 text-gray-400" />
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No donations yet</h3>
-                <p className="text-gray-600">Start supporting campaigns to see your impact here</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Chưa có khoản ủng hộ nào</h3>
+                <p className="text-gray-600">Hãy bắt đầu ủng hộ các chiến dịch để thấy tác động của bạn tại đây</p>
               </div>
             </div>
           </div>

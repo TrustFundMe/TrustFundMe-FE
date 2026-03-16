@@ -426,7 +426,11 @@ export default function FeedPostDetail({
                   <SwiperSlide key={`${attachment.url}-${index}`}>
                     <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#000" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={attachment.url} alt={`Ảnh ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      <img
+                        src={attachment.url}
+                        alt={`Ảnh ${index + 1}`}
+                        style={{ width: "100%", height: "100%", objectFit: "contain", filter: "none" }}
+                      />
                     </div>
                   </SwiperSlide>
                 ))}

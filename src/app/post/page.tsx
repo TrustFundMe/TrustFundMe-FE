@@ -193,7 +193,12 @@ function PostCard({
           ${imgs.length === 1 ? "aspect-[4/3]" : "aspect-video"}`}>
           {imgs.length === 1 ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imgs[0].url} alt="" className="w-full h-full object-cover" />
+            <img
+              src={imgs[0].url}
+              alt=""
+              className="w-full h-full object-cover"
+              style={{ filter: "none" }}
+            />
           ) : (
             <div
               className="grid h-full gap-[2px]"
@@ -202,7 +207,12 @@ function PostCard({
               {imgs.slice(0, 3).map((img, i) => (
                 <div key={i} className="relative overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={img.url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    style={{ filter: "none" }}
+                  />
                   {i === 2 && imgs.length > 3 && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <span className="text-white font-bold text-lg">+{imgs.length - 3}</span>

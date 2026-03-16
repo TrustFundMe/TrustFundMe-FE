@@ -77,5 +77,8 @@ module.exports = {
       },
     },
   },
+  corePlugins: {
+    container: false,
+  },
   plugins: [],
 };
