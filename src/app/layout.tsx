@@ -1,6 +1,4 @@
 
-import "@css/bootstrap.min.css";
-import "@css/font-awesome.css";
 import "@css/swiper-bundle.min.css";
 import "@css/animate.css";
 import "@css/magnific-popup.css";
