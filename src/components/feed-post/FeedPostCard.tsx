@@ -177,7 +177,7 @@ export default function FeedPostCard({
               }}
             >
               <Image
-                src={post.author.avatar || "/assets/img/about/01.jpg"}
+                src={post.author.avatar || "/assets/img/defaul.jpg"}
                 alt={post.author.name}
                 width={40}
                 height={40}

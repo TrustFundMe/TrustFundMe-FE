@@ -22,7 +22,7 @@ const defaultItems: HighlightCampaign[] = [
     subtitle: "Healthcare",
     agree: 40802,
     disagree: 10000,
-    image: "/assets/img/campaign/1.jpg",
+    image: "/assets/img/defaul.jpg",
   },
   {
     id: "highlight-2",
@@ -38,7 +38,7 @@ const defaultItems: HighlightCampaign[] = [
     subtitle: "Disaster Relief",
     agree: 75000,
     disagree: 2000,
-    image: "/assets/img/campaign/1.jpg",
+    image: "/assets/img/defaul.jpg",
   },
 ];
 

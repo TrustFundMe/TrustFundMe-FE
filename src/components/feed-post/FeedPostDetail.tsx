@@ -557,7 +557,7 @@ export default function FeedPostDetail({
                   {editingCommentId === comment.id ? (
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                       <div style={{ width: 40, height: 40, borderRadius: "50%", overflow: "hidden", flex: "0 0 auto", background: "rgba(0,0,0,0.05)" }}>
-                        <img src={comment.user.avatar || "/assets/img/about/01.jpg"} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={comment.user.avatar || "/assets/img/defaul.jpg"} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                       <div style={{ flex: 1, background: "#f0faf8", border: "1px solid rgba(26,104,91,0.25)", borderRadius: 12, padding: "10px 14px" }}>
                         <textarea

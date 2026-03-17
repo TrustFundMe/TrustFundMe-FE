@@ -74,7 +74,7 @@ export default function CommentItem({
         }}
       >
         <Image
-          src={comment.user.avatar || "/assets/img/about/01.jpg"}
+          src={comment.user.avatar || "/assets/img/defaul.jpg"}
           alt={comment.user.name}
           width={isReply ? 32 : 40}
           height={isReply ? 32 : 40}

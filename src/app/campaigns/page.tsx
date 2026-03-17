@@ -15,9 +15,9 @@ const CampaignsPage = () => {
     <DanboxLayout>
       <div className="font-dm-sans">
         <CampaignBanner
-          heading="Help Bring Meaningful Campaigns to Life"
-          subheading="Helping today so communities can thrive tomorrow"
-          ctaLabel="Start a Campaign"
+          heading="Sưởi ấm lòng người"
+          subheading="Giúp đỡ hôm nay để cộng đồng phát triển mạnh mẽ hơn vào ngày mai"
+          ctaLabel="Tạo chiến dịch"
           ctaHref="/campaign-creation"
         />
         <VolunteerDoubleCta />

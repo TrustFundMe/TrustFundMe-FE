@@ -3,14 +3,14 @@ import type { User } from "./types";
 
 export default function CreatorInfo({ user }: { user: User }) {
   return (
-    <div className="d-flex align-items-center gap-3">
+    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
       <div
         style={{
           width: 48,
           height: 48,
           borderRadius: 9999,
           overflow: "hidden",
-          flex: "0 0 auto",
+          flexShrink: 0,
         }}
       >
         <Image
@@ -22,10 +22,8 @@ export default function CreatorInfo({ user }: { user: User }) {
         />
       </div>
       <div>
-        <div className="text-sm" style={{ opacity: 0.75 }}>
-          Người tạo
-        </div>
-        <div className="fw-bold">{user.name}</div>
+        <div style={{ opacity: 0.75, fontSize: 13 }}>Người tạo</div>
+        <div style={{ fontWeight: 700 }}>{user.name}</div>
       </div>
     </div>
   );

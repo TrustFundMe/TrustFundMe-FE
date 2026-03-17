@@ -310,7 +310,7 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
             }}>
                 {/* Cover image */}
                 <img
-                    src={campaign.coverImageUrl || '/assets/img/campaign/1.jpg'}
+                    src={campaign.coverImageUrl || '/assets/img/defaul.jpg'}
                     alt={campaign.title}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                 />

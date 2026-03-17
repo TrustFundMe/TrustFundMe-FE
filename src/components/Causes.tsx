@@ -16,7 +16,7 @@ export const Causes1 = () => {
     delay: string;
   }[] = [
     {
-      img: "/assets/img/causes/04.png",
+      img: "/assets/img/defaul.jpg",
       title: "Care charity names \n its new chief",
       description:
         "Under his leadership, we believe \n strengthen our position",
@@ -26,7 +26,7 @@ export const Causes1 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/causes/05.png",
+      img: "/assets/img/defaul.jpg",
       title: "Our Donation Is Hope For Poor Children's",
       description:
         "Under his leadership, we believe \n strengthen our position",
@@ -36,7 +36,7 @@ export const Causes1 = () => {
       delay: ".5s",
     },
     {
-      img: "/assets/img/causes/06.png",
+      img: "/assets/img/defaul.jpg",
       title: "Raise Fund For Clean & Healthy Water",
       description:
         "Under his leadership, we believe \n strengthen our position",
@@ -46,7 +46,7 @@ export const Causes1 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/causes/07.png",
+      img: "/assets/img/defaul.jpg",
       title: "Emergency Response And Schools Food",
       description:
         "Under his leadership, we believe \n strengthen our position",
@@ -142,7 +142,7 @@ export const Causes2 = () => {
     goal: string;
   }[] = [
     {
-      img: "/assets/img/causes/04.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Water",
       title: "Rebecca's New Album Aid for the Needy",
       progress: 70,
@@ -150,7 +150,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/05.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Foods",
       title: "Charity Showcases Nation's Kindness",
       progress: 90,
@@ -158,7 +158,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/06.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Medical",
       title: "Provide Healthy Meals to an Impoverished Rural Child",
       progress: 55,
@@ -166,7 +166,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/07.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Water",
       title: "Rebecca's New Album Aid for the Needy",
       progress: 80,
@@ -174,7 +174,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/04.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Water",
       title: "Rebecca's New Album Aid for the Needy",
       progress: 70,
@@ -182,7 +182,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/05.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Foods",
       title: "Charity Showcases Nation's Kindness",
       progress: 90,
@@ -190,7 +190,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/06.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Medical",
       title: "Provide Healthy Meals to an Impoverished Rural Child",
       progress: 55,
@@ -198,7 +198,7 @@ export const Causes2 = () => {
       goal: "$10.000",
     },
     {
-      img: "/assets/img/causes/07.jpg",
+      img: "/assets/img/defaul.jpg",
       category: "Water",
       title: "Rebecca's New Album Aid for the Needy",
       progress: 80,
@@ -295,7 +295,7 @@ export const Causes3 = () => {
   }[] = [
     {
       delay: ".3s",
-      bgImage: "/assets/img/causes/01.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       category: "Water",
       author: "Miranda H.",
       title: "Because Everyone Deserves Clean Water",
@@ -304,7 +304,7 @@ export const Causes3 = () => {
     },
     {
       delay: ".5s",
-      bgImage: "/assets/img/causes/02.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       category: "Health",
       author: "Miranda H.",
       title: "Free And Cost-Effective Health Care for the poor",
@@ -313,7 +313,7 @@ export const Causes3 = () => {
     },
     {
       delay: ".7s",
-      bgImage: "/assets/img/causes/03.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       category: "Foods",
       author: "Miranda H.",
       title: "Our Donation Is Hope For Poor Children's",
@@ -408,7 +408,7 @@ export const Causes4 = () => {
       title: "Raise Fund For Clean & Healthy Food",
       description:
         "There are only a few times in each of our lives that we get to witness.",
-      image: "/assets/img/causes/01.png",
+      image: "/assets/img/defaul.jpg",
       progress: 70,
       raised: "$4,407",
       goal: "$10.000",
@@ -417,7 +417,7 @@ export const Causes4 = () => {
       title: "Give African Child A Good Education",
       description:
         "There are only a few times in each of our lives that we get to witness.",
-      image: "/assets/img/causes/02.png",
+      image: "/assets/img/defaul.jpg",
       progress: 90,
       raised: "$4,407",
       goal: "$10.000",
@@ -426,7 +426,7 @@ export const Causes4 = () => {
       title: "Raise Fund For Clean & Healthy Food",
       description:
         "There are only a few times in each of our lives that we get to witness.",
-      image: "/assets/img/causes/03.png",
+      image: "/assets/img/defaul.jpg",
       progress: 55,
       raised: "$4,407",
       goal: "$10.000",
@@ -517,21 +517,21 @@ export const Causes5 = () => {
       date: "24th January 2024",
       title: "2024 Water Full Day Main Conference",
       location: "M12/A Miranda Hall Town Hall Street New York, United States",
-      image: "/assets/img/event/event-card-bg.jpg",
+      image: "/assets/img/defaul.jpg",
     },
     {
       category: "Friendship Day",
       date: "24th May 2024",
       title: "How We Can Be A Good Friends",
       location: "M12/A Miranda Hall Town Hall Street New York, United States",
-      image: "/assets/img/event/event-card-bg.jpg",
+      image: "/assets/img/defaul.jpg",
     },
     {
       category: "Teachers Day",
       date: "24th January 2024",
       title: "Teachers Presentation Day of 2024",
       location: "M12/A Miranda Hall Town Hall Street New York, United States",
-      image: "/assets/img/event/event-card-bg.jpg",
+      image: "/assets/img/defaul.jpg",
     },
   ];
 
@@ -688,7 +688,7 @@ export const CausesTab = () => {
       {
         id: 1,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -699,7 +699,7 @@ export const CausesTab = () => {
       {
         id: 2,
         category: "Foods",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Our Donation Is Hope For Poor Children's",
         raised: 220,
         goal: 6000,
@@ -710,7 +710,7 @@ export const CausesTab = () => {
       {
         id: 3,
         category: "Healthy",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Raise Fund For Clean & Healthy Water",
         raised: 70,
         goal: 3000,
@@ -721,7 +721,7 @@ export const CausesTab = () => {
       {
         id: 4,
         category: "Education",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Emergency Response And Schools Food",
         raised: 1220,
         goal: 8000,
@@ -732,7 +732,7 @@ export const CausesTab = () => {
       {
         id: 5,
         category: "Education",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Children Education Needs For Change The World.",
         raised: 6400,
         goal: 9000,
@@ -743,7 +743,7 @@ export const CausesTab = () => {
       {
         id: 6,
         category: "Health",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Free And Cost-Effective Health Care",
         raised: 350,
         goal: 2000,
@@ -754,7 +754,7 @@ export const CausesTab = () => {
       {
         id: 7,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Everyone Deserves Pure Clean Water",
         raised: 800,
         goal: 4500,
@@ -765,7 +765,7 @@ export const CausesTab = () => {
       {
         id: 8,
         category: "Education",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Fundraising For Early Childhood Rise",
         raised: 70,
         goal: 3000,
@@ -776,7 +776,7 @@ export const CausesTab = () => {
       {
         id: 9,
         category: "Education",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Children Education Needs For Change The World.",
         raised: 70,
         goal: 3000,
@@ -789,7 +789,7 @@ export const CausesTab = () => {
       {
         id: 1,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Everyone in the world Clean Water",
         raised: 70,
         goal: 3000,
@@ -800,7 +800,7 @@ export const CausesTab = () => {
       {
         id: 2,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -811,7 +811,7 @@ export const CausesTab = () => {
       {
         id: 3,
         category: "Water",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Deserves Basic Education for the poor",
         raised: 670,
         goal: 6000,
@@ -822,7 +822,7 @@ export const CausesTab = () => {
       {
         id: 4,
         category: "Water",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 760,
         goal: 6600,
@@ -833,7 +833,7 @@ export const CausesTab = () => {
       {
         id: 5,
         category: "Foods",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Everyone Want to eating foods",
         raised: 700,
         goal: 2000,
@@ -846,7 +846,7 @@ export const CausesTab = () => {
       {
         id: 1,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -857,7 +857,7 @@ export const CausesTab = () => {
       {
         id: 2,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -868,7 +868,7 @@ export const CausesTab = () => {
       {
         id: 3,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -881,7 +881,7 @@ export const CausesTab = () => {
       {
         id: 1,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -892,7 +892,7 @@ export const CausesTab = () => {
       {
         id: 2,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -903,7 +903,7 @@ export const CausesTab = () => {
       {
         id: 3,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -914,7 +914,7 @@ export const CausesTab = () => {
       {
         id: 4,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -925,7 +925,7 @@ export const CausesTab = () => {
       {
         id: 5,
         category: "Water",
-        image: "/assets/img/causes/03.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -938,7 +938,7 @@ export const CausesTab = () => {
       {
         id: 1,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -949,7 +949,7 @@ export const CausesTab = () => {
       {
         id: 2,
         category: "Water",
-        image: "/assets/img/causes/01.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,
@@ -960,7 +960,7 @@ export const CausesTab = () => {
       {
         id: 3,
         category: "Water",
-        image: "/assets/img/causes/02.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Because Everyone Deserves Clean Water",
         raised: 70,
         goal: 3000,

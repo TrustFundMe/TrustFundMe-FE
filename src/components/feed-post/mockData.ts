@@ -5,7 +5,7 @@ export const mockCampaigns: CampaignInfo[] = [
   {
     id: "1",
     title: "Xây dựng trường học cho trẻ em vùng cao",
-    image: "/assets/img/campaign/1.jpg",
+    image: "/assets/img/defaul.jpg",
     raised: 350000000,
     goal: 500000000,
     progress: 70,
@@ -21,7 +21,7 @@ export const mockCampaigns: CampaignInfo[] = [
   {
     id: "3",
     title: "Chương trình từ thiện cuối năm",
-    image: "/assets/img/campaign/1.jpg",
+    image: "/assets/img/defaul.jpg",
     raised: 500000000,
     goal: 800000000,
     progress: 62,
@@ -34,7 +34,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "1",
       name: "Nguyễn Văn A",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: "Cập nhật về dự án xây trường học",
     content:
@@ -46,7 +46,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     attachments: [
       {
         type: "image",
-        url: "/assets/img/campaign/1.jpg",
+        url: "/assets/img/defaul.jpg",
       },
     ],
     liked: false,
@@ -58,7 +58,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "2",
           name: "Trần Thị B",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Tuyệt vời! Cảm ơn bạn đã cập nhật",
         createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
@@ -72,7 +72,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "2",
       name: "Trần Thị B",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: null,
     content:
@@ -96,7 +96,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "3",
           name: "Lê Văn C",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Cảm ơn các bạn rất nhiều!",
         createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
@@ -106,7 +106,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "1",
           name: "Nguyễn Văn A",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Chúc mừng!",
         createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
@@ -120,7 +120,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "3",
       name: "Lê Văn C",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: "Thông báo về chương trình từ thiện mới",
     content:
@@ -140,7 +140,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "1",
       name: "Nguyễn Văn A",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: null,
     content:
@@ -152,7 +152,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     attachments: [
       {
         type: "image",
-        url: "/assets/img/campaign/1.jpg",
+        url: "/assets/img/defaul.jpg",
       },
     ],
     liked: true,
@@ -164,7 +164,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "2",
           name: "Trần Thị B",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Tuyệt vời!",
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -176,7 +176,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "4",
       name: "Phạm Thị D",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: "Kết quả chiến dịch gây quỹ",
     content:
@@ -200,7 +200,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "1",
           name: "Nguyễn Văn A",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Tuyệt vời quá!",
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -210,7 +210,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
         user: {
           id: "2",
           name: "Trần Thị B",
-          avatar: "/assets/img/about/01.jpg",
+          avatar: "/assets/img/defaul.jpg",
         },
         content: "Chúc mừng!",
         createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -224,7 +224,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     author: {
       id: "2",
       name: "Trần Thị B",
-      avatar: "/assets/img/about/01.jpg",
+      avatar: "/assets/img/defaul.jpg",
     },
     title: null,
     content:
@@ -236,7 +236,7 @@ export const mockFeedPosts: (FeedPost & { campaign?: CampaignInfo })[] = [
     attachments: [
       {
         type: "image",
-        url: "/assets/img/campaign/1.jpg",
+        url: "/assets/img/defaul.jpg",
       },
     ],
     liked: true,

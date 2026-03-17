@@ -40,6 +40,7 @@ function CommentRow({ comment, isReply = false }: { comment: CommentVM; isReply?
           borderRadius: 9999,
           overflow: "hidden",
           background: "rgba(0,0,0,0.06)",
+          flexShrink: 0,
         }}
       >
         <Image
@@ -52,11 +53,12 @@ function CommentRow({ comment, isReply = false }: { comment: CommentVM; isReply?
       </div>
 
       <div style={{ minWidth: 0 }}>
-        <div className="d-flex align-items-start justify-content-between gap-2">
+        {/* Name + more-button row */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
           <div style={{ minWidth: 0 }}>
             <div
-              className="fw-bold"
               style={{
+                fontWeight: 700,
                 lineHeight: 1.1,
                 fontSize: isReply ? 14 : 15,
                 ...clampLinesStyle(1),
@@ -64,7 +66,7 @@ function CommentRow({ comment, isReply = false }: { comment: CommentVM; isReply?
             >
               {comment.user.name}
             </div>
-            <div className="text-sm" style={{ opacity: 0.6, fontSize: isReply ? 12 : 13 }}>
+            <div style={{ opacity: 0.6, fontSize: isReply ? 12 : 13 }}>
               {comment.createdAt}
             </div>
           </div>
@@ -77,13 +79,20 @@ function CommentRow({ comment, isReply = false }: { comment: CommentVM; isReply?
               background: "transparent",
               padding: 6,
               opacity: 0.6,
-              flex: "0 0 auto",
+              flexShrink: 0,
+              cursor: "pointer",
             }}
           >
-            <i className="far fa-ellipsis-h" style={{ fontSize: 14 }} />
+            {/* Three dots icon */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="5" cy="12" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="19" cy="12" r="2" />
+            </svg>
           </button>
         </div>
 
+        {/* Comment content — no broken icon here */}
         <div
           style={{
             marginTop: 6,
@@ -96,17 +105,31 @@ function CommentRow({ comment, isReply = false }: { comment: CommentVM; isReply?
           {comment.content}
         </div>
 
+        {/* Like & reply count */}
         <div
-          className="d-flex align-items-center gap-3"
-          style={{ marginTop: 8, fontSize: 13, opacity: 0.7, flexWrap: "wrap" }}
+          style={{
+            marginTop: 8,
+            fontSize: 13,
+            opacity: 0.7,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+          }}
         >
-          <span className="d-flex align-items-center gap-1">
-            <i className="far fa-thumbs-up" style={{ fontSize: 13 }} />
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            {/* Thumbs up SVG */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z" />
+              <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+            </svg>
             <span>{comment.likes}</span>
           </span>
           {!isReply ? (
-            <span className="d-flex align-items-center gap-1">
-              <i className="far fa-comment-dots" style={{ fontSize: 13 }} />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+              {/* Comment bubble SVG */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
               <span>{comment.replies}</span>
             </span>
           ) : null}
@@ -169,17 +192,17 @@ export default function CampaignCommentsCard({
       style={{ marginTop: 24, marginBottom: 24 }}
     >
       <div
-        className="d-flex align-items-center justify-content-between"
         style={{
           height: headerHeight,
           padding: "0 16px",
           borderBottom: "1px solid rgba(0,0,0,0.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        <div className="fw-bold">Bình luận</div>
-        <div className="text-sm" style={{ opacity: 0.65 }}>
-          Mới nhất
-        </div>
+        <div style={{ fontWeight: 700, fontSize: 15 }}>Bình luận</div>
+        <div style={{ opacity: 0.65, fontSize: 13 }}>Mới nhất</div>
       </div>
 
       <div
@@ -206,10 +229,13 @@ export default function CampaignCommentsCard({
 
       {parents.length > pageSize ? (
         <div
-          className="d-flex align-items-center justify-content-between"
           style={{
             height: pagerHeight,
             padding: "0 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "nowrap",
           }}
         >
           <button
@@ -222,12 +248,14 @@ export default function CampaignCommentsCard({
               borderRadius: 9999,
               padding: "8px 12px",
               opacity: page === 1 ? 0.5 : 1,
+              cursor: page === 1 ? "default" : "pointer",
+              fontWeight: 500,
             }}
           >
             Trước
           </button>
 
-          <div className="text-sm" style={{ opacity: 0.7 }}>
+          <div style={{ opacity: 0.7, fontSize: 13 }}>
             {page}/{totalPages}
           </div>
 
@@ -241,6 +269,8 @@ export default function CampaignCommentsCard({
               borderRadius: 9999,
               padding: "8px 12px",
               opacity: page === totalPages ? 0.5 : 1,
+              cursor: page === totalPages ? "default" : "pointer",
+              fontWeight: 500,
             }}
           >
             Sau

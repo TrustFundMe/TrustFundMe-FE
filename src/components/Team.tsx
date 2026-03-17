@@ -28,7 +28,7 @@ export const Team1 = () => {
       ],
     },
     {
-      image: "/assets/img/volunter/05.jpg",
+      image: "/assets/img/defaul.jpg",
       role: "Head of Idea",
       name: "Rosalina D. William",
       delay: ".4s",
@@ -40,7 +40,7 @@ export const Team1 = () => {
       ],
     },
     {
-      image: "/assets/img/volunter/06.jpg",
+      image: "/assets/img/defaul.jpg",
       role: "Head of Idea",
       name: "Rosalina D. William",
       delay: ".6s",
@@ -52,7 +52,7 @@ export const Team1 = () => {
       ],
     },
     {
-      image: "/assets/img/volunter/07.jpg",
+      image: "/assets/img/defaul.jpg",
       role: "Head of Idea",
       name: "Rosalina D. William",
       delay: ".8s",

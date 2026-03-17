@@ -12,19 +12,19 @@ export const mockCampaign: Campaign = {
   category: "Giáo dục",
   description:
     "Chiến dịch này nhằm hỗ trợ sách vở, học bổng và cải thiện điều kiện học tập cho trẻ em ở các vùng xa xôi. Chúng tui sẽ công khai cập nhật minh bạch cho từng giai đoạn chi tiêu.",
-  coverImage: "/assets/img/campaign/4.jpg",
+  coverImage: "/assets/img/defaul.jpg",
   galleryImages: [
-    "/assets/img/campaign/4.jpg",
-    "/assets/img/campaign/1.jpg",
+    "/assets/img/defaul.jpg",
+    "/assets/img/defaul.jpg",
     "/assets/img/campaign/2.jpg",
   ],
   goalAmount: 7000,
   raisedAmount: 4900,
-  creator: u("u_creator", "Nguyen Minh", "/assets/img/about/01.jpg"),
+  creator: u("u_creator", "Nguyen Minh", "/assets/img/defaul.jpg"),
   followers: [
-    u("u_01", "Ha Vy", "/assets/img/about/02.jpg"),
-    u("u_02", "Tuan Anh", "/assets/img/about/03.jpg"),
-    u("u_03", "Thao My", "/assets/img/about/04.jpg"),
+    u("u_01", "Ha Vy", "/assets/img/defaul.jpg"),
+    u("u_02", "Tuan Anh", "/assets/img/defaul.jpg"),
+    u("u_03", "Thao My", "/assets/img/defaul.jpg"),
     u("u_04", "Hoang Long", "/assets/img/about/05.jpg"),
     u("u_05", "Lan Anh", "/assets/img/about/06.jpg"),
     u("u_06", "Minh Khang", "/assets/img/about/07.jpg"),
@@ -64,13 +64,13 @@ export const mockPlans: CampaignPlan[] = [
 export const mockPosts: CampaignPost[] = [
   {
     id: "post_01",
-    author: u("u_creator", "Nguyen Minh", "/assets/img/about/01.jpg"),
+    author: u("u_creator", "Nguyen Minh", "/assets/img/defaul.jpg"),
     content:
       "Hôm nay chúng tui đã liên hệ với trường để xác nhận danh sách học sinh nhận sách. Cảm ơn mọi người đã theo dõi và ủng hộ!",
     createdAt: "2 giờ trước",
     attachments: [
-      { type: "image", url: "/assets/img/causes/p2.jpg" },
-      { type: "image", url: "/assets/img/causes/p3.jpg" },
+      { type: "image", url: "/assets/img/defaul.jpg" },
+      { type: "image", url: "/assets/img/defaul.jpg" },
     ],
     liked: false,
     likeCount: 32,
@@ -78,13 +78,13 @@ export const mockPosts: CampaignPost[] = [
     comments: [
       {
         id: "c_01",
-        user: u("u_02", "Tuấn Anh", "/assets/img/about/03.jpg"),
+        user: u("u_02", "Tuấn Anh", "/assets/img/defaul.jpg"),
         content: "Công việc tuyệt vời — rất vui được ủng hộ!",
         createdAt: "1 giờ trước",
       },
       {
         id: "c_02",
-        user: u("u_01", "Hà Vy", "/assets/img/about/02.jpg"),
+        user: u("u_01", "Hà Vy", "/assets/img/defaul.jpg"),
         content: "Hóng ảnh thực tế từ buổi giao hàng!",
         createdAt: "35 phút trước",
       },
@@ -92,7 +92,7 @@ export const mockPosts: CampaignPost[] = [
   },
   {
     id: "post_02",
-    author: u("u_creator", "Nguyen Minh", "/assets/img/about/01.jpg"),
+    author: u("u_creator", "Nguyen Minh", "/assets/img/defaul.jpg"),
     content:
       "Cập nhật minh bạch: Tui sẽ công khai kế hoạch và hóa đơn sau khi hoàn thành mỗi giai đoạn. Vui lòng bình chọn để chúng tui ưu tiên các hạng mục cần thiết nhất.",
     createdAt: "Hôm qua",
@@ -103,7 +103,7 @@ export const mockPosts: CampaignPost[] = [
   },
   {
     id: "post_03",
-    author: u("u_02", "Tuan Anh", "/assets/img/about/03.jpg"),
+    author: u("u_02", "Tuan Anh", "/assets/img/defaul.jpg"),
     content: "Vừa quyên góp xong — hy vọng chiến dịch sớm đạt mục tiêu!",
     createdAt: "2 ngày trước",
     liked: false,
@@ -112,7 +112,7 @@ export const mockPosts: CampaignPost[] = [
     comments: [
       {
         id: "c_03",
-        user: u("u_creator", "Nguyen Minh", "/assets/img/about/01.jpg"),
+        user: u("u_creator", "Nguyen Minh", "/assets/img/defaul.jpg"),
         content: "Cảm ơn bạn rất nhiều!",
         createdAt: "2 ngày trước",
       },
@@ -120,7 +120,7 @@ export const mockPosts: CampaignPost[] = [
   },
   {
     id: "post_04",
-    author: u("u_01", "Ha Vy", "/assets/img/about/02.jpg"),
+    author: u("u_01", "Ha Vy", "/assets/img/defaul.jpg"),
     content: "Chia sẻ tệp tham khảo cho danh sách sách — mọi người xem qua nhé.",
     createdAt: "1 tuần trước",
     attachments: [
@@ -140,7 +140,7 @@ export const mockPosts: CampaignPost[] = [
 export const mockComments = [
   {
     id: "cm_01",
-    user: u("u_01", "Ha Vy", "/assets/img/about/02.jpg"),
+    user: u("u_01", "Ha Vy", "/assets/img/defaul.jpg"),
     content:
       "Rất thích ý tưởng này. Hãy chia sẻ ảnh ngày trao quà để mọi người thấy được tác động nhé.",
     createdAt: "08:39 sáng",
@@ -149,7 +149,7 @@ export const mockComments = [
   },
   {
     id: "cm_01_r1",
-    user: u("u_creator", "Nguyen Minh", "/assets/img/about/01.jpg"),
+    user: u("u_creator", "Nguyen Minh", "/assets/img/defaul.jpg"),
     content: "Chắc chắn rồi! Chúng tui sẽ đăng ảnh và hóa đơn ngay sau giai đoạn đầu tiên.",
     createdAt: "08:45 sáng",
     likes: 3,
@@ -158,7 +158,7 @@ export const mockComments = [
   },
   {
     id: "cm_02",
-    user: u("u_02", "Tuấn Anh", "/assets/img/about/03.jpg"),
+    user: u("u_02", "Tuấn Anh", "/assets/img/defaul.jpg"),
     content: "Tui ủng hộ chiến dịch này. Cập nhật rõ ràng như thế này tạo niềm tin rất lớn.",
     createdAt: "09:02 sáng",
     likes: 6,
@@ -166,7 +166,7 @@ export const mockComments = [
   },
   {
     id: "cm_03",
-    user: u("u_03", "Thảo My", "/assets/img/about/04.jpg"),
+    user: u("u_03", "Thảo My", "/assets/img/defaul.jpg"),
     content: "Nếu bạn cần tình nguyện viên giúp giao sách, tui sẵn sàng.",
     createdAt: "09:10 sáng",
     likes: 2,

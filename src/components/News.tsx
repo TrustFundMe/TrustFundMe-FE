@@ -14,7 +14,7 @@ export const News1 = () => {
     active?: boolean;
   }[] = [
     {
-      image: "/assets/img/news/04.jpg",
+      image: "/assets/img/defaul.jpg",
       day: "20",
       month: "Feb",
       category: "Food",
@@ -24,7 +24,7 @@ export const News1 = () => {
       delay: ".3s",
     },
     {
-      image: "/assets/img/news/05.jpg",
+      image: "/assets/img/defaul.jpg",
       day: "22",
       month: "April",
       category: "Water",
@@ -35,7 +35,7 @@ export const News1 = () => {
       active: true,
     },
     {
-      image: "/assets/img/news/06.jpg",
+      image: "/assets/img/defaul.jpg",
       day: "20",
       month: "Feb",
       category: "Children",
@@ -115,7 +115,7 @@ export const News2 = () => {
     delay: string;
   }[] = [
     {
-      img: "/assets/img/news/07.jpg",
+      img: "/assets/img/defaul.jpg",
       day: "17",
       month: "Feb",
       author: "Admin",
@@ -124,7 +124,7 @@ export const News2 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/news/08.jpg",
+      img: "/assets/img/defaul.jpg",
       day: "25",
       month: "Feb",
       author: "Admin",
@@ -133,7 +133,7 @@ export const News2 = () => {
       delay: ".5s",
     },
     {
-      img: "/assets/img/news/09.jpg",
+      img: "/assets/img/defaul.jpg",
       day: "21",
       month: "Feb",
       author: "Admin",
@@ -221,7 +221,7 @@ export const News3 = () => {
     tags: "Charity, Fundrise",
     description:
       "Many of us have no idea what it's like to be thirsty. We have plenty of water to drink -- even the water in our toilets But many people around the world don’t have tha",
-    image: "/assets/img/news/01.jpg",
+    image: "/assets/img/defaul.jpg",
     delay: ".3s",
   };
 
@@ -345,21 +345,21 @@ export const News4 = () => {
     description: string;
   }[] = [
     {
-      image: "/assets/img/news/04.jpg",
+      image: "/assets/img/defaul.jpg",
       date: "24th September 2024",
       title: "Group of donors is a cover operating",
       description:
         "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt",
     },
     {
-      image: "/assets/img/news/05.jpg",
+      image: "/assets/img/defaul.jpg",
       date: "24th September 2024",
       title: "Everyone Deserves Clean Water",
       description:
         "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt",
     },
     {
-      image: "/assets/img/news/06.jpg",
+      image: "/assets/img/defaul.jpg",
       date: "24th September 2024",
       title: "Childhood Teaching Free support",
       description:

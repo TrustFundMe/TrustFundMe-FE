@@ -5195,7 +5195,7 @@ input.main-search-input::placeholder {
   content: "";
   left: -25px;
   top: -10px;
-  background-image: url(../../assets/img/testimonial/comma.png);
+  background-image: url(../../assets/img/defaul.jpg);
   width: 100%;
   height: 100%;
   background-repeat: no-repeat;
@@ -5827,7 +5827,7 @@ input.main-search-input::placeholder {
   width: 114px;
   height: 90px;
   content: "";
-  background: url(../img/event/quote-gray.png) no-repeat;
+  background: url(../img/defaul.jpg) no-repeat;
   z-index: -1;
 }
 .event-details-wrapper img {
@@ -6359,7 +6359,7 @@ input.main-search-input::placeholder {
 .blog-wrapper .single-blog-post.quote-post .post-content, .blog-wrapper .single-blog-post.format-quote .post-content {
   position: relative;
   background-color: var(--theme-3);
-  background-image: url("../img/quotepost.png");
+  background-image: url("../img/defaul.jpg");
   border: none;
 }
 .blog-wrapper .single-blog-post.quote-post .quote-content, .blog-wrapper .single-blog-post.format-quote .quote-content {

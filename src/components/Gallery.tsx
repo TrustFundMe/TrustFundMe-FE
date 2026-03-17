@@ -6,23 +6,23 @@ export const Gallery1 = () => {
     delay: string;
   }[] = [
     {
-      img: "/assets/img/gallery/gallery-6.jpg",
+      img: "/assets/img/defaul.jpg",
       delay: ".2s",
     },
     {
-      img: "/assets/img/gallery/gallery-7.jpg",
+      img: "/assets/img/defaul.jpg",
       delay: ".4s",
     },
     {
-      img: "/assets/img/gallery/gallery-8.jpg",
+      img: "/assets/img/defaul.jpg",
       delay: ".6s",
     },
     {
-      img: "/assets/img/gallery/gallery-9.jpg",
+      img: "/assets/img/defaul.jpg",
       delay: ".8s",
     },
     {
-      img: "/assets/img/gallery/gallery-10.jpg",
+      img: "/assets/img/defaul.jpg",
       delay: ".9s",
     },
   ];
@@ -64,27 +64,27 @@ export const Gallery2 = () => {
     title: string;
   }[] = [
     {
-      image: "/assets/img/gallery/gallery-1.jpg",
+      image: "/assets/img/defaul.jpg",
       category: "Charity",
       title: "Education",
     },
     {
-      image: "/assets/img/gallery/gallery-2.jpg",
+      image: "/assets/img/defaul.jpg",
       category: "Charity",
       title: "Education",
     },
     {
-      image: "/assets/img/gallery/gallery-3.jpg",
+      image: "/assets/img/defaul.jpg",
       category: "Charity",
       title: "Education",
     },
     {
-      image: "/assets/img/gallery/gallery-4.jpg",
+      image: "/assets/img/defaul.jpg",
       category: "Charity",
       title: "Education",
     },
     {
-      image: "/assets/img/gallery/gallery-5.jpg",
+      image: "/assets/img/defaul.jpg",
       category: "Charity",
       title: "Education",
     },

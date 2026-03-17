@@ -17,7 +17,7 @@ export const Event1 = () => {
     delay: string;
   }[] = [
     {
-      img: "/assets/img/event/09.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -28,7 +28,7 @@ export const Event1 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/event/15.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -39,7 +39,7 @@ export const Event1 = () => {
       delay: ".5s",
     },
     {
-      img: "/assets/img/event/16.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -50,7 +50,7 @@ export const Event1 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/event/17.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -139,7 +139,7 @@ export const Event2 = () => {
     delay: string;
   }[] = [
     {
-      img: "/assets/img/event/02.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -149,7 +149,7 @@ export const Event2 = () => {
       delay: ".3s",
     },
     {
-      img: "/assets/img/event/08.jpg",
+      img: "/assets/img/defaul.jpg",
       date: "13 Nov 2024",
       time: "10:00 PM",
       location: "66 Broklyant, New York India",
@@ -232,7 +232,7 @@ export const Event3 = () => {
     author: string;
   }[] = [
     {
-      bgImage: "/assets/img/event/01.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       category: "School",
@@ -241,7 +241,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/04.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-2",
@@ -251,7 +251,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/05.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-3",
@@ -261,7 +261,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/06.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-4",
@@ -271,7 +271,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/07.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-5",
@@ -281,7 +281,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/01.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       category: "School",
@@ -290,7 +290,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/04.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-2",
@@ -300,7 +300,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/05.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-3",
@@ -310,7 +310,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/06.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-4",
@@ -320,7 +320,7 @@ export const Event3 = () => {
       author: "Shikhon Islam",
     },
     {
-      bgImage: "/assets/img/event/07.jpg",
+      bgImage: "/assets/img/defaul.jpg",
       date: "11",
       month: "July",
       colorClass: "color-5",
@@ -465,91 +465,91 @@ export const EventPage = () => {
   > = {
     categories: [
       {
-        image: "/assets/img/event/e1.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Project Management In The Voluntary Sector",
       },
       {
-        image: "/assets/img/event/e2.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "10 Ways To Help Others That Will Lead You",
       },
       {
-        image: "/assets/img/event/e3.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Helping The Church To Serve Others",
       },
       {
-        image: "/assets/img/event/e4.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Rebuilding Collapse Primary School",
       },
       {
-        image: "/assets/img/event/e5.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Changing Leadership In A Changing World",
       },
       {
-        image: "/assets/img/event/e6.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Charity Program In The Dhaka",
       },
     ],
     water: [
       {
-        image: "/assets/img/event/e1.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Project Management In The Voluntary Sector",
       },
       {
-        image: "/assets/img/event/e2.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "10 Ways To Help Others That Will Lead You",
       },
       {
-        image: "/assets/img/event/e5.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Changing Leadership In A Changing World",
       },
       {
-        image: "/assets/img/event/e6.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Charity Program In The Dhaka",
       },
     ],
     festival: [
       {
-        image: "/assets/img/event/e2.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "10 Ways To Help Others That Will Lead You",
       },
       {
-        image: "/assets/img/event/e3.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Helping The Church To Serve Others",
       },
       {
-        image: "/assets/img/event/e4.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Rebuilding Collapse Primary School",
       },
       {
-        image: "/assets/img/event/e5.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Changing Leadership In A Changing World",
       },
     ],
     proevent: [
       {
-        image: "/assets/img/event/e1.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Project Management In The Voluntary Sector",
       },
       {
-        image: "/assets/img/event/e2.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "10 Ways To Help Others That Will Lead You",
       },
       {
-        image: "/assets/img/event/e6.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Charity Program In The Dhaka",
       },
     ],
     trending: [
       {
-        image: "/assets/img/event/e4.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Rebuilding Collapse Primary School",
       },
       {
-        image: "/assets/img/event/e5.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Changing Leadership In A Changing World",
       },
       {
-        image: "/assets/img/event/e6.jpg",
+        image: "/assets/img/defaul.jpg",
         title: "Charity Program In The Dhaka",
       },
     ],

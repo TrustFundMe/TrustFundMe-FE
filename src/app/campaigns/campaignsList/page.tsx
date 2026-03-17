@@ -29,7 +29,7 @@ function CampaignsListContent() {
         title: "Community Kitchens",
         description:
           "Support community kitchens where volunteers prepare meals for people in need.",
-        image: "/assets/img/campaign/1.jpg",
+        image: "/assets/img/defaul.jpg",
       },
       {
         id: "school-feeding",
@@ -43,7 +43,7 @@ function CampaignsListContent() {
         title: "Health & Wellness",
         description:
           "Fund medical supplies, checkups, and wellness support for vulnerable groups.",
-        image: "/assets/img/campaign/1.jpg",
+        image: "/assets/img/defaul.jpg",
       },
       {
         id: "emergency-food",
@@ -57,7 +57,7 @@ function CampaignsListContent() {
         title: "Nutritional Support",
         description:
           "Provide nutrition packs and education to improve long-term health outcomes.",
-        image: "/assets/img/campaign/1.jpg",
+        image: "/assets/img/defaul.jpg",
       },
     ];
 
@@ -129,7 +129,7 @@ function CampaignsListContent() {
   const categoryDescription =
     data.category?.description ??
     "Please select a valid category to view available campaigns.";
-  const categoryImage = data.category?.image ?? "/assets/img/campaign/1.jpg";
+  const categoryImage = data.category?.image ?? "/assets/img/defaul.jpg";
 
   return (
     <DanboxLayout>

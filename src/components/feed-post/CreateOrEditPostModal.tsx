@@ -256,7 +256,7 @@ export default function CreateOrEditPostModal({
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden">
               <img
-                src={user?.avatarUrl || "/assets/img/about/01.jpg"}
+                src={user?.avatarUrl || "/assets/img/defaul.jpg"}
                 alt={user?.fullName || "User"}
                 className="w-full h-full object-cover"
                 onError={(e) =>

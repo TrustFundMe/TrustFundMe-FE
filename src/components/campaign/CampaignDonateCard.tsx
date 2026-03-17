@@ -11,8 +11,8 @@ function CircularProgress({ value }: { value: number }) {
   const dashOffset = circumference * (1 - progress / 100);
 
   return (
-    <div className="d-flex align-items-center gap-3" style={{ flexWrap: "wrap" }}>
-      <div style={{ position: "relative", width: size, height: size, flex: "0 0 auto" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
+      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
         <svg width={size} height={size} style={{ display: "block" }}>
           <circle
             cx={size / 2}
@@ -53,10 +53,10 @@ function CircularProgress({ value }: { value: number }) {
       </div>
 
       <div style={{ minWidth: 0 }}>
-        <div className="fw-bold" style={{ lineHeight: 1.1 }}>
+        <div style={{ fontWeight: 700, lineHeight: 1.2 }}>
           Tiến trình gây quỹ
         </div>
-        <div className="text-sm" style={{ opacity: 0.65 }}>
+        <div style={{ opacity: 0.65, fontSize: 13 }}>
           Trạng thái gây quỹ hiện tại
         </div>
       </div>
@@ -110,9 +110,9 @@ export default function CampaignDonateCard({
       <div style={{ padding: 16 }}>
         <CircularProgress value={progress} />
 
+        {/* Quick-amount buttons */}
         <div
-          className="d-flex align-items-center gap-2 flex-wrap"
-          style={{ marginTop: 14 }}
+          style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
         >
           {[50000, 100000, 200000, 500000].map((v) => (
             <button
@@ -131,11 +131,21 @@ export default function CampaignDonateCard({
               {v >= 1000 ? `${v / 1000}k` : v}
             </button>
           ))}
+        </div>
 
+        {/* Input amount + Donate button — same row, no wrap */}
+        <div
+          style={{
+            marginTop: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <div
             style={{
               flex: "1 1 auto",
-              minWidth: 140,
+              minWidth: 0,
               display: "flex",
               alignItems: "center",
               gap: 8,
@@ -170,37 +180,51 @@ export default function CampaignDonateCard({
             style={{
               border: "none",
               borderRadius: 9999,
-              padding: "10px 14px",
+              padding: "10px 18px",
               background: "#202426",
               color: "#fff",
               fontWeight: 800,
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Donate
-            <i className="far fa-arrow-right" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
           </button>
         </div>
 
         <div
-          className="d-flex align-items-center justify-content-between"
-          style={{ marginTop: 12, opacity: 0.75, fontSize: 14 }}
+          style={{ marginTop: 12, opacity: 0.75, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap", gap: 8 }}
         >
-          <div>
+          <div style={{ whiteSpace: "nowrap" }}>
             <span style={{ fontWeight: 800 }}>{raisedAmount.toLocaleString()} VNĐ</span> đã quyên góp
           </div>
-          <div>
+          <div style={{ whiteSpace: "nowrap" }}>
             Mục tiêu: <span style={{ fontWeight: 800 }}>{goalAmount.toLocaleString()} VNĐ</span>
           </div>
         </div>
 
         {/* Recent Donors Section */}
         <div style={{ marginTop: 24, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 20 }}>
-          <div className="d-flex align-items-center justify-content-between" style={{ marginBottom: 15 }}>
-            <h5 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#202426" }}>Người vừa ủng hộ</h5>
-            <span style={{ fontSize: 12, color: "#F84D43", fontWeight: 700 }}>Mới nhất</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap", gap: 8, marginBottom: 15 }}>
+            <h5 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#202426", whiteSpace: "nowrap" }}>Người vừa ủng hộ</h5>
+            <span style={{ fontSize: 12, color: "#F84D43", fontWeight: 700, whiteSpace: "nowrap" }}>Mới nhất</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -223,11 +247,11 @@ export default function CampaignDonateCard({
                     flexShrink: 0
                   }}>
                     <img
-                      src={donor.donorAvatar || "/assets/img/about/02.jpg"}
+                      src={donor.donorAvatar || "/assets/img/defaul.jpg"}
                       alt={donor.donorName}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/assets/img/about/02.jpg";
+                        (e.target as HTMLImageElement).src = "/assets/img/defaul.jpg";
                       }}
                     />
                   </div>

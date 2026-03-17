@@ -94,12 +94,12 @@ function PlanCard({ plan, onOpen }: { plan: CampaignPlan; onOpen: () => void }) 
 
   const avatars =
     status === "disbursed" || status === "approved"
-      ? ["/assets/img/about/02.jpg"]
+      ? ["/assets/img/defaul.jpg"]
       : status === "voting"
         ? [
-          "/assets/img/about/02.jpg",
-          "/assets/img/about/03.jpg",
-          "/assets/img/about/04.jpg",
+          "/assets/img/defaul.jpg",
+          "/assets/img/defaul.jpg",
+          "/assets/img/defaul.jpg",
         ]
         : [];
 
@@ -184,22 +184,27 @@ export default function PlansList({
       }}
     >
       <div
-        className="d-flex align-items-center justify-content-between"
-        style={{ marginBottom: 14 }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+        }}
       >
-        <div className="widget-title" style={{ marginBottom: 0 }}>
-          <h4 style={{ marginBottom: 0 }}>Kế hoạch chi tiêu</h4>
-        </div>
+        <h4 style={{ marginBottom: 0, fontSize: 18, fontWeight: 700 }}>
+          Kế hoạch chi tiêu
+        </h4>
 
         <button
           type="button"
-          className="text-sm"
           style={{
             border: "none",
             background: "transparent",
             padding: 0,
             color: "var(--theme)",
             fontWeight: 700,
+            fontSize: 13,
+            cursor: "pointer",
           }}
           onClick={() => alert("Xem thêm kế hoạch (tính năng chưa thực hiện)")}
         >

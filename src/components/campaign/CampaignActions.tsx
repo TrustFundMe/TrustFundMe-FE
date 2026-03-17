@@ -224,8 +224,8 @@ export default function CampaignActions({
 
   return (
     <>
-      <div className="d-flex align-items-center justify-content-between flex-wrap gap-3" style={{ position: "relative" }}>
-        <div className="d-flex align-items-center gap-3 flex-wrap">
+      <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {/* Follow button */}
           <button
             type="button"
@@ -246,7 +246,21 @@ export default function CampaignActions({
               transition: "all 0.2s ease",
             }}
           >
-            <i className={followed ? "fas fa-user-check" : "far fa-user-plus"} style={{ opacity: 0.85 }} />
+            {/* User-plus / user-check SVG */}
+            {followed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+                <polyline points="16 11 18 13 22 9" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+            )}
             {followed ? "Đang theo dõi" : "Theo dõi"}
           </button>
 
@@ -267,7 +281,11 @@ export default function CampaignActions({
               gap: 6,
             }}
           >
-            <i className="far fa-user" style={{ opacity: 0.7 }} />
+            {/* User icon SVG */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7 }}>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
             {followerCount} người theo dõi
           </button>
 
@@ -293,7 +311,11 @@ export default function CampaignActions({
               transition: "all 0.2s ease",
             }}
           >
-            <i className={flagged ? "fas fa-flag" : "far fa-flag"} style={{ opacity: 0.85 }} />
+            {/* Flag icon SVG */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill={flagged ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+              <line x1="4" y1="22" x2="4" y2="15" />
+            </svg>
             {flagged ? "Đã tố cáo" : "Tố cáo"}
           </button>
         </div>
@@ -333,7 +355,7 @@ export default function CampaignActions({
                     }}
                   >
                     <img
-                      src={follower.avatarUrl || "/assets/img/about/01.jpg"}
+                      src={follower.avatarUrl || "/assets/img/defaul.jpg"}
                       alt={follower.userName}
                       style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }}
                     />

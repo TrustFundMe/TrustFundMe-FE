@@ -17,7 +17,7 @@ const CausesPage = () => {
                     height={0}
                     sizes="100vw"
                     style={{ width: "100%", height: "auto" }}
-                    src="/assets/img/donation/donation_bg.jpg"
+                    src="/assets/img/defaul.jpg"
                     alt="img"
                   />
                 </div>
