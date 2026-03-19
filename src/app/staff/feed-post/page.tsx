@@ -11,6 +11,7 @@ import { feedPostService } from '@/services/feedPostService';
 import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
@@ -58,6 +59,8 @@ export default function StaffFeedPostPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [createdAtOpen, setCreatedAtOpen] = useState(false);
+  const [createdAtDetails, setCreatedAtDetails] = useState<{ postTitle?: string; createdAt: string } | null>(null);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -157,7 +160,7 @@ export default function StaffFeedPostPage() {
     processingId === id && processingAction === action;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
@@ -232,24 +235,24 @@ export default function StaffFeedPostPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center py-20 flex-1 min-h-0">
             <Loader2 className="w-8 h-8 animate-spin text-[#1A685B]" />
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-500">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-500 flex-1 min-h-0">
             <AlertCircle className="w-8 h-8" />
             <p className="text-sm font-semibold">{error}</p>
             <button onClick={loadPosts} className="text-sm text-[#1A685B] underline">Thử lại</button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-400">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-400 flex-1 min-h-0">
             <MessageSquare className="w-10 h-10 opacity-30" />
             <p className="text-sm font-semibold">Không tìm thấy bài viết nào</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/60">
@@ -310,7 +313,19 @@ export default function StaffFeedPostPage() {
                       <div>{post.likeCount} likes · {post.replyCount} comments</div>
                       <div>{post.viewCount} views</div>
                     </td>
-                    <td className="px-5 py-4 text-xs text-zinc-500 whitespace-nowrap">{formatDate(post.createdAt)}</td>
+                    <td className="px-5 py-4 text-xs text-zinc-500 whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="hover:text-[#1A685B] transition-colors"
+                        onClick={() => {
+                          setCreatedAtDetails({ postTitle: post.title ?? undefined, createdAt: post.createdAt });
+                          setCreatedAtOpen(true);
+                        }}
+                        aria-label="Xem chi tiết ngày tạo"
+                      >
+                        {formatDate(post.createdAt)}
+                      </button>
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1">
                         <Link href={`/post/${post.id}`} target="_blank"
@@ -366,6 +381,30 @@ export default function StaffFeedPostPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
+        <DialogContent className="max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Chi tiết ngày tạo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div className="text-sm text-zinc-600">
+              {createdAtDetails?.postTitle ? (
+                <span className="font-bold text-zinc-900">Bài viết:</span>
+              ) : null}
+              {createdAtDetails?.postTitle ?? '—'}
+            </div>
+            <div className="text-sm text-zinc-900 font-bold">
+              {createdAtDetails?.createdAt
+                ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </div>
+            <div className="text-xs text-zinc-500 break-all">
+              Raw: {createdAtDetails?.createdAt ?? '—'}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {!loading && !error && totalPages > 1 && (
         <div className="flex items-center justify-between">

@@ -8,6 +8,8 @@ import "swiper/css";
 import "swiper/css/pagination";
 import { feedPostService } from "@/services/feedPostService";
 import { mediaService } from "@/services/mediaService";
+import { expenditureService } from "@/services/expenditureService";
+import { forumCategoryService } from "@/services/forumCategoryService";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import type { FeedPost } from "@/types/feedPost";
 
@@ -44,6 +46,9 @@ export default function CreateOrEditPostModal({
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [campaignId, setCampaignId] = useState("");
+  // Backend stores campaign link inside budgetId (which is actually expenditureId)
+  // => when user selects a campaign, we resolve latest expenditureId and store it in budgetId.
+  const [budgetId, setBudgetId] = useState<number | null>(null);
   const [existingImages, setExistingImages] = useState<{ url: string; mediaId: number }[]>([]);
   /** Ảnh đang upload: preview local, xong thì chuyển sang existingImages */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string }[]>([]);
@@ -58,7 +63,19 @@ export default function CreateOrEditPostModal({
       setTitle(initialData.title ?? "");
       setContent(initialData.content ?? "");
       setCategoryId(initialData.category ?? "");
-      setCampaignId(initialData.expenditureId != null ? String(initialData.expenditureId) : "");
+      const initialBudget = initialData.expenditureId ?? initialData.budgetId ?? null;
+      setBudgetId(initialBudget);
+      setCampaignId("");
+
+      // Derive campaignId from the selected latest expenditureId
+      if (initialBudget != null) {
+        expenditureService
+          .getById(initialBudget)
+          .then((exp) => setCampaignId(String(exp.campaignId)))
+          .catch(() => {
+            /* ignore */
+          });
+      }
       setExistingImages([]);
       setUploadingItems([]);
     } else {
@@ -70,6 +87,7 @@ export default function CreateOrEditPostModal({
           setContent(draft.content || "");
           setCategoryId(draft.categoryId || "");
           setCampaignId(draft.campaignId || "");
+          setBudgetId(typeof draft.budgetId === "number" ? draft.budgetId : null);
         } catch (e) {
           console.error("Failed to load draft", e);
         }
@@ -78,6 +96,7 @@ export default function CreateOrEditPostModal({
         setContent("");
         setCategoryId("");
         setCampaignId("");
+        setBudgetId(null);
       }
       setExistingImages([]);
       setUploadingItems([]);
@@ -86,9 +105,32 @@ export default function CreateOrEditPostModal({
 
   useEffect(() => {
     if (!isOpen || isEdit) return;
-    const draft = { title, content, categoryId, campaignId };
+    const draft = { title, content, categoryId, campaignId, budgetId };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [title, content, categoryId, campaignId, isOpen, isEdit]);
+  }, [title, content, categoryId, campaignId, budgetId, isOpen, isEdit]);
+
+  const handleCampaignChange = async (nextCampaignId: string) => {
+    setCampaignId(nextCampaignId);
+    setBudgetId(null);
+
+    if (!nextCampaignId) return;
+
+    const exps = await expenditureService
+      .getByCampaignId(nextCampaignId)
+      .catch(() => []);
+
+    if (!Array.isArray(exps) || exps.length === 0) return;
+
+    // Latest by createdAt
+    const sorted = [...exps].sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return (b.id ?? 0) - (a.id ?? 0);
+    });
+
+    setBudgetId(sorted[0]?.id ?? null);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -154,14 +196,58 @@ export default function CreateOrEditPostModal({
         allImages = [...baseImages, ...newImages];
       }
 
+      const inputCategory = categoryId.trim();
+      const parsedNumeric =
+        inputCategory && /^\d+$/.test(inputCategory) ? Number(inputCategory) : null;
+
+      let categoryIdNum: number | null = parsedNumeric;
+      if (categoryIdNum == null && inputCategory) {
+        // Prefer resolving by slug; if UI provides name (Vietnamese), fallback to matching name.
+        const resolvedBySlug = await forumCategoryService
+          .getBySlug(inputCategory)
+          .catch(() => null);
+
+        categoryIdNum = resolvedBySlug?.id ?? null;
+
+        if (categoryIdNum == null) {
+          const allCats = await forumCategoryService
+            .getAll()
+            .catch(() => []);
+          const matched = Array.isArray(allCats)
+            ? allCats.find(
+                (c) =>
+                  c.slug === inputCategory ||
+                  c.name === inputCategory
+              )
+            : undefined;
+          categoryIdNum = matched?.id ?? null;
+        }
+      }
+
+      // Safety: if user submits before the async resolve finishes, pick latest here too.
+      let effectiveBudgetId = budgetId;
+      if (effectiveBudgetId == null && campaignId) {
+        const exps = await expenditureService
+          .getByCampaignId(campaignId)
+          .catch(() => []);
+        if (Array.isArray(exps) && exps.length > 0) {
+          const sorted = [...exps].sort((a, b) => {
+            const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            if (tb !== ta) return tb - ta;
+            return (b.id ?? 0) - (a.id ?? 0);
+          });
+          effectiveBudgetId = sorted[0]?.id ?? null;
+        }
+      }
+
       if (isEdit && initialData?.id) {
         await feedPostService.update(Number(initialData.id), {
           title: title || content.slice(0, 50),
           content,
-            status: "PUBLISHED",
-          campaignId: campaignId ? Number(campaignId) : null,
-          expenditureId: campaignId ? Number(campaignId) : null,
-          category: categoryId || undefined,
+          status: "PUBLISHED",
+          budgetId: effectiveBudgetId ?? null,
+          categoryId: categoryIdNum,
         });
         // Link any newly uploaded media to this post
         const postId = Number(initialData.id);
@@ -181,9 +267,8 @@ export default function CreateOrEditPostModal({
           title: title || content.slice(0, 50),
           content,
           status: "PUBLISHED",
-          campaignId: campaignId ? Number(campaignId) : null,
-          expenditureId: campaignId ? Number(campaignId) : null,
-          category: categoryId || undefined,
+          budgetId: effectiveBudgetId ?? null,
+          categoryId: categoryIdNum,
         });
         // Link all uploaded media to the newly created post
         if (newPost?.id && allImages.length > 0) {
@@ -205,6 +290,7 @@ export default function CreateOrEditPostModal({
       setContent("");
       setCategoryId("");
       setCampaignId("");
+      setBudgetId(null);
       setExistingImages([]);
       setUploadingItems((prev) => {
         prev.forEach((item) => URL.revokeObjectURL(item.preview));
@@ -284,7 +370,7 @@ export default function CreateOrEditPostModal({
                 )}
                 <select
                   value={campaignId}
-                  onChange={(e) => setCampaignId(e.target.value)}
+                  onChange={(e) => handleCampaignChange(e.target.value)}
                   className="mt-0.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded px-2 py-1 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer max-w-[120px]"
                 >
                   <option value="">Chiến dịch...</option>

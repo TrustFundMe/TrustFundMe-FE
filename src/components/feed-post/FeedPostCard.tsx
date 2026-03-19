@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContextProxy";
 import CampaignCard, { type CampaignInfo } from "./CampaignCard";
 import { likeService } from "@/services/likeService";
 import { commentService } from "@/services/commentService";
+import ImageZoomModal, { type ZoomImage } from "./ImageZoomModal";
 
 interface FeedPostCardProps {
   post: FeedPost;
@@ -38,6 +39,8 @@ export default function FeedPostCard({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localCommentCount, setLocalCommentCount] = useState(post.replyCount);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(0);
 
   const isAuthor = user?.id && String(user.id) === String(post.author.id);
 
@@ -51,6 +54,8 @@ export default function FeedPostCard({
   const hasMedia = images.length > 0;
   const campaign = (post as any).campaign as CampaignInfo | undefined;
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content || "");
+
+  const zoomImages: ZoomImage[] = images.map((a) => ({ url: a.url, alt: post.title || "Ảnh" }));
 
   const handleClick = () => {
     if (onOpen) {
@@ -286,11 +291,26 @@ export default function FeedPostCard({
               background: "#000",
               cursor: "pointer",
             }}
-            onClick={handleClick}
           >
             {images.slice(0, 9).map((att, i) => (
               <SwiperSlide key={`${att.url}-${i}`}>
                 <div
+                role="button"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setZoomIndex(i);
+                  setZoomOpen(true);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setZoomIndex(i);
+                    setZoomOpen(true);
+                  }
+                }}
                   style={{
                     position: "relative",
                     width: "100%",
@@ -580,6 +600,13 @@ export default function FeedPostCard({
           </motion.button>
         </form>
       </fieldset>
+
+      <ImageZoomModal
+        open={zoomOpen}
+        onOpenChange={setZoomOpen}
+        images={zoomImages}
+        initialIndex={zoomIndex}
+      />
     </article>
   );
 }

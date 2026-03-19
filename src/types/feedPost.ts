@@ -2,6 +2,8 @@ export type FeedPostDto = {
   id: number;
   campaignId?: number | null;
   expenditureId?: number | null;
+  // Backend stores campaign link inside budgetId (which is actually expenditureId)
+  budgetId?: number | null;
   authorId: number;
   authorName?: string | null;
   authorAvatar?: string | null;
@@ -14,6 +16,8 @@ export type FeedPostDto = {
   updatedAt: string | null;
   // enriched fields from FeedPostResponse
   category?: string | null;
+  // Optional numeric category id (if backend returns it)
+  categoryId?: number | null;
   replyCount?: number;
   viewCount?: number;
   likeCount?: number;
@@ -69,7 +73,9 @@ export type FeedPost = {
   comments: FeedPostComment[];
   campaignId?: number | null;
   expenditureId?: number | null;
+  budgetId?: number | null;
   category?: string | null;
+  categoryId?: number | null;
   parentPostId?: number | null;
   replyCount: number;
   viewCount: number;
@@ -78,6 +84,10 @@ export type FeedPost = {
 };
 
 export type CreateFeedPostRequest = {
+  // Preferred fields (backend)
+  budgetId?: number | null;
+  categoryId?: number | null;
+  // Legacy/compat (some screens may still send these)
   campaignId?: number | null;
   expenditureId?: number | null;
   category?: string | null;
@@ -89,6 +99,10 @@ export type CreateFeedPostRequest = {
 };
 
 export type UpdateFeedPostRequest = {
+  // Preferred fields (backend)
+  budgetId?: number | null;
+  categoryId?: number | null;
+  // Legacy/compat
   campaignId?: number | null;
   expenditureId?: number | null;
   category?: string | null;

@@ -11,6 +11,7 @@ import { feedPostService } from '@/services/feedPostService';
 import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
@@ -58,6 +59,8 @@ export default function AdminFeedPostsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [createdAtOpen, setCreatedAtOpen] = useState(false);
+  const [createdAtDetails, setCreatedAtDetails] = useState<{ postTitle?: string; createdAt: string } | null>(null);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -324,7 +327,19 @@ export default function AdminFeedPostsPage() {
                     <div className="font-medium">{post.likeCount} likes · {post.replyCount} comments</div>
                     <div>{post.viewCount} views</div>
                   </td>
-                  <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">{formatDate(post.createdAt)}</td>
+                  <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">
+                    <button
+                      type="button"
+                      className="hover:text-[#1A685B] transition-colors"
+                      onClick={() => {
+                        setCreatedAtDetails({ postTitle: post.title ?? undefined, createdAt: post.createdAt });
+                        setCreatedAtOpen(true);
+                      }}
+                      aria-label="Xem chi tiết ngày tạo"
+                    >
+                      {formatDate(post.createdAt)}
+                    </button>
+                  </td>
                   <td className="py-2 pr-8 text-right">
                     <div className="flex justify-end gap-1 transition-all">
                       {/* View */}
@@ -437,6 +452,30 @@ export default function AdminFeedPostsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
+        <DialogContent className="max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Chi tiết ngày tạo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div className="text-sm text-slate-600">
+              {createdAtDetails?.postTitle ? (
+                <span className="font-bold text-slate-900">Bài viết:</span>
+              ) : null}
+              {createdAtDetails?.postTitle ?? '—'}
+            </div>
+            <div className="text-sm text-slate-900 font-bold">
+              {createdAtDetails?.createdAt
+                ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </div>
+            <div className="text-xs text-slate-500 break-all">
+              Raw: {createdAtDetails?.createdAt ?? '—'}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
