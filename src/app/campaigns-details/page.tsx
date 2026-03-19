@@ -171,7 +171,7 @@ function CampaignDetailsInner() {
         const alreadyFlagged = (myFlags as import('@/services/flagService').FlagDto[])
           .some(f => f.campaignId === campaignId);
 
-        let owner = { name: '', avatar: '/assets/img/defaul.jpg' };
+        const owner = { name: '', avatar: '/assets/img/defaul.jpg' };
         if (ownerResult?.success && ownerResult?.data) {
           owner.name = ownerResult.data.fullName;
           owner.avatar = ownerResult.data.avatarUrl || owner.avatar;

@@ -18,6 +18,7 @@ export type FeedPostDto = {
   viewCount?: number;
   likeCount?: number;
   commentCount?: number;
+  flagCount?: number;
   isLiked?: boolean;
   isPinned?: boolean;
   isLocked?: boolean;
@@ -64,6 +65,7 @@ export type FeedPost = {
   liked: boolean;
   likeCount: number;
   flagged: boolean;
+  flagCount?: number;
   comments: FeedPostComment[];
   campaignId?: number | null;
   expenditureId?: number | null;

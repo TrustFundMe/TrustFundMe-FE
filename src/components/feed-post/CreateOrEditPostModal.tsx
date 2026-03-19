@@ -158,7 +158,7 @@ export default function CreateOrEditPostModal({
         await feedPostService.update(Number(initialData.id), {
           title: title || content.slice(0, 50),
           content,
-          status: "ACTIVE",
+            status: "PUBLISHED",
           campaignId: campaignId ? Number(campaignId) : null,
           expenditureId: campaignId ? Number(campaignId) : null,
           category: categoryId || undefined,
@@ -180,7 +180,7 @@ export default function CreateOrEditPostModal({
           visibility: "PUBLIC",
           title: title || content.slice(0, 50),
           content,
-          status: "ACTIVE",
+          status: "PUBLISHED",
           campaignId: campaignId ? Number(campaignId) : null,
           expenditureId: campaignId ? Number(campaignId) : null,
           category: categoryId || undefined,

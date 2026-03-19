@@ -21,6 +21,7 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     liked: dto.isLiked ?? false,
     likeCount: dto.likeCount ?? 0,
     flagged: false,
+    flagCount: dto.flagCount ?? 0,
     comments: [],
     campaignId: dto.campaignId ?? null,
     expenditureId: dto.expenditureId ?? null,

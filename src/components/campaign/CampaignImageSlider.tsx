@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import ImageZoomModal, { type ZoomImage } from "@/components/feed-post/ImageZoomModal";
 
 export default function CampaignImageSlider({
   images,
@@ -12,6 +13,7 @@ export default function CampaignImageSlider({
 }) {
   const slides = useMemo(() => images.filter(Boolean), [images]);
   const [index, setIndex] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
 
   useEffect(() => {
     if (index > slides.length - 1) setIndex(0);
@@ -20,6 +22,10 @@ export default function CampaignImageSlider({
   if (!slides.length) return null;
 
   const canNav = slides.length > 1;
+  const zoomImages: ZoomImage[] = useMemo(
+    () => slides.map((url) => ({ url, alt })),
+    [slides, alt]
+  );
 
   return (
     <div
@@ -41,6 +47,18 @@ export default function CampaignImageSlider({
             width: "100%",
             aspectRatio: "16 / 11",
             maxHeight: 360,
+          }}
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.preventDefault();
+            setZoomOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setZoomOpen(true);
+            }
           }}
         >
           <Image
@@ -137,6 +155,12 @@ export default function CampaignImageSlider({
           </>
         ) : null}
       </div>
+      <ImageZoomModal
+        open={zoomOpen}
+        onOpenChange={setZoomOpen}
+        images={zoomImages}
+        initialIndex={index}
+      />
     </div>
   );
 }

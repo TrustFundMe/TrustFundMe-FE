@@ -92,7 +92,7 @@ export default function FeedPostCard({
   const handleSubmitComment = async (e: React.FormEvent | React.KeyboardEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!commentText.trim() || isSubmittingComment) return;
+    if (!commentText.trim() || isSubmittingComment || post.isLocked) return;
     if (!user) {
       router.push("/login");
       return;
@@ -547,8 +547,8 @@ export default function FeedPostCard({
                 handleSubmitComment(e);
               }
             }}
-            placeholder="Thêm bình luận..."
-            disabled={isSubmittingComment}
+            placeholder={post.isLocked ? "Bài viết đang khóa bình luận..." : "Thêm bình luận..."}
+            disabled={isSubmittingComment || post.isLocked}
             style={{
               flex: 1,
               border: "none",
@@ -561,17 +561,17 @@ export default function FeedPostCard({
           />
           <motion.button
             type="submit"
-            disabled={!commentText.trim() || isSubmittingComment}
+            disabled={!commentText.trim() || isSubmittingComment || post.isLocked}
             whileTap={{ scale: 0.95 }}
             style={{
               border: "none",
               background: "transparent",
-              cursor: commentText.trim() && !isSubmittingComment ? "pointer" : "default",
+              cursor: !post.isLocked && commentText.trim() && !isSubmittingComment ? "pointer" : "default",
               padding: 0,
               fontSize: 14,
               color: "#1A685B",
               fontWeight: 600,
-              opacity: commentText.trim() && !isSubmittingComment ? 1 : 0.4,
+              opacity: !post.isLocked && commentText.trim() && !isSubmittingComment ? 1 : 0.4,
               transition: "opacity 0.2s",
               fontFamily: "var(--font-dm-sans)",
             }}

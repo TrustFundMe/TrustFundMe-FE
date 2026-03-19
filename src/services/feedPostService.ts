@@ -53,10 +53,10 @@ export const feedPostService = {
 
   /**
    * Creates a new feed post using the authenticated axios instance.
-   * Status defaults to 'ACTIVE' so the post is immediately visible on the feed.
+   * Status defaults to 'PUBLISHED' so the post is immediately visible on the feed.
    */
   async create(payload: CreateFeedPostRequest): Promise<FeedPostDto> {
-    const body = { ...payload, status: payload.status ?? "ACTIVE" };
+    const body = { ...payload, status: payload.status ?? "PUBLISHED" };
     const res = await api.post<FeedPostDto>("/api/feed-posts", body);
     return res.data;
   },

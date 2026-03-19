@@ -30,7 +30,7 @@ export function UserDropdown() {
   if (!isAuthenticated || !user) {
     return (
       <Link href="/sign-in" className="theme-btn transparent-btn">
-        Sign In
+        Đăng nhập
       </Link>
     );
   }
@@ -98,7 +98,7 @@ export function UserDropdown() {
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <User className="w-4 h-4" />
-            Profile
+            Hồ sơ
           </Link>
 
           <Link
@@ -107,7 +107,7 @@ export function UserDropdown() {
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <Heart className="w-4 h-4" />
-            Your fundraisers
+            Quỹ của bạn
           </Link>
 
           <Link
@@ -116,7 +116,7 @@ export function UserDropdown() {
             className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <TrendingUp className="w-4 h-4" />
-            Your impact
+            Tác động của bạn
           </Link>
 
           <div className="border-t border-gray-200 my-1" />
@@ -126,7 +126,7 @@ export function UserDropdown() {
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            Đăng xuất
           </button>
         </div>
       )}

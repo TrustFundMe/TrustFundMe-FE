@@ -9,6 +9,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import FeedPostHeader from "./FeedPostHeader";
 import CommentItem from "./CommentItem";
+import ImageZoomModal, { type ZoomImage } from "./ImageZoomModal";
 import type { FeedPost, FeedPostComment } from "@/types/feedPost";
 import { likeService } from "@/services/likeService";
 import { commentService, CommentDto } from "@/services/commentService";
@@ -71,6 +72,16 @@ export default function FeedPostDetail({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
   const COMMENTS_PREVIEW = 4;
+  // Image zoom modal state (used for post attachments)
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomImages, setZoomImages] = useState<ZoomImage[]>([]);
+  const [zoomIndex, setZoomIndex] = useState(0);
+
+  const handleOpenZoom = (images: ZoomImage[], index: number) => {
+    setZoomImages(images);
+    setZoomIndex(index);
+    setZoomOpen(true);
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -226,7 +237,7 @@ export default function FeedPostDetail({
   };
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || isSubmittingComment || !isAuthenticated) return;
+    if (!commentText.trim() || isSubmittingComment || !isAuthenticated || post.isLocked) return;
     setIsSubmittingComment(true);
     const tempId = `temp-${Date.now()}`;
     const isReply = replyingTo !== null;
@@ -416,6 +427,10 @@ export default function FeedPostDetail({
           return true;
         });
         const fileAttachments = post.attachments!.filter((a) => a.type !== "image");
+        const zoomImages: ZoomImage[] = uniqueImages.map((a) => ({
+          url: a.url,
+          alt: a.name ?? post.title ?? "Ảnh",
+        }));
         return (
           <fieldset style={{ margin: 0, padding: 0, border: "none", borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
             {uniqueImages.length > 0 && (
@@ -424,7 +439,22 @@ export default function FeedPostDetail({
                 style={{ width: "100%", aspectRatio: "3/4", maxHeight: isMobile ? "100vw" : 480, background: "#000" }}>
                 {uniqueImages.map((attachment, index) => (
                   <SwiperSlide key={`${attachment.url}-${index}`}>
-                    <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#000" }}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenZoom(zoomImages, index);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleOpenZoom(zoomImages, index);
+                        }
+                      }}
+                      style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#000", cursor: "zoom-in" }}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={attachment.url}
@@ -621,23 +651,27 @@ export default function FeedPostDetail({
             onChange={(e) => setCommentText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmitComment(); } }}
             placeholder={
-              !isAuthenticated
-                ? "Đăng nhập để bình luận..."
-                : replyingTo
-                ? `Phản hồi ${replyingTo.name}...`
-                : "Thêm bình luận..."
+              post.isLocked
+                ? "Bài viết đang khóa bình luận..."
+                : !isAuthenticated
+                  ? "Đăng nhập để bình luận..."
+                  : replyingTo
+                    ? `Phản hồi ${replyingTo.name}...`
+                    : "Thêm bình luận..."
             }
-            disabled={!isAuthenticated || isSubmittingComment}
+            disabled={!isAuthenticated || isSubmittingComment || post.isLocked}
             style={{ flex: 1, border: "none", outline: "none", fontSize: 14, background: "transparent", color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}
           />
           <button
             type="button"
-            disabled={!commentText.trim() || isSubmittingComment || !isAuthenticated}
+            disabled={!commentText.trim() || isSubmittingComment || !isAuthenticated || post.isLocked}
             onClick={handleSubmitComment}
             style={{
-              border: "none", background: "transparent", cursor: (commentText.trim() && !isSubmittingComment && isAuthenticated) ? "pointer" : "not-allowed",
+              border: "none",
+              background: "transparent",
+              cursor: (!post.isLocked && commentText.trim() && !isSubmittingComment && isAuthenticated) ? "pointer" : "not-allowed",
               padding: 0, fontSize: 14, color: "#1A685B", fontWeight: 600,
-              opacity: (commentText.trim() && !isSubmittingComment && isAuthenticated) ? 1 : 0.5,
+              opacity: (!post.isLocked && commentText.trim() && !isSubmittingComment && isAuthenticated) ? 1 : 0.5,
               transition: "opacity 0.2s", fontFamily: "var(--font-dm-sans)",
             }}
           >
@@ -645,6 +679,12 @@ export default function FeedPostDetail({
           </button>
         </div>
       </fieldset>
+      <ImageZoomModal
+        open={zoomOpen}
+        onOpenChange={setZoomOpen}
+        images={zoomImages}
+        initialIndex={zoomIndex}
+      />
     </article>
   );
 }
