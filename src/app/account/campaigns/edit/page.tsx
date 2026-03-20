@@ -118,6 +118,7 @@ function EditCampaignForm() {
                 toast('Không thể tải thông tin chiến dịch.', 'error');
             } finally {
                 setLoading(false);
+                window.scrollTo(0, 0);
             }
         };
 
@@ -265,183 +266,164 @@ function EditCampaignForm() {
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] pb-20">
-            <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
-                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                            <ChevronLeft className="w-5 h-5" />
+            <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] h-14">
+                <div className="max-w-4xl mx-auto px-4 h-full flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => router.back()} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center">
+                            <ChevronLeft className="w-5 h-5 text-gray-600" />
                         </button>
-                        <h1 className="text-xl font-bold text-gray-900">Sửa chiến dịch</h1>
+                        <h1 className="text-base font-bold text-gray-900">Sửa Chiến Dịch</h1>
                     </div>
                     <button
                         onClick={submit}
                         disabled={isSubmitting}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 font-bold transition-all shadow-lg shadow-orange-100"
+                        className="flex items-center gap-2 px-4 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 text-sm font-black transition-all shadow-md shadow-orange-100"
                     >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         Lưu thay đổi
                     </button>
                 </div>
             </header>
 
-            <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+            <div className="h-14 w-full" /> {/* Header Spacer */}
+
+            <main className="max-w-6xl mx-auto px-4 pb-20 pt-6">
                 {campaign.status === 'REJECTED' && (
-                    <div className="p-5 bg-red-50 border border-red-200 rounded-2xl flex gap-4">
-                        <div className="p-2 bg-red-100 rounded-full text-red-600">
-                            <AlertCircle className="w-6 h-6" />
-                        </div>
+                    <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 mb-6">
+                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                         <div>
-                            <h4 className="font-bold text-red-900">Chiến dịch không được duyệt</h4>
-                            <p className="text-red-700 text-sm mt-1 leading-relaxed">"{campaign.rejectionReason}"</p>
-                            <p className="mt-3 text-xs font-bold text-red-600 uppercase tracking-widest">Vui lòng sửa thông tin và gửi lại</p>
+                            <h4 className="font-bold text-red-900 text-sm">Cần sửa đổi thông tin</h4>
+                            <p className="text-red-700 text-sm mt-0.5 leading-snug">"{campaign.rejectionReason}"</p>
                         </div>
                     </div>
                 )}
 
-                <FormSectionCard title="Thông tin cơ bản" subtitle="Tiêu đề và lĩnh vực hoạt động của chiến dịch">
-                    <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Tiêu đề chiến dịch</label>
-                            <input
-                                type="text"
-                                value={campaign.title}
-                                onChange={(e) => setCampaign(p => p ? ({ ...p, title: e.target.value }) : null)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Danh mục</label>
-                            <select
-                                value={campaign.categoryId}
-                                onChange={(e) => setCampaign(p => p ? ({ ...p, categoryId: parseInt(e.target.value) }) : null)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none"
-                            >
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Mô tả chi tiết</label>
-                            <textarea
-                                rows={8}
-                                value={campaign.description}
-                                onChange={(e) => setCampaign(p => p ? ({ ...p, description: e.target.value }) : null)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none resize-none"
-                            />
-                        </div>
-                    </div>
-                </FormSectionCard>
-
-                <FormSectionCard title="Mục tiêu tài chính" subtitle="Số tiền dự kiến cần huy động cho chiến dịch">
-                    <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Số tiền mục tiêu (VND)</label>
-                            <input
-                                type="number"
-                                value={campaign.targetAmount}
-                                onChange={(e) => setCampaign(p => p ? ({ ...p, targetAmount: parseInt(e.target.value) }) : null)}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 font-mono text-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                            />
-                        </div>
-                        <div className="pt-8 text-gray-400 text-sm hidden md:block">~ {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign.targetAmount)}</div>
-                    </div>
-                </FormSectionCard>
-
-                <FormSectionCard title="Hình ảnh & Tài liệu" subtitle="Ảnh bìa và các minh chứng liên quan">
-                    <div className="space-y-8">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-4">Ảnh bìa chính</label>
-                            <div className="relative aspect-video rounded-3xl overflow-hidden border-2 border-dashed border-gray-200 group">
-                                <img src={withFallbackImage(campaign.coverImageUrl, '/assets/img/campaign/1.png')} className="w-full h-full object-cover" alt="Cover" />
-                                {campaign.coverImageUrl && (
-                                    <button
-                                        onClick={() => setCampaign(p => p ? ({ ...p, coverImageUrl: '', coverImageId: undefined, coverImageFile: undefined }) : null)}
-                                        className="absolute top-3 right-3 p-1.5 bg-red-600/90 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all z-20"
-                                        title="Gỡ ảnh bìa"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                )}
-                                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white z-10">
-                                    <div className="text-center">
-                                        <Camera className="w-10 h-10 mx-auto mb-2" />
-                                        <span className="font-bold">Thay đổi ảnh bìa</span>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    {/* Left Column: Core Info & Goal */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <FormSectionCard title="Thông tin cơ bản" className="shadow-none border-gray-100">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tiêu đề chiến dịch</label>
+                                    <input
+                                        type="text"
+                                        value={campaign.title}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, title: e.target.value }) : null)}
+                                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none text-sm font-medium"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Danh mục</label>
+                                        <select
+                                            value={campaign.categoryId}
+                                            onChange={(e) => setCampaign(p => p ? ({ ...p, categoryId: parseInt(e.target.value) }) : null)}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none text-sm font-medium"
+                                        >
+                                          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                        </select>
                                     </div>
-                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'cover')} />
-                                </label>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mục tiêu (VND)</label>
+                                        <input
+                                            type="number"
+                                            value={campaign.targetAmount}
+                                            onChange={(e) => setCampaign(p => p ? ({ ...p, targetAmount: parseInt(e.target.value) }) : null)}
+                                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 font-mono text-sm focus:ring-2 focus:ring-orange-500 outline-none font-bold"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mô tả chi tiết</label>
+                                    <textarea
+                                        rows={6}
+                                        value={campaign.description}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, description: e.target.value }) : null)}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none resize-none text-sm leading-relaxed"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Lời cảm ơn nhà hảo tâm</label>
+                                    <textarea
+                                        rows={3}
+                                        value={campaign.thankMessage}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, thankMessage: e.target.value }) : null)}
+                                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:ring-2 focus:ring-orange-500 transition-all outline-none resize-none text-sm leading-relaxed"
+                                        placeholder="Nhập lời cảm ơn sẽ hiển thị sau khi họ đóng góp..."
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        </FormSectionCard>
+                    </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-4">Tài liệu đính kèm ({campaign.attachments.length})</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {campaign.attachments.map((attr, idx) => {
-                                    const isCurrentCover = campaign.coverImageUrl === attr.url;
-                                    return (
-                                        <div key={idx} className={`relative aspect-square rounded-2xl overflow-hidden border ${isCurrentCover ? 'border-orange-500 ring-2 ring-orange-100' : 'border-gray-100'} group`}>
-                                            <img src={attr.url} className="w-full h-full object-cover" alt="Attachment" />
+                    {/* Right Column: Media & Bank */}
+                    <div className="space-y-6">
+                        <FormSectionCard title="Hình ảnh & Tài liệu" className="shadow-none border-gray-100">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Ảnh bìa</label>
+                                    <div className="relative aspect-video rounded-xl overflow-hidden border border-gray-100 group">
+                                        <img src={withFallbackImage(campaign.coverImageUrl, '/assets/img/campaign/1.png')} className="w-full h-full object-cover" alt="Cover" />
+                                        <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
+                                            <div className="text-center">
+                                                <Camera className="w-8 h-8 mx-auto mb-1" />
+                                                <span className="text-[10px] font-bold uppercase">Thay đổi</span>
+                                            </div>
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, 'cover')} />
+                                        </label>
+                                    </div>
+                                </div>
 
-                                            {/* Delete Action (Always Visible) */}
-                                            <button
-                                                onClick={() => removeAttachment(idx)}
-                                                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-all z-10"
-                                                title="Xóa tệp"
-                                            >
-                                                <Trash2 className="w-3 h-3" />
-                                            </button>
-
-                                            {/* Set as Cover Action (On Hover) */}
-                                            {!isCurrentCover && (
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Đính kèm ({campaign.attachments.length})</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {campaign.attachments.map((attr, idx) => {
+                                            const isCurrentCover = campaign.coverImageUrl === attr.url;
+                                            return (
+                                                <div key={idx} className={`relative aspect-square rounded-lg overflow-hidden border ${isCurrentCover ? 'border-orange-500 ring-1 ring-orange-500' : 'border-gray-100'} group`}>
+                                                    <img src={attr.url} className="w-full h-full object-cover" alt="Attachment" />
                                                     <button
-                                                        onClick={() => setAsCover(attr)}
-                                                        className="px-3 py-1.5 bg-white text-gray-900 rounded-lg text-[10px] font-bold shadow-xl hover:bg-orange-50 transition-colors"
+                                                        onClick={() => removeAttachment(idx)}
+                                                        className="absolute top-1 right-1 p-1 bg-red-500/90 text-white rounded shadow-md hover:bg-red-600 z-10"
                                                     >
-                                                        Đặt làm bìa
+                                                        <Trash2 className="w-2.5 h-2.5" />
                                                     </button>
+                                                    {!isCurrentCover && (
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-1">
+                                                            <button
+                                                                onClick={() => setAsCover(attr)}
+                                                                className="px-2 py-1 bg-white text-gray-900 rounded-md text-[8px] font-bold hover:bg-orange-50"
+                                                            >
+                                                                Bìa
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-
-                                            {isCurrentCover && (
-                                                <div className="absolute top-2 left-2 px-2 py-0.5 bg-orange-500 text-white text-[9px] font-black rounded-full uppercase tracking-tighter">
-                                                    Ảnh bìa
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                <label className="aspect-square rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors text-gray-400">
-                                    <PlusCircle className="w-8 h-8 mb-2" />
-                                    <span className="text-xs font-bold">Thêm tệp</span>
-                                    <input type="file" className="hidden" multiple accept="image/*" onChange={(e) => handleFileChange(e, 'attachment')} />
-                                </label>
+                                            );
+                                        })}
+                                        <label className="aspect-square rounded-lg border-2 border-dashed border-gray-100 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors text-gray-400">
+                                            <PlusCircle className="w-5 h-5 mb-1" />
+                                            <span className="text-[8px] font-bold">Thêm</span>
+                                            <input type="file" className="hidden" multiple accept="image/*" onChange={(e) => handleFileChange(e, 'attachment')} />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </FormSectionCard>
+                        </FormSectionCard>
 
-                <FormSectionCard title="Tài khoản nhận quỹ" subtitle="Thông tin ngân hàng để giải ngân khi hoàn thành">
-                    <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex gap-4">
-                        <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
-                            <Landmark className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Tài khoản hiện tại</p>
-                            <h4 className="font-bold text-gray-900 text-lg">{campaign.bankAccount?.accountHolderName || 'Chưa thiết lập'}</h4>
-                            <p className="text-gray-500 text-sm">{campaign.bankAccount?.bankCode} • {campaign.bankAccount?.accountNumber}</p>
-                        </div>
-                    </div>
-                    <p className="mt-4 text-xs text-gray-400 font-medium italic">Để thay đổi tài khoản nhận quỹ, vui lòng cập nhật trong phần Cài đặt tài khoản.</p>
-                </FormSectionCard>
+                        <FormSectionCard title="Tài khoản nhận quỹ" className="shadow-none border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-gray-50 rounded-lg text-gray-400">
+                                    <Landmark className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="font-bold text-gray-900 text-sm truncate">{campaign.bankAccount?.accountHolderName || 'Chưa thiết lập'}</h4>
+                                    <p className="text-gray-500 text-[10px] tabular-nums">{campaign.bankAccount?.bankCode} • {campaign.bankAccount?.accountNumber}</p>
+                                </div>
+                            </div>
+                        </FormSectionCard>
 
-                <div className="pt-8 flex justify-center">
-                    <button
-                        onClick={submit}
-                        disabled={isSubmitting}
-                        className="w-full md:w-auto px-12 py-4 bg-orange-600 text-white rounded-2xl font-black text-lg hover:bg-orange-700 transition-all shadow-xl shadow-orange-100 flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                        {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
-                        Cập nhật và Gửi duyệt lại
-                    </button>
+                    </div>
                 </div>
             </main>
         </div>
