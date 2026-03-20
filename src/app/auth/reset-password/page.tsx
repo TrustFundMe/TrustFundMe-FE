@@ -8,6 +8,22 @@ import { OtpInput } from '@/components/OtpInput';
 
 type Step = 'email' | 'otp' | 'password';
 
+const normalizeResetError = (message?: string): string => {
+  if (!message) return 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('invalid or expired otp')) return 'OTP không hợp lệ hoặc đã hết hạn.';
+  if (normalized.includes('failed to send otp')) return 'Gửi OTP thất bại.';
+  if (normalized.includes('failed to verify otp')) return 'Xác minh OTP thất bại.';
+  if (normalized.includes('failed to reset password')) return 'Đặt lại mật khẩu thất bại.';
+  if (normalized.includes('password does not meet security requirements')) return 'Mật khẩu chưa đáp ứng yêu cầu bảo mật.';
+  if (normalized.includes('passwords do not match')) return 'Mật khẩu xác nhận không khớp.';
+  if (normalized.includes('reset token is missing')) return 'Thiếu mã đặt lại mật khẩu. Vui lòng bắt đầu lại.';
+  if (normalized.includes('please enter your email address')) return 'Vui lòng nhập địa chỉ email.';
+
+  return message;
+};
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('email');
@@ -46,7 +62,7 @@ export default function ResetPasswordPage() {
 
   const handleSendOtp = async () => {
     if (!email.trim()) {
-      setError('Please enter your email address');
+      setError('Vui lòng nhập địa chỉ email.');
       return;
     }
 
@@ -66,15 +82,15 @@ export default function ResetPasswordPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to send OTP');
+        setError(normalizeResetError(data.error || 'Failed to send OTP'));
       } else {
-        setSuccess('OTP has been sent to your email');
+        setSuccess('Mã OTP đã được gửi đến email của bạn');
         setResendCooldown(60);
         setStep('otp');
         setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err: any) {
-      setError('Failed to send OTP. Please try again.');
+      setError('Gửi OTP thất bại. Vui lòng thử lại.');
     } finally {
       setSending(false);
     }
@@ -100,13 +116,13 @@ export default function ResetPasswordPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Invalid or expired OTP');
+        setError(normalizeResetError(data.error || 'Invalid or expired OTP'));
         setLoading(false);
         return;
       }
 
       if (!data.token) {
-        setError('Failed to get reset token');
+        setError('Không thể lấy mã đặt lại mật khẩu');
         setLoading(false);
         return;
       }
@@ -114,7 +130,7 @@ export default function ResetPasswordPage() {
       setToken(data.token);
       setStep('password');
     } catch (err: any) {
-      setError('Failed to verify OTP. Please try again.');
+      setError('Xác minh OTP thất bại. Vui lòng thử lại.');
       setLoading(false);
     }
   };
@@ -124,17 +140,17 @@ export default function ResetPasswordPage() {
     setError('');
 
     if (!isPasswordValid) {
-      setError('Password does not meet security requirements.');
+      setError('Mật khẩu chưa đáp ứng yêu cầu bảo mật.');
       return;
     }
 
     if (!passwordsMatch) {
-      setError('Passwords do not match.');
+      setError('Mật khẩu xác nhận không khớp.');
       return;
     }
 
     if (!token) {
-      setError('Reset token is missing. Please start over.');
+      setError('Thiếu mã đặt lại mật khẩu. Vui lòng bắt đầu lại.');
       return;
     }
 
@@ -155,17 +171,17 @@ export default function ResetPasswordPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to reset password');
+        setError(normalizeResetError(data.error || 'Failed to reset password'));
         setLoading(false);
         return;
       }
 
-      setSuccess('Password reset successfully! Redirecting to sign in...');
+      setSuccess('Đặt lại mật khẩu thành công! Đang chuyển đến trang đăng nhập...');
       setTimeout(() => {
         router.push('/sign-in');
       }, 2000);
     } catch (err: any) {
-      setError('Failed to reset password. Please try again.');
+      setError('Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
       setLoading(false);
     }
   };
@@ -185,11 +201,11 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Reset Your Password</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Đặt lại mật khẩu</h2>
             <p className="mt-2 text-sm text-gray-600">
-              {step === 'email' && 'Enter your email to receive a verification code'}
-              {step === 'otp' && `Enter the 6-digit code sent to ${email}`}
-              {step === 'password' && 'Enter your new password'}
+              {step === 'email' && 'Nhập email để nhận mã xác minh'}
+              {step === 'otp' && `Nhập mã 6 chữ số đã gửi đến ${email}`}
+              {step === 'password' && 'Nhập mật khẩu mới của bạn'}
             </p>
           </div>
 
@@ -214,7 +230,7 @@ export default function ResetPasswordPage() {
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
                   <Mail className="w-4 h-4 inline mr-2" />
-                  Email Address
+                  Địa chỉ email
                 </label>
                 <input
                   id="email"
@@ -222,7 +238,7 @@ export default function ResetPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                  placeholder="your@email.com"
+                  placeholder="ban@email.com"
                   required
                 />
               </div>
@@ -232,7 +248,7 @@ export default function ResetPasswordPage() {
                 disabled={sending || !email.trim()}
                 className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {sending ? 'Sending...' : 'Send OTP'}
+                {sending ? 'Đang gửi...' : 'Gửi OTP'}
               </button>
             </div>
           )}
@@ -242,7 +258,7 @@ export default function ResetPasswordPage() {
             <div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-                  Enter the 6-digit code
+                  Nhập mã gồm 6 chữ số
                 </label>
                 <OtpInput
                   onComplete={handleOtpComplete}
@@ -259,8 +275,8 @@ export default function ResetPasswordPage() {
                 {sending
                   ? 'Sending...'
                   : resendCooldown > 0
-                  ? `Resend code in ${resendCooldown}s`
-                  : 'Resend Code'}
+                  ? `Gửi lại mã sau ${resendCooldown}s`
+                  : 'Gửi lại mã'}
               </button>
 
               <button
@@ -268,7 +284,7 @@ export default function ResetPasswordPage() {
                 className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Email
+                Quay lại nhập email
               </button>
             </div>
           )}
@@ -282,7 +298,7 @@ export default function ResetPasswordPage() {
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
                   <Lock className="w-4 h-4 inline mr-2" />
-                  New Password
+                  Mật khẩu mới
                 </label>
                 <div className="relative">
                   <input
@@ -308,7 +324,7 @@ export default function ResetPasswordPage() {
                   htmlFor="confirmPassword"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Confirm Password
+                  Xác nhận mật khẩu
                 </label>
                 <div className="relative">
                   <input
@@ -328,20 +344,20 @@ export default function ResetPasswordPage() {
                   </button>
                 </div>
                 {confirmPassword && !passwordsMatch && (
-                  <p className="mt-1 text-xs text-red-500">Passwords do not match</p>
+                  <p className="mt-1 text-xs text-red-500">Mật khẩu xác nhận không khớp</p>
                 )}
               </div>
 
               {/* Password Requirements */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-3">Password must have:</p>
+                <p className="text-sm font-medium text-gray-700 mb-3">Mật khẩu cần có:</p>
                 <ul className="space-y-2">
                   {Object.entries({
-                    minLength: 'Minimum 12 characters',
-                    hasUppercase: '1 uppercase letter',
-                    hasLowercase: '1 lowercase letter',
-                    hasNumber: '1 number',
-                    hasSymbol: '1 symbol',
+                    minLength: 'Tối thiểu 12 ký tự',
+                    hasUppercase: '1 chữ cái viết hoa',
+                    hasLowercase: '1 chữ cái viết thường',
+                    hasNumber: '1 chữ số',
+                    hasSymbol: '1 ký tự đặc biệt',
                   }).map(([key, label]) => (
                     <li key={key} className="flex items-center gap-2 text-sm">
                       {passwordValidation[key as keyof typeof passwordValidation] ? (
@@ -368,7 +384,7 @@ export default function ResetPasswordPage() {
                 disabled={loading || !isPasswordValid || !passwordsMatch}
                 className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Resetting...' : 'Reset Password'}
+                {loading ? 'Đang đặt lại...' : 'Đặt lại mật khẩu'}
               </button>
             </form>
           )}

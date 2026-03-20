@@ -303,6 +303,23 @@ const isPasswordValid = (validation: PasswordValidation): boolean => {
   );
 };
 
+const normalizeAuthError = (message?: string): string => {
+  if (!message) return "Đã có lỗi xảy ra. Vui lòng thử lại.";
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("invalid email or password")) {
+    return "Email hoặc mật khẩu không đúng. Vui lòng thử lại.";
+  }
+  if (normalized.includes("invalid login credentials")) {
+    return "Thông tin đăng nhập không hợp lệ.";
+  }
+  if (normalized.includes("email not confirmed")) {
+    return "Email chưa được xác minh. Vui lòng kiểm tra hộp thư của bạn.";
+  }
+
+  return message;
+};
+
 // ==================================================================================
 // SEARCH PARAMS WRAPPER COMPONENT
 // ==================================================================================
@@ -386,29 +403,29 @@ function SignInContent() {
   // Field validation errors
   const firstNameError = useMemo(() => {
     if (!firstNameTouched) return "";
-    if (!firstName.trim()) return "Please fill out this field.";
+    if (!firstName.trim()) return "Vui lòng điền vào trường này.";
     return "";
   }, [firstNameTouched, firstName]);
 
   const lastNameError = useMemo(() => {
     if (!lastNameTouched) return "";
-    if (!lastName.trim()) return "Please fill out this field.";
+    if (!lastName.trim()) return "Vui lòng điền vào trường này.";
     return "";
   }, [lastNameTouched, lastName]);
 
   const emailError = useMemo(() => {
     if (!emailTouched) return "";
-    if (!email.trim()) return "Please fill out this field.";
+    if (!email.trim()) return "Vui lòng điền vào trường này.";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return "Please enter a valid email address.";
+    if (!emailRegex.test(email)) return "Vui lòng nhập địa chỉ email hợp lệ.";
     return "";
   }, [emailTouched, email]);
 
   const passwordErrorMessage = useMemo(() => {
     if (!passwordTouched) return "";
-    if (!signUpPassword) return "Please fill out this field.";
+    if (!signUpPassword) return "Vui lòng điền vào trường này.";
     if (!isSignUpPasswordValid) {
-      return "Value does not comply with requirements";
+      return "Mật khẩu chưa đáp ứng yêu cầu";
     }
     return "";
   }, [passwordTouched, signUpPassword, isSignUpPasswordValid]);
@@ -428,13 +445,13 @@ function SignInContent() {
 
     // Validate email format
     if (!email.trim()) {
-      setError("Please fill out this field.");
+      setError("Vui lòng điền vào trường này.");
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address.");
+      setError("Vui lòng nhập địa chỉ email hợp lệ.");
       return;
     }
 
@@ -455,11 +472,11 @@ function SignInContent() {
           (errorMsg.includes('after') && errorMsg.includes('seconds'))) {
           const waitMatch = checkResult.error.match(/(\d+)\s*seconds?/i);
           const waitTime = waitMatch ? waitMatch[1] : '60';
-          setError(`⚠️ Too many requests. Please wait ${waitTime} seconds before checking email again.`);
+          setError(`⚠️ Quá nhiều yêu cầu. Vui lòng đợi ${waitTime} giây trước khi kiểm tra email lại.`);
         } else {
           // SANITIZED ERROR MESSAGE: Never show raw backend errors
           console.warn('Check email raw error:', checkResult.error);
-          setError("Unable to verify email. Please try again.");
+          setError("Không thể xác minh email. Vui lòng thử lại.");
         }
         setLoading(false);
         return;
@@ -483,7 +500,7 @@ function SignInContent() {
       }
     } catch (error: any) {
       console.error('Check email error:', error);
-      setError(error?.message || "Something went wrong. Please try again.");
+      setError(error?.message || "Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -497,7 +514,7 @@ function SignInContent() {
     setInfo("");
 
     if (!password.trim()) {
-      setError("Please enter your password.");
+      setError("Vui lòng nhập mật khẩu.");
       return;
     }
 
@@ -507,7 +524,7 @@ function SignInContent() {
       const { error, user: loggedInUser, tokenRole } = await login(normalizeEmail(email), password);
 
       if (error) {
-        setError(error.message || "Invalid email or password. Please try again.");
+        setError(normalizeAuthError(error.message) || "Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
         setLoading(false);
       } else {
         // Success - redirect based on authoritative role claim from token (RBAC)
@@ -527,7 +544,7 @@ function SignInContent() {
         }
       }
     } catch (error) {
-      setError("Something went wrong. Please try again.");
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -542,13 +559,13 @@ function SignInContent() {
 
     // Validate required fields
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !signUpPassword.trim()) {
-      setError("Please fill out all required fields.");
+      setError("Vui lòng điền đầy đủ các trường bắt buộc.");
       return;
     }
 
     // Validate password strength
     if (!isSignUpPasswordValid) {
-      setError("Password does not meet security requirements.");
+      setError("Mật khẩu chưa đáp ứng yêu cầu bảo mật.");
       return;
     }
 
@@ -568,18 +585,18 @@ function SignInContent() {
         let errorMsg = '';
 
         if (result.error && typeof result.error === 'object') {
-          errorMsg = result.error.message || JSON.stringify(result.error) || "Registration failed. Please try again.";
+          errorMsg = result.error.message || JSON.stringify(result.error) || "Đăng ký thất bại. Vui lòng thử lại.";
         } else if (typeof result.error === 'string') {
           errorMsg = result.error;
         } else {
-          errorMsg = "Registration failed. Please try again.";
+          errorMsg = "Đăng ký thất bại. Vui lòng thử lại.";
         }
 
         console.error('Signup error:', { error: result.error, errorMsg });
 
         // If error message is empty or just "{}", show generic message
         if (!errorMsg || errorMsg === '{}' || errorMsg.trim() === '') {
-          errorMsg = "Registration failed. Please check your information and try again.";
+          errorMsg = "Đăng ký thất bại. Vui lòng kiểm tra thông tin và thử lại.";
         }
 
         // Handle rate limiting
@@ -590,33 +607,33 @@ function SignInContent() {
           // Extract wait time if available
           const waitMatch = errorMsg.match(/(\d+)\s*seconds?/i);
           const waitTime = waitMatch ? waitMatch[1] : '60';
-          setError(`Too many requests. Please wait ${waitTime} seconds before trying again.`);
+          setError(`Quá nhiều yêu cầu. Vui lòng đợi ${waitTime} giây trước khi thử lại.`);
         } else if (errorMsg.includes('User already registered') ||
           errorMsg.includes('already registered') ||
           errorMsg.includes('already exists') ||
           errorMsg.includes('Email rate limit exceeded') ||
           errorMsg.includes('user already exists')) {
-          setError("This email is already registered. Please sign in instead.");
+          setError("Email này đã được đăng ký. Vui lòng đăng nhập.");
           setStep("password-entry");
         } else if (errorMsg.includes('Password') || errorMsg.includes('password')) {
-          setError(`Password error: ${errorMsg}. Please ensure your password meets all requirements.`);
+          setError(`Lỗi mật khẩu: ${errorMsg}. Vui lòng đảm bảo mật khẩu đáp ứng đầy đủ yêu cầu.`);
         } else if (errorMsg.includes('Email') || errorMsg.includes('email')) {
-          setError(`Email error: ${errorMsg}`);
+          setError(`Lỗi email: ${errorMsg}`);
         } else {
           // SANITIZED ERROR MESSAGE
           console.warn('Signup raw error:', errorMsg);
-          setError("Registration failed. Please check your details and try again.");
+          setError("Đăng ký thất bại. Vui lòng kiểm tra thông tin và thử lại.");
         }
         setLoading(false);
       } else {
         // Success - User registered and logged in automatically
-        setInfo("Account created! Redirecting to verification...");
+        setInfo("Tạo tài khoản thành công! Đang chuyển đến bước xác minh...");
         // Redirect to OTP verification page immediately
         router.push(`/auth/verify-email?email=${encodeURIComponent(normalizeEmail(email))}`);
       }
     } catch (error: any) {
       console.error('Signup exception:', error);
-      setError(error?.message || "Something went wrong. Please try again.");
+      setError(error?.message || "Đã có lỗi xảy ra. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -629,7 +646,7 @@ function SignInContent() {
     setInfo("");
 
     if (!email.trim()) {
-      setError("Please enter your email address.");
+      setError("Vui lòng nhập địa chỉ email.");
       return;
     }
 
@@ -639,14 +656,14 @@ function SignInContent() {
       const result = await authService.forgotPassword(normalizeEmail(email));
 
       if (result.success) {
-        setInfo(result.message || "OTP has been sent to your email.");
+        setInfo(result.message || "Mã OTP đã được gửi đến email của bạn.");
         setStep("verify-otp");
       } else {
-        setError(result.error || "Failed to send reset code.");
+        setError(result.error || "Gửi mã đặt lại thất bại.");
       }
       setLoading(false);
     } catch (error) {
-      setError("Something went wrong. Please try again.");
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -659,7 +676,7 @@ function SignInContent() {
     setInfo("");
 
     if (!otp.trim() || otp.length !== 6) {
-      setError("Please enter a valid 6-digit OTP.");
+      setError("Vui lòng nhập mã OTP 6 chữ số hợp lệ.");
       return;
     }
 
@@ -671,13 +688,13 @@ function SignInContent() {
       if (result.success && result.token) {
         setResetToken(result.token);
         setStep("reset-password");
-        setInfo("OTP verified. Please set your new password.");
+        setInfo("Xác minh OTP thành công. Vui lòng đặt mật khẩu mới.");
       } else {
-        setError(result.error || "Invalid OTP. Please try again.");
+        setError(result.error || "OTP không hợp lệ. Vui lòng thử lại.");
       }
       setLoading(false);
     } catch (error) {
-      setError("Something went wrong. Please try again.");
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -690,17 +707,17 @@ function SignInContent() {
     setInfo("");
 
     if (!newPassword.trim()) {
-      setError("Please enter your new password.");
+      setError("Vui lòng nhập mật khẩu mới.");
       return;
     }
 
     if (newPassword !== confirmNewPassword) {
-      setError("Passwords do not match.");
+      setError("Mật khẩu xác nhận không khớp.");
       return;
     }
 
     if (!isNewPasswordValid) {
-      setError("Password does not meet security requirements.");
+      setError("Mật khẩu chưa đáp ứng yêu cầu bảo mật.");
       return;
     }
 
@@ -711,18 +728,18 @@ function SignInContent() {
 
       if (result.success) {
         setStep("password-entry");
-        setInfo("Password reset successfully. Please sign in with your new password.");
+        setInfo("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.");
         setPassword("");
         setOtp("");
         setResetToken("");
         setNewPassword("");
         setConfirmNewPassword("");
       } else {
-        setError(result.error || "Failed to reset password.");
+        setError(result.error || "Đặt lại mật khẩu thất bại.");
       }
       setLoading(false);
     } catch (error) {
-      setError("Something went wrong. Please try again.");
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
       setLoading(false);
     }
   };
@@ -737,12 +754,12 @@ function SignInContent() {
     try {
       const { error } = await signInWithGoogle(idToken);
       if (error) {
-        setError(error.message || "Failed to sign in with Google. Please try again.");
+        setError(error.message || "Đăng nhập bằng Google thất bại. Vui lòng thử lại.");
       } else {
         router.push(returnTo || "/");
       }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -810,7 +827,7 @@ function SignInContent() {
             {step !== "sign-up" && (
               <div className="text-center mb-8">
                 <p className="text-gray-600">
-                  Sign in to TrustFundMe or sign up to continue
+                  Đăng nhập TrustFundMe hoặc đăng ký để tiếp tục
                 </p>
               </div>
             )}
@@ -835,12 +852,12 @@ function SignInContent() {
                   <div className="w-full flex justify-center">
                     <GoogleLogin
                       onSuccess={(r) => r?.credential && handleGoogleCredential(r.credential)}
-                      onError={() => setError("Google sign-in failed. Please try again.")}
+                      onError={() => setError("Đăng nhập Google thất bại. Vui lòng thử lại.")}
                       theme="outline"
                       size="large"
                       text="continue_with"
                       shape="rectangular"
-                      locale="en"
+                      locale="vi"
                       width="350"
                     />
                   </div>
@@ -852,7 +869,7 @@ function SignInContent() {
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 bg-white text-gray-500">or</span>
+                    <span className="px-4 bg-white text-gray-500">hoặc</span>
                   </div>
                 </div>
               </>
@@ -891,11 +908,11 @@ function SignInContent() {
                   disabled={loading}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Please wait..." : "Continue"}
+                  {loading ? "Vui lòng chờ..." : "Tiếp tục"}
                 </button>
 
                 <p className="text-center text-xs text-gray-500 mt-6">
-                  This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
+                  Trang này được bảo vệ bởi reCAPTCHA và tuân theo Chính sách quyền riêng tư cùng Điều khoản dịch vụ của Google.
                 </p>
               </form>
             )}
@@ -942,7 +959,7 @@ function SignInContent() {
                       htmlFor="password"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
-                      Password
+                      Mật khẩu
                     </label>
                     <button
                       type="button"
@@ -984,14 +1001,14 @@ function SignInContent() {
                     onClick={() => setStep("forgot-password")}
                     className="text-sm text-primary hover:underline"
                   >
-                    Forgot password?
+                    Quên mật khẩu?
                   </button>
                   <button
                     type="button"
                     onClick={handleBackToEmail}
                     className="text-sm text-gray-600 hover:underline"
                   >
-                    Change email
+                    Đổi email
                   </button>
                 </div>
 
@@ -1000,19 +1017,19 @@ function SignInContent() {
                   disabled={loading}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Signing in..." : "Sign in"}
+                  {loading ? "Đang đăng nhập..." : "Đăng nhập"}
                 </button>
 
                 <div className="text-center">
                   <p className="text-sm text-gray-600 mb-2">
-                    Don't have an account?
+                    Bạn chưa có tài khoản?
                   </p>
                   <button
                     type="button"
                     onClick={() => setStep("sign-up")}
                     className="text-sm text-primary hover:underline font-medium"
                   >
-                    Sign up
+                    Đăng ký
                   </button>
                 </div>
               </form>
@@ -1045,7 +1062,7 @@ function SignInContent() {
                       htmlFor="firstName"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
-                      First Name
+                      Họ
                     </label>
                   </div>
                   {firstNameError && (
@@ -1072,7 +1089,7 @@ function SignInContent() {
                       htmlFor="lastName"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
-                      Last Name
+                      Tên
                     </label>
                   </div>
                   {lastNameError && (
@@ -1099,7 +1116,7 @@ function SignInContent() {
                       htmlFor="signupEmail"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
-                      Email Address
+                      Địa chỉ email
                     </label>
                   </div>
                   {emailError && (
@@ -1126,7 +1143,7 @@ function SignInContent() {
                       htmlFor="signupPassword"
                       className="absolute left-4 top-3 text-gray-500 transition-all duration-200 pointer-events-none peer-focus:text-xs peer-focus:-top-2 peer-focus:left-3 peer-focus:bg-white peer-focus:px-1 peer-focus:text-red-500 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-top-2 peer-[:not(:placeholder-shown)]:left-3 peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:px-1"
                     >
-                      Password
+                      Mật khẩu
                     </label>
                     <button
                       type="button"
@@ -1167,7 +1184,7 @@ function SignInContent() {
 
                 {/* Password Requirements (Real-time validation) */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Your password must have at least:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Mật khẩu của bạn cần có ít nhất:</p>
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2 text-sm">
                       {passwordValidation.minLength ? (
@@ -1192,7 +1209,7 @@ function SignInContent() {
                         </svg>
                       )}
                       <span className={passwordValidation.minLength ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
-                        Minimum 12 characters
+                        Tối thiểu 12 ký tự
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
@@ -1218,7 +1235,7 @@ function SignInContent() {
                         </svg>
                       )}
                       <span className={passwordValidation.hasUppercase ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
-                        1 uppercase letter
+                        1 chữ cái viết hoa
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
@@ -1244,7 +1261,7 @@ function SignInContent() {
                         </svg>
                       )}
                       <span className={passwordValidation.hasLowercase ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
-                        1 lowercase letter
+                        1 chữ cái viết thường
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
@@ -1270,7 +1287,7 @@ function SignInContent() {
                         </svg>
                       )}
                       <span className={passwordValidation.hasNumber ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
-                        1 number
+                        1 chữ số
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
@@ -1296,7 +1313,7 @@ function SignInContent() {
                         </svg>
                       )}
                       <span className={passwordValidation.hasSymbol ? "text-green-700" : passwordTouched ? "text-red-600" : "text-gray-600"}>
-                        1 symbol
+                        1 ký tự đặc biệt
                       </span>
                     </li>
                   </ul>
@@ -1307,7 +1324,7 @@ function SignInContent() {
                   disabled={loading || !isSignUpPasswordValid}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Creating account..." : "Sign up"}
+                  {loading ? "Đang tạo tài khoản..." : "Đăng ký"}
                 </button>
 
                 <div className="text-center">
@@ -1316,7 +1333,7 @@ function SignInContent() {
                     onClick={handleBackToEmail}
                     className="text-sm text-gray-600 hover:underline"
                   >
-                    Back to email
+                    Quay lại bước email
                   </button>
                 </div>
               </form>
@@ -1332,7 +1349,7 @@ function SignInContent() {
               >
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-4">
-                    Enter your email address and we'll send you an OTP to reset your password.
+                    Nhập địa chỉ email của bạn, chúng tôi sẽ gửi mã OTP để đặt lại mật khẩu.
                   </p>
                 </div>
 
@@ -1355,7 +1372,7 @@ function SignInContent() {
                   disabled={loading}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Sending..." : "Send OTP"}
+                  {loading ? "Đang gửi..." : "Gửi OTP"}
                 </button>
 
                 <div className="text-center">
@@ -1364,7 +1381,7 @@ function SignInContent() {
                     onClick={() => setStep("password-entry")}
                     className="text-sm text-gray-600 hover:underline"
                   >
-                    Back to sign in
+                    Quay lại đăng nhập
                   </button>
                 </div>
               </form>
@@ -1380,13 +1397,13 @@ function SignInContent() {
               >
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-4">
-                    Please enter the 6-digit OTP sent to {email}
+                    Vui lòng nhập mã OTP 6 chữ số đã gửi đến {email}
                   </p>
                 </div>
 
                 <div className="mb-6">
                   <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
-                    OTP Code
+                    Mã OTP
                   </label>
                   <input
                     id="otp"
@@ -1405,7 +1422,7 @@ function SignInContent() {
                   disabled={loading || otp.length !== 6}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Verifying..." : "Verify OTP"}
+                  {loading ? "Đang xác minh..." : "Xác minh OTP"}
                 </button>
 
                 <div className="text-center">
@@ -1414,7 +1431,7 @@ function SignInContent() {
                     onClick={() => setStep("forgot-password")}
                     className="text-sm text-gray-600 hover:underline"
                   >
-                    Resend OTP
+                    Gửi lại OTP
                   </button>
                 </div>
               </form>
@@ -1430,7 +1447,7 @@ function SignInContent() {
               >
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-4">
-                    Create a new password for your account.
+                    Tạo mật khẩu mới cho tài khoản của bạn.
                   </p>
                 </div>
 
@@ -1439,7 +1456,7 @@ function SignInContent() {
                     <input
                       id="newPassword"
                       type={showNewPassword ? "text" : "password"}
-                      placeholder="New Password"
+                      placeholder="Mật khẩu mới"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900"
@@ -1464,7 +1481,7 @@ function SignInContent() {
                     <input
                       id="confirmNewPassword"
                       type={showConfirmNewPassword ? "text" : "password"}
-                      placeholder="Confirm New Password"
+                      placeholder="Xác nhận mật khẩu mới"
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-gray-900"
@@ -1486,31 +1503,31 @@ function SignInContent() {
 
                 {/* Reuse password validation UI */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Your new password must have at least:</p>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Mật khẩu mới cần có ít nhất:</p>
                   <ul className="space-y-2">
                     <li className="flex items-center gap-2 text-sm">
                       <span className={passwordValidation.minLength ? "text-green-700" : "text-gray-600"}>
-                        {passwordValidation.minLength ? "✓" : "○"} Minimum 12 characters
+                        {passwordValidation.minLength ? "✓" : "○"} Tối thiểu 12 ký tự
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       <span className={passwordValidation.hasUppercase ? "text-green-700" : "text-gray-600"}>
-                        {passwordValidation.hasUppercase ? "✓" : "○"} 1 uppercase letter
+                        {passwordValidation.hasUppercase ? "✓" : "○"} 1 chữ cái viết hoa
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       <span className={passwordValidation.hasLowercase ? "text-green-700" : "text-gray-600"}>
-                        {passwordValidation.hasLowercase ? "✓" : "○"} 1 lowercase letter
+                        {passwordValidation.hasLowercase ? "✓" : "○"} 1 chữ cái viết thường
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       <span className={passwordValidation.hasNumber ? "text-green-700" : "text-gray-600"}>
-                        {passwordValidation.hasNumber ? "✓" : "○"} 1 number
+                        {passwordValidation.hasNumber ? "✓" : "○"} 1 chữ số
                       </span>
                     </li>
                     <li className="flex items-center gap-2 text-sm">
                       <span className={passwordValidation.hasSymbol ? "text-green-700" : "text-gray-600"}>
-                        {passwordValidation.hasSymbol ? "✓" : "○"} 1 symbol
+                        {passwordValidation.hasSymbol ? "✓" : "○"} 1 ký tự đặc biệt
                       </span>
                     </li>
                   </ul>
@@ -1521,7 +1538,7 @@ function SignInContent() {
                   disabled={loading || !isNewPasswordValid || newPassword !== confirmNewPassword}
                   className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? "Resetting..." : "Reset Password"}
+                  {loading ? "Đang đặt lại..." : "Đặt lại mật khẩu"}
                 </button>
 
                 <div className="text-center">
@@ -1530,7 +1547,7 @@ function SignInContent() {
                     onClick={() => setStep("password-entry")}
                     className="text-sm text-gray-600 hover:underline"
                   >
-                    Cancel
+                    Hủy
                   </button>
                 </div>
               </form>
@@ -1540,7 +1557,7 @@ function SignInContent() {
             {step === "email-entry" && (
               <div className="mt-6 text-center">
                 <Link href="/" className="text-sm text-gray-600 hover:underline">
-                  Back to Home
+                  Về trang chủ
                 </Link>
               </div>
             )}
@@ -1561,7 +1578,7 @@ export default function SignInPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Đang tải...</p>
         </div>
       </div>
     }>

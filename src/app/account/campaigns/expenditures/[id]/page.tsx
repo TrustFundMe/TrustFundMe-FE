@@ -56,8 +56,8 @@ export default function ExpenditureDetailPage() {
                     price: item.price || 0
                 })));
             } catch (err) {
-                console.error('Failed to fetch details:', err);
-                setError('Failed to load expenditure details.');
+                console.error('Không thể tải chi tiết khoản chi:', err);
+                setError('Không thể tải chi tiết khoản chi.');
             } finally {
                 setLoading(false);
             }
@@ -97,7 +97,7 @@ export default function ExpenditureDetailPage() {
             setIsUpdateModalOpen(false);
             alert('Cập nhật thành công!');
         } catch (err) {
-            console.error('Update failed:', err);
+            console.error('Cập nhật thất bại:', err);
             alert('Cập nhật thất bại. Vui lòng thử lại.');
         } finally {
             setUpdating(false);
@@ -138,7 +138,7 @@ export default function ExpenditureDetailPage() {
             setExpenditure(updated);
             alert('Yêu cầu rút tiền đã được gửi thành công.');
         } catch (err: any) {
-            console.error('Withdrawal request failed:', err);
+            console.error('Yêu cầu rút tiền thất bại:', err);
             alert(err.response?.data?.message || 'Yêu cầu rút tiền thất bại. Vui lòng thử lại.');
         } finally {
             setLoading(false);
@@ -157,7 +157,7 @@ export default function ExpenditureDetailPage() {
         return (
             <div className="max-w-4xl mx-auto px-4 py-12 text-center text-red-600">
                 <AlertCircle className="mx-auto h-12 w-12 mb-4" />
-                <p>{error || 'Expenditure not found'}</p>
+                <p>{error || 'Không tìm thấy khoản chi'}</p>
                 <Link href="/account/campaigns" className="mt-4 inline-block text-orange-600 font-medium">
                     Quay lại danh sách
                 </Link>
@@ -188,7 +188,7 @@ export default function ExpenditureDetailPage() {
                             </h1>
                             <p className="mt-2 text-gray-500 flex items-center gap-2">
                                 <Calendar className="w-4 h-4" />
-                                Ngày tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString() : 'N/A'}
+                                Ngày tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString() : 'Không có dữ liệu'}
                             </p>
                             <div className="flex flex-wrap gap-2 mt-3">
                                 <button
@@ -374,7 +374,7 @@ export default function ExpenditureDetailPage() {
                                 {/* TODO: Add logic/button to upload evidence here */}
                                 <div className="mt-6 pt-4 border-t border-gray-100">
                                     <button disabled className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed">
-                                        Cập nhật minh chứng (Coming Soon)
+                                        Cập nhật minh chứng (Sắp ra mắt)
                                     </button>
                                 </div>
                             </div>

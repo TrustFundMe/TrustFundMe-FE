@@ -40,30 +40,30 @@ const Faq = () => {
   }[] = [
     {
       key: "faq1",
-      question: "How do I start a fundraiser?",
+      question: "Làm sao để bắt đầu một chiến dịch gây quỹ?",
       answer:
-        "Starting a fundraiser is simple! Click on 'Start a Fundraiser' button, fill in your campaign details including your goal amount, story, and upload relevant images. Our team will review and approve your campaign within 24 hours. Once approved, you can start sharing your fundraiser with friends, family, and social networks.",
+        "Bắt đầu gây quỹ rất đơn giản! Nhấn nút 'Bắt đầu gây quỹ', điền thông tin chiến dịch gồm mục tiêu số tiền, câu chuyện và tải lên hình ảnh liên quan. Đội ngũ của chúng tôi sẽ xem xét và phê duyệt chiến dịch trong vòng 24 giờ. Sau khi được duyệt, bạn có thể bắt đầu chia sẻ chiến dịch với bạn bè, gia đình và mạng xã hội.",
       delay: 0,
     },
     {
       key: "faq2",
-      question: "What fees does your platform charge?",
+      question: "Nền tảng thu những khoản phí nào?",
       answer:
-        "We charge a small platform fee of 2.9% + $0.30 per donation to cover payment processing and platform maintenance. This helps us keep the service running and support thousands of campaigns. There are no hidden fees, and you'll see exactly what you'll receive before withdrawing funds.",
+        "Chúng tôi thu một khoản phí nền tảng nhỏ để chi trả chi phí xử lý thanh toán và vận hành hệ thống. Điều này giúp dịch vụ hoạt động ổn định và hỗ trợ hàng ngàn chiến dịch. Không có phí ẩn, và bạn sẽ thấy rõ số tiền thực nhận trước khi rút.",
       delay: 100,
     },
     {
       key: "faq3",
-      question: "How long does it take to receive funds?",
+      question: "Mất bao lâu để nhận tiền?",
       answer:
-        "Funds are typically available for withdrawal within 2-5 business days after a donation is made. You can withdraw funds at any time once they're available in your account. We use secure payment processors to ensure your money is transferred safely to your bank account.",
+        "Tiền thường có thể rút trong khoảng 2-5 ngày làm việc sau khi khoản ủng hộ được ghi nhận. Bạn có thể rút bất kỳ lúc nào khi số dư đã sẵn sàng trong tài khoản. Chúng tôi sử dụng cổng thanh toán bảo mật để đảm bảo tiền được chuyển an toàn về tài khoản ngân hàng của bạn.",
       delay: 200,
     },
     {
       key: "faq4",
-      question: "Can I donate anonymously?",
+      question: "Tôi có thể ủng hộ ẩn danh không?",
       answer:
-        "Yes! When making a donation, you have the option to remain anonymous. Your name won't be displayed publicly on the fundraiser page, though the campaign organizer will still be able to see your information for thank-you purposes and tax receipts.",
+        "Có! Khi ủng hộ, bạn có thể chọn chế độ ẩn danh. Tên của bạn sẽ không hiển thị công khai trên trang gây quỹ, tuy nhiên người tạo chiến dịch vẫn có thể xem thông tin để gửi lời cảm ơn và xử lý chứng từ khi cần.",
       delay: 300,
     },
   ];
@@ -77,11 +77,11 @@ const Faq = () => {
       >
         <span className="sub-title color-2">
           <i className="far fa-heart" />
-          Frequently Asked Questions
+          Câu hỏi thường gặp
         </span>
         <h2 className="mt-char-animation">
-          Got Questions? <br />
-          We've Got Answers
+          Bạn có thắc mắc? <br />
+          Chúng tôi có câu trả lời
         </h2>
       </div>
       <div className="faq-accordion mt-4 mt-md-0">

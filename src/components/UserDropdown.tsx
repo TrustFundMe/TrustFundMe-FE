@@ -37,7 +37,7 @@ export function UserDropdown() {
 
   const displayName = user.fullName ||
     user.email?.split('@')[0] ||
-    'User';
+    'Người dùng';
 
   const handleLogout = async () => {
     await logout();

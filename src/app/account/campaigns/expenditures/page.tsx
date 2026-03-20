@@ -55,7 +55,7 @@ export default function CampaignExpendituresPage() {
         }
 
         if (!campaignId) {
-            setError('Campaign ID is missing.');
+            setError('Thiếu mã chiến dịch.');
             setLoading(false);
             return;
         }
@@ -71,8 +71,8 @@ export default function CampaignExpendituresPage() {
                 const expendituresData = await expenditureService.getByCampaignId(Number(campaignId));
                 setExpenditures(expendituresData);
             } catch (err) {
-                console.error('Failed to fetch data:', err);
-                setError('Failed to load campaign data or expenditures.');
+                console.error('Không thể tải dữ liệu:', err);
+                setError('Không thể tải dữ liệu chiến dịch hoặc khoản chi.');
             } finally {
                 setLoading(false);
             }
@@ -279,10 +279,10 @@ export default function CampaignExpendituresPage() {
         return (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                    {error || 'Campaign not found'}
+                    {error || 'Không tìm thấy chiến dịch'}
                 </div>
                 <Link href="/account/campaigns" className="mt-4 inline-flex items-center text-[#dc2626] hover:text-red-700 font-bold uppercase tracking-tight text-xs">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Campaigns
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch
                 </Link>
             </div>
         );
@@ -294,7 +294,7 @@ export default function CampaignExpendituresPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <Link href="/account/campaigns" className="inline-flex items-center text-black/40 hover:text-black mb-6 transition-colors text-[10px] font-black uppercase tracking-[2px]">
-                        <ArrowLeft className="w-4 h-4 mr-2" /> Back to My Campaigns
+                        <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch của tôi
                     </Link>
 
                     {isDisabled && (

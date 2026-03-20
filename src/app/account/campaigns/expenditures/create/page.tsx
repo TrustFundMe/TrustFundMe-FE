@@ -40,7 +40,7 @@ export default function CreateExpenditurePage() {
         }
 
         if (!campaignId) {
-            setError('Campaign ID is missing.');
+            setError('Thiếu mã chiến dịch.');
             setLoading(false);
             return;
         }
@@ -66,8 +66,8 @@ export default function CreateExpenditurePage() {
                 const anyBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
                 setPrimaryBank(approvedBank || anyBank || null);
             } catch (err) {
-                console.error('Failed to fetch data:', err);
-                setError('Failed to load campaign or bank data.');
+                console.error('Không thể tải dữ liệu:', err);
+                setError('Không thể tải dữ liệu chiến dịch hoặc ngân hàng.');
             } finally {
                 setLoading(false);
             }
@@ -151,7 +151,7 @@ export default function CreateExpenditurePage() {
             await expenditureService.create(payload);
             router.push(`/account/campaigns/expenditures?campaignId=${campaignId}`);
         } catch (err: any) {
-            console.error('Failed to create expenditure:', err);
+            console.error('Không thể tạo khoản chi:', err);
             // Try to extract error message from response
             const msg = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tạo khoản chi.';
             alert(`Lỗi: ${msg}`);
@@ -172,7 +172,7 @@ export default function CreateExpenditurePage() {
         return (
             <div className="max-w-4xl mx-auto px-4 py-12 text-center text-red-600">
                 <AlertCircle className="mx-auto h-12 w-12 mb-4" />
-                <p>{error || 'Campaign not found'}</p>
+                <p>{error || 'Không tìm thấy chiến dịch'}</p>
                 <Link href="/account/campaigns" className="mt-4 inline-block text-orange-600 font-medium">
                     Quay lại danh sách chiến dịch
                 </Link>

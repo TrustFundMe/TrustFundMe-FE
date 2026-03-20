@@ -499,14 +499,14 @@ export default function ProfilePage() {
   };
 
   const handleAvatarUpload = async (file: File): Promise<{ success: boolean }> => {
-    if (!user) throw new Error('Not authenticated');
+    if (!user) throw new Error('Bạn chưa đăng nhập');
     try {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('userId', String(user.id));
       const upRes = await fetch('/api/upload/avatar', { method: 'POST', credentials: 'include', body: fd });
       const upJson = await upRes.json();
-      if (!upRes.ok) throw new Error(upJson.error || 'Upload failed');
+      if (!upRes.ok) throw new Error(upJson.error || 'Tải ảnh lên thất bại');
       const avatarUrl = upJson.avatarUrl as string;
       updateUser({ avatarUrl });
       setAvatarPreview(avatarUrl);
@@ -522,7 +522,7 @@ export default function ProfilePage() {
       }
       return { success: true };
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to upload avatar';
+      const msg = err instanceof Error ? err.message : 'Không thể tải ảnh đại diện lên';
       toast(msg, 'error');
       throw err;
     }
@@ -533,7 +533,7 @@ export default function ProfilePage() {
     setSaving(true);
     try {
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      if (!user?.id) { toast('User ID is required', 'error'); return; }
+      if (!user?.id) { toast('Thiếu thông tin người dùng, vui lòng đăng nhập lại', 'error'); return; }
 
       // 1. Update Profile (Base User)
       try {
@@ -545,7 +545,7 @@ export default function ProfilePage() {
       } catch (err: any) {
         console.error('Profile update 403/error:', err);
         const detail = err.response?.data?.message || err.response?.data?.error || err.message;
-        throw new Error(`Profile Save Error: ${detail}`);
+        throw new Error(`Lỗi lưu hồ sơ: ${detail}`);
       }
 
       // 2. Handle Bank Account update / create
@@ -568,7 +568,7 @@ export default function ProfilePage() {
       } catch (bankErr: any) {
         console.error('Bank update 403/error:', bankErr);
         const detail = bankErr.response?.data?.message || bankErr.response?.data?.error || bankErr.message;
-        toast(`Basic profile saved, but Bank Error: ${detail}`, 'error');
+        toast(`Hồ sơ đã lưu nhưng cập nhật tài khoản ngân hàng thất bại: ${detail}`, 'error');
         setIsEditing(false);
         return;
       }
@@ -577,7 +577,7 @@ export default function ProfilePage() {
       setIsEditing(false);
     } catch (err: any) {
       const detail = err.response?.data?.message || err.response?.data?.error || err.message;
-      toast(detail || 'An unexpected error occurred', 'error');
+      toast(detail || 'Đã xảy ra lỗi không mong muốn', 'error');
     } finally { setSaving(false); }
   };
 
@@ -628,7 +628,7 @@ export default function ProfilePage() {
                       <div className="flex justify-end mb-6">
                         <button type="button" onClick={handleEdit}
                           className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                          <Pencil className="w-4 h-4 mr-2" /> Edit
+                          <Pencil className="w-4 h-4 mr-2" /> Chỉnh sửa
                         </button>
                       </div>
 
@@ -668,7 +668,7 @@ export default function ProfilePage() {
                         <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
                           {isBankLoading ? (
                             <div className="flex items-center gap-2 text-gray-400 text-sm">
-                              <Loader2 className="w-4 h-4 animate-spin" /> Loading bank info...
+                              <Loader2 className="w-4 h-4 animate-spin" /> Đang tải thông tin ngân hàng...
                             </div>
                           ) : bankAccount ? (
                             <div className="space-y-4">
@@ -679,7 +679,7 @@ export default function ProfilePage() {
                                 </div>
                                 <div className="text-right">
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                                    <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> VERIFIED
+                                    <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> ĐÃ XÁC THỰC
                                   </span>
                                 </div>
                               </div>
@@ -729,7 +729,12 @@ export default function ProfilePage() {
                       <div className="mb-8">
                           <label className="block text-sm font-medium text-gray-600 mb-3">Ảnh đại diện</label>
                         <div className="flex items-center gap-6">
-                          <AvatarUploader onUpload={handleAvatarUpload} onError={(m) => toast(m, 'error')} maxSizeMB={5} acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}>
+                          <AvatarUploader
+                            onUpload={handleAvatarUpload}
+                            onError={(m) => { if (m?.trim()) toast(m, 'error'); }}
+                            maxSizeMB={5}
+                            acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
+                          >
                             <Avatar className="h-28 w-28 cursor-pointer border-2 border-gray-200 shadow-sm hover:opacity-80 transition-opacity">
                               <AvatarImage src={avatarPreview ?? undefined} alt="Avatar" />
                               <AvatarFallback className="bg-gray-100 text-2xl font-bold text-gray-500">

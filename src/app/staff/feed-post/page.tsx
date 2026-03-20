@@ -12,6 +12,7 @@ import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContextProxy';
 
 const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
@@ -50,6 +51,7 @@ interface PostWithFlags extends FeedPost {
 }
 
 export default function StaffFeedPostPage() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<PostWithFlags[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export default function StaffFeedPostPage() {
       }
       setPosts(dtos.map((d) => dtoToFeedPost(d) as PostWithFlags));
     } catch (e: unknown) {
-      setError((e as Error)?.message ?? 'Không tải được danh sách bài viết');
+      setError('Không thể tải báo cáo bài viết. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -105,16 +107,23 @@ export default function StaffFeedPostPage() {
   };
 
   const handleTogglePin = async (post: PostWithFlags) => {
+    const role = String(user?.role || '').toUpperCase().replace(/^ROLE_/, '');
+    if (role === 'USER') {
+      alert('Bạn không có quyền ghim bài viết.');
+      return;
+    }
     setProcessingId(post.id);
     setProcessingAction('pin');
     try {
       const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id), { method: 'PATCH', credentials: 'include' });
-      if (res.ok) {
-        const updated = await res.json();
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Không thể ghim/bỏ ghim bài viết.');
       }
+      const updated = await res.json();
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
     } catch {
-      alert('Thao tác thất bại.');
+      alert('Ghim bài thất bại. Vui lòng thử lại.');
     } finally {
       setProcessingId(null);
       setProcessingAction(null);

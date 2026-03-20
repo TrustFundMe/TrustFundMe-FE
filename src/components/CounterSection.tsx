@@ -48,29 +48,29 @@ export const CounterSection1 = () => {
     delay: number;
   }[] = [
     {
-      label: "Total Funds Raised",
+      label: "Tổng quỹ đã huy động",
       value: 50000000,
       suffix: " VND",
       prefix: "$",
       delay: 0.1,
     },
     {
-      label: "Total Disbursed",
+      label: "Tổng tiền đã giải ngân",
       value: 35000000,
       suffix: " VND",
       prefix: "$",
       delay: 0.2,
     },
     {
-      label: "Verified Expenses",
+      label: "Chi phí đã xác minh",
       value: 1234,
-      suffix: " Invoices",
+      suffix: " Hóa đơn",
       delay: 0.3,
     },
     {
-      label: "Active Donors",
+      label: "Nhà hảo tâm đang hoạt động",
       value: 567,
-      suffix: " Users",
+      suffix: " Người dùng",
       delay: 0.4,
     },
   ];
