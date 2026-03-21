@@ -50,7 +50,7 @@ function VerifyEmailContent() {
   const handleSendOtp = async () => {
     const targetEmail = email || user?.email;
     if (!targetEmail) {
-      setError('Email is required');
+      setError('Email là bắt buộc');
       return;
     }
 
@@ -71,15 +71,15 @@ function VerifyEmailContent() {
       try {
         data = await response.json();
       } catch {
-        throw new Error('Failed to parse server response');
+        throw new Error('Không thể đọc phản hồi từ máy chủ');
       }
 
       if (!response.ok) {
-        const errorMessage = data.error || data.message || 'Failed to send OTP';
+        const errorMessage = data.error || data.message || 'Gửi OTP thất bại';
         console.error('Send OTP failed:', { status: response.status, data });
         setError(errorMessage);
       } else {
-        setSuccess(data.message || 'OTP has been sent to your email');
+        setSuccess(data.message || 'Mã OTP đã được gửi đến email của bạn');
         setResendCooldown(60); // 60 seconds cooldown
         setTimeout(() => setSuccess(''), 5000);
       }
@@ -87,7 +87,7 @@ function VerifyEmailContent() {
       console.error('Send OTP error:', err);
       setError(
         err.message ||
-          'Unable to send verification code. Please check your connection and try again.'
+          'Không thể gửi mã xác minh. Vui lòng kiểm tra kết nối và thử lại.'
       );
     } finally {
       setSending(false);
@@ -97,7 +97,7 @@ function VerifyEmailContent() {
   const handleOtpComplete = async (completeOtp: string) => {
     const targetEmail = email || user?.email;
     if (!targetEmail) {
-      setError('Email is required');
+      setError('Email là bắt buộc');
       return;
     }
 
@@ -122,11 +122,11 @@ function VerifyEmailContent() {
       try {
         verifyData = await verifyResponse.json();
       } catch {
-        throw new Error('Failed to parse verify response');
+        throw new Error('Không thể đọc phản hồi xác minh');
       }
 
       if (!verifyResponse.ok) {
-        const errorMessage = verifyData.error || verifyData.message || 'Invalid or expired OTP';
+        const errorMessage = verifyData.error || verifyData.message || 'OTP không hợp lệ hoặc đã hết hạn';
         console.error('Verify OTP failed:', { status: verifyResponse.status, data: verifyData });
         setError(errorMessage);
         setLoading(false);
@@ -134,7 +134,7 @@ function VerifyEmailContent() {
       }
 
       if (!verifyData.token) {
-        setError('Failed to get verification token');
+        setError('Không thể lấy token xác minh');
         setLoading(false);
         return;
       }
@@ -154,11 +154,11 @@ function VerifyEmailContent() {
       try {
         emailData = await emailResponse.json();
       } catch {
-        throw new Error('Failed to parse email verification response');
+        throw new Error('Không thể đọc phản hồi xác minh email');
       }
 
       if (!emailResponse.ok) {
-        const errorMessage = emailData.error || emailData.message || 'Failed to verify email';
+        const errorMessage = emailData.error || emailData.message || 'Xác minh email thất bại';
         console.error('Email verification failed:', { status: emailResponse.status, data: emailData });
         setError(errorMessage);
         setLoading(false);
@@ -171,7 +171,7 @@ function VerifyEmailContent() {
       }
 
       // Success - redirect to homepage
-      setSuccess('Email verified successfully! Redirecting...');
+      setSuccess('Xác minh email thành công! Đang chuyển hướng...');
       setTimeout(() => {
         router.push('/');
       }, 1500);
@@ -179,7 +179,7 @@ function VerifyEmailContent() {
       console.error('Verify email error:', err);
       setError(
         err.message ||
-          'Unable to verify email. Please check your connection and try again.'
+          'Không thể xác minh email. Vui lòng kiểm tra kết nối và thử lại.'
       );
       setLoading(false);
     }
@@ -195,7 +195,7 @@ function VerifyEmailContent() {
             <Link href="/" className="inline-block">
               <img
                 src="/assets/img/logo/black-logo.png"
-                alt="TrustFundMe Logo"
+                alt="Logo TrustFundMe"
                 className="h-12 w-auto hover:opacity-80 transition-opacity"
               />
             </Link>
@@ -207,8 +207,8 @@ function VerifyEmailContent() {
                 <Mail className="w-8 h-8 text-orange-600" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Verify Your Email</h2>
-            <p className="mt-2 text-sm text-gray-600">We've sent a verification code to:</p>
+            <h2 className="text-2xl font-bold text-gray-900">Xác minh email của bạn</h2>
+            <p className="mt-2 text-sm text-gray-600">Chúng tôi đã gửi mã xác minh đến:</p>
             <p className="mt-1 text-sm font-medium text-gray-900">{targetEmail}</p>
           </div>
 
@@ -226,7 +226,7 @@ function VerifyEmailContent() {
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
-              Enter the 6-digit code
+              Nhập mã gồm 6 chữ số
             </label>
             <OtpInput
               onComplete={handleOtpComplete}
@@ -242,10 +242,10 @@ function VerifyEmailContent() {
               className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending
-                ? 'Sending...'
+                ? 'Đang gửi...'
                 : resendCooldown > 0
-                  ? `Resend code in ${resendCooldown}s`
-                  : 'Resend Code'}
+                  ? `Gửi lại mã sau ${resendCooldown}s`
+                  : 'Gửi lại mã'}
             </button>
 
             <Link
@@ -264,7 +264,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Đang tải...</div>}>
       <VerifyEmailContent />
     </Suspense>
   );

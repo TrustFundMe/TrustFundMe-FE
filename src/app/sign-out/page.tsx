@@ -42,7 +42,7 @@ export default function SignOutPage() {
                   <CheckCircle size={40} style={{ color: "#ff5e14" }} />
                 </div>
                 <h1 className="fw-bold mb-3" style={{ color: "#202426", fontSize: "2.5rem" }}>
-                  You have securely signed out of TrustFundMe.
+                  Bạn đã đăng xuất khỏi TrustFundMe an toàn.
                 </h1>
               </motion.div>
 
@@ -58,28 +58,28 @@ export default function SignOutPage() {
                   <div className="row align-items-center">
                     <div className="col-lg-8">
                       <h3 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                        Never miss a donation with the TrustFundMe App
+                        Đừng bỏ lỡ bất kỳ khoản ủng hộ nào với ứng dụng TrustFundMe
                       </h3>
                       <ul className="list-unstyled mb-4" style={{ fontSize: "16px" }}>
                         <li className="mb-2 d-flex align-items-start gap-2">
                           <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Get fundraising coaching tips</span>
+                          <span>Nhận mẹo và hướng dẫn gây quỹ hiệu quả</span>
                         </li>
                         <li className="mb-2 d-flex align-items-start gap-2">
                           <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Access more ways to share</span>
+                          <span>Mở rộng nhiều cách chia sẻ chiến dịch hơn</span>
                         </li>
                         <li className="mb-2 d-flex align-items-start gap-2">
                           <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Post videos to update donors</span>
+                          <span>Đăng video cập nhật đến người ủng hộ</span>
                         </li>
                         <li className="mb-2 d-flex align-items-start gap-2">
                           <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Manage your fundraiser anywhere</span>
+                          <span>Quản lý chiến dịch gây quỹ ở mọi nơi</span>
                         </li>
                       </ul>
                       <p className="text-muted mb-0">
-                        Or, search your app store for 'TrustFundMe'
+                        Hoặc tìm "TrustFundMe" trên cửa hàng ứng dụng của bạn
                       </p>
                     </div>
                     <div className="col-lg-4 text-center">
@@ -123,11 +123,11 @@ export default function SignOutPage() {
                     </div>
                     <div>
                       <p className="mb-2" style={{ fontSize: "16px", fontStyle: "italic", color: "#202426" }}>
-                        "The app made it so much easier to check on the fundraiser. I always have my phone with me, so it was just a click away. Getting notifications regarding each donation was exciting and I was able to easily thank people for their contributions."
+                        "Ứng dụng giúp tôi theo dõi chiến dịch gây quỹ dễ dàng hơn rất nhiều. Tôi luôn mang điện thoại bên mình nên chỉ cần một lần chạm là xem được ngay. Mỗi khi có thông báo ủng hộ mới, tôi rất hào hứng và cũng dễ dàng gửi lời cảm ơn đến mọi người."
                       </p>
                       <div>
                         <strong style={{ color: "#202426" }}>Evan</strong>
-                        <span className="text-muted"> - TrustFundMe app user</span>
+                        <span className="text-muted"> - Người dùng ứng dụng TrustFundMe</span>
                       </div>
                     </div>
                   </div>
@@ -141,7 +141,7 @@ export default function SignOutPage() {
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
                 <h3 className="fw-bold text-center mb-5" style={{ color: "#202426" }}>
-                  What can you do to fundraise successfully?
+                  Làm gì để gây quỹ thành công hơn?
                 </h3>
                 <div className="row g-4">
                   <div className="col-md-6 col-lg-4">
@@ -159,11 +159,11 @@ export default function SignOutPage() {
                           <Share2 size={30} style={{ color: "#ff5e14" }} />
                         </div>
                         <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Share with friends and family
+                          Chia sẻ với bạn bè và người thân
                         </h5>
                         <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Share your fundraiser with a personalized message.</li>
-                          <li>• Inspire others to help you spread the word.</li>
+                          <li className="mb-2">• Chia sẻ chiến dịch của bạn bằng thông điệp cá nhân hóa.</li>
+                          <li>• Truyền cảm hứng để mọi người cùng bạn lan tỏa câu chuyện.</li>
                         </ul>
                       </div>
                     </div>
@@ -184,11 +184,11 @@ export default function SignOutPage() {
                           <CreditCard size={30} style={{ color: "#ff5e14" }} />
                         </div>
                         <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Set up withdrawals early
+                          Thiết lập rút tiền sớm
                         </h5>
                         <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Invite your beneficiary or set up your withdrawal account early.</li>
-                          <li>• Funds can automatically be deposited into the designated bank account.</li>
+                          <li className="mb-2">• Mời người thụ hưởng hoặc thiết lập tài khoản rút tiền sớm.</li>
+                          <li>• Tiền có thể tự động chuyển vào tài khoản ngân hàng đã chỉ định.</li>
                         </ul>
                       </div>
                     </div>
@@ -209,11 +209,11 @@ export default function SignOutPage() {
                           <Users size={30} style={{ color: "#ff5e14" }} />
                         </div>
                         <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Invite team members
+                          Mời thành viên đồng hành
                         </h5>
                         <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Add friends and family as team members to help you fundraise.</li>
-                          <li>• Team members can help you share your campaign as well as thank and update donors.</li>
+                          <li className="mb-2">• Thêm bạn bè và người thân làm thành viên để cùng gây quỹ.</li>
+                          <li>• Thành viên có thể hỗ trợ chia sẻ chiến dịch, cảm ơn và cập nhật cho người ủng hộ.</li>
                         </ul>
                       </div>
                     </div>
@@ -221,7 +221,7 @@ export default function SignOutPage() {
                 </div>
               </motion.div>
 
-              {/* Back to Home */}
+              {/* Quay về trang chủ */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -233,7 +233,7 @@ export default function SignOutPage() {
                   className="theme-btn d-inline-flex align-items-center gap-2"
                 >
                   <Heart size={18} />
-                  Back to Home
+                  Về trang chủ
                 </Link>
               </motion.div>
             </div>

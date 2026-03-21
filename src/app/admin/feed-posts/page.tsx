@@ -4,23 +4,24 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle,
   MessageSquare, Filter, RefreshCw, Pin, Lock, LockOpen, PinOff, Flag,
-  CheckCircle, XCircle
+  // status toggle removed (PUBLISHED/DRAFT now read-only in table)
 } from 'lucide-react';
 import Link from 'next/link';
 import { feedPostService } from '@/services/feedPostService';
 import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-const STATUS_OPTIONS = ['ALL', 'ACTIVE', 'DRAFT'];
+const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
 const PAGE_SIZE = 15;
 
 function StatusPill({ status }: { status: string }) {
   const base = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider';
   switch (status) {
-    case 'ACTIVE':
-      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Đang hoạt động</span>;
+    case 'PUBLISHED':
+      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Đã đăng</span>;
     case 'DRAFT':
       return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Bản nháp</span>;
     default:
@@ -28,9 +29,14 @@ function StatusPill({ status }: { status: string }) {
   }
 }
 
+function normalizeType(type: string) {
+  return type?.toUpperCase().includes('CAMPAIGN') ? 'CAMPAIGN' : 'GENERAL';
+}
+
 function TypePill({ type }: { type: string }) {
   const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider';
-  return type === 'CAMPAIGN'
+  const normalized = normalizeType(type);
+  return normalized === 'CAMPAIGN'
     ? <span className={`${base} bg-blue-50 text-blue-700`}>Chiến dịch</span>
     : <span className={`${base} bg-slate-100 text-slate-500`}>Chung</span>;
 }
@@ -53,6 +59,8 @@ export default function AdminFeedPostsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [createdAtOpen, setCreatedAtOpen] = useState(false);
+  const [createdAtDetails, setCreatedAtDetails] = useState<{ postTitle?: string; createdAt: string } | null>(null);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -130,28 +138,6 @@ export default function AdminFeedPostsPage() {
     }
   };
 
-  const handleToggleStatus = async (post: PostWithFlags) => {
-    const newStatus = post.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
-    setProcessingId(post.id);
-    setProcessingAction('status');
-    try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_STATUS(post.id), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: newStatus } : p));
-      }
-    } catch {
-      alert('Thao tác thất bại.');
-    } finally {
-      setProcessingId(null);
-      setProcessingAction(null);
-    }
-  };
-
   const filtered = useMemo(() => {
     return posts.filter((p) => {
       const matchSearch = !search ||
@@ -159,7 +145,7 @@ export default function AdminFeedPostsPage() {
         p.content.toLowerCase().includes(search.toLowerCase()) ||
         p.author.name.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'ALL' || p.status === statusFilter;
-      const matchType = typeFilter === 'ALL' || p.type === typeFilter;
+      const matchType = typeFilter === 'ALL' || normalizeType(p.type) === typeFilter;
       return matchSearch && matchStatus && matchType;
     });
   }, [posts, search, statusFilter, typeFilter]);
@@ -182,9 +168,6 @@ export default function AdminFeedPostsPage() {
             <MessageSquare className="w-6 h-6 text-[#1A685B]" />
             Quản lý bảng tin
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {posts.length} bài viết · {pinnedCount} đang ghim · {lockedCount} đang khóa
-          </p>
         </div>
         <button
           onClick={loadPosts}
@@ -199,7 +182,7 @@ export default function AdminFeedPostsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
         {[
           { label: 'Tổng bài viết', value: posts.length, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100' },
-          { label: 'Đang hoạt động', value: posts.filter((p) => p.status === 'ACTIVE').length, color: 'text-[#1A685B]', bg: 'bg-[#1A685B]/5', border: 'border-[#1A685B]/10' },
+          { label: 'Đã đăng', value: posts.filter((p) => p.status === 'PUBLISHED').length, color: 'text-[#1A685B]', bg: 'bg-[#1A685B]/5', border: 'border-[#1A685B]/10' },
           { label: 'Đang ghim', value: pinnedCount, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
           { label: 'Đang khóa', value: lockedCount, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
         ].map((stat) => (
@@ -230,7 +213,17 @@ export default function AdminFeedPostsPage() {
             className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
           >
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === 'ALL' ? 'Tất cả trạng thái' : s}</option>)}
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s === 'ALL'
+                  ? 'Tất cả trạng thái'
+                  : s === 'PUBLISHED'
+                    ? 'Đã đăng'
+                    : s === 'DRAFT'
+                      ? 'Bản nháp'
+                      : s}
+              </option>
+            ))}
           </select>
 
           <select
@@ -239,7 +232,11 @@ export default function AdminFeedPostsPage() {
             className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
           >
-            {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t === 'ALL' ? 'Tất cả loại' : t}</option>)}
+            {TYPE_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t === 'ALL' ? 'Tất cả loại' : t === 'GENERAL' ? 'Chung' : t === 'CAMPAIGN' ? 'Chiến dịch' : t}
+              </option>
+            ))}
           </select>
 
           {(search !== '' || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
@@ -273,7 +270,7 @@ export default function AdminFeedPostsPage() {
           <table className="min-w-full text-sm border-separate border-spacing-0">
             <thead className="sticky top-0 z-30 bg-slate-50">
               <tr className="text-left">
-                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">ID</th>
+                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">STT</th>
                 <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Bài viết</th>
                 <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Tác giả</th>
                 <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Loại</th>
@@ -285,9 +282,11 @@ export default function AdminFeedPostsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {pagePosts.map((post) => (
+              {pagePosts.map((post, rowIndex) => (
                 <tr key={post.id} className={`h-[68px] group hover:bg-slate-50/30 transition-colors ${post.isPinned ? 'bg-orange-50/30' : ''}`}>
-                  <td className="py-2 pl-8 pr-4 text-slate-400 font-mono text-xs">#{post.id}</td>
+                  <td className="py-2 pl-8 pr-4 text-slate-400 font-mono text-xs">
+                    {(currentPage - 1) * PAGE_SIZE + rowIndex + 1}.
+                  </td>
                   <td className="py-2 pr-4 max-w-[220px]">
                     <div className="flex items-start gap-1.5">
                       <div className="flex-1 min-w-0">
@@ -312,14 +311,7 @@ export default function AdminFeedPostsPage() {
                   </td>
                   <td className="py-2 pr-4"><TypePill type={post.type} /></td>
                   <td className="py-2 pr-4">
-                    <button
-                      onClick={() => handleToggleStatus(post)}
-                      disabled={processingId === post.id}
-                      title={`Chuyển sang ${post.status === 'ACTIVE' ? 'Draft' : 'Active'}`}
-                      className="hover:opacity-70 transition-opacity disabled:opacity-50"
-                    >
-                      <StatusPill status={post.status} />
-                    </button>
+                    <StatusPill status={post.status} />
                   </td>
                   <td className="py-2 pr-4">
                     {(post.flagCount ?? 0) > 0 ? (
@@ -335,7 +327,19 @@ export default function AdminFeedPostsPage() {
                     <div className="font-medium">{post.likeCount} likes · {post.replyCount} comments</div>
                     <div>{post.viewCount} views</div>
                   </td>
-                  <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">{formatDate(post.createdAt)}</td>
+                  <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">
+                    <button
+                      type="button"
+                      className="hover:text-[#1A685B] transition-colors"
+                      onClick={() => {
+                        setCreatedAtDetails({ postTitle: post.title ?? undefined, createdAt: post.createdAt });
+                        setCreatedAtOpen(true);
+                      }}
+                      aria-label="Xem chi tiết ngày tạo"
+                    >
+                      {formatDate(post.createdAt)}
+                    </button>
+                  </td>
                   <td className="py-2 pr-8 text-right">
                     <div className="flex justify-end gap-1 transition-all">
                       {/* View */}
@@ -373,22 +377,6 @@ export default function AdminFeedPostsPage() {
                           <LockOpen className="h-4 w-4" />
                         ) : (
                           <Lock className="h-4 w-4" />
-                        )}
-                      </button>
-
-                      {/* Toggle Status */}
-                      <button
-                        onClick={() => handleToggleStatus(post)}
-                        disabled={processingId === post.id}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-50 ${post.status === 'ACTIVE' ? 'text-slate-400 hover:text-amber-600 hover:bg-white hover:shadow-lg' : 'text-slate-400 hover:text-[#1A685B] hover:bg-white hover:shadow-lg'}`}
-                        title={post.status === 'ACTIVE' ? 'Chuyển về Draft' : 'Kích hoạt'}
-                      >
-                        {isProcessing(post.id, 'status') ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : post.status === 'ACTIVE' ? (
-                          <XCircle className="h-4 w-4" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4" />
                         )}
                       </button>
 
@@ -464,6 +452,30 @@ export default function AdminFeedPostsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
+        <DialogContent className="max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Chi tiết ngày tạo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div className="text-sm text-slate-600">
+              {createdAtDetails?.postTitle ? (
+                <span className="font-bold text-slate-900">Bài viết:</span>
+              ) : null}
+              {createdAtDetails?.postTitle ?? '—'}
+            </div>
+            <div className="text-sm text-slate-900 font-bold">
+              {createdAtDetails?.createdAt
+                ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </div>
+            <div className="text-xs text-slate-500 break-all">
+              Raw: {createdAtDetails?.createdAt ?? '—'}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

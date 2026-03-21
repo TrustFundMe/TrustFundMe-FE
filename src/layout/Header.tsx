@@ -96,7 +96,7 @@ const Header1 = ({ open }: { open: () => void }) => (
             </div>
             <div className="header-button d-none d-sm-block">
               <Link href="/contact" className="theme-btn">
-                Donate Now
+                Ủng hộ ngay
                 <i className="ps-2 far fa-heart" />
               </Link>
             </div>
@@ -144,7 +144,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                   </a>
                   <div className="header-button">
                     <Link href="/contact" className="theme-btn">
-                      Donate Now
+                      Ủng hộ ngay
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
@@ -216,7 +216,7 @@ const Header4 = ({ open }: { open: () => void }) => {
                   </a>
                   <div className="header-button">
                     <Link href="/contact" className="theme-btn">
-                      Donate Now
+                      Ủng hộ ngay
                       <i className="ps-2 far fa-heart" />
                     </Link>
                   </div>
@@ -250,7 +250,7 @@ const HomeMenuItem = ({ n }: { n: number }) => (
       />
       <div className="demo-button">
         <Link href={n === 2 ? "/" : `/index-${n}`} className="theme-btn">
-          <span>View Demo</span>
+          <span>Xem demo</span>
         </Link>
       </div>
     </div>
@@ -291,7 +291,7 @@ const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
             <input
               type="search"
               className="main-search-input"
-              placeholder="Search..."
+                  placeholder="Tìm kiếm..."
             />
           </div>
         </form>
@@ -326,7 +326,7 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
               </p>
               <MobileNav />
               <div className="offcanvas__contact">
-                <h4>Contact Info</h4>
+                <h4>Thông tin liên hệ</h4>
                 <ul>
                   {[
                     {

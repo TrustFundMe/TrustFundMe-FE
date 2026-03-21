@@ -114,8 +114,25 @@ export const campaignService = {
   },
 
   async getTasksByStaff(staffId: number): Promise<any[]> {
-    const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BY_STAFF(staffId));
-    return res.data;
+    try {
+      const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BY_STAFF(staffId));
+      return res.data;
+    } catch (error) {
+      // Fallback for environments where staff-task endpoint is unstable (500).
+      const allRes = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
+      const allTasks = allRes.data ?? [];
+      return allTasks.filter((task) => {
+        const candidateIds = [
+          task.staffId,
+          task.assignedStaffId,
+          task.assigneeId,
+          task.assignee?.id,
+          task.staff?.id,
+          task.assignedTo?.id,
+        ];
+        return candidateIds.some((id) => Number(id) === Number(staffId));
+      });
+    }
   },
 
   async getAllTasks(): Promise<any[]> {

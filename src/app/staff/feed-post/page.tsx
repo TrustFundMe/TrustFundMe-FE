@@ -4,23 +4,25 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle,
   MessageSquare, Filter, RefreshCw, Pin, Lock, LockOpen, PinOff, Flag,
-  CheckCircle, XCircle
+  // status toggle removed (PUBLISHED/DRAFT now read-only in table)
 } from 'lucide-react';
 import Link from 'next/link';
 import { feedPostService } from '@/services/feedPostService';
 import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthContextProxy';
 
-const STATUS_OPTIONS = ['ALL', 'ACTIVE', 'DRAFT'];
+const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
 const PAGE_SIZE = 15;
 
 function StatusPill({ status }: { status: string }) {
   const base = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider';
   switch (status) {
-    case 'ACTIVE':
-      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Hoạt động</span>;
+    case 'PUBLISHED':
+      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Đã đăng</span>;
     case 'DRAFT':
       return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Bản nháp</span>;
     default:
@@ -28,9 +30,14 @@ function StatusPill({ status }: { status: string }) {
   }
 }
 
+function normalizeType(type: string) {
+  return type?.toUpperCase().includes('CAMPAIGN') ? 'CAMPAIGN' : 'GENERAL';
+}
+
 function TypePill({ type }: { type: string }) {
   const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider';
-  return type === 'CAMPAIGN'
+  const normalized = normalizeType(type);
+  return normalized === 'CAMPAIGN'
     ? <span className={`${base} bg-blue-50 text-blue-700`}>Chiến dịch</span>
     : <span className={`${base} bg-zinc-100 text-zinc-500`}>Chung</span>;
 }
@@ -44,6 +51,7 @@ interface PostWithFlags extends FeedPost {
 }
 
 export default function StaffFeedPostPage() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<PostWithFlags[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +61,8 @@ export default function StaffFeedPostPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
+  const [createdAtOpen, setCreatedAtOpen] = useState(false);
+  const [createdAtDetails, setCreatedAtDetails] = useState<{ postTitle?: string; createdAt: string } | null>(null);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -72,7 +82,7 @@ export default function StaffFeedPostPage() {
       }
       setPosts(dtos.map((d) => dtoToFeedPost(d) as PostWithFlags));
     } catch (e: unknown) {
-      setError((e as Error)?.message ?? 'Không tải được danh sách bài viết');
+      setError('Không thể tải báo cáo bài viết. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -97,16 +107,23 @@ export default function StaffFeedPostPage() {
   };
 
   const handleTogglePin = async (post: PostWithFlags) => {
+    const role = String(user?.role || '').toUpperCase().replace(/^ROLE_/, '');
+    if (role === 'USER') {
+      alert('Bạn không có quyền ghim bài viết.');
+      return;
+    }
     setProcessingId(post.id);
     setProcessingAction('pin');
     try {
       const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id), { method: 'PATCH', credentials: 'include' });
-      if (res.ok) {
-        const updated = await res.json();
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Không thể ghim/bỏ ghim bài viết.');
       }
+      const updated = await res.json();
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
     } catch {
-      alert('Thao tác thất bại.');
+      alert('Ghim bài thất bại. Vui lòng thử lại.');
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
@@ -130,28 +147,6 @@ export default function StaffFeedPostPage() {
     }
   };
 
-  const handleToggleStatus = async (post: PostWithFlags) => {
-    const newStatus = post.status === 'ACTIVE' ? 'DRAFT' : 'ACTIVE';
-    setProcessingId(post.id);
-    setProcessingAction('status');
-    try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_STATUS(post.id), {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: newStatus } : p));
-      }
-    } catch {
-      alert('Thao tác thất bại.');
-    } finally {
-      setProcessingId(null);
-      setProcessingAction(null);
-    }
-  };
-
   const filtered = useMemo(() => {
     return posts.filter((p) => {
       const matchSearch = !search ||
@@ -159,7 +154,7 @@ export default function StaffFeedPostPage() {
         p.content.toLowerCase().includes(search.toLowerCase()) ||
         p.author.name.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'ALL' || p.status === statusFilter;
-      const matchType = typeFilter === 'ALL' || p.type === typeFilter;
+      const matchType = typeFilter === 'ALL' || normalizeType(p.type) === typeFilter;
       return matchSearch && matchStatus && matchType;
     });
   }, [posts, search, statusFilter, typeFilter]);
@@ -174,16 +169,13 @@ export default function StaffFeedPostPage() {
     processingId === id && processingAction === action;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-3">
             <MessageSquare className="w-6 h-6 text-[#1A685B]" />
             Quản lý bài viết
           </h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            {posts.length} bài viết · {pinnedCount} đang ghim · {lockedCount} đang khóa
-          </p>
         </div>
         <button
           onClick={loadPosts}
@@ -197,7 +189,7 @@ export default function StaffFeedPostPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Tổng bài viết', value: posts.length, color: 'text-zinc-700', bg: 'bg-zinc-50' },
-          { label: 'Đang hoạt động', value: posts.filter((p) => p.status === 'ACTIVE').length, color: 'text-[#1A685B]', bg: 'bg-[#1A685B]/5' },
+          { label: 'Đã đăng', value: posts.filter((p) => p.status === 'PUBLISHED').length, color: 'text-[#1A685B]', bg: 'bg-[#1A685B]/5' },
           { label: 'Đang ghim', value: pinnedCount, color: 'text-orange-600', bg: 'bg-orange-50' },
           { label: 'Đang khóa', value: lockedCount, color: 'text-red-600', bg: 'bg-red-50' },
         ].map((stat) => (
@@ -226,40 +218,54 @@ export default function StaffFeedPostPage() {
             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
             className="text-sm border border-zinc-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1A685B]/20"
           >
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === 'ALL' ? 'Tất cả trạng thái' : s}</option>)}
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s === 'ALL'
+                  ? 'Tất cả trạng thái'
+                  : s === 'PUBLISHED'
+                    ? 'Đã đăng'
+                    : s === 'DRAFT'
+                      ? 'Bản nháp'
+                      : s}
+              </option>
+            ))}
           </select>
           <select
             value={typeFilter}
             onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
             className="text-sm border border-zinc-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1A685B]/20"
           >
-            {TYPE_OPTIONS.map((t) => <option key={t} value={t}>{t === 'ALL' ? 'Tất cả loại' : t}</option>)}
+            {TYPE_OPTIONS.map((t) => (
+              <option key={t} value={t}>
+                {t === 'ALL' ? 'Tất cả loại' : t === 'GENERAL' ? 'Chung' : t === 'CAMPAIGN' ? 'Chiến dịch' : t}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex items-center justify-center py-20 flex-1 min-h-0">
             <Loader2 className="w-8 h-8 animate-spin text-[#1A685B]" />
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-500">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-500 flex-1 min-h-0">
             <AlertCircle className="w-8 h-8" />
             <p className="text-sm font-semibold">{error}</p>
             <button onClick={loadPosts} className="text-sm text-[#1A685B] underline">Thử lại</button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-400">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-zinc-400 flex-1 min-h-0">
             <MessageSquare className="w-10 h-10 opacity-30" />
             <p className="text-sm font-semibold">Không tìm thấy bài viết nào</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/60">
-                  <th className="px-5 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">ID</th>
+                  <th className="px-5 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">STT</th>
                   <th className="px-5 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Bài viết</th>
                   <th className="px-5 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Tác giả</th>
                   <th className="px-5 py-4 text-left text-[10px] font-black uppercase tracking-widest text-zinc-400">Loại</th>
@@ -271,9 +277,11 @@ export default function StaffFeedPostPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-50">
-                {pagePosts.map((post) => (
+                {pagePosts.map((post, rowIndex) => (
                   <tr key={post.id} className={`hover:bg-zinc-50/50 transition-colors group ${post.isPinned ? 'bg-orange-50/30' : ''}`}>
-                    <td className="px-5 py-4 text-zinc-400 font-mono text-xs">#{post.id}</td>
+                    <td className="px-5 py-4 text-zinc-400 font-mono text-xs">
+                      {(currentPage - 1) * PAGE_SIZE + rowIndex + 1}.
+                    </td>
                     <td className="px-5 py-4 max-w-[220px]">
                       <div className="flex items-start gap-1.5">
                         <div className="flex-1 min-w-0">
@@ -298,14 +306,7 @@ export default function StaffFeedPostPage() {
                     </td>
                     <td className="px-5 py-4"><TypePill type={post.type} /></td>
                     <td className="px-5 py-4">
-                      <button
-                        onClick={() => handleToggleStatus(post)}
-                        disabled={processingId === post.id}
-                        title={`Chuyển sang ${post.status === 'ACTIVE' ? 'Draft' : 'Active'}`}
-                        className="hover:opacity-70 transition-opacity disabled:opacity-50"
-                      >
-                        <StatusPill status={post.status} />
-                      </button>
+                      <StatusPill status={post.status} />
                     </td>
                     <td className="px-5 py-4">
                       {(post.flagCount ?? 0) > 0 ? (
@@ -321,7 +322,19 @@ export default function StaffFeedPostPage() {
                       <div>{post.likeCount} likes · {post.replyCount} comments</div>
                       <div>{post.viewCount} views</div>
                     </td>
-                    <td className="px-5 py-4 text-xs text-zinc-500 whitespace-nowrap">{formatDate(post.createdAt)}</td>
+                    <td className="px-5 py-4 text-xs text-zinc-500 whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="hover:text-[#1A685B] transition-colors"
+                        onClick={() => {
+                          setCreatedAtDetails({ postTitle: post.title ?? undefined, createdAt: post.createdAt });
+                          setCreatedAtOpen(true);
+                        }}
+                        aria-label="Xem chi tiết ngày tạo"
+                      >
+                        {formatDate(post.createdAt)}
+                      </button>
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1">
                         <Link href={`/post/${post.id}`} target="_blank"
@@ -357,20 +370,6 @@ export default function StaffFeedPostPage() {
                           )}
                         </button>
                         <button
-                          onClick={() => handleToggleStatus(post)}
-                          disabled={processingId === post.id}
-                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${post.status === 'ACTIVE' ? 'hover:bg-amber-50 text-zinc-400 hover:text-amber-600' : 'hover:bg-[#1A685B]/10 text-zinc-400 hover:text-[#1A685B]'}`}
-                          title={post.status === 'ACTIVE' ? 'Chuyển về Draft' : 'Kích hoạt'}
-                        >
-                          {isProcessing(post.id, 'status') ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : post.status === 'ACTIVE' ? (
-                            <XCircle className="w-3.5 h-3.5" />
-                          ) : (
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                        <button
                           onClick={() => handleDelete(post)}
                           disabled={processingId === post.id}
                           className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-50"
@@ -391,6 +390,30 @@ export default function StaffFeedPostPage() {
           </div>
         )}
       </div>
+
+      <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
+        <DialogContent className="max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Chi tiết ngày tạo</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <div className="text-sm text-zinc-600">
+              {createdAtDetails?.postTitle ? (
+                <span className="font-bold text-zinc-900">Bài viết:</span>
+              ) : null}
+              {createdAtDetails?.postTitle ?? '—'}
+            </div>
+            <div className="text-sm text-zinc-900 font-bold">
+              {createdAtDetails?.createdAt
+                ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </div>
+            <div className="text-xs text-zinc-500 break-all">
+              Raw: {createdAtDetails?.createdAt ?? '—'}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {!loading && !error && totalPages > 1 && (
         <div className="flex items-center justify-between">

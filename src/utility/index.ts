@@ -2,81 +2,102 @@ import { useEffect } from "react";
 export function useStickyHeader(): void {
   useEffect(() => {
     const header = document.querySelector<HTMLElement>("#header-sticky");
-    const headerTop = document.querySelector<HTMLElement>(".header-top-section-3");
     if (!header) return;
-    
-    // Fixed scroll threshold
-    const STICKY_THRESHOLD = 48;
-    
-    // Create placeholder element (no transitions for smooth behavior)
-    const placeholder = document.createElement("div");
+
+    // Some header variants have a top section above `#header-sticky`
+    const headerTop =
+      (document.querySelector<HTMLElement>(".header-top-section-3") ||
+        document.querySelector<HTMLElement>(".header-top-section")) ?? null;
+
+    // Preserve original display so we don't "reveal" sections that are intentionally hidden (e.g. style={{display:'none'}})
+    const headerTopInitialDisplay = headerTop
+      ? headerTop.style.display || getComputedStyle(headerTop).display
+      : "";
+
+    // Avoid duplicate placeholders if this hook is mounted twice
+    const existingPlaceholder = document.getElementById("header-sticky-placeholder");
+    const placeholder =
+      (existingPlaceholder as HTMLDivElement | null) ?? document.createElement("div");
     placeholder.id = "header-sticky-placeholder";
     placeholder.style.display = "none";
     placeholder.style.width = "100%";
-    placeholder.style.transition = "none"; // NO TRANSITIONS
+    placeholder.style.transition = "none"; // no transitions during stick/un-stick
     placeholder.style.margin = "0";
     placeholder.style.padding = "0";
-    
-    // Insert placeholder before headerTop or header
+
     const targetElement = headerTop || header;
     targetElement.parentElement?.insertBefore(placeholder, targetElement);
-    
-    // Function to calculate exact total height
+
     const calculateTotalHeight = (): number => {
-      const headerTopHeight = headerTop?.offsetHeight || 0;
-      const headerHeight = header.offsetHeight || 0;
+      const headerTopHeight = headerTop?.offsetHeight ?? 0;
+      const headerHeight = header.offsetHeight ?? 0;
       return headerTopHeight + headerHeight;
     };
-    
-    const onScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const shouldStick = scrollTop >= STICKY_THRESHOLD;
-      
-      if (shouldStick && !header.classList.contains("sticky")) {
-        // Calculate height BEFORE adding sticky class
-        const totalHeight = calculateTotalHeight();
-        
-        // Set placeholder height and show it (instant, no transition)
-        placeholder.style.height = `${totalHeight}px`;
+
+    let stickyStartY = 0;
+    const recalcStickyStart = () => {
+      const rect = header.getBoundingClientRect();
+      stickyStartY = rect.top + (window.scrollY || document.documentElement.scrollTop);
+    };
+    recalcStickyStart();
+
+    const applySticky = (shouldStick: boolean) => {
+      const isCurrentlySticky = header.classList.contains("sticky");
+      if (shouldStick && !isCurrentlySticky) {
+        placeholder.style.height = `${calculateTotalHeight()}px`;
         placeholder.style.display = "block";
-        
-        // Add sticky class (CSS has no transitions)
         header.classList.add("sticky");
-        
-        // Hide header-top when sticky
+
         if (headerTop) {
-          headerTop.style.transition = "none"; // NO TRANSITIONS
+          headerTop.style.transition = "none";
           headerTop.style.display = "none";
         }
-      } else if (!shouldStick && header.classList.contains("sticky")) {
-        // Remove sticky
+      } else if (!shouldStick && isCurrentlySticky) {
         header.classList.remove("sticky");
-        
-        // Hide placeholder (instant)
         placeholder.style.display = "none";
-        
-        // Show header-top again
+
         if (headerTop) {
-          headerTop.style.transition = "none"; // NO TRANSITIONS
-          headerTop.style.display = "block";
+          headerTop.style.transition = "none";
+          headerTop.style.display = headerTopInitialDisplay || "";
         }
       }
     };
-    
+
+    const onScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      applySticky(scrollTop >= stickyStartY);
+    };
+
     // Initial check
     onScroll();
-    
-    // Add scroll listener
+
+    const handleResize = () => {
+      recalcStickyStart();
+      // If we're currently sticky, keep placeholder height in sync
+      if (header.classList.contains("sticky")) {
+        placeholder.style.height = `${calculateTotalHeight()}px`;
+      }
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
-    
-    // Cleanup
+    window.addEventListener("resize", handleResize);
+
+    // React to content size changes (e.g. images/fonts affecting header height)
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(header);
+    if (headerTop) resizeObserver.observe(headerTop);
+
     return () => {
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
+
       header.classList.remove("sticky");
       if (headerTop) {
-        headerTop.style.display = "block";
+        headerTop.style.transition = "none";
+        headerTop.style.display = headerTopInitialDisplay || "";
       }
-      placeholder?.remove();
+      placeholder.remove();
     };
   }, []);
 }

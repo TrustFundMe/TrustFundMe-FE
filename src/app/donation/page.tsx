@@ -121,7 +121,7 @@ function DonationContent() {
     if (!item) return;
 
     const isCurrentlySelected = !!items[itemId];
-    let newItems = { ...items };
+    const newItems = { ...items };
 
     if (isCurrentlySelected) {
       delete newItems[itemId];

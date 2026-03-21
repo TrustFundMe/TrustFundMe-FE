@@ -110,6 +110,8 @@ export default function FlagsManagementPage() {
     } catch (error: any) {
       console.error('Failed to fetch flags:', error);
       toast.error('Không thể tải danh sách tố cáo');
+      setFlags([]);
+      setStats({ total: 0, pending: 0, resolved: 0, dismissed: 0 });
     } finally {
       setLoading(false);
     }

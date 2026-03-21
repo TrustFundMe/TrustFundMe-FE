@@ -102,6 +102,9 @@ export default function StaffRequestPage() {
 
     } catch (error) {
       console.error('Failed to fetch campaigns', error);
+      toast.error('Không thể tải dữ liệu yêu cầu. Vui lòng thử lại sau.');
+      setCampaignRows([]);
+      setSelectedCampaignId(undefined);
     }
   };
 

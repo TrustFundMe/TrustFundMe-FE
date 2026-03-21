@@ -57,10 +57,21 @@ export const flagService = {
     page = 0,
     size = 20
   ): Promise<PagedFlagResponse> {
-    const res = await api.get<PagedFlagResponse>(API_ENDPOINTS.FLAGS.BASE, {
-      params: { status, page, size },
-    });
-    return res.data;
+    try {
+      const res = await api.get<PagedFlagResponse>(API_ENDPOINTS.FLAGS.BASE, {
+        params: { status, page, size },
+      });
+      return res.data;
+    } catch {
+      // Soft fallback to avoid breaking staff UI when list endpoint fails.
+      return {
+        content: [],
+        totalElements: 0,
+        totalPages: 0,
+        number: page,
+        size,
+      };
+    }
   },
 
   /**

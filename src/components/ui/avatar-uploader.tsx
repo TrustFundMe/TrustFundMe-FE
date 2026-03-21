@@ -47,7 +47,6 @@ export function AvatarUploader({
 		const file = e.target.files?.[0];
 		if (!file) return;
 
-		onError?.('');
 
 		const ext = (file.name.split('.').pop() || '').toLowerCase();
 		const types = acceptedTypes.map((t) => t.toLowerCase());
@@ -62,16 +61,15 @@ export function AvatarUploader({
 		}
 
 		if (!valid) {
-			onError?.('Selected file is not a supported image type. Use JPG, PNG, WebP or GIF.');
+			onError?.('Tệp đã chọn không đúng định dạng. Vui lòng dùng JPG, PNG, WebP hoặc GIF.');
 			(e.target as HTMLInputElement).value = '';
 			return;
 		}
 		if (parseFloat(String(file.size)) / (1024 * 1024) >= maxSizeMB) {
-			onError?.(`Selected image is too large. Max ${maxSizeMB}MB.`);
+			onError?.(`Ảnh đã chọn quá lớn. Dung lượng tối đa là ${maxSizeMB}MB.`);
 			(e.target as HTMLInputElement).value = '';
 			return;
 		}
-		onError?.('');
 		setPhoto({ url: URL.createObjectURL(file), file });
 	};
 
@@ -83,14 +81,14 @@ export function AvatarUploader({
 
 	const handleUpdate = async () => {
 		if (!photo?.file || !croppedAreaPixels) {
-			onError?.('No image selected for upload');
+			onError?.('Vui lòng chọn ảnh trước khi tải lên.');
 			return;
 		}
 		setIsPending(true);
 		try {
 			const croppedImg = await getCroppedImg(photo.url, croppedAreaPixels);
 			if (!croppedImg?.file) {
-				onError?.('Failed to crop image');
+				onError?.('Không thể cắt ảnh. Vui lòng thử lại.');
 				return;
 			}
 			const file = new File(
@@ -103,7 +101,7 @@ export function AvatarUploader({
 			setPhoto({ url: '', file: null });
 			onOpenChange(false);
 		} catch (error) {
-			const msg = error instanceof Error ? error.message : 'Failed to update image';
+			const msg = error instanceof Error ? error.message : 'Không thể cập nhật ảnh.';
 			onError?.(msg);
 		} finally {
 			setIsPending(false);
@@ -121,7 +119,7 @@ export function AvatarUploader({
 			<ModalTrigger asChild>{children}</ModalTrigger>
 			<ModalContent className="h-max md:max-w-md">
 				<ModalHeader>
-					<ModalTitle>Upload Image</ModalTitle>
+					<ModalTitle>Tải ảnh lên</ModalTitle>
 				</ModalHeader>
 				<ModalBody className="space-y-2">
 					<Input
@@ -157,7 +155,7 @@ export function AvatarUploader({
 						disabled={isPending}
 						onClick={() => onOpenChange(false)}
 					>
-						Cancel
+						Hủy
 					</Button>
 
 					<Button
@@ -166,7 +164,7 @@ export function AvatarUploader({
 						onClick={handleUpdate}
 						disabled={isPending}
 					>
-						{isPending ? 'Uploading...' : 'Update'}
+						{isPending ? 'Đang tải lên...' : 'Cập nhật'}
 					</Button>
 				</ModalFooter>
 			</ModalContent>

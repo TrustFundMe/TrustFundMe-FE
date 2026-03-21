@@ -10,6 +10,7 @@ function getAccessToken(request: NextRequest): string {
     : (cookieHeader.match(/access_token=([^;]+)/)?.[1] ?? "").trim();
 }
 
+
 /**
  * PATCH /api/feed-posts/admin/[id]/pin - Toggle pin status (admin)
  */
@@ -23,19 +24,37 @@ export async function PATCH(
     if (!accessToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const endpoint = `${BE_API_URL}/api/feed-posts/admin/${id}/pin`;
+    const methodsToTry: Array<"PATCH" | "PUT" | "POST"> = ["PATCH", "PUT", "POST"];
+    let lastStatus = 500;
+    let lastMessage = "Failed to toggle pin";
 
-    const response = await fetch(`${BE_API_URL}/api/feed-posts/admin/${id}/pin`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    for (const method of methodsToTry) {
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return NextResponse.json(data);
+      }
+
+      lastStatus = response.status;
       const error = await response.json().catch(() => ({ message: "Failed to toggle pin" }));
-      return NextResponse.json({ error: error.message }, { status: response.status });
+      lastMessage = error?.message || lastMessage;
+
+      // Method not allowed or server error -> try next method variant.
+      if (![405, 500].includes(response.status)) {
+        break;
+      }
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json({ error: lastMessage }, { status: lastStatus });
   } catch (error) {
     console.error("Admin PATCH pin error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
