@@ -11,7 +11,7 @@ import { Menu } from "lucide-react";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
-  const headers = { 1: Header1, 2: Header2, 3: Header3, 4: Header4 };
+  const headers = { 1: Header1, 3: Header3, 4: Header4 };
   const HeaderComponent = headers[header as keyof typeof headers] || Header3;
   const [toggleMobileMenu, setToggleMobileMenu] = useState(false);
   return (
@@ -113,101 +113,13 @@ const Header1 = ({ open }: { open: () => void }) => (
   </header>
 );
 
-const Header2 = ({ open }: { open: () => void }) => (
-  <Fragment>
-    <div className="header-top-section-3" style={{ display: 'none' }}>
-      <div className="container">
-        <div className="header-top-wrapper-2 style-3">
-          <ContactList
-            items={[
-              {
-                icon: "fal fa-map-marker-alt",
-                content: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
-              },
-              {
-                icon: "far fa-envelope",
-                content: (
-                  <a href="mailto:trustfundme@co.vn" className="link">
-                    trustfundme@co.vn
-                  </a>
-                ),
-              },
-            ]}
-          />
-          <div className="d-none">
-            <SocialIcons label="Follow Us On:" />
-          </div>
-        </div>
-      </div>
-    </div>
-    <header id="header-sticky" className="header-3 shadow-sm border-b border-gray-100 bg-white sticky top-0" style={{ zIndex: 1000 }}>
-      <div className="container">
-        <div className="mega-menu-wrapper">
-          <div className="header-main style-2 py-0 d-flex align-items-center justify-content-between" style={{ height: '64px', minHeight: '64px' }}>
-            {/* Left: logo + main nav (căn trái, không đụng logo) */}
-            <div className="d-flex align-items-center gap-4 flex-grow-1">
-              <div className="logo d-flex align-items-center">
-                <Logo logo="black-logo.png" />
-              </div>
-              <div className="mean__menu-wrapper d-none d-lg-block">
-                <Nav />
-              </div>
-            </div>
-
-            {/* Right: notification + auth + hamburger */}
-            <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: '0 0 auto' }}>
-              <NotificationBell />
-              <AuthButton />
-
-              <div className="header__hamburger d-lg-none d-flex align-items-center ms-2">
-                <button
-                  onClick={open}
-                  style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', background: 'none', border: 'none', padding: '4px' }}
-                  aria-label="Open menu"
-                >
-                  <Menu size={24} color="#202426" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-  </Fragment>
-);
-
 const Header3 = ({ open }: { open: () => void }) => {
   const [toggle, setToggle] = useState(false);
   return (
     <Fragment>
       <SearchPopup open={toggle} close={() => setToggle(false)} />
       <header className="header-section-1">
-        <div className="header-top-section fix">
-          <div className="container-fluid">
-            <div className="header-top-wrapper style-2">
-              <ContactList
-                items={[
-                  {
-                    icon: "far fa-envelope",
-                    content: (
-                      <a href="mailto:trustfundme@co.vn" className="link">
-                        trustfundme@co.vn
-                      </a>
-                    ),
-                  },
-                  {
-                    icon: "fa fa-regular fa-phone",
-                    content: <a href="tel:+11002345909">+1 100 234 5909</a>,
-                  },
-                ]}
-              />
-              <div className="top-right d-none">
-                <SocialIcons />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div id="header-sticky" className="header-1">
+        <div id="header-sticky" className="header-1 bg-[var(--theme-light,#f74938)]" style={{ backgroundColor: '#fff5f4' }}>
           <div className="main-logo">
             <Logo logo="white-logo.png" />
           </div>

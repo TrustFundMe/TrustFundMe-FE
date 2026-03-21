@@ -522,7 +522,7 @@ export default function CampaignCreationPage() {
           await expenditureService.create({
             campaignId,
             items: itemsToCreate,
-            plan: 'Kế hoạch chi tiêu chi tiết (Quỹ Tự Lập)',
+            plan: 'Kế hoạch chi tiêu chi tiết (Quỹ Vật Phẩm)',
             evidenceDueAt: formattedDeadline
           });
           setSubmissionSuccess(prev => ({ ...prev, expenditure: true }));

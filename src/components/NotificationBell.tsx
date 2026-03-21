@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Flag, Heart, MessageCircle, Megaphone } from "lucide-react";
+import { Bell, X, Flag, Heart, MessageCircle, Megaphone, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContextProxy";
+import { notificationService } from "@/services/notificationService";
+import type { Notification as BENotification } from "@/types/notification";
 
 interface Notification {
-  id: string;
-  type: "flag_reviewed" | "campaign_update" | "new_comment" | "like" | "general";
+  id: number | string;
+  type: string;
   title: string;
   message: string;
   link?: string;
@@ -20,63 +22,87 @@ function formatTimeAgo(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (isNaN(diff)) return "---";
   if (diff < 60) return "Vừa xong";
   if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
   return `${Math.floor(diff / 86400)} ngày trước`;
 }
 
-function NotifIcon({ type }: { type: Notification["type"] }) {
+function NotifIcon({ type }: { type: string }) {
   const base = { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 } as const;
-  switch (type) {
-    case "flag_reviewed":
-      return <div style={{ ...base, background: "rgba(248,77,67,0.1)" }}><Flag className="w-4 h-4" style={{ color: "#F84D43" }} /></div>;
-    case "campaign_update":
-      return <div style={{ ...base, background: "rgba(26,104,91,0.1)" }}><Megaphone className="w-4 h-4" style={{ color: "#1A685B" }} /></div>;
-    case "new_comment":
-      return <div style={{ ...base, background: "rgba(59,130,246,0.1)" }}><MessageCircle className="w-4 h-4" style={{ color: "#3B82F6" }} /></div>;
-    case "like":
-      return <div style={{ ...base, background: "rgba(248,77,67,0.1)" }}><Heart className="w-4 h-4" style={{ color: "#F84D43" }} /></div>;
-    default:
-      return <div style={{ ...base, background: "rgba(0,0,0,0.06)" }}><Bell className="w-4 h-4" style={{ color: "#666" }} /></div>;
-  }
-}
+  const t = type.toLowerCase();
 
-const STORAGE_KEY = "tfm_notifications";
+  if (t.includes("donation")) return <div style={{ ...base, background: "rgba(16,185,129,0.1)" }}><Heart className="w-4 h-4" style={{ color: "#10B981" }} /></div>;
+  if (t.includes("message")) return <div style={{ ...base, background: "rgba(59,130,246,0.1)" }}><MessageCircle className="w-4 h-4" style={{ color: "#3B82F6" }} /></div>;
+  if (t.includes("campaign") || t.includes("update")) return <div style={{ ...base, background: "rgba(26,104,91,0.1)" }}><Megaphone className="w-4 h-4" style={{ color: "#1A685B" }} /></div>;
+  if (t.includes("flag")) return <div style={{ ...base, background: "rgba(248,77,67,0.1)" }}><Flag className="w-4 h-4" style={{ color: "#F84D43" }} /></div>;
+  if (t.includes("kyc")) return <div style={{ ...base, background: "rgba(59,130,246,0.1)" }}><Info className="w-4 h-4" style={{ color: "#3B82F6" }} /></div>;
 
-function loadNotifications(): Notification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveNotifications(items: Notification[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch {
-    // ignore
-  }
+  return <div style={{ ...base, background: "rgba(0,0,0,0.06)" }}><Bell className="w-4 h-4" style={{ color: "#666" }} /></div>;
 }
 
 export default function NotificationBell() {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const loadFromStorage = useCallback(() => {
-    setNotifications(loadNotifications());
-  }, []);
+  const mapNotification = useCallback((n: BENotification): Notification => ({
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    message: n.content,
+    isRead: n.isRead,
+    createdAt: n.createdAt,
+    link: (n.type === "CAMPAIGN_APPROVED" || n.type === "CAMPAIGN_REJECTED" || n.type === "EXPENDITURE_APPROVED" || n.type === "EXPENDITURE_REJECTED")
+      ? `/account/campaigns?id=${n.targetId}`
+      : n.targetType === "CAMPAIGN" ? `/campaign/${n.targetId}` :
+        n.targetType === "FEED" ? `/forum/post/${n.targetId}` :
+          n.targetType === "Conversation" ? `/chat/${n.targetId}` : undefined
+  }), []);
 
+  const fetchNotifications = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      const data = await notificationService.getLatest(user.id);
+      setNotifications(data.map(mapNotification));
+    } catch (error) {
+      console.error("[NotificationBell] Failed to fetch notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, mapNotification]);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const count = await notificationService.getUnreadCount(user.id);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error("[NotificationBell] Failed to fetch unread count:", error);
+    }
+  }, [user?.id]);
+
+  // Fetch unread count on mount
   useEffect(() => {
-    if (!isAuthenticated) return;
-    loadFromStorage();
-  }, [isAuthenticated, loadFromStorage]);
+    if (isAuthenticated && user?.id) {
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated, user?.id, fetchUnreadCount]);
 
-  // Close on outside click
+  // useEffect removed to avoid auto-fetching on mount
+
+  // Fetch when opening the bell to ensure data is fresh
+  useEffect(() => {
+    if (open && isAuthenticated && user?.id) {
+      fetchNotifications();
+    }
+  }, [open, isAuthenticated, user?.id, fetchNotifications]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -89,23 +115,30 @@ export default function NotificationBell() {
 
   if (!isAuthenticated) return null;
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // unreadCount is now managed by state
 
-  const markAllRead = () => {
-    const updated = notifications.map((n) => ({ ...n, isRead: true }));
-    setNotifications(updated);
-    saveNotifications(updated);
+  const markAllRead = async () => {
+    const unread = notifications.filter(n => !n.isRead);
+    await Promise.all(unread.map(n => notificationService.markAsRead(n.id)));
+    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0);
   };
 
-  const markRead = (id: string) => {
-    const updated = notifications.map((n) => n.id === id ? { ...n, isRead: true } : n);
-    setNotifications(updated);
-    saveNotifications(updated);
+  const markRead = async (id: string | number) => {
+    const notif = notifications.find(n => n.id === id);
+    if (!notif || notif.isRead) return;
+
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(notifications.map((n) => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
   };
 
   const clearAll = () => {
     setNotifications([]);
-    saveNotifications([]);
   };
 
   return (
@@ -178,9 +211,17 @@ export default function NotificationBell() {
               </div>
             </div>
 
-            {/* Notification list */}
+            {/* Notification list container */}
             <div style={{ overflowY: "auto", flex: 1 }}>
-              {notifications.length === 0 ? (
+              {loading && notifications.length === 0 ? (
+                <div style={{ padding: "40px 16px", textAlign: "center", color: "rgba(0,0,0,0.4)", fontFamily: "var(--font-dm-sans)", fontSize: 14 }}>
+                  <div className="animate-pulse flex flex-col items-center">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  </div>
+                  <p style={{ margin: 0 }}>Đang tải thông báo...</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div style={{ padding: "40px 16px", textAlign: "center", color: "rgba(0,0,0,0.4)", fontFamily: "var(--font-dm-sans)", fontSize: 14 }}>
                   <Bell className="w-8 h-8 mx-auto mb-3" style={{ opacity: 0.3 }} />
                   <p style={{ margin: 0 }}>Chưa có thông báo nào</p>

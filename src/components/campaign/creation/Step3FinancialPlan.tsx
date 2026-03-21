@@ -119,15 +119,12 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
                     </p>
                 </div>
                 <div className="mt-12 flex flex-col items-center gap-4">
-                    <div className="px-6 py-3 rounded-2xl bg-gray-50 text-[10px] font-black text-black/20 uppercase tracking-[2px]">
-                        Hệ thống tự động thiết lập minh chứng
-                    </div>
                     <button
                         type="button"
                         onClick={() => onChange('fundType', 'ITEMIZED')}
                         className="text-[10px] font-black text-[#dc2626] uppercase tracking-[2px] hover:underline"
                     >
-                        Thay đổi sang Quỹ Tự Lập
+                        Thay đổi sang Quỹ Vật Phẩm
                     </button>
                 </div>
             </div>
@@ -340,6 +337,9 @@ export default function Step3FinancialPlan({ data, onChange }: Step3FinancialPla
                     <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0" />
                     <p className="text-[10px] font-bold text-amber-800/60 leading-relaxed">
                         Kế hoạch chi tiêu này sẽ được cộng đồng giám sát. Hãy đảm bảo tính chính xác để tăng độ tin cậy của chiến dịch.
+                    </p>
+                    <p className="text-[10px] font-bold text-amber-800/60 leading-relaxed">
+                        Lưu ý: đây chỉ là kế hoạch dự kiến, số lượng sản phẩm thực tế có thể thay đổi tùy thuộc vào tình hình thực tế và sẽ phải cập nhật lại, không thể mua quá số tiền được nhận.
                     </p>
                 </div>
             </div>

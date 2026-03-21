@@ -79,8 +79,9 @@ function CampaignsListContent() {
       try {
         setLoading(true);
         const res = await campaignService.getAll();
+        const approvedCampaigns = res.filter((c: CampaignDto) => c.status === "APPROVED");
 
-        const items: CampaignCardItem[] = res.map((c: CampaignDto) => ({
+        const items: CampaignCardItem[] = approvedCampaigns.map((c: CampaignDto) => ({
           id: String(c.id),
           title: c.title,
           type: c.type || c.categoryName || c.category || "Chung",

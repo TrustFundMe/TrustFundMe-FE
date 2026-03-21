@@ -32,6 +32,9 @@ export default function CampaignsPage() {
   const [existingConversation, setExistingConversation] = useState<Conversation | null>(null);
   const [isCheckingChat, setIsCheckingChat] = useState(false);
 
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const targetId = searchParams?.get('id');
+
   // Fetch campaigns for the current page
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -39,7 +42,25 @@ export default function CampaignsPage() {
       try {
         setLoading(true);
         const data = await campaignService.getUserCampaignsPaginated(user.id, currentPage - 1, itemsPerPage);
-        setCampaigns(data.content);
+        let fetchedCampaigns = data.content;
+
+        // If we have a targetId from notification, ensure it's in the list (prepend if not present)
+        if (targetId && currentPage === 1) {
+          const tId = parseInt(targetId);
+          const isIncluded = fetchedCampaigns.some(c => c.id === tId);
+          if (!isIncluded) {
+            try {
+              const targetCampaign = await campaignService.getById(tId);
+              if (targetCampaign && targetCampaign.fundOwnerId === user.id) {
+                fetchedCampaigns = [targetCampaign, ...fetchedCampaigns];
+              }
+            } catch (err) {
+              console.error('Failed to fetch target campaign:', err);
+            }
+          }
+        }
+
+        setCampaigns(fetchedCampaigns);
         setTotalPages(data.totalPages);
         setTotalElements(data.totalElements);
       } catch (error) {
@@ -50,7 +71,36 @@ export default function CampaignsPage() {
       }
     };
     fetchCampaigns();
-  }, [user?.id, currentPage]);
+  }, [user?.id, currentPage, targetId]);
+
+  // Handle scrolling to target ID with retries
+  useEffect(() => {
+    if (!loading && targetId && campaigns.length > 0) {
+      const tryScroll = (attempts = 0) => {
+        const element = document.getElementById(`campaign-${targetId}`);
+        if (element) {
+          // Calculate offset to account for fixed header (approx 120px)
+          const yOffset = -120;
+          const rect = element.getBoundingClientRect();
+          const y = rect.top + window.scrollY + yOffset;
+
+          window.scrollTo({ top: y, behavior: 'smooth' });
+
+          // Visual cue: Highlight the target campaign
+          element.classList.add('ring-4', 'ring-orange-500', 'ring-offset-4', 'scale-[1.02]', 'transition-all', 'duration-500');
+          setTimeout(() => {
+            element.classList.remove('ring-4', 'ring-orange-500', 'ring-offset-4', 'scale-[1.02]');
+          }, 4000);
+        } else if (attempts < 20) {
+          // Retry because DOM might not be ready or rendered yet
+          setTimeout(() => tryScroll(attempts + 1), 150);
+        }
+      };
+
+      const timer = setTimeout(() => tryScroll(), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, targetId, campaigns]);
 
   // When using server-side pagination, filtered campaigns are just the campaigns on the current page
   const filteredCampaigns = useMemo(() =>
@@ -75,7 +125,7 @@ export default function CampaignsPage() {
       // Mark as enriching
       setEnriching(prev => {
         const next = { ...prev };
-        toEnrich.forEach(c => { if(c.id) next[c.id] = true; });
+        toEnrich.forEach(c => { if (c.id) next[c.id] = true; });
         return next;
       });
 
@@ -107,9 +157,9 @@ export default function CampaignsPage() {
     enrichVisible();
   }, [paginatedCampaigns, enrichedCampaigns, enriching]);
 
-  const displayCampaigns = useMemo(() => 
+  const displayCampaigns = useMemo(() =>
     paginatedCampaigns.map(c => (c.id && enrichedCampaigns[c.id]) ? enrichedCampaigns[c.id] : c)
-  , [paginatedCampaigns, enrichedCampaigns]);
+    , [paginatedCampaigns, enrichedCampaigns]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -217,87 +267,87 @@ export default function CampaignsPage() {
               ) : filteredCampaigns.length > 0 ? (
                 <div className={`space-y-10 animate-in fade-in duration-700 ${loading ? 'opacity-40 pointer-events-none transition-opacity duration-300' : 'opacity-100 transition-opacity duration-500'}`}>
                   <div className="grid grid-cols-1 gap-6">
-                  {displayCampaigns.map((campaign) => (
-                    <MyCampaignCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      onChatClick={() => {
-                        console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
-                        handleChatClick(campaign);
-                      }}
-                    />
-                  ))}
-                </div>
+                    {displayCampaigns.map((campaign) => (
+                      <MyCampaignCard
+                        key={campaign.id}
+                        campaign={campaign}
+                        onChatClick={() => {
+                          console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
+                          handleChatClick(campaign);
+                        }}
+                      />
+                    ))}
+                  </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-gray-100">
-                    <p className="text-sm font-medium text-gray-500">
-                      Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, totalElements)}</span> trong tổng số <span className="text-gray-900">{totalElements}</span> chiến dịch
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-gray-100">
+                      <p className="text-sm font-medium text-gray-500">
+                        Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, totalElements)}</span> trong tổng số <span className="text-gray-900">{totalElements}</span> chiến dịch
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
 
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === page
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === page
                                 ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
                                 : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
-                              }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                      </div>
+                                }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
 
-                      <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
+                        <button
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                          className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 p-12 text-center animate-in zoom-in duration-500">
+                  <div className="flex justify-center mb-6">
+                    <div className="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center">
+                      <Heart className="w-12 h-12 text-orange-400" />
                     </div>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 p-12 text-center animate-in zoom-in duration-500">
-                <div className="flex justify-center mb-6">
-                  <div className="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center">
-                    <Heart className="w-12 h-12 text-orange-400" />
-                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    {searchTerm ? 'Không tìm thấy chiến dịch phù hợp' : 'Bạn đã sẵn sàng để bắt đầu chưa?'}
+                  </h3>
+                  <p className="text-gray-500 mb-8 max-w-md mx-auto text-lg">
+                    {searchTerm
+                      ? "Hãy thử điều chỉnh từ khóa tìm kiếm để tìm thấy chiến dịch bạn cần."
+                      : "Bạn chưa tạo chiến dịch nào. Hãy bắt đầu hành trình ngay hôm nay để tạo nên những thay đổi tuyệt vời."}
+                  </p>
+                  {!searchTerm && (
+                    <Link
+                      href="/campaign-creation"
+                      className="inline-flex px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all font-bold shadow-xl shadow-orange-100 hover:scale-105"
+                    >
+                      Bắt đầu chiến dịch đầu tiên
+                    </Link>
+                  )}
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {searchTerm ? 'Không tìm thấy chiến dịch phù hợp' : 'Bạn đã sẵn sàng để bắt đầu chưa?'}
-                </h3>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto text-lg">
-                  {searchTerm
-                    ? "Hãy thử điều chỉnh từ khóa tìm kiếm để tìm thấy chiến dịch bạn cần."
-                    : "Bạn chưa tạo chiến dịch nào. Hãy bắt đầu hành trình ngay hôm nay để tạo nên những thay đổi tuyệt vời."}
-                </p>
-                {!searchTerm && (
-                  <Link
-                    href="/campaign-creation"
-                    className="inline-flex px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all font-bold shadow-xl shadow-orange-100 hover:scale-105"
-                  >
-                    Bắt đầu chiến dịch đầu tiên
-                  </Link>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
         {selectedCampaign && (
           <UserChatModal

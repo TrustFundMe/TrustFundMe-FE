@@ -90,10 +90,10 @@ export default function CampaignExpendituresPage() {
         if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
 
         if (campaign.status === 'DISABLED') {
-            return { 
-                canCreate: false, 
+            return {
+                canCreate: false,
                 blockReason: 'Chiến dịch đã bị vô hiệu hóa. Mọi hoạt động quản lý tài chính hiện bị tạm dừng.',
-                isDisabled: true 
+                isDisabled: true
             };
         }
 
@@ -222,7 +222,7 @@ export default function CampaignExpendituresPage() {
             setUploadingEvidence(true);
 
             // 1. Upload all to Media Service
-            const uploadPromises = evidenceFiles.map(file => 
+            const uploadPromises = evidenceFiles.map(file =>
                 mediaService.uploadMedia(
                     file,
                     Number(campaignId),
@@ -305,7 +305,7 @@ export default function CampaignExpendituresPage() {
                             <div>
                                 <h2 className="text-2xl font-black text-rose-950 tracking-tight leading-none mb-2">Chiến dịch đã bị vô hiệu hóa</h2>
                                 <p className="text-sm font-bold text-rose-800/60 leading-relaxed">
-                                    {campaign.rejectionReason 
+                                    {campaign.rejectionReason
                                         ? `Lý do: ${campaign.rejectionReason}`
                                         : 'Chiến dịch này đã bị tạm dừng bởi quản trị viên. Bạn không thể tạo khoản chi mới, rút tiền hoặc cập nhật minh chứng cho đến khi trạng thái được khôi phục.'}
                                 </p>
@@ -467,7 +467,7 @@ export default function CampaignExpendituresPage() {
                             </div>
                             <div className="flex-1 relative z-10 py-2">
                                 <p className="text-[11px] font-black text-[#1b4332] uppercase tracking-[4px] mb-4 flex items-center gap-2">
-                                    <span className="p-1.5 rounded-lg bg-slate-50 border border-slate-100"><Clock className="w-4 h-4" /></span> QUY TRÌNH GIẢI NGÂN (QUỸ TỰ LẬP)
+                                    <span className="p-1.5 rounded-lg bg-slate-50 border border-slate-100"><Clock className="w-4 h-4" /></span> QUY TRÌNH GIẢI NGÂN (QUỸ VẬT PHẨM)
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                     {[
@@ -707,7 +707,7 @@ export default function CampaignExpendituresPage() {
                                                                                                         3. Admin giải ngân
                                                                                                     </span>
                                                                                                     <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                        { (exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : 'Đang xử lý'}
+                                                                                                        {(exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : 'Đang xử lý'}
                                                                                                     </span>
                                                                                                 </div>
                                                                                             </button>
@@ -918,10 +918,10 @@ export default function CampaignExpendituresPage() {
                                                                                             <div className="bg-white p-10 rounded-[2.5rem] border border-black/5 shadow-sm space-y-8">
                                                                                                 <div className="space-y-4">
                                                                                                     <label className="text-[10px] font-black uppercase text-black/30 tracking-[2px] ml-2 block">Hình ảnh minh chứng (Hóa đơn/Vật phẩm)</label>
-                                                                                                    
+
                                                                                                     <div className="relative group/upload">
-                                                                                                        <input 
-                                                                                                            type="file" 
+                                                                                                        <input
+                                                                                                            type="file"
                                                                                                             multiple
                                                                                                             accept="image/*"
                                                                                                             onChange={(e) => {
@@ -945,12 +945,12 @@ export default function CampaignExpendituresPage() {
                                                                                                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
                                                                                                             {evidenceFiles.map((file, idx) => (
                                                                                                                 <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-black/5 group/img shadow-sm animate-in zoom-in-50 duration-300">
-                                                                                                                    <img 
-                                                                                                                        src={URL.createObjectURL(file)} 
-                                                                                                                        alt={`Preview ${idx}`} 
+                                                                                                                    <img
+                                                                                                                        src={URL.createObjectURL(file)}
+                                                                                                                        alt={`Preview ${idx}`}
                                                                                                                         className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
                                                                                                                     />
-                                                                                                                    <button 
+                                                                                                                    <button
                                                                                                                         onClick={() => setEvidenceFiles(prev => prev.filter((_, i) => i !== idx))}
                                                                                                                         className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-all hover:bg-black"
                                                                                                                     >
@@ -964,7 +964,7 @@ export default function CampaignExpendituresPage() {
 
                                                                                                 <div className="space-y-4">
                                                                                                     <label className="text-[10px] font-black uppercase text-black/30 tracking-[2px] ml-2 block">Mô tả hoặc Lời cảm ơn</label>
-                                                                                                    <textarea 
+                                                                                                    <textarea
                                                                                                         placeholder="Chia sẻ về việc mua sắm này hoặc gửi lời cảm ơn tới những người đã ủng hộ..."
                                                                                                         value={evidenceDescription}
                                                                                                         onChange={(e) => setEvidenceDescription(e.target.value)}
@@ -976,15 +976,15 @@ export default function CampaignExpendituresPage() {
                                                                                                 <div className="pt-4">
                                                                                                     <button
                                                                                                         onClick={() => {
-                                                                            if (isDisabled) {
-                                                                                toast.error('Chiến dịch đã bị vô hiệu hóa, không thể gửi minh chứng.');
-                                                                                return;
-                                                                            }
-                                                                            handleEvidenceSubmit(exp.id);
-                                                                        }}
+                                                                                                            if (isDisabled) {
+                                                                                                                toast.error('Chiến dịch đã bị vô hiệu hóa, không thể gửi minh chứng.');
+                                                                                                                return;
+                                                                                                            }
+                                                                                                            handleEvidenceSubmit(exp.id);
+                                                                                                        }}
                                                                                                         disabled={evidenceFiles.length === 0 || uploadingEvidence || isDisabled}
-                                                                                                        className={`w-full py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl ${evidenceFiles.length === 0 || uploadingEvidence 
-                                                                                                            ? 'bg-gray-100 text-black/20 cursor-not-allowed shadow-none' 
+                                                                                                        className={`w-full py-5 rounded-[2rem] flex items-center justify-center gap-3 transition-all duration-500 shadow-xl ${evidenceFiles.length === 0 || uploadingEvidence
+                                                                                                            ? 'bg-gray-100 text-black/20 cursor-not-allowed shadow-none'
                                                                                                             : 'bg-black text-white hover:bg-emerald-900 shadow-emerald-900/10 active:scale-[0.98]'}`}
                                                                                                     >
                                                                                                         {uploadingEvidence ? (
@@ -997,7 +997,7 @@ export default function CampaignExpendituresPage() {
                                                                                                         )}
                                                                                                     </button>
                                                                                                     <p className="text-center mt-6 text-[9px] font-bold text-black/20 uppercase tracking-[2px] leading-relaxed">
-                                                                                                        Hệ thống sẽ tự động tạo một bài viết cập nhật trên Feed <br/> kèm theo hình ảnh minh chứng của bạn.
+                                                                                                        Hệ thống sẽ tự động tạo một bài viết cập nhật trên Feed <br /> kèm theo hình ảnh minh chứng của bạn.
                                                                                                     </p>
                                                                                                 </div>
                                                                                             </div>

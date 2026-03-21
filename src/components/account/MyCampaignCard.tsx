@@ -79,7 +79,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
     const [showRejectionReason, setShowRejectionReason] = useState(false);
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+        <div id={`campaign-${campaign.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
             <div className="flex flex-col md:flex-row">
                 {/* Campaign Image */}
                 <div className="relative w-full md:w-64 h-48 md:h-auto overflow-hidden">
@@ -111,7 +111,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                         </div>
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-xs text-gray-500">
-                                Created: {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString() : 'N/A'}
+                                Tạo ngày: {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString() : 'N/A'}
                             </span>
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
@@ -125,7 +125,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                                     <span>Chiến dịch bị vô hiệu hóa</span>
                                 </div>
                                 <p className="text-rose-800/60 text-xs font-medium">
-                                    {campaign.rejectionReason 
+                                    {campaign.rejectionReason
                                         ? `Lý do: ${campaign.rejectionReason}`
                                         : "Chiến dịch này đã bị tạm dừng bởi quản trị viên. Mọi hoạt động quyên góp và chi tiêu hiện bị khóa."}
                                 </p>
@@ -220,10 +220,14 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                                             toast('Chiến dịch đã bị vô hiệu hóa, không thể nhắn tin.', 'error');
                                             return;
                                         }
+                                        if (isPending) {
+                                            toast('Chiến dịch đang trong quá trình xét duyệt, chưa có nhân viên tiếp nhận. Vui lòng nhắn tin sau.', 'info');
+                                            return;
+                                        }
                                         handleChatClick(e);
                                     }}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border ${isDisabled 
-                                        ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border ${isDisabled || isPending
+                                        ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
                                         : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
                                 >
                                     <MessageSquare className="w-4 h-4" />

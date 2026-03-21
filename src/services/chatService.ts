@@ -124,8 +124,10 @@ export const chatService = {
                 data: response.data,
             };
         } catch (error: any) {
-            console.error("Chat service error:", error);
             const isNotFound = error?.response?.status === 404;
+            if (!isNotFound) {
+                console.error("Chat service error:", error);
+            }
             return {
                 success: false,
                 isNotFound,

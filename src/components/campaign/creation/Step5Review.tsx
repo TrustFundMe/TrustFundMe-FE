@@ -39,7 +39,7 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result }: St
                         <div className="space-y-2">
                             <div className="text-[10px] font-black text-black/30 uppercase tracking-widest">Loại Quỹ & Mục tiêu</div>
                             <div className="text-sm font-black text-black">
-                                {isAuthorized ? 'Quỹ Ủy Quyền' : 'Quỹ Tự Lập'}
+                                {isAuthorized ? 'Quỹ Ủy Quyền' : 'Quỹ Vật Phẩm'}
                             </div>
                             <div className="text-xl font-black text-[#dc2626]">
                                 {isAuthorized ? 'Standard' : `${totalAmount.toLocaleString('vi-VN')} VNĐ`}

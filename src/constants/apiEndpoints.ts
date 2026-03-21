@@ -105,4 +105,11 @@ export const API_ENDPOINTS = {
     BY_STAFF: (staffId: number | string) => `/api/admin/tasks/staff/${staffId}`,
     REASSIGN: (taskId: number | string) => `/api/admin/tasks/${taskId}/reassign`,
   },
+  NOTIFICATIONS: {
+    BASE: "/api/notifications",
+    BY_USER: (userId: number | string) => `/api/notifications/user/${userId}`,
+    LATEST: (userId: number | string) => `/api/notifications/user/${userId}/latest`,
+    UNREAD_COUNT: (userId: number | string) => `/api/notifications/user/${userId}/unread-count`,
+    MARK_AS_READ: (id: number | string) => `/api/notifications/${id}/read`,
+  },
 } as const;

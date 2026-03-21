@@ -38,7 +38,7 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const staffId = campaign.approvedByStaff || 1;
+    const staffId = campaign.approvedByStaff;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,9 +70,13 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
             setIsLoading(true);
             try {
                 console.log('[Chat] Initializing for campaign:', campaign.id);
-                const staffRes = await userService.getUserById(staffId);
-                if (staffRes.success && staffRes.data) {
-                    setStaffInfo(staffRes.data);
+                if (staffId) {
+                    const staffRes = await userService.getUserById(staffId);
+                    if (staffRes.success && staffRes.data) {
+                        setStaffInfo(staffRes.data);
+                    }
+                } else {
+                    console.log('[Chat] Campaign not approved yet or no staff assigned');
                 }
 
                 // 2. Determine target conversation
@@ -85,16 +89,20 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                 } else {
                     // Nếu page.tsx trả về null (404), tiến hành tạo mới
                     console.log('[Chat] No initial conversation found, creating new one...');
+                    const targetStaffId = campaign.approvedByStaff || null;
+                    console.log('[Chat] targetStaffId for new conversation:', targetStaffId);
+
                     const createRes = await chatService.createConversation(
                         user.id,
                         campaign.id,
-                        campaign.approvedByStaff || undefined
+                        targetStaffId || undefined
                     );
 
                     if (createRes.success && createRes.data) {
-                        console.log('[Chat] Created new conversation:', createRes.data.id);
+                        console.log('[Chat] Created new conversation SUCCESS:', createRes.data.id);
                         targetConv = createRes.data;
                     } else {
+                        console.error('[Chat] Create conversation FAILED:', createRes.error);
                         toast(createRes.error || 'Không thể khởi tạo cuộc hội thoại', 'error');
                     }
                 }

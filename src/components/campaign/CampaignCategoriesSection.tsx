@@ -204,7 +204,8 @@ export function CampaignCategoriesSection() {
           if (!newCampaigns[cat.id]) {
             try {
               const dtos = await campaignService.getByCategory(cat.id);
-              const mapped = await Promise.all(dtos.map(async (dto) => {
+              const approvedDtos = dtos.filter((dto) => dto.status === "APPROVED");
+              const mapped = await Promise.all(approvedDtos.map(async (dto) => {
                 let goalAmount = 0;
                 try {
                   const activeGoal = await campaignService.getActiveGoalByCampaignId(dto.id);
