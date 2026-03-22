@@ -3,10 +3,9 @@ import "@css/swiper-bundle.min.css";
 import "@css/animate.css";
 import "@css/magnific-popup.css";
 import "@css/meanmenu.css";
-import "@css/nice-select.css";
 import "@css/main.css";
 import type { Metadata } from "next";
-import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google"; // 1. Import
+import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/layout/Preloader";
 
@@ -28,7 +27,7 @@ const chelsea_market = Chelsea_Market({
   variable: "--font-chelsea_market",
   display: "swap",
 });
-const playfair = Playfair_Display({ // 2. Configure
+const playfair = Playfair_Display({
   subsets: ["latin", "vietnamese"],
   variable: "--font-playfair",
   display: "swap",
@@ -47,14 +46,12 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-        />
+        {/* Preconnect for CDN resources — browser resolves DNS before fetching */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
+        {/* Bootstrap & Font Awesome — loaded normally; browsers optimize CSS loading */}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
       </head>
       <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
         <AuthProvider>

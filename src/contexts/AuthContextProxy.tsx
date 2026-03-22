@@ -39,41 +39,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
+    // Load user from localStorage immediately — non-blocking, lets page render right away
+    const storedUser = localStorage.getItem('be_user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.warn('Failed to parse stored user:', e);
+      }
+    }
+
+    // Verify session with BE in the background — don't block page render
     const initAuth = async () => {
       try {
-        // Load BE user from localStorage if available
-        const storedUser = localStorage.getItem('be_user');
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-          } catch (e) {
-            console.warn('Failed to parse stored user:', e);
-          }
-        }
-
-        // Verify session with BE
         const { session: currentSession, user: currentUser } = await authService.getSession();
-
         if (currentSession && currentUser) {
           setUser(currentUser);
-          // Update localStorage
           localStorage.setItem('be_user', JSON.stringify(currentUser));
         } else {
-          // Clear invalid session
           setUser(null);
           localStorage.removeItem('be_user');
         }
       } catch (error) {
         console.error('Failed to initialize auth:', error);
-        setUser(null);
-        localStorage.removeItem('be_user');
       } finally {
         setLoading(false);
       }
     };
 
-    initAuth();
+    // Add timeout: if BE doesn't respond in 5s, stop waiting
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    initAuth().finally(() => clearTimeout(timeoutId));
   }, []);
 
   const login = async (email: string, password: string) => {

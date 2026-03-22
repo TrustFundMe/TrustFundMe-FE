@@ -133,11 +133,10 @@ export function useScrollTop(): void {
 
 export function scrollAnimation() {
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      // @ts-ignore
-      window.WOW = require("wowjs");
-    }
-    // @ts-ignore
-    new WOW.WOW().init();
+    if (typeof window === "undefined") return;
+    // Dynamic import — loads wowjs only after page is interactive, not during initial render
+    import("wowjs").then(({ WOW }) => {
+      new WOW({ live: false }).init();
+    }).catch(console.error);
   }, []);
 }
