@@ -228,7 +228,7 @@ const FeedPostDetailPage = () => {
 
   if (loading) {
     return (
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[200px]">
           <div className="animate-spin w-8 h-8 border-4 border-[#ff5e14] border-t-transparent rounded-full" />
         </div>
@@ -238,7 +238,7 @@ const FeedPostDetailPage = () => {
 
   if (!post) {
     return (
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-red-500">{error ?? "Không tìm thấy bài viết"}</div>
         </div>
@@ -247,7 +247,7 @@ const FeedPostDetailPage = () => {
   }
 
   return (
-    <DanboxLayout header={2} footer={2}>
+    <DanboxLayout header={4} footer={2}>
       <section
         className="min-h-screen bg-zinc-50 dark:bg-zinc-900"
         style={{ padding: "24px 0", fontFamily: "var(--font-dm-sans)" }}

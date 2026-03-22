@@ -5,6 +5,24 @@
 ============================================================================= */
 
 /* ============================================================================
+   GLOBAL RESET
+============================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6, p { margin: 0; }
+
+/* ============================================================================
    CSS VARIABLES
 ============================================================================= */
 :root {
@@ -232,6 +250,8 @@ input.main-search-input::placeholder {
 .header-2,
 .header-3,
 .header-4 {
+  width: 100%;
+  z-index: 999;
   overflow: visible !important;
   position: relative;
 }
@@ -282,18 +302,16 @@ header .header-left {
 #header-sticky {
   z-index: 9999 !important;
   position: relative;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  transform: translateY(0) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  will-change: opacity, transform, visibility;
+  animation: none !important;
 }
 
 #header-sticky.sticky {
-  animation: none !important;
-  top: 0 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 9999 !important;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  animation: none !important;
 }
 
 /* Mobile menu open - hide header */
@@ -322,6 +340,55 @@ body:has(.offcanvas__overlay.overlay-open) .header-top-section-3 {
 /* Header top bar */
 .header-top-section-3 {
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Header4 layout — logo left, nav+buttons right */
+.header-4 .header-main.style-2 {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 0 !important;
+  position: relative !important;
+}
+
+.header-4 .header-main.style-2 .header-left {
+  flex: 0 0 auto !important;
+  z-index: 2 !important;
+}
+
+.header-4 .header-main.style-2 .header-right {
+  flex: 0 0 auto !important;
+  z-index: 2 !important;
+}
+
+/* Social icons in header top bar — compact */
+.header-top-section-3 .social-icon {
+  gap: 8px !important;
+}
+
+.header-top-section-3 .social-icon a {
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  font-size: 12px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.header-top-section-3 .social-icon a:hover {
+  background: #F84D43 !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Theme button in header context — compact */
+.header-4 .header-button .theme-btn {
+  padding: 10px 20px !important;
+  font-size: 13px !important;
+  border-radius: 6px !important;
+  border: none !important;
 }
 
 /* Header dropdown submenu */
@@ -1954,7 +2021,7 @@ img.mfp-img {
 /* Prevent horizontal overflow */
 html { overflow-x: hidden; }
 
-body { overflow-x: hidden; }
+body { overflow-x: hidden; margin: 0; padding: 0; }
 
 /* Equal height for contact cards */
 .align-items-stretch > [class*='col-'] { display: flex; }

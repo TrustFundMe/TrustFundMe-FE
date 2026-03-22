@@ -266,7 +266,7 @@ function CampaignDetailsInner() {
 
   if (loading) {
     return (
-      <DanboxLayout>
+      <DanboxLayout header={4}>
         <section className="causes-details-section fix section-padding" style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}>
           <div className="container" style={{ padding: '80px 0' }}>
             <div
@@ -304,7 +304,7 @@ function CampaignDetailsInner() {
   // If a non-numeric id is provided, fall back to mock data so the page still renders.
   if (campaignId === null || isNaN(campaignId)) {
     return (
-      <DanboxLayout>
+      <DanboxLayout header={4}>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div style={{ marginBottom: 12, fontWeight: 700 }}>
             ID chiến dịch không hợp lệ.
@@ -319,7 +319,7 @@ function CampaignDetailsInner() {
 
   if (error || !campaign) {
     return (
-      <DanboxLayout>
+      <DanboxLayout header={4}>
         <div className="container" style={{ padding: '80px 0', fontFamily: 'var(--font-dm-sans)' }}>
           <div>{error || 'Không tìm thấy chiến dịch'}</div>
         </div>
@@ -328,7 +328,7 @@ function CampaignDetailsInner() {
   }
 
   return (
-    <DanboxLayout>
+    <DanboxLayout header={4}>
       <section
         className="causes-details-section fix section-padding"
         style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}
@@ -543,7 +543,7 @@ export default function CampaignDetailsPage() {
   return (
     <Suspense
       fallback={
-        <DanboxLayout>
+        <DanboxLayout header={4}>
           <section className="causes-details-section fix section-padding" style={{ paddingTop: 0, fontFamily: 'var(--font-dm-sans)' }}>
             <div className="container" style={{ padding: '80px 0' }}>
               <div

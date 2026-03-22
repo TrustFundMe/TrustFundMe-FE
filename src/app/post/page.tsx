@@ -537,8 +537,8 @@ export default function ForumPage() {
   });
 
   return (
-    <DanboxLayout footer={0}>
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950" style={{ paddingTop: 130 }}>
+    <DanboxLayout header={4} footer={0}>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950" style={{ paddingTop: 100 }}>
         <div className="max-w-3xl mx-auto px-4 pt-4 pb-16">
           {/* ── MAIN FEED ── */}
           <main className="flex-1 min-w-0 space-y-3">

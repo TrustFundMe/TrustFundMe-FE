@@ -7,7 +7,6 @@ import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import NotificationBell from "@/components/NotificationBell";
-import { Menu } from "lucide-react";
 
 const Header = ({ header }: { header?: number }) => {
   useStickyHeader();
@@ -126,9 +125,6 @@ const Header3 = ({ open }: { open: () => void }) => {
           <div className="container-fluid">
             <div className="mega-menu-wrapper">
               <div className="header-main">
-                <div className="logo d-none" style={{ filter: "white-logo.png".includes('white') ? 'none' : 'brightness(0)' }}>
-                  <Logo logo="black-logo.png" />
-                </div>
                 <div className="header-left">
                   <div className="mean__menu-wrapper">
                     <Nav />
@@ -170,61 +166,36 @@ const Header4 = ({ open }: { open: () => void }) => {
   return (
     <Fragment>
       <SearchPopup open={toggle} close={() => setToggle(false)} />
-      <header className="header-section-2">
-        <div className="header-top-section-2">
-          <div className="container">
-            <div className="header-top-wrapper-2">
-              <ContactList
-                items={[
-                  {
-                    icon: "fal fa-map-marker-alt",
-                    content: "Main Street, Melbourne, Australia",
-                  },
-                  {
-                    icon: "far fa-envelope",
-                    content: (
-                      <a href="mailto:info@example.com" className="link">
-                        info@example.com
-                      </a>
-                    ),
-                  },
-                ]}
-              />
-              <SocialIcons label="Follow Us On:" />
-            </div>
-          </div>
-        </div>
-        <div id="header-sticky" className="header-2">
-          <div className="container">
-            <div className="mega-menu-wrapper">
-              <div className="header-main style-2">
-                <div className="header-left">
-                  <div className="logo">
-                    <Logo logo="black-logo.png" />
-                  </div>
+      {/* Main header — trắng, sticky */}
+      <header id="header-sticky" className="header-4" style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+        <div className="container">
+          <div className="mega-menu-wrapper">
+            <div className="header-main style-2">
+              <div className="header-left d-flex align-items-center">
+                <Logo logo="black-logo.png" />
+              </div>
+              <div className="header-right d-flex justify-content-end align-items-center gap-3">
+                <div className="mean__menu-wrapper">
+                  <Nav />
                 </div>
-                <div className="header-right d-flex justify-content-end align-items-center gap-3">
-                  <div className="mean__menu-wrapper">
-                    <Nav />
-                  </div>
-                  <a
-                    href="#0"
-                    className="search-trigger search-icon"
-                    onClick={() => setToggle(true)}
-                  >
-                    <i className="fa-light fa-magnifying-glass"></i>
-                  </a>
-                  <div className="header-button">
-                    <Link href="/contact" className="theme-btn">
-                      Ủng hộ ngay
-                      <i className="ps-2 far fa-heart" />
-                    </Link>
-                  </div>
-                  <AuthButton />
-                  <div className="header__hamburger d-xl-none my-auto">
-                    <div className="sidebar__toggle" onClick={open}>
-                      <i className="fas fa-bars" />
-                    </div>
+                <a
+                  href="#0"
+                  className="search-trigger search-icon"
+                  onClick={() => setToggle(true)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', transition: 'all 0.3s' }}
+                >
+                  <i className="fa-light fa-magnifying-glass" style={{ color: '#333' }}></i>
+                </a>
+                <div className="header-button d-none d-sm-block">
+                  <Link href="/donation-details" className="theme-btn" style={{ padding: '10px 20px', fontSize: '13px', backgroundColor: '#F84D43', color: '#fff', border: 'none', borderRadius: '6px' }}>
+                    Ủng hộ ngay
+                    <i className="ps-2 far fa-heart" />
+                  </Link>
+                </div>
+                <AuthButton />
+                <div className="header__hamburger d-xl-none my-auto">
+                  <div className="sidebar__toggle" onClick={open}>
+                    <i className="fas fa-bars" />
                   </div>
                 </div>
               </div>

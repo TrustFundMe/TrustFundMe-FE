@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const CampaignsPage = () => {
   return (
-    <DanboxLayout>
+    <DanboxLayout header={4}>
       <div className="font-dm-sans">
         <CampaignBanner
           heading="Sưởi ấm lòng người"

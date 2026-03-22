@@ -613,7 +613,7 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute requireVerified={true}>
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <section className="about-section section-padding">
           <div className="container">
             <div className="row">

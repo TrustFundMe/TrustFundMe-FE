@@ -19,7 +19,7 @@ const Cta2 = dynamic(() => import("@/components/Cta").then(m => ({ default: m.Ct
 
 const Home = () => {
   return (
-    <DanboxLayout header={2} footer={2}>
+    <DanboxLayout header={4} footer={2}>
       <EmailVerificationBanner />
       <HeroSection9 />
       <About2 />

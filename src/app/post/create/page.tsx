@@ -54,7 +54,7 @@ const CreateFeedPostPage = () => {
   };
 
   return (
-    <DanboxLayout header={2} footer={2}>
+    <DanboxLayout header={4} footer={2}>
       <div className="bg-zinc-50 dark:bg-black min-h-screen py-12 md:py-20">
         <div className="container px-4 mx-auto">
           <div className="max-w-3xl mx-auto">
