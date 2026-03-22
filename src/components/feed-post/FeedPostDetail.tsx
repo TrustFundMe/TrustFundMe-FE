@@ -11,12 +11,15 @@ import FeedPostHeader from "./FeedPostHeader";
 import CommentItem from "./CommentItem";
 import ImageZoomModal, { type ZoomImage } from "./ImageZoomModal";
 import type { FeedPost, FeedPostComment } from "@/types/feedPost";
+import type { CampaignInfo } from "@/components/feed-post/CampaignCard";
+import type { Expenditure } from "@/types/expenditure";
 import { likeService } from "@/services/likeService";
 import { commentService, CommentDto } from "@/services/commentService";
 import { useAuth } from "@/contexts/AuthContextProxy";
 
 interface FeedPostDetailProps {
-  post: FeedPost;
+  post: FeedPost & { campaign?: CampaignInfo };
+  expenditure?: Expenditure | null;
   onToggleLike?: () => void;
   onToggleFlag?: () => void;
   onEdit?: () => void;
@@ -45,6 +48,7 @@ function commentDtoToFeedPostComment(dto: CommentDto): FeedPostComment {
 
 export default function FeedPostDetail({
   post,
+  expenditure,
   onToggleLike,
   onToggleFlag,
   onEdit,
@@ -414,7 +418,7 @@ export default function FeedPostDetail({
             )}
           </div>
         )}
-        <FeedPostHeader post={post} onToggleLike={onToggleLike} onToggleFlag={onToggleFlag} />
+        <FeedPostHeader post={post} expenditure={expenditure} onToggleLike={onToggleLike} onToggleFlag={onToggleFlag} />
       </fieldset>
 
       {/* Media Field */}

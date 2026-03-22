@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export type ZoomImage = {
   url: string;
@@ -29,6 +29,15 @@ export default function ImageZoomModal({
   const safeImages = useMemo(() => images.filter((i) => Boolean(i?.url)), [images]);
   const safeIndex = clamp(index, 0, Math.max(0, safeImages.length - 1));
 
+  // Prevent Radix from locking body scroll
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     setIndex(initialIndex);
@@ -52,8 +61,13 @@ export default function ImageZoomModal({
   const canNav = safeImages.length > 1;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 bg-black/95 border-none shadow-2xl max-w-[95vw] w-[95vw] h-[95vh] rounded-2xl overflow-hidden">
+    <Dialog open={open} onOpenChange={onOpenChange} preventScroll={false}>
+      <DialogContent
+        className="p-0 bg-black/95 border-none shadow-2xl max-w-[95vw] w-[95vw] h-[95vh] rounded-2xl overflow-hidden"
+      >
+        <DialogTitle className="sr-only">
+          Xem ảnh {safeIndex + 1} trên {safeImages.length}
+        </DialogTitle>
         <div className="relative w-full h-full">
           {/* Close */}
           <button

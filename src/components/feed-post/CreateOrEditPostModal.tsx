@@ -9,7 +9,6 @@ import "swiper/css/pagination";
 import { feedPostService } from "@/services/feedPostService";
 import { mediaService } from "@/services/mediaService";
 import { expenditureService } from "@/services/expenditureService";
-import { forumCategoryService } from "@/services/forumCategoryService";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import type { FeedPost } from "@/types/feedPost";
 
@@ -20,7 +19,6 @@ const SWIPE_THRESHOLD = 3;
 export type CreateOrEditPostModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  categories?: string[];
   campaignsList: { id: number; title: string }[];
   campaignTitlesMap: Record<string, string>;
   /** Khi có = chế độ chỉnh sửa: pre-fill form, submit gọi update */
@@ -32,7 +30,6 @@ export type CreateOrEditPostModalProps = {
 export default function CreateOrEditPostModal({
   isOpen,
   onClose,
-  categories,
   campaignsList,
   campaignTitlesMap,
   initialData,
@@ -44,11 +41,12 @@ export default function CreateOrEditPostModal({
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [campaignId, setCampaignId] = useState("");
-  // Backend stores campaign link inside budgetId (which is actually expenditureId)
-  // => when user selects a campaign, we resolve latest expenditureId and store it in budgetId.
-  const [budgetId, setBudgetId] = useState<number | null>(null);
+  // "none" = không liên kết, "CAMPAIGN" = liên kết chiến dịch, "EXPENDITURE" = liên kết đợt chi tiêu
+  const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE">("none");
+  const [linkedCampaignId, setLinkedCampaignId] = useState("");
+  /** expenditureId chỉ set khi user chọn expenditure trong dropdown */
+  const [selectedExpenditureId, setSelectedExpenditureId] = useState<number | null>(null);
+  const [expendituresOfCampaign, setExpendituresOfCampaign] = useState<{ id: number; plan: string }[]>([]);
   const [existingImages, setExistingImages] = useState<{ url: string; mediaId: number }[]>([]);
   /** Ảnh đang upload: preview local, xong thì chuyển sang existingImages */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string }[]>([]);
@@ -62,19 +60,45 @@ export default function CreateOrEditPostModal({
     if (initialData) {
       setTitle(initialData.title ?? "");
       setContent(initialData.content ?? "");
-      setCategoryId(initialData.category ?? "");
-      const initialBudget = initialData.expenditureId ?? initialData.budgetId ?? null;
-      setBudgetId(initialBudget);
-      setCampaignId("");
-
-      // Derive campaignId from the selected latest expenditureId
-      if (initialBudget != null) {
-        expenditureService
-          .getById(initialBudget)
-          .then((exp) => setCampaignId(String(exp.campaignId)))
-          .catch(() => {
-            /* ignore */
-          });
+      if (initialData.targetId) {
+        const rawTt = initialData.targetType;
+        const tt: "none" | "CAMPAIGN" | "EXPENDITURE" =
+          rawTt === "CAMPAIGN" || rawTt === "EXPENDITURE" ? rawTt : "none";
+        setLinkType(tt);
+        if (tt === "CAMPAIGN") {
+          setLinkedCampaignId(String(initialData.targetId));
+          setSelectedExpenditureId(null);
+          setExpendituresOfCampaign([]);
+        } else if (tt === "EXPENDITURE") {
+          expenditureService
+            .getById(initialData.targetId)
+            .then((exp) => {
+              setLinkedCampaignId(String(exp.campaignId));
+              setSelectedExpenditureId(initialData.targetId ?? null);
+              return expenditureService.getByCampaignId(String(exp.campaignId)).catch(() => []);
+            })
+            .then((exps) => {
+              if (Array.isArray(exps)) {
+                const sorted = [...exps].sort((a, b) => {
+                  const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  if (tb !== ta) return tb - ta;
+                  return (b.id ?? 0) - (a.id ?? 0);
+                });
+                setExpendituresOfCampaign(sorted.map((e) => ({ id: e.id, plan: e.plan ?? "" })));
+              }
+            })
+            .catch(() => {});
+        } else {
+          setLinkedCampaignId("");
+          setSelectedExpenditureId(null);
+          setExpendituresOfCampaign([]);
+        }
+      } else {
+        setLinkType("none");
+        setLinkedCampaignId("");
+        setSelectedExpenditureId(null);
+        setExpendituresOfCampaign([]);
       }
       setExistingImages([]);
       setUploadingItems([]);
@@ -85,18 +109,22 @@ export default function CreateOrEditPostModal({
           const draft = JSON.parse(savedDraft);
           setTitle(draft.title || "");
           setContent(draft.content || "");
-          setCategoryId(draft.categoryId || "");
-          setCampaignId(draft.campaignId || "");
-          setBudgetId(typeof draft.budgetId === "number" ? draft.budgetId : null);
+          setLinkedCampaignId(draft.campaignId || "");
+          setLinkType(
+            draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE"
+              ? draft.targetType
+              : "none"
+          );
+          setSelectedExpenditureId(null);
+          setExpendituresOfCampaign([]);
         } catch (e) {
           console.error("Failed to load draft", e);
         }
       } else {
         setTitle("");
         setContent("");
-        setCategoryId("");
-        setCampaignId("");
-        setBudgetId(null);
+        setLinkType("none");
+        setLinkedCampaignId("");
       }
       setExistingImages([]);
       setUploadingItems([]);
@@ -105,32 +133,10 @@ export default function CreateOrEditPostModal({
 
   useEffect(() => {
     if (!isOpen || isEdit) return;
-    const draft = { title, content, categoryId, campaignId, budgetId };
+    const draft = { title, content, campaignId: linkedCampaignId, targetType: linkType };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [title, content, categoryId, campaignId, budgetId, isOpen, isEdit]);
+  }, [title, content, linkedCampaignId, linkType, isOpen, isEdit]);
 
-  const handleCampaignChange = async (nextCampaignId: string) => {
-    setCampaignId(nextCampaignId);
-    setBudgetId(null);
-
-    if (!nextCampaignId) return;
-
-    const exps = await expenditureService
-      .getByCampaignId(nextCampaignId)
-      .catch(() => []);
-
-    if (!Array.isArray(exps) || exps.length === 0) return;
-
-    // Latest by createdAt
-    const sorted = [...exps].sort((a, b) => {
-      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      if (tb !== ta) return tb - ta;
-      return (b.id ?? 0) - (a.id ?? 0);
-    });
-
-    setBudgetId(sorted[0]?.id ?? null);
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -196,58 +202,21 @@ export default function CreateOrEditPostModal({
         allImages = [...baseImages, ...newImages];
       }
 
-      const inputCategory = categoryId.trim();
-      const parsedNumeric =
-        inputCategory && /^\d+$/.test(inputCategory) ? Number(inputCategory) : null;
-
-      let categoryIdNum: number | null = parsedNumeric;
-      if (categoryIdNum == null && inputCategory) {
-        // Prefer resolving by slug; if UI provides name (Vietnamese), fallback to matching name.
-        const resolvedBySlug = await forumCategoryService
-          .getBySlug(inputCategory)
-          .catch(() => null);
-
-        categoryIdNum = resolvedBySlug?.id ?? null;
-
-        if (categoryIdNum == null) {
-          const allCats = await forumCategoryService
-            .getAll()
-            .catch(() => []);
-          const matched = Array.isArray(allCats)
-            ? allCats.find(
-                (c) =>
-                  c.slug === inputCategory ||
-                  c.name === inputCategory
-              )
-            : undefined;
-          categoryIdNum = matched?.id ?? null;
-        }
-      }
-
-      // Safety: if user submits before the async resolve finishes, pick latest here too.
-      let effectiveBudgetId = budgetId;
-      if (effectiveBudgetId == null && campaignId) {
-        const exps = await expenditureService
-          .getByCampaignId(campaignId)
-          .catch(() => []);
-        if (Array.isArray(exps) && exps.length > 0) {
-          const sorted = [...exps].sort((a, b) => {
-            const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            if (tb !== ta) return tb - ta;
-            return (b.id ?? 0) - (a.id ?? 0);
-          });
-          effectiveBudgetId = sorted[0]?.id ?? null;
-        }
-      }
+      // Resolve targetId based on selected linkType
+      const effectiveTargetId =
+        linkType === "CAMPAIGN"
+          ? linkedCampaignId ? Number(linkedCampaignId) : null
+          : linkType === "EXPENDITURE"
+          ? selectedExpenditureId
+          : null;
 
       if (isEdit && initialData?.id) {
         await feedPostService.update(Number(initialData.id), {
           title: title || content.slice(0, 50),
           content,
           status: "PUBLISHED",
-          budgetId: effectiveBudgetId ?? null,
-          categoryId: categoryIdNum,
+          targetId: effectiveTargetId ?? null,
+          targetType: linkType === "none" ? null : linkType,
         });
         // Link any newly uploaded media to this post
         const postId = Number(initialData.id);
@@ -267,8 +236,8 @@ export default function CreateOrEditPostModal({
           title: title || content.slice(0, 50),
           content,
           status: "PUBLISHED",
-          budgetId: effectiveBudgetId ?? null,
-          categoryId: categoryIdNum,
+          targetId: effectiveTargetId ?? null,
+          targetType: linkType === "none" ? null : linkType,
         });
         // Link all uploaded media to the newly created post
         if (newPost?.id && allImages.length > 0) {
@@ -288,9 +257,10 @@ export default function CreateOrEditPostModal({
       onClose();
       setTitle("");
       setContent("");
-      setCategoryId("");
-      setCampaignId("");
-      setBudgetId(null);
+      setLinkedCampaignId("");
+      setLinkType("none");
+      setSelectedExpenditureId(null);
+      setExpendituresOfCampaign([]);
       setExistingImages([]);
       setUploadingItems((prev) => {
         prev.forEach((item) => URL.revokeObjectURL(item.preview));
@@ -339,8 +309,9 @@ export default function CreateOrEditPostModal({
         </div>
 
         <div className="p-4 flex-1 overflow-y-auto">
+          {/* Author */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden">
+            <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden flex-shrink-0">
               <img
                 src={user?.avatarUrl || "/assets/img/defaul.jpg"}
                 alt={user?.fullName || "User"}
@@ -350,43 +321,123 @@ export default function CreateOrEditPostModal({
                 }
               />
             </div>
-            <div>
-              <div className="font-semibold text-zinc-900 dark:text-white">{user?.fullName || "Người dùng"}</div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  placeholder="Tag..."
-                  list="category-suggestions"
-                  className="mt-0.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded px-2 py-1 border-none focus:ring-1 focus:ring-[#ff5e14] outline-none"
-                />
-                {categories && categories.length > 0 && (
-                  <datalist id="category-suggestions">
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat} />
-                    ))}
-                  </datalist>
-                )}
-                <select
-                  value={campaignId}
-                  onChange={(e) => handleCampaignChange(e.target.value)}
-                  className="mt-0.5 text-xs font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded px-2 py-1 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer max-w-[120px]"
-                >
-                  <option value="">Chiến dịch...</option>
-                  {campaignsList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {campaignId && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                  Chiến dịch: {campaignTitlesMap[campaignId] || `#${campaignId}`}
-                </p>
-              )}
-            </div>
+            <div className="font-semibold text-zinc-900 dark:text-white">{user?.fullName || "Người dùng"}</div>
+          </div>
+
+          {/* Liên kết section */}
+          <div className="flex items-center gap-2 flex-wrap mb-4">
+            <select
+              value={linkType}
+              onChange={(e) => {
+                const val = e.target.value as "none" | "CAMPAIGN" | "EXPENDITURE";
+                setLinkType(val);
+                setLinkedCampaignId("");
+                setSelectedExpenditureId(null);
+                setExpendituresOfCampaign([]);
+              }}
+              className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
+            >
+              <option value="none">Liên kết...</option>
+              <option value="CAMPAIGN">Chiến dịch</option>
+              <option value="EXPENDITURE">Đợt chi tiêu</option>
+            </select>
+
+            {linkType === "CAMPAIGN" && (
+              <select
+                value={linkedCampaignId}
+                onChange={(e) => setLinkedCampaignId(e.target.value)}
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px]"
+              >
+                <option value="">Chọn chiến dịch...</option>
+                {campaignsList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            {linkType === "CAMPAIGN" && linkedCampaignId && (
+              <span
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 20,
+                  background: "rgba(59, 130, 246, 0.08)",
+                  border: "1px solid rgba(59, 130, 246, 0.2)",
+                  fontSize: 13, fontWeight: 600, color: "#2563eb",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                {campaignTitlesMap[linkedCampaignId] || `#${linkedCampaignId}`}
+              </span>
+            )}
+
+            {linkType === "EXPENDITURE" && (
+              <select
+                value={linkedCampaignId}
+                onChange={async (e) => {
+                  const cId = e.target.value;
+                  setLinkedCampaignId(cId);
+                  setSelectedExpenditureId(null);
+                  setExpendituresOfCampaign([]);
+                  if (!cId) return;
+                  const exps = await expenditureService.getByCampaignId(cId).catch(() => []);
+                  if (Array.isArray(exps)) {
+                    const sorted = [...exps].sort((a, b) => {
+                      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                      if (tb !== ta) return tb - ta;
+                      return (b.id ?? 0) - (a.id ?? 0);
+                    });
+                    setExpendituresOfCampaign(sorted.map((exp) => ({ id: exp.id, plan: exp.plan ?? "" })));
+                  }
+                }}
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
+              >
+                <option value="">Chọn chiến dịch...</option>
+                {campaignsList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            )}
+            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length > 0 && (
+              <select
+                value={selectedExpenditureId ?? ""}
+                onChange={(e) => setSelectedExpenditureId(e.target.value ? Number(e.target.value) : null)}
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px]"
+              >
+                <option value="">Chọn đợt chi tiêu...</option>
+                {expendituresOfCampaign.map((exp) => (
+                  <option key={exp.id} value={exp.id}>
+                    {exp.plan || `#${exp.id}`}
+                  </option>
+                ))}
+              </select>
+            )}
+            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length === 0 && (
+              <span className="text-sm text-zinc-400 italic">Chưa có đợt chi tiêu</span>
+            )}
+            {linkType === "EXPENDITURE" && selectedExpenditureId && (
+              <span
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "6px 14px", borderRadius: 20,
+                  background: "rgba(16, 185, 129, 0.08)",
+                  border: "1px solid rgba(16, 185, 129, 0.2)",
+                  fontSize: 13, fontWeight: 600, color: "#059669",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                {expendituresOfCampaign.find((e) => e.id === selectedExpenditureId)?.plan || `#${selectedExpenditureId}`}
+              </span>
+            )}
           </div>
 
           <input

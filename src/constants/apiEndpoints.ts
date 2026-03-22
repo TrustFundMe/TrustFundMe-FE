@@ -112,4 +112,7 @@ export const API_ENDPOINTS = {
     UNREAD_COUNT: (userId: number | string) => `/api/notifications/user/${userId}/unread-count`,
     MARK_AS_READ: (id: number | string) => `/api/notifications/${id}/read`,
   },
+  USER_POST_SEEN: {
+    BASE: "/api/user-post-seen",
+  },
 } as const;

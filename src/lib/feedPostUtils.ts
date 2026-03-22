@@ -24,10 +24,12 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     flagCount: dto.flagCount ?? 0,
     comments: [],
     campaignId: dto.campaignId ?? null,
-    // Backend uses budgetId to store expenditureId for campaign-linked posts.
-    expenditureId: dto.expenditureId ?? dto.budgetId ?? null,
+    expenditureId: dto.expenditureId ?? null,
+    // Target: links post to expenditure or campaign
+    targetId: dto.targetId ?? null,
+    targetType: dto.targetType ?? null,
+    targetName: dto.targetName ?? null,
     category: dto.category ?? (dto.categoryId != null ? String(dto.categoryId) : null),
-    budgetId: dto.budgetId ?? null,
     categoryId: dto.categoryId ?? null,
     replyCount: Math.max(dto.commentCount ?? 0, dto.replyCount ?? 0),
     viewCount: dto.viewCount ?? 0,

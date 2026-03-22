@@ -8,16 +8,14 @@ import DanboxLayout from "@/layout/DanboxLayout";
 import CreateOrEditPostModal from "@/components/feed-post/CreateOrEditPostModal";
 import { feedPostService } from "@/services/feedPostService";
 import { campaignService } from "@/services/campaignService";
-import { expenditureService } from "@/services/expenditureService";
 import { likeService } from "@/services/likeService";
-import { mediaService } from "@/services/mediaService";
+import { seenService } from "@/services/seenService";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
-import type { Expenditure } from "@/types/expenditure";
 import { useAuth } from "@/contexts/AuthContextProxy";
 import {
   Heart, MessageCircle, Eye, Plus, Search,
-  Flame, Pin, Lock, FileText,
+  Pin, Lock, FileText, Building2,
 } from "lucide-react";
 
 // ─── utils ────────────────────────────────────────────────────────────────────
@@ -68,56 +66,43 @@ function Ava({ name, src, size = 40 }: { name: string; src?: string; size?: numb
 
 function PostCard({
   post, author, authorAvatar, banned,
-  campaign, campaignOff, expenditure, catColor, isSeen, onSeen, onOpen, onToggleLike,
+  catColor, isSeen, onVisible, onOpen, onToggleLike,
 }: {
   post: FeedPost;
   author: string;
   authorAvatar?: string;
   banned: boolean;
-  campaign?: string;
-  campaignOff?: boolean;
-  expenditure?: { id: number; plan?: string };
   catColor?: string;
   isSeen: boolean;
-  onSeen: () => void;
+  onVisible: (postId: string) => void; // called once when post enters viewport
   onOpen: () => void;
   onToggleLike?: (postId: string) => void;
 }) {
   const cardRef = useRef<HTMLElement>(null);
 
-  // Facebook-style: mark seen when post is ≥50% in viewport for 1.5s
+  // Notify parent when post enters viewport — re-check when seenIdsLoaded flips to true
   useEffect(() => {
-    if (isSeen) return; // already seen, skip observer
     const el = cardRef.current;
     if (!el) return;
-    let timer: ReturnType<typeof setTimeout> | null = null;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          timer = setTimeout(onSeen, 1500);
-        } else {
-          if (timer) { clearTimeout(timer); timer = null; }
-        }
+        if (entry.isIntersecting) onVisible(String(post.id));
       },
-      { threshold: 0.5 }
+      { threshold: 0 }
     );
     observer.observe(el);
-    return () => {
-      observer.disconnect();
-      if (timer) clearTimeout(timer);
-    };
-  // onSeen is stable (useCallback) so this is safe
+    return () => observer.disconnect();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSeen]);
+  }, []);
 
   const imgs = (post.attachments ?? []).filter(a => a.type === "image" && a.url);
   const text = post.content.replace(/<[^>]*>/g, "").trim();
-  const hot  = (post.viewCount ?? 0) >= 20 || (post.likeCount ?? 0) >= 10;
 
   return (
     <article
       ref={cardRef}
       onClick={onOpen}
+      data-post-id={String(post.id)}
       className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer
         border border-zinc-100 dark:border-zinc-800
         hover:border-zinc-200 dark:hover:border-zinc-700
@@ -161,14 +146,43 @@ function PostCard({
 
         {/* badges */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {hot && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500 flex items-center gap-1">
-              <Flame className="w-3 h-3" /> Hot
+          {post.isPinned && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-500 flex items-center gap-1">
+              <Pin className="w-3 h-3" /> Đã ghim
             </span>
           )}
           {post.isLocked && <Lock className="w-3.5 h-3.5 text-zinc-400" />}
         </div>
       </div>
+
+      {/* ── Target tag (EXPENDITURE or CAMPAIGN) ── */}
+      {post.targetId && post.targetType && (
+        <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
+          {post.targetType === "EXPENDITURE" ? (
+            <Link
+              href={`/account/campaigns/expenditures/${post.targetId}`}
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400
+                hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors shadow-sm"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              {post.targetName || `Minh chứng #${post.targetId}`}
+            </Link>
+          ) : post.targetType === "CAMPAIGN" ? (
+            <Link
+              href={`/campaign/${post.targetId}`}
+              onClick={e => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400
+                hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-sm"
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              {post.targetName || `Chiến dịch #${post.targetId}`}
+            </Link>
+          ) : null}
+        </div>
+      )}
 
       {/* ── Title ── */}
       {post.title && (
@@ -225,37 +239,6 @@ function PostCard({
         </div>
       )}
 
-      {/* ── Tags row: campaign + PE ── */}
-      {(campaign || expenditure) && (
-        <div className="px-4 pt-2.5 pb-1 flex items-center gap-2 flex-wrap">
-          {/* Campaign tag */}
-          {campaign && (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-              ${campaignOff
-                ? "bg-red-50 text-red-400 line-through"
-                : "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400"
-              }`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current" />
-              {campaign}
-            </span>
-          )}
-
-          {/* PE (Expenditure) tag — direct link, stop propagation so card doesn't open */}
-          {expenditure && (
-            <Link
-              href={`/account/campaigns/expenditures/${expenditure.id}`}
-              onClick={e => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold
-                bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400
-                hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
-            >
-              <FileText className="w-3 h-3" />
-              {expenditure.plan || `Minh chứng #${expenditure.id}`}
-            </Link>
-          )}
-        </div>
-      )}
-
       {/* ── Actions ── */}
       <div className="px-4 py-3 mt-1 flex items-center gap-5 border-t border-zinc-100 dark:border-zinc-800">
         <button
@@ -269,11 +252,6 @@ function PostCard({
           <Heart className={`w-[18px] h-[18px] ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
           <span className="tabular-nums">{post.likeCount ?? 0}</span>
         </button>
-
-        <span className="flex items-center gap-1.5 text-zinc-500 text-sm">
-          <MessageCircle className="w-[18px] h-[18px]" />
-          <span className="tabular-nums">{post.replyCount ?? 0}</span>
-        </span>
 
         <span className="flex items-center gap-1.5 text-zinc-400 text-sm">
           <Eye className="w-[18px] h-[18px]" />
@@ -296,155 +274,178 @@ export default function ForumPage() {
   const [posts, setPosts]                   = useState<FeedPost[]>([]);
   const [categories, setCategories]         = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [authorNames, setAuthorNames]       = useState<Record<string, string>>({});
-  const [authorAvatars, setAuthorAvatars]   = useState<Record<string, string>>({});
-  const [authorBanned, setAuthorBanned]     = useState<Record<string, boolean>>({});
-  const [campaignTitles, setCampaignTitles] = useState<Record<string, string>>({});
-  const [campaignStatuses, setCampaignStatuses] = useState<Record<string, string>>({});
+  const [campaignTitles, setCampaignTitles]  = useState<Record<string, string>>({});
   const [campaignsList, setCampaignsList]   = useState<{ id: number; title: string }[]>([]);
-  const [expenditures, setExpenditures]     = useState<Record<string, Expenditure>>({});
   const [loading, setLoading]               = useState(true);
   const [modal, setModal]                   = useState(false);
   const [search, setSearch]                 = useState("");
   const [seenIds, setSeenIds]               = useState<Set<string>>(new Set()); // live — written to localStorage
   const [initialSeenIds, setInitialSeenIds] = useState<Set<string>>(new Set()); // snapshot at mount — used for filtering
-  const [quickFilter, setQuickFilter]       = useState<"all" | "unseen" | "seen" | "hot">("all");
+  const [seenIdsLoaded, setSeenIdsLoaded]   = useState(false); // guard: don't trigger observer until seenIds are fetched from DB
+  const [quickFilter, setQuickFilter]       = useState<"all" | "unseen" | "seen" | "pinned">("all");
+  // Scroll-based seen tracking
+  const seenTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()); // postId → timer
+  // Infinite scroll
+  const [currentPage, setCurrentPage]       = useState(0);
+  const [hasMore, setHasMore]              = useState(true);
+  const [isLoadingMore, setIsLoadingMore]   = useState(false);
+  const loadMoreRef                        = useRef<HTMLDivElement | null>(null);
 
-  const load = async () => {
+  const PAGE_SIZE = 5;
+
+  const loadInitial = async () => {
     setLoading(true);
+    setCurrentPage(0);
+    setHasMore(true);
     try {
-      const postsP = filterCampaignId
-        ? feedPostService.getByCampaignId(filterCampaignId, { size: 50 }).then(r => r.content)
-        : feedPostService.getAll();
+      const raw = filterCampaignId
+        ? await feedPostService.getByCampaignId(filterCampaignId, { page: 0, size: PAGE_SIZE }).then(r => ({ content: r.content, total: r.totalElements }))
+        : await feedPostService.getPage({ page: 0, size: PAGE_SIZE }).then(r => ({ content: r.content, total: r.totalElements }));
 
-      const [postsR, campaignsR] = await Promise.allSettled([
-        postsP,
-        campaignService.getAll(),
+      const mapped = (Array.isArray(raw.content) ? raw.content : []).map(dtoToFeedPost).sort((a, b) => {
+        if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+        const ta = new Date(a.updatedAt ?? a.createdAt).getTime();
+        const tb = new Date(b.updatedAt ?? b.createdAt).getTime();
+        return tb - ta;
+      });
+
+      setPosts(mapped);
+      setHasMore(mapped.length >= PAGE_SIZE && mapped.length < raw.total);
+      setCategories([
+        ...new Set(mapped.map(p => p.category).filter((c): c is string => Boolean(c))),
       ]);
 
-      const campsData = campaignsR.status === "fulfilled" ? campaignsR.value : [];
-      const titles: Record<string, string>  = {};
-      const statuses: Record<string, string> = {};
-      const list: { id: number; title: string }[] = [];
-      campsData.forEach(c => {
-        titles[String(c.id)]  = c.title ?? "";
-        if (c.status) statuses[String(c.id)] = c.status;
-        // Only add user's own campaigns to the create-post dropdown
-        if (user?.id && Number(c.fundOwnerId) === Number(user.id)) {
-          list.push({ id: c.id, title: c.title ?? "" });
-        }
-      });
-      setCampaignTitles(titles);
-      setCampaignStatuses(statuses);
-      setCampaignsList(list);
-
-      if (postsR.status === "fulfilled") {
-        const raw    = Array.isArray(postsR.value) ? postsR.value : [];
-        const mapped = raw.map(dtoToFeedPost).sort((a, b) => {
-          if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
-          const ta = new Date(a.updatedAt ?? a.createdAt).getTime();
-          const tb = new Date(b.updatedAt ?? b.createdAt).getTime();
-          return tb - ta;
+      // Fetch seen IDs from backend (read-only — do NOT auto-mark on load)
+      if (user) {
+        seenService.getSeenPostIds().then(dbSeen => {
+          const strSeen = new Set<string>([...dbSeen].map(String));
+          setSeenIds(strSeen);
+          setInitialSeenIds(strSeen);
+          setSeenIdsLoaded(true);
+        }).catch(() => {
+          setSeenIdsLoaded(true); // treat error as empty set — allow observer to run
         });
-
-        // Fetch media for each post so cards show images (Instagram-style)
-        const mediaByPost = await Promise.all(
-          mapped.map((p) =>
-            mediaService.getMediaByPostId(Number(p.id)).catch(() => [] as { url: string; fileName?: string }[])
-          )
-        );
-        const withAttachments = mapped.map((p, i) => ({
-          ...p,
-          attachments: (mediaByPost[i] ?? []).map((m) => ({
-            type: "image" as const,
-            url: m.url,
-            name: m.fileName,
-          })),
-        }));
-        setPosts(withAttachments);
-        setCategories([
-          ...new Set(mapped.map(p => p.category).filter((c): c is string => Boolean(c))),
-        ]);
-
-        // Fetch author info
-        const ids = [...new Set(mapped.map(p => String(p.author?.id)).filter(Boolean))];
-        const userRes = await Promise.allSettled(
-          ids.map(id =>
-            fetch(`/api/users/${id}`, { credentials: "include" }).then(r => (r.ok ? r.json() : null))
-          )
-        );
-        const names: Record<string, string>  = {};
-        const avs:   Record<string, string>  = {};
-        const bans:  Record<string, boolean> = {};
-        ids.forEach((id, i) => {
-          const r = userRes[i];
-          if (r.status === "fulfilled" && r.value) {
-            const n = r.value.fullName ?? r.value.name;
-            if (n) names[id] = n;
-            if (r.value.avatarUrl) avs[id] = r.value.avatarUrl;
-            bans[id] = r.value.isActive === false;
-          }
-        });
-        setAuthorNames(names);
-        setAuthorAvatars(avs);
-        setAuthorBanned(bans);
-
-        // Fetch expenditure info for posts with expenditureId
-        const expIds = [
-          ...new Set(
-            mapped
-              .map(p => p.expenditureId)
-              .filter((id): id is number => id != null)
-          ),
-        ];
-        if (expIds.length > 0) {
-          const expResults = await Promise.allSettled(
-            expIds.map(id => expenditureService.getById(id))
-          );
-          const expMap: Record<string, Expenditure> = {};
-          expIds.forEach((id, i) => {
-            const r = expResults[i];
-            if (r.status === "fulfilled") expMap[String(id)] = r.value;
-          });
-          setExpenditures(expMap);
-        }
+      } else {
+        setSeenIdsLoaded(true); // not logged in — allow observer to run
       }
     } catch {
       setPosts([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load seen posts from localStorage once on mount
-  // initialSeenIds is frozen for the session — filtering/display only updates on refresh
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore || loading) return;
+    setIsLoadingMore(true);
     try {
-      const raw = window.localStorage.getItem("feed_seen_posts");
-      if (raw) {
-        const s = new Set<string>(JSON.parse(raw));
-        setSeenIds(s);
-        setInitialSeenIds(s); // snapshot — won't change until next page load
-      }
+      const nextPage = currentPage + 1;
+      const raw = filterCampaignId
+        ? await feedPostService.getByCampaignId(filterCampaignId, { page: nextPage, size: PAGE_SIZE })
+        : await feedPostService.getPage({ page: nextPage, size: PAGE_SIZE });
+      const mapped = (Array.isArray(raw.content) ? raw.content : []).map(dtoToFeedPost);
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const filtered = mapped.filter(p => !existingIds.has(p.id));
+        return [...prev, ...filtered].sort((a, b) => {
+          if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+          const ta = new Date(a.updatedAt ?? a.createdAt).getTime();
+          const tb = new Date(b.updatedAt ?? b.createdAt).getTime();
+          return tb - ta;
+        });
+      });
+      // Sync new post IDs into seenIds state so they can be tracked during scroll
+      setSeenIds(prev => {
+        const merged = new Set(prev);
+        mapped.forEach(p => merged.add(String(p.id)));
+        return merged;
+      });
+      setCurrentPage(nextPage);
+      setHasMore(mapped.length >= PAGE_SIZE && mapped.length < raw.totalElements);
     } catch {
       // ignore
+    } finally {
+      setIsLoadingMore(false);
     }
-  }, []);
+  };
 
-  const markSeen = useCallback((postId: string) => {
-    if (typeof window === "undefined") return;
+  // Load campaigns for create-post modal (independent from feed)
+  useEffect(() => {
+    campaignService.getAll().then((camps: { id: number; title?: string; fundOwnerId?: number }[]) => {
+      const titles: Record<string, string> = {};
+      const list: { id: number; title: string }[] = [];
+      camps.forEach(c => {
+        const title = c.title ?? "";
+        titles[String(c.id)] = title;
+        if (user?.id && Number(c.fundOwnerId) === Number(user.id)) {
+          list.push({ id: c.id, title });
+        }
+      });
+      setCampaignTitles(titles);
+      setCampaignsList(list);
+    }).catch(() => { /* non-critical */ });
+  }, [user]);
+
+  const markSeen = useCallback(async (postId: string) => {
+    if (!user) return; // only track seen for logged-in users
+    const numId = Number(postId);
+    if (isNaN(numId)) return;
+    // Optimistically add to seenIds
     setSeenIds(prev => {
-      if (prev.has(postId)) return prev; // no-op, avoid unnecessary re-render
+      if (prev.has(postId)) return prev;
       const next = new Set(prev);
       next.add(postId);
-      try {
-        window.localStorage.setItem("feed_seen_posts", JSON.stringify(Array.from(next)));
-      } catch {
-        // ignore
-      }
       return next;
     });
+    // Only increment viewCount after BE confirms this is a new view
+    try {
+      const result = await seenService.markSeen(numId);
+      if (result.new) {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, viewCount: (p.viewCount ?? 0) + 1 } : p));
+      }
+    } catch {
+      // non-critical
+    }
+  }, [user]);
+
+  // Called by PostCard when it enters viewport — starts 3s timer
+  const handleVisible = useCallback((postId: string) => {
+    if (!user) return;
+    if (seenIds.has(postId)) return;
+    if (seenTimersRef.current.has(postId)) return;
+    if (!seenIdsLoaded) return;
+    const timer = setTimeout(() => {
+      seenTimersRef.current.delete(postId);
+      markSeen(postId);
+    }, 3000);
+    seenTimersRef.current.set(postId, timer);
+  }, [user, seenIds, seenIdsLoaded]);
+
+  // When seenIds are loaded, check visibility for posts already in viewport + set up scroll listener
+  useEffect(() => {
+    if (!seenIdsLoaded) return;
+    const checkVisibility = () => {
+      const allPosts = document.querySelectorAll("article[data-post-id]");
+      allPosts.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          const id = el.getAttribute("data-post-id");
+          if (id) handleVisible(id);
+        }
+      });
+    };
+    checkVisibility(); // check immediately after seenIdsLoaded flips
+    window.addEventListener("scroll", checkVisibility, { passive: true });
+    return () => window.removeEventListener("scroll", checkVisibility);
+  }, [seenIdsLoaded]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      seenTimersRef.current.forEach(t => clearTimeout(t));
+      seenTimersRef.current.clear();
+    };
   }, []);
 
   const handleToggleLike = useCallback(async (postId: string) => {
@@ -482,11 +483,20 @@ export default function ForumPage() {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load().catch(() => setLoading(false)); }, [campaignIdParam]);
+  useEffect(() => { loadInitial().catch(() => setLoading(false)); }, [campaignIdParam]);
 
-  // derived
-  const isHot = (post: FeedPost): boolean =>
-    (post.viewCount ?? 0) >= 20 || (post.likeCount ?? 0) >= 10;
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) loadMore(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [currentPage, hasMore, isLoadingMore, filterCampaignId, loading]);
+
 
   const catMap: Record<string, string> = {};
   categories.forEach((c, i) => { catMap[c] = CAT_COLORS[i % CAT_COLORS.length]; });
@@ -501,8 +511,8 @@ export default function ForumPage() {
     base = base.filter(p => !initialSeenIds.has(String(p.id)));
   } else if (quickFilter === "seen") {
     base = base.filter(p => initialSeenIds.has(String(p.id)));
-  } else if (quickFilter === "hot") {
-    base = base.filter(p => isHot(p));
+  } else if (quickFilter === "pinned") {
+    base = base.filter(p => !!p.isPinned);
   }
 
   const q = search.trim().toLowerCase();
@@ -510,7 +520,7 @@ export default function ForumPage() {
     ? base.filter(p => {
         const t = (p.title ?? "").toLowerCase();
         const c = p.content.replace(/<[^>]*>/g, "").toLowerCase();
-        const a = (authorNames[String(p.author?.id)] ?? "").toLowerCase();
+        const a = (p.author?.name ?? "").toLowerCase();
         return t.includes(q) || c.includes(q) || a.includes(q);
       })
     : base;
@@ -560,51 +570,6 @@ export default function ForumPage() {
               )}
             </div>
 
-            {/* Category + quick filter pills (no overlay) */}
-            <div className="flex flex-wrap gap-2 pb-2">
-              <button
-                onClick={() => { setActiveCategory(null); setQuickFilter("all"); }}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors
-                  ${activeCategory === null && quickFilter === "all"
-                    ? "text-white"
-                    : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
-                  }`}
-                style={activeCategory === null && quickFilter === "all" ? { background: "#18181b" } : {}}
-              >
-                Tất cả ({posts.length})
-              </button>
-              {categories.map(cat => {
-                const active = activeCategory === cat && quickFilter === "all";
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => { setQuickFilter("all"); setActiveCategory(active ? null : cat); }}
-                    className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors
-                      ${active
-                        ? "text-white"
-                        : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
-                      }`}
-                    style={active ? { background: catMap[cat] } : {}}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
-              {[
-                { id: "unseen" as const, label: "Chưa xem", active: "bg-emerald-500 text-white" },
-                { id: "seen" as const, label: "Đã xem", active: "bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white" },
-                { id: "hot" as const, label: "Đang hot", active: "bg-red-500 text-white" },
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => { setQuickFilter(f.id); setActiveCategory(null); }}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors
-                    ${quickFilter === f.id ? f.active : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
 
             {/* Campaign filter banner */}
             {filterCampaignId && (
@@ -640,8 +605,8 @@ export default function ForumPage() {
               </div>
             )}
 
-            {/* Loading */}
-            {loading && (
+            {/* Loading initial */}
+            {loading && !isLoadingMore && (
               <div className="flex justify-center py-24">
                 <div className="w-7 h-7 rounded-full border-2 border-zinc-200 dark:border-zinc-700 border-t-[#ff5e14] animate-spin" />
               </div>
@@ -672,23 +637,6 @@ export default function ForumPage() {
             {!loading && visible.length > 0 && (
               <AnimatePresence mode="popLayout">
                 {visible.map((post, idx) => {
-                  const aid    = String(post.author?.id ?? "");
-                  const name   = authorNames[aid] || post.author?.name || "Ẩn danh";
-                  const ava    = authorAvatars[aid] || post.author?.avatar;
-                  const ban    = authorBanned[aid] ?? false;
-
-                  // Campaign: only from campaignId (not from expenditureId)
-                  const campId  = post.campaignId;
-                  const camp    = campId ? campaignTitles[String(campId)] : undefined;
-                  const campOff = campId ? campaignStatuses[String(campId)] === "DISABLED" : false;
-
-                  // PE (Expenditure): from expenditureId
-                  const expId  = post.expenditureId;
-                  const expObj = expId ? expenditures[String(expId)] : undefined;
-                  const expTag = expId
-                    ? { id: expId, plan: expObj?.plan ?? undefined }
-                    : undefined;
-
                   return (
                     <motion.div
                       key={post.id}
@@ -699,15 +647,12 @@ export default function ForumPage() {
                     >
                       <PostCard
                         post={post}
-                        author={name}
-                        authorAvatar={ava}
-                        banned={ban}
-                        campaign={camp}
-                        campaignOff={campOff}
-                        expenditure={expTag}
+                        author={post.author?.name || "Ẩn danh"}
+                        authorAvatar={post.author?.avatar}
+                        banned={false}
                         catColor={post.category ? catMap[post.category] : undefined}
                         isSeen={seenIds.has(String(post.id))}
-                        onSeen={() => markSeen(String(post.id))}
+                        onVisible={handleVisible}
                         onOpen={() => router.push(`/post/${post.id}`)}
                         onToggleLike={handleToggleLike}
                       />
@@ -716,6 +661,15 @@ export default function ForumPage() {
                 })}
               </AnimatePresence>
             )}
+
+            {/* Infinite scroll sentinel */}
+            <div ref={loadMoreRef} className="flex justify-center py-6">
+              {isLoadingMore ? (
+                <div className="w-6 h-6 rounded-full border-2 border-zinc-200 dark:border-zinc-700 border-t-[#ff5e14] animate-spin" />
+              ) : !hasMore && !loading ? (
+                <span className="text-sm text-zinc-400">— Đã xem hết tất cả bài viết —</span>
+              ) : null}
+            </div>
           </main>
         </div>
       </div>
@@ -725,10 +679,9 @@ export default function ForumPage() {
           <CreateOrEditPostModal
             isOpen={modal}
             onClose={() => setModal(false)}
-            categories={categories}
             campaignsList={campaignsList}
             campaignTitlesMap={campaignTitles}
-            onPostCreated={load}
+            onPostCreated={loadInitial}
           />
         )}
       </AnimatePresence>

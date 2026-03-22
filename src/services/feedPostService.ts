@@ -25,6 +25,22 @@ export const feedPostService = {
     return unwrapPage(res.data);
   },
 
+  /** Paginated feed — returns page metadata for infinite scroll */
+  async getPage(params?: { page?: number; size?: number }): Promise<{
+    content: FeedPostDto[];
+    totalElements: number;
+    totalPages: number;
+  }> {
+    const res = await api.get<{ content: FeedPostDto[]; totalElements: number; totalPages: number }>(
+      API_ENDPOINTS.FEED_POSTS.BASE,
+      { params: { page: params?.page ?? 0, size: params?.size ?? 5 } }
+    );
+    if (Array.isArray(res.data)) {
+      return { content: res.data, totalElements: res.data.length, totalPages: 1 };
+    }
+    return res.data;
+  },
+
   async getByCampaignId(
     campaignId: number,
     params?: { page?: number; size?: number }
