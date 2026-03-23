@@ -296,22 +296,6 @@ export default function StaffRequestPage() {
                             )
                           ),
                         },
-                        {
-                          key: 'status',
-                          title: 'Trạng thái',
-                          render: (r: CampaignRequest) => (
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-sm border border-white ${r.status === 'APPROVED'
-                              ? 'bg-green-50 text-green-600'
-                              : r.status === 'REJECTED'
-                                ? 'bg-red-50 text-red-600'
-                                : r.status === 'DISABLED'
-                                  ? 'bg-gray-50 text-gray-400'
-                                  : 'bg-amber-50 text-amber-600'
-                              }`}>
-                              {r.status === 'DISABLED' ? 'Đã vô hiệu' : r.status === 'PENDING' ? 'Đang chờ' : r.status === 'APPROVED' ? 'Đã duyệt' : 'Đã loại'}
-                            </span>
-                          ),
-                        },
                       ]}
                     />
                   </div>
@@ -320,7 +304,7 @@ export default function StaffRequestPage() {
                 <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar">
                   <RequestDetailPanel
                     request={selectedCampaign}
-                    title={selectedCampaign ? `Chiến dịch · #${selectedCampaign.campaignId}` : 'Chi tiết nhiệm vụ'}
+                    title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
                     fields={[
                       { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : '-' },
                       { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },

@@ -175,16 +175,7 @@ export default function HistoryTab() {
                 title: 'Hoàn thành lúc',
                 render: (r) => <span className="text-[10px] font-black text-gray-400 uppercase">{new Date(r.processedAt).toLocaleString('vi-VN')}</span>,
               },
-              {
-                key: 'status',
-                title: 'Trạng thái',
-                render: () => (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-50 text-green-600 shadow-sm border border-white">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    HOÀN TẤT
-                  </span>
-                ),
-              },
+// Removed duplicate status column as RequestTable adds it automatically
             ]}
           />
         </div>
