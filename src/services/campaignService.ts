@@ -117,21 +117,32 @@ export const campaignService = {
     try {
       const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BY_STAFF(staffId));
       return res.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.warn(`Access forbidden for staff tasks (StaffId: ${staffId}).`);
+        return [];
+      }
+      
       // Fallback for environments where staff-task endpoint is unstable (500).
-      const allRes = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
-      const allTasks = allRes.data ?? [];
-      return allTasks.filter((task) => {
-        const candidateIds = [
-          task.staffId,
-          task.assignedStaffId,
-          task.assigneeId,
-          task.assignee?.id,
-          task.staff?.id,
-          task.assignedTo?.id,
-        ];
-        return candidateIds.some((id) => Number(id) === Number(staffId));
-      });
+      console.log('Attempting fallback to total tasks list for staff:', staffId);
+      try {
+        const allRes = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
+        const allTasks = allRes.data ?? [];
+        return allTasks.filter((task) => {
+          const candidateIds = [
+            task.staffId,
+            task.assignedStaffId,
+            task.assigneeId,
+            task.assignee?.id,
+            task.staff?.id,
+            task.assignedTo?.id,
+          ];
+          return candidateIds.some((id) => Number(id) === Number(staffId));
+        });
+      } catch (fallbackError) {
+        console.error('Fallback failed:', fallbackError);
+        return [];
+      }
     }
   },
 

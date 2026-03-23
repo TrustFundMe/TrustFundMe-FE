@@ -32,6 +32,7 @@ export default function StaffRequestPage() {
   const [selectedUserIdForKyc, setSelectedUserIdForKyc] = useState<number | null>(
     searchParams.get('userId') ? Number(searchParams.get('userId')) : null
   );
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
@@ -84,7 +85,7 @@ export default function StaffRequestPage() {
             campaignTitle: c.title,
             requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
             description: c.description || '',
-            category: c.category || '',
+            category: c.categoryName || '',
             rejectionReason: c.rejectionReason || undefined,
             kycVerified: c.kycVerified,
             bankVerified: c.bankVerified,
@@ -183,7 +184,8 @@ export default function StaffRequestPage() {
   return (
     <div className="flex flex-col h-full bg-[#f1f5f9]">
       {/* Folder Tabs Headers */}
-      <div className="flex items-end px-6 gap-2 h-14">
+      {!isModalOpen && (
+        <div className="flex items-end px-6 gap-2 h-14">
         {[
           { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
           { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
@@ -215,7 +217,8 @@ export default function StaffRequestPage() {
             </button>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Folder Body Container */}
       <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative z-10 flex flex-col">
@@ -259,7 +262,6 @@ export default function StaffRequestPage() {
                           render: (r: CampaignRequest) => (
                             <div>
                               <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.campaignTitle}</div>
-                              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã: #{r.campaignId}</div>
                             </div>
                           ),
                         },
@@ -343,11 +345,11 @@ export default function StaffRequestPage() {
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
-            <ExpenditureTab />
+            <ExpenditureTab onModalToggle={setIsModalOpen} />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
           ) : activeTab === 'KYC' ? (
-            <KYCTab initialUserId={selectedUserIdForKyc} />
+            <KYCTab initialUserId={selectedUserIdForKyc} onModalToggle={setIsModalOpen} />
           ) : (
             <HistoryTab />
           )}

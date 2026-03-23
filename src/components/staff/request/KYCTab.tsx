@@ -37,9 +37,10 @@ const statusConfig = {
 
 interface KYCTabProps {
   initialUserId?: number | null;
+  onModalToggle?: (open: boolean) => void;
 }
 
-export default function KYCTab({ initialUserId }: KYCTabProps) {
+export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   const [users, setUsers] = useState<UserWithKyc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithKyc | null>(null);
@@ -59,10 +60,11 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
         setSelectedUser(match);
         if (!match.kycStatus) {
           setShowKycForm(true);
+          onModalToggle?.(true);
         }
       }
     }
-  }, [initialUserId, users]);
+  }, [initialUserId, users, onModalToggle]);
 
   const fetchData = async () => {
     try {
@@ -104,6 +106,7 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
 
   const handleKycSuccess = async () => {
     setShowKycForm(false);
+    onModalToggle?.(false);
     toast.success('Gửi KYC thành công!');
     setRefreshKey(prev => prev + 1);
   };
@@ -132,6 +135,7 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
   const handleCreateKYC = (user: UserWithKyc) => {
     setSelectedUser(user);
     setShowKycForm(true);
+    onModalToggle?.(true);
   };
 
   return (
@@ -269,6 +273,7 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
                             e.stopPropagation();
                             setSelectedUser(user);
                             setShowKycForm(true);
+                            onModalToggle?.(true);
                           }}
                           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
                             kycStatus === 'REJECTED'
@@ -301,7 +306,10 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thông tin định danh người dùng</p>
               </div>
               <button
-                onClick={() => setShowKycForm(false)}
+                onClick={() => {
+                  setShowKycForm(false);
+                  onModalToggle?.(false);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
               >
                 <X className="h-6 w-6 text-gray-400" />
@@ -312,7 +320,10 @@ export default function KYCTab({ initialUserId }: KYCTabProps) {
                 userId={selectedUser.id}
                 userName={selectedUser.fullName}
                 onSuccess={handleKycSuccess}
-                onCancel={() => setShowKycForm(false)}
+                onCancel={() => {
+                  setShowKycForm(false);
+                  onModalToggle?.(false);
+                }}
                 readOnly={selectedUser.kycStatus === 'APPROVED'}
               />
             </div>
