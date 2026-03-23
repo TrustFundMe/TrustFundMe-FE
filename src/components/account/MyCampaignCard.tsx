@@ -14,10 +14,11 @@ import Image from 'next/image';
 
 interface MyCampaignCardProps {
     campaign: CampaignDto;
+    assignedReviewerName?: string;
     onChatClick: (campaign: CampaignDto) => void;
 }
 
-const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }) => {
+const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, onChatClick }) => {
     const targetAmount = campaign.activeGoal?.targetAmount || 0;
     const progress = targetAmount > 0 ? Math.min(100, (campaign.balance / targetAmount) * 100) : 0;
 
@@ -76,6 +77,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
     const isPending = ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(campaign.status?.toUpperCase());
     const isRejected = campaign.status?.toUpperCase() === 'REJECTED';
     const isDisabled = campaign.status?.toUpperCase() === 'DISABLED';
+    const isApproved = campaign.status?.toUpperCase() === 'APPROVED';
     const [showRejectionReason, setShowRejectionReason] = useState(false);
 
     return (
@@ -114,6 +116,12 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                                 Tạo ngày: {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString() : 'N/A'}
                             </span>
                         </div>
+                        {isPending && assignedReviewerName && (
+                            <div className="flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 mb-2">
+                                <span className="font-semibold">NV phụ trách:</span>
+                                <span>{assignedReviewerName}</span>
+                            </div>
+                        )}
                         <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
                             {campaign.title}
                         </h3>
@@ -205,7 +213,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, onChatClick }
                                         </Link>
                                     </>
                                 )}
-                                {!isDisabled && (
+                                {!isDisabled && !isApproved && (
                                     <Link
                                         href={`/account/campaigns/edit?id=${campaign.id}`}
                                         className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"

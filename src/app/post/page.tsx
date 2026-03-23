@@ -8,6 +8,7 @@ import DanboxLayout from "@/layout/DanboxLayout";
 import CreateOrEditPostModal from "@/components/feed-post/CreateOrEditPostModal";
 import { feedPostService } from "@/services/feedPostService";
 import { campaignService } from "@/services/campaignService";
+import { mediaService } from "@/services/mediaService";
 import { likeService } from "@/services/likeService";
 import { seenService } from "@/services/seenService";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
@@ -272,6 +273,8 @@ export default function ForumPage() {
   const filterCampaignId  = campaignIdParam ? Number(campaignIdParam) : null;
 
   const [posts, setPosts]                   = useState<FeedPost[]>([]);
+  const [postMedia, setPostMedia]           = useState<Record<string, { type: "image" | "file"; url: string; name?: string }[]>>({});
+  const [enrichingPosts, setEnrichingPosts] = useState<Set<string>>(new Set());
   const [categories, setCategories]         = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [campaignTitles, setCampaignTitles]  = useState<Record<string, string>>({});
@@ -369,6 +372,37 @@ export default function ForumPage() {
       setIsLoadingMore(false);
     }
   };
+
+  // Fetch media for posts that don't have it yet
+  useEffect(() => {
+    const toFetch = posts.filter(p => {
+      const id = String(p.id);
+      return !postMedia[id] && !enrichingPosts.has(id);
+    });
+    if (toFetch.length === 0) return;
+
+    toFetch.forEach(post => {
+      const id = String(post.id);
+      setEnrichingPosts(prev => new Set([...prev, id]));
+      mediaService.getMediaByPostId(Number(id)).then(mediaList => {
+        if (mediaList?.length) {
+          const attachments = mediaList.map((m: { mediaType: string; url: string; fileName?: string }) => ({
+            type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
+            url: m.url,
+            name: m.fileName,
+          }));
+          setPostMedia(prev => ({ ...prev, [id]: attachments }));
+        }
+      }).catch(() => {}).finally(() => {
+        setEnrichingPosts(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts]);
 
   // Load campaigns for create-post modal (independent from feed)
   useEffect(() => {
@@ -501,10 +535,16 @@ export default function ForumPage() {
   const catMap: Record<string, string> = {};
   categories.forEach((c, i) => { catMap[c] = CAT_COLORS[i % CAT_COLORS.length]; });
 
-  // posts is already sorted by pinned-first + time desc (from load())
+  // Merge fetched media into posts for display
+  const displayPosts = posts.map(p => ({
+    ...p,
+    attachments: postMedia[String(p.id)] ?? p.attachments ?? [],
+  }));
+
+  // displayPosts is already sorted by pinned-first + time desc (from load())
   // Do NOT re-sort here based on seenIds — that would cause posts to jump positions
   // seenIds is only used for FILTERING (quickFilter buttons), not sorting
-  let base = posts;
+  let base = displayPosts;
   if (activeCategory) base = base.filter(p => p.category === activeCategory);
 
   if (quickFilter === "unseen") {

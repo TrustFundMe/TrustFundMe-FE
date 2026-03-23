@@ -89,7 +89,7 @@ const FeedPostDetailPage = () => {
       mediaService.getMediaByPostId(id).then((mediaList) => {
         if (!mediaList?.length) return;
         const attachments = mediaList.map((m) => ({
-          type: "image" as const,
+          type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
           url: m.url,
           name: m.fileName,
         }));

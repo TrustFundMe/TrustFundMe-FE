@@ -146,4 +146,13 @@ export const campaignService = {
     });
     return res.data;
   },
+
+  async getTaskByCampaign(campaignId: number | string): Promise<any | null> {
+    try {
+      const res = await api.get(API_ENDPOINTS.TASKS.BY_CAMPAIGN(campaignId));
+      return res.data;
+    } catch {
+      return null;
+    }
+  },
 };
