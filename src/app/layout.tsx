@@ -11,9 +11,7 @@ import Preloader from "@/layout/Preloader";
 
 // Using Proxy Mode: FE → Next.js API (service_role) → Supabase
 // This allows using service_role key safely (server-side only)
-import { AuthProvider } from "@/contexts/AuthContextProxy";
-import { ToastProvider } from "@/components/ui/Toast";
-import BannedAccountWrapper from "@/components/BannedAccountWrapper";
+import { ClientProviders } from "@/components/Providers";
 
 const dmSans = Inter({
   subsets: ["latin", "vietnamese"],
@@ -54,14 +52,10 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
       </head>
       <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
-        <AuthProvider>
-          <BannedAccountWrapper>
-            <ToastProvider>
-              <Preloader />
-              {children}
-            </ToastProvider>
-          </BannedAccountWrapper>
-        </AuthProvider>
+        <ClientProviders>
+          <Preloader />
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

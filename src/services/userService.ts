@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
+import { PaginatedResponse } from "@/types/pagination";
 
 export interface UserInfo {
     id: number;
@@ -53,13 +54,17 @@ export const userService = {
     /**
      * Get all users
      */
-    async getAllUsers(): Promise<{
+    async getAllUsers(page: number = 0, size: number = 10): Promise<{
         success: boolean;
-        data?: UserInfo[];
+        data?: PaginatedResponse<UserInfo>;
         error?: string;
     }> {
         try {
-            const response = await fetch(API_ENDPOINTS.USERS.BASE, {
+            const url = new URL(API_ENDPOINTS.USERS.BASE, window.location.origin);
+            url.searchParams.append("page", page.toString());
+            url.searchParams.append("size", size.toString());
+
+            const response = await fetch(url.toString(), {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

@@ -83,6 +83,24 @@ export const PERMISSIONS = {
     STAFF: true,
     ADMIN: true,
   },
+  VIEW_USERS: {
+    USER: false,
+    FUND_OWNER: false,
+    STAFF: true,
+    ADMIN: true,
+  },
+  VIEW_CAMPAIGNS: {
+    USER: false,
+    FUND_OWNER: false,
+    STAFF: true,
+    ADMIN: true,
+  },
+  VIEW_PAYOUTS: {
+    USER: false,
+    FUND_OWNER: false,
+    STAFF: true,
+    ADMIN: true,
+  },
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;

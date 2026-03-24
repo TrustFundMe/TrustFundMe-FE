@@ -1,10 +1,13 @@
 import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest, FundraisingGoal } from "@/types/campaign";
+import { PaginatedResponse } from "@/types/pagination";
 
 export const campaignService = {
-  async getAll(): Promise<CampaignDto[]> {
-    const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BASE);
+  async getAll(page: number = 0, size: number = 10): Promise<PaginatedResponse<CampaignDto>> {
+    const res = await api.get<PaginatedResponse<CampaignDto>>(API_ENDPOINTS.CAMPAIGNS.BASE, {
+      params: { page, size }
+    });
     return res.data;
   },
 
