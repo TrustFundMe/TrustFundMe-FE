@@ -7,14 +7,14 @@ import type {
 } from '../types/module';
 
 export const moduleGroupApi = {
-    getAllModuleGroups: async (params: {
-        page: number;
-        size: number;
-        sort: string;
+    getAllModuleGroups: async (params?: {
+        page?: number;
+        size?: number;
+        sort?: string;
         keyword?: string;
     }) => {
         const res = await axiosInstance.get(
-            "/module-groups",
+            "/api/module-groups/details",
             { params }
         );
         return res.data;
@@ -27,9 +27,9 @@ export const moduleGroupApi = {
         return response.data;
     },
 
-    getModuleGroupById: async (id: string): Promise<ModuleGroup> => {
+    getModuleGroupById: async (id: string | number): Promise<ModuleGroup> => {
         const response = await axiosInstance.get<ModuleGroup>(
-            `/module-groups/${id}`
+            `/api/module-groups/${id}`
         );
         return response.data;
     },
@@ -38,40 +38,40 @@ export const moduleGroupApi = {
         moduleGroup: CreateModuleGroupRequest
     ): Promise<ModuleGroup> => {
         const response = await axiosInstance.post<ModuleGroup>(
-            '/module-groups',
+            '/api/module-groups',
             moduleGroup
         );
         return response.data;
     },
 
     updateModuleGroup: async (
-        id: string,
+        id: string | number,
         moduleGroup: Partial<ModuleGroup>
     ): Promise<ModuleGroup> => {
         const response = await axiosInstance.put<ModuleGroup>(
-            `/module-groups/${id}`,
+            `/api/module-groups/${id}`,
             moduleGroup
         );
         return response.data;
     },
 
-    deleteModuleGroup: async (id: string): Promise<void> => {
-        await axiosInstance.delete(`/module-groups/${id}`);
+    deleteModuleGroup: async (id: string | number): Promise<void> => {
+        await axiosInstance.delete(`/api/module-groups/${id}`);
     },
 };
 
 export const moduleApi = {
     getModulesByModuleGroup: async (
-        moduleGroupId: string
+        moduleGroupId: string | number
     ): Promise<Module[]> => {
         const response = await axiosInstance.get<Module[]>(
-            `/modules/module-group/${moduleGroupId}`
+            `/api/modules/module-group/${moduleGroupId}`
         );
         return response.data;
     },
 
-    getModuleById: async (id: string): Promise<Module> => {
-        const response = await axiosInstance.get<Module>(`/modules/${id}`);
+    getModuleById: async (id: string | number): Promise<Module> => {
+        const response = await axiosInstance.get<Module>(`/api/modules/${id}`);
         return response.data;
     },
 
@@ -79,24 +79,24 @@ export const moduleApi = {
         module: CreateModuleRequest
     ): Promise<Module> => {
         const response = await axiosInstance.post<Module>(
-            '/modules',
+            '/api/modules',
             module
         );
         return response.data;
     },
 
     updateModule: async (
-        id: string,
+        id: string | number,
         module: Partial<Module>
     ): Promise<Module> => {
         const response = await axiosInstance.put<Module>(
-            `/modules/${id}`,
+            `/api/modules/${id}`,
             module
         );
         return response.data;
     },
 
-    deleteModule: async (id: string): Promise<void> => {
-        await axiosInstance.delete(`/modules/${id}`);
+    deleteModule: async (id: string | number): Promise<void> => {
+        await axiosInstance.delete(`/api/modules/${id}`);
     },
 };

@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import type { ModuleGroup } from "@/types/module"
 
-import { usePermissions } from "@/hooks/usePermissions"
-import { canAccessMenuItem } from "@/utils/permission.utils"
 import { moduleGroupApi } from "@/api/moduleApi"
 import { iconMap } from "@/constants/iconMap"
 import { useQuery } from "@tanstack/react-query"
@@ -19,102 +17,112 @@ export const useActiveModuleGroups = (enabled = true) => {
     });
 };
 
-
-const DEFAULT_MENU: ModuleGroup[] = [
+/* ================= FALLBACK MENU ================= */
+const fallbackMenus: ModuleGroup[] = [
     {
-        id: "mgmt",
-        name: "Quản lý hệ thống",
+        id: 1,
+        name: "Main Menu",
         isActive: true,
         displayOrder: 1,
-        createdAt: "",
-        updatedAt: "",
         modules: [
             {
-                id: "dashboard",
-                moduleGroupId: "mgmt",
-                title: "Bảng điều khiển",
+                id: 100,
+                title: "Dashboard",
                 url: "/admin",
                 icon: "dashboard",
-                displayOrder: 0,
-                isActive: true,
-                children: [],
-                createdAt: "",
-                updatedAt: ""
-            },
-            {
-                id: "management_group",
-                moduleGroupId: "mgmt",
-                title: "Quản lý",
-                url: "",
-                icon: "menu",
+                moduleGroupId: 1,
                 displayOrder: 1,
                 isActive: true,
-                requiredPermission: "VIEW_USERS",
                 createdAt: "",
                 updatedAt: "",
-                children: [
-                    {
-                        id: "users",
-                        moduleGroupId: "mgmt",
-                        title: "Quản lý Người dùng",
-                        url: "/admin/users",
-                        icon: "users",
-                        displayOrder: 0,
-                        isActive: true,
-                        requiredPermission: "VIEW_USERS",
-                        children: [],
-                        createdAt: "",
-                        updatedAt: ""
-                    },
-                    {
-                        id: "campaigns",
-                        moduleGroupId: "mgmt",
-                        title: "Quản lý Chiến dịch",
-                        url: "/admin/campaigns",
-                        icon: "folder",
-                        displayOrder: 1,
-                        isActive: true,
-                        requiredPermission: "VIEW_CAMPAIGNS",
-                        children: [],
-                        createdAt: "",
-                        updatedAt: ""
-                    },
-                    {
-                        id: "payouts",
-                        moduleGroupId: "mgmt",
-                        title: "Quản lý Giải ngân",
-                        url: "/admin/payouts",
-                        icon: "clipboard-check",
-                        displayOrder: 2,
-                        isActive: true,
-                        requiredPermission: "VIEW_PAYOUTS",
-                        children: [],
-                        createdAt: "",
-                        updatedAt: ""
-                    },
-                    {
-                        id: "modules",
-                        moduleGroupId: "mgmt",
-                        title: "Quản lý Menu",
-                        url: "/admin/modules",
-                        icon: "layers",
-                        displayOrder: 3,
-                        isActive: true,
-                        requiredPermission: "VIEW_USERS",
-                        children: [],
-                        createdAt: "",
-                        updatedAt: ""
-                    }
-                ]
-            }
-        ]
-    }
+            },
+            {
+                id: 101,
+                title: "Quản lý người dùng",
+                url: "/admin/users",
+                icon: "users",
+                moduleGroupId: 1,
+                displayOrder: 2,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 102,
+                title: "Quản lý chiến dịch",
+                url: "/admin/campaigns",
+                icon: "target",
+                moduleGroupId: 1,
+                displayOrder: 3,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 103,
+                title: "Quản lý bài viết",
+                url: "/admin/feed-posts",
+                icon: "rss",
+                moduleGroupId: 1,
+                displayOrder: 4,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 104,
+                title: "Quản lý thanh toán",
+                url: "/admin/payouts",
+                icon: "credit-card",
+                moduleGroupId: 1,
+                displayOrder: 5,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 105,
+                title: "Quản lý nhiệm vụ",
+                url: "/admin/tasks",
+                icon: "clipboard-check",
+                moduleGroupId: 1,
+                displayOrder: 6,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 106,
+                title: "Quản lý báo cáo",
+                url: "/admin/flags",
+                icon: "bell",
+                moduleGroupId: 1,
+                displayOrder: 7,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+            {
+                id: 107,
+                title: "Quản lý modules",
+                url: "/admin/modules",
+                icon: "layers",
+                moduleGroupId: 1,
+                displayOrder: 8,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
+        ],
+        createdAt: "",
+        updatedAt: "",
+    },
 ];
 
+
 export function useSidebarMenus() {
-    
+
     const [moduleGroups, setModuleGroups] = useState<ModuleGroup[]>([])
-    const { can } = usePermissions()
     const pathname = usePathname()
 
     /* -------- ACTIVE ROUTE CHECK ------------ */
@@ -134,75 +142,59 @@ export function useSidebarMenus() {
             .getActiveModuleGroups()
             .then((data) => {
                 if (data && data.length > 0) {
-                    // Kiểm tra nếu data từ API có cấu trúc nhóm (có modules với children)
-                    const hasGroupStructure = data.some(
-                        group => group.modules?.some(m => m.children && m.children.length > 0)
-                    );
-                    if (hasGroupStructure) {
-                        setModuleGroups(data);
-                    } else {
-                        // API trả về cấu trúc cũ (phẳng) → dùng DEFAULT_MENU mới
-                        setModuleGroups(DEFAULT_MENU);
-                    }
+                    setModuleGroups(data);
                 } else {
-                    setModuleGroups(DEFAULT_MENU);
+                    setModuleGroups(fallbackMenus);
                 }
             })
             .catch(() => {
                 console.warn("Using fallback menu: API not available");
-                setModuleGroups(DEFAULT_MENU);
+                setModuleGroups(fallbackMenus);
             });
     }, [])
     /* --------------------------------------- */
 
+    /* -------- ENSURE /admin PREFIX ---------- */
+    const ensureAdminPrefix = (url?: string) => {
+        if (!url || url === '#') return url || '#';
+        if (url.startsWith('/admin')) return url;
+        return '/admin' + (url.startsWith('/') ? '' : '/') + url;
+    };
+    /* --------------------------------------- */
+
     /* -------- MAP MODULE ➜ Sidebar Nav ------ */
     const navGroups = useMemo(() => {
-        // hasPermission adapter for canAccessMenuItem
-        const hasPermissionAdapter = (perm: string) => {
-            // Check if perm is a valid PermissionKey, otherwise return true/false based on some logic
-            // For now, assume perm is a string that might be a PermissionKey
-            return (can as any)(perm);
-        };
-
         return moduleGroups
             .map((group) => {
                 const items = (group.modules || [])
-                    .filter(
-                        (module) =>
-                            !module.parentId &&
-                            canAccessMenuItem(
-                                module.requiredPermission,
-                                hasPermissionAdapter
-                            )
-                    )
-                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                    .filter((module) => !module.parentId)
+                    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
                     .map((module) => {
                         const safeIcon =
                             module.icon && module.icon in iconMap
                                 ? module.icon
                                 : "menu"
 
+                        // Map children to sub-items
                         const children = module.children
-                            ?.filter((c) =>
-                                canAccessMenuItem(
-                                    c.requiredPermission,
-                                    hasPermissionAdapter
-                                )
-                            )
-                            .sort((a, b) => a.displayOrder - b.displayOrder)
-                            .map((c) => ({
-                                title: c.title,
-                                url: c.url || "#",
-                                isActive: isActiveRoute(c.url),
-                            }))
+                            ?.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+                            .map((c) => {
+                                const childUrl = ensureAdminPrefix(c.url);
+                                return {
+                                    title: c.title,
+                                    url: childUrl,
+                                    isActive: isActiveRoute(childUrl),
+                                };
+                            })
 
+                        const moduleUrl = ensureAdminPrefix(module.url);
                         const isActive =
-                            isActiveRoute(module.url) ||
-                            children?.some((c) => c.isActive)
+                            isActiveRoute(moduleUrl) ||
+                            children?.some((c) => c.isActive);
 
                         return {
                             title: module.title,
-                            url: module.url || "#",
+                            url: moduleUrl,
                             icon: iconMap[safeIcon],
                             isActive,
                             items:
@@ -215,13 +207,14 @@ export function useSidebarMenus() {
                 if (items.length === 0) return null
 
                 return {
-                    id: group.id,
+                    id: String(group.id),
                     name: group.name,
                     items,
                 }
             })
             .filter(Boolean) as any[]
-    }, [moduleGroups, can, isActiveRoute])
+    }, [moduleGroups, isActiveRoute])
+    /* --------------------------------------- */
 
     return {
         navGroups,

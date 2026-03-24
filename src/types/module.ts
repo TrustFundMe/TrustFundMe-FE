@@ -17,14 +17,27 @@ export type IconKey =
     | "map-pin"
     | "trending-up"
     | "graduation-cap"
+    | "heart"
+    | "dollar-sign"
+    | "target"
+    | "credit-card"
+    | "user-check"
+    | "tag"
+    | "message-circle"
+    | "message-square"
+    | "rss"
+    | "bell"
+    | "history"
+    | "credit-card";
 
 
 export interface ModuleGroup {
-    id: string;
+    id: number;
     name: string;
     description?: string;
     isActive: boolean;
     displayOrder: number;
+    totalModules?: number;
     modules: Module[];
     createdAt: string;
     updatedAt: string;
@@ -32,22 +45,18 @@ export interface ModuleGroup {
 
 
 export interface Module {
-    id: string;
-    moduleGroupId: string;
-    parentId?: string;
-
+    id: number;
     title: string;
-    name?: string; // Backend might return name instead of title
     url?: string;
     icon?: IconKey;
     description?: string;
-
+    moduleGroupId: number;
+    moduleGroupName?: string;
     displayOrder: number;
     isActive: boolean;
     requiredPermission?: string;
-
-    children: Module[];
-
+    parentId?: number | null;
+    children?: Module[];
     createdAt: string;
     updatedAt: string;
 }
@@ -57,18 +66,17 @@ export interface CreateModuleGroupRequest {
     name: string;
     description?: string;
     displayOrder?: number;
+    isActive?: boolean;
 }
 
 
 export interface CreateModuleRequest {
-    moduleGroupId: string;
-    parentId?: string;
-
+    moduleGroupId: number;
     title: string;
     url?: string;
     icon?: IconKey;
     description?: string;
-
     displayOrder?: number;
     requiredPermission?: string;
+    isActive?: boolean;
 }

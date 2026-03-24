@@ -19,6 +19,17 @@ import {
     MapPin,
     TrendingUp,
     GraduationCap,
+    Heart,
+    DollarSign,
+    Target,
+    CreditCard,
+    UserCheck,
+    Tag,
+    MessageCircle,
+    MessageSquare,
+    Rss,
+    Bell,
+    History,
 } from "lucide-react"
 
 export const iconMap: Record<IconKey, LucideIcon> = {
@@ -26,22 +37,29 @@ export const iconMap: Record<IconKey, LucideIcon> = {
     users: Users,
     person: User,
     people: Users,
-
     security: Shield,
     settings: Settings,
     menu: List,
-
     folder: Folder,
     layers: Layers,
     calendar: Calendar,
-
     "book-open": BookOpen,
     "clipboard-check": ClipboardCheck,
-
     home: Home,
     star: Star,
     building: Building,
     "map-pin": MapPin,
     "trending-up": TrendingUp,
     "graduation-cap": GraduationCap,
+    heart: Heart,
+    "dollar-sign": DollarSign,
+    target: Target,
+    "credit-card": CreditCard,
+    "user-check": UserCheck,
+    tag: Tag,
+    "message-circle": MessageCircle,
+    "message-square": MessageSquare,
+    rss: Rss,
+    bell: Bell,
+    history: History,
 }
