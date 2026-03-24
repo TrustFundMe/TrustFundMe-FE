@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <RequireRole allowedRoles={['ADMIN']}>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider defaultOpen={true} className="overflow-hidden">
         <AdminSidebar />
         <SidebarInset className="h-screen flex flex-col overflow-hidden max-h-[calc(100vh-18px)]">
           <AdminHeader />

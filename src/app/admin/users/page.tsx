@@ -150,6 +150,9 @@ export default function AdminUsersPage() {
   const error = queryError ? (queryError as Error).message : null;
   const totalPages = usersData?.totalPages || 0;
 
+  // DEBUG pagination
+  console.log('[DEBUG] usersData.content.length:', usersData?.content?.length, '| pageSize prop:', pageSize, '| totalPages:', totalPages);
+
   // Áp dụng bộ lọc Role/Status và cắt gộp nếu API BE bị cứng pageSize=10
   const users = useMemo(() => {
     let list = usersData?.content || [];

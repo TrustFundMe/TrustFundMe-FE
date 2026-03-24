@@ -9,14 +9,40 @@ import { Menu, ChevronDown, UserCircle, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
+const URL_TO_LABEL: Record<string, string> = {
+  admin: 'Quản lý',
+  users: 'Người dùng',
+  campaigns: 'Chiến dịch',
+  payouts: 'Giải ngân',
+  tasks: 'Nhiệm vụ',
+  modules: 'Module',
+  'module-groups': 'Nhóm module',
+  roles: 'Vai trò',
+  flags: 'Báo cáo',
+  'feed-posts': 'Bài đăng',
+  'payout-history': 'Lịch sử giải ngân',
+  'bank-accounts': 'Tài khoản ngân hàng',
+  kyc: 'Xác minh KYC',
+  notifications: 'Thông báo',
+  donations: 'Quyên góp',
+  payments: 'Thanh toán',
+  categories: 'Danh mục',
+  'fundraising-goals': 'Mục tiêu gây quỹ',
+  expenditures: 'Chi tiêu',
+  chat: 'Chat',
+  forum: 'Diễn đàn',
+  feed: 'Bài đăng',
+};
+
 export function AdminHeader() {
   const pathname = usePathname() || '';
   const paths = pathname.split('/').filter(Boolean);
-  
+
   const breadcrumbItems = paths.map((path, index) => {
     const href = '/' + paths.slice(0, index + 1).join('/');
+    const label = URL_TO_LABEL[path] || (path.charAt(0).toUpperCase() + path.slice(1).replace(/-/g, ' '));
     return {
-      label: path.charAt(0).toUpperCase() + path.slice(1).replace(/-/g, ' '),
+      label,
       href,
       active: index === paths.length - 1
     };
@@ -39,7 +65,7 @@ export function AdminHeader() {
                   )}
                 </BreadcrumbItem>
                 {index < breadcrumbItems.length - 1 && (
-                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbSeparator className="hidden md:block text-slate-300 text-xs font-bold select-none">/</BreadcrumbSeparator>
                 )}
               </React.Fragment>
             ))}

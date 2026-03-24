@@ -32,7 +32,7 @@ export function AdminSidebar() {
     .join('') || 'A';
 
   return (
-    <Sidebar variant="sidebar" collapsible="none" className="border-r border-slate-200">
+    <Sidebar variant="sidebar" collapsible="none" className="border-r border-slate-200 h-full max-h-screen overflow-hidden">
       {/* Header */}
       <SidebarHeader className="py-3 px-0">
         <div className="flex h-auto w-full min-w-0 items-center justify-start gap-3 px-4 py-2">
@@ -60,7 +60,7 @@ export function AdminSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="p-4 text-[10px] flex flex-row items-center gap-2 text-slate-400 font-bold uppercase tracking-wider group-data-[collapsible=icon]:justify-center border-t border-slate-100/50">
+      <SidebarFooter className="p-4 text-[10px] flex flex-row items-center gap-2 text-slate-400 font-bold uppercase tracking-wider group-data-[collapsible=icon]:justify-center border-t border-slate-100/50 shrink-0">
         {state === "expanded" && (
           <span className="flex-1 truncate">TrustFundMe v1.0</span>
         )}

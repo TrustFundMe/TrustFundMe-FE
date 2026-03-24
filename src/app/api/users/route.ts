@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
             headers["Authorization"] = `Bearer ${accessToken}`;
         }
 
-        const response = await fetch(`${BE_API_URL}/api/users`, {
+        // Forward query params (page, size) to backend
+        const { searchParams } = new URL(request.url);
+        const queryString = searchParams.toString();
+        const beUrl = `${BE_API_URL}/api/users${queryString ? '?' + queryString : ''}`;
+
+        const response = await fetch(beUrl, {
             method: "GET",
             headers: headers,
         });

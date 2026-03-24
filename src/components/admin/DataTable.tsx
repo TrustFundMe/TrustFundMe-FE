@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { useMemo } from "react";
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   type ColumnFiltersState,
   type PaginationState,
@@ -144,6 +143,18 @@ export function DataTable<TData, TValue>({
   const [internalSorting, setInternalSorting] = useState<SortingState>([]);
   const sortingState = sorting ?? internalSorting;
 
+  // Sync internal pagination with props (e.g., when pageSize changes from parent)
+  useEffect(() => {
+    setPagination(prev => {
+      const newPageSize = pageSize ?? prev.pageSize;
+      const newPageIndex = pageIndex ?? prev.pageIndex;
+      if (prev.pageIndex !== newPageIndex || prev.pageSize !== newPageSize) {
+        return { pageIndex: newPageIndex, pageSize: newPageSize };
+      }
+      return prev;
+    });
+  }, [pageIndex, pageSize]);
+
   /** ------------------ REACT TABLE ------------------ */
   const table = useReactTable({
     data: filteredData,
@@ -162,7 +173,6 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
-    getPaginationRowModel: getPaginationRowModel(),
     manualPagination: manualPagination,
     pageCount: totalPage,
     onPaginationChange: (updater) => {
@@ -281,7 +291,7 @@ export function DataTable<TData, TValue>({
         ref={tableContainerRef}
       >
         <Table className="relative w-full">
-          <TableHeader className="bg-slate-50/50 border-b border-slate-100 sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          <TableHeader className="bg-slate-100 border-b border-slate-200 sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                 {headerGroup.headers.map((header) => {

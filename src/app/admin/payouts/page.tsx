@@ -24,6 +24,14 @@ import type {
 
 interface ExpenditureRequest extends BaseExpenditureRequest {
     campaignCoverImage?: string | null;
+    // Sender bank info (from campaign-service platform)
+    fromBankCode?: string;
+    fromAccountNumber?: string;
+    fromAccountHolderName?: string;
+    // Recipient bank info (to fund owner)
+    toBankCode?: string;
+    toAccountNumber?: string;
+    toAccountHolderName?: string;
 }
 
 function formatVnd(value: number) {
@@ -46,7 +54,8 @@ export default function AdminPayoutsPage() {
     const fetchExpenditures = async () => {
         setIsLoading(true);
         try {
-            const allCampaigns = await campaignService.getAll();
+            const campaignsData = await campaignService.getAll(0, 1000);
+            const allCampaigns = campaignsData.content;
             const expenditurePromises = allCampaigns.map(c => expenditureService.getByCampaignId(c.id));
             const expenditureResults = await Promise.all(expenditurePromises);
             const allExps = expenditureResults.flat();
@@ -86,6 +95,12 @@ export default function AdminPayoutsPage() {
                     bankCode: e.bankCode || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toBankCode || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toBankCode,
                     accountNumber: e.accountNumber || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountNumber || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountNumber,
                     accountHolderName: e.accountHolderName || e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountHolderName || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountHolderName,
+                    fromBankCode: e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.fromBankCode,
+                    fromAccountNumber: e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.fromAccountNumber,
+                    fromAccountHolderName: e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.fromAccountHolderName,
+                    toBankCode: e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toBankCode || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toBankCode,
+                    toAccountNumber: e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountNumber || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountNumber,
+                    toAccountHolderName: e.transactions?.filter(t => t.type === 'PAYOUT' && t.status === 'PENDING').slice(-1)[0]?.toAccountHolderName || e.transactions?.filter(t => t.type === 'PAYOUT').slice(-1)[0]?.toAccountHolderName,
                     transactions: e.transactions
                 };
             }));
@@ -422,33 +437,57 @@ export default function AdminPayoutsPage() {
                                 </div>
 
                                 {selectedExp.accountNumber && (
-                                    <div className="bg-[#1A685B]/5 p-6 rounded-[32px] border border-[#1A685B]/10 shadow-sm relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                                            <CreditCard className="h-20 w-20 text-[#1A685B]" />
-                                        </div>
-                                        <h3 className="text-[10px] font-black text-[#1A685B] uppercase tracking-[0.2em] mb-4">Tài khoản thụ hưởng (Lịch sử)</h3>
-                                        <div className="space-y-4 relative z-10">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ngân hàng</span>
-                                                    <p className="text-sm font-black text-slate-900">{selectedExp.bankCode}</p>
+                                    <>
+                                        {/* Recipient Bank Info */}
+                                        <div className="bg-[#1A685B]/5 p-6 rounded-[32px] border border-[#1A685B]/10 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                                <CreditCard className="h-20 w-20 text-[#1A685B]" />
+                                            </div>
+                                            <h3 className="text-[10px] font-black text-[#1A685B] uppercase tracking-[0.2em] mb-4">Người nhận</h3>
+                                            <div className="space-y-4 relative z-10">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Ngân hàng</span>
+                                                        <p className="text-sm font-black text-slate-900">{selectedExp.toBankCode || selectedExp.bankCode}</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản</span>
+                                                        <p className="text-sm font-black text-slate-900">{selectedExp.toAccountNumber || selectedExp.accountNumber}</p>
+                                                    </div>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản</span>
-                                                    <p className="text-sm font-black text-slate-900">{selectedExp.accountNumber}</p>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Chủ tài khoản</span>
+                                                    <p className="text-sm font-black text-slate-900">{selectedExp.toAccountHolderName || selectedExp.accountHolderName}</p>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Chủ tài khoản</span>
-                                                <p className="text-sm font-black text-slate-900">{selectedExp.accountHolderName}</p>
-                                            </div>
-                                            <div className="pt-2">
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#1A685B]/10 text-[#1A685B] text-[9px] font-bold uppercase">
-                                                    Thông tin tại thời điểm yêu cầu
-                                                </span>
-                                            </div>
                                         </div>
-                                    </div>
+
+                                        {/* Sender Bank Info */}
+                                        {(selectedExp.fromBankCode || selectedExp.fromAccountNumber) && (
+                                            <div className="bg-amber-50 p-6 rounded-[32px] border border-amber-200 shadow-sm relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-4 opacity-10">
+                                                    <CreditCard className="h-20 w-20 text-amber-600" />
+                                                </div>
+                                                <h3 className="text-[10px] font-black text-amber-700 uppercase tracking-[0.2em] mb-4">Người gửi</h3>
+                                                <div className="space-y-4 relative z-10">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Ngân hàng</span>
+                                                            <p className="text-sm font-black text-slate-900">{selectedExp.fromBankCode}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Số tài khoản</span>
+                                                            <p className="text-sm font-black text-slate-900">{selectedExp.fromAccountNumber}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Chủ tài khoản</span>
+                                                        <p className="text-sm font-black text-slate-900">{selectedExp.fromAccountHolderName}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
 
                             </div>
