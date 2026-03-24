@@ -2,10 +2,9 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { toast } from 'react-hot-toast';
+import { toast, Toaster } from 'react-hot-toast';
 import {
   Eye,
-  Search,
   Ban,
   CheckCircle2,
   ShieldAlert,
@@ -14,6 +13,8 @@ import {
   Phone,
   Calendar,
   CheckCircle,
+  FileDown,
+  FileUp,
 } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 import {
@@ -31,7 +32,6 @@ import { Badge } from '@/components/ui/badge';
 import { TooltipWrapper } from '@/components/TooltipWrapper';
 
 export default function AdminUsersPage() {
-  const [query, setQuery] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   
@@ -53,6 +53,90 @@ export default function AdminUsersPage() {
 
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await userService.exportUsers();
+
+      let filename = `quanlynguoidung_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Xuất file Excel thành công');
+    } catch (error: any) {
+      toast.error('Lỗi khi xuất file Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await userService.downloadUsersTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template_import_nguoidung.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Đã tải file mẫu');
+    } catch (error) {
+      toast.error('Lỗi khi tải file mẫu');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[handleImport] triggered, files:', e.target.files);
+    const file = e.target.files?.[0];
+    if (!file) {
+      console.log('[handleImport] no file selected');
+      return;
+    }
+    console.log('[handleImport] file:', file.name, file.size);
+
+    try {
+      setIsImporting(true);
+      const loadingToast = toast.loading('Đang xử lý file Excel...');
+      const res = await userService.importUsers(file);
+      toast.dismiss(loadingToast);
+
+      if (res.success) {
+        console.log('[handleImport] success:', res.message);
+        if (res.imported === 0 && res.skipped && res.skipped > 0) {
+          // All rows skipped
+          toast(res.message || 'Tất cả dòng bị bỏ qua', {
+            icon: '⚠️',
+            style: { maxWidth: '500px', whiteSpace: 'pre-line' },
+          });
+        } else {
+          toast.success(res.message || 'Nhập dữ liệu thành công');
+        }
+        refetch();
+      } else {
+        console.log('[handleImport] failed:', res.error);
+        toast.error(res.error || 'Lỗi khi nhập dữ liệu');
+      }
+    } catch (error: any) {
+      console.error('[handleImport] catch error:', error);
+      toast.error('Lỗi khi nhập dữ liệu: ' + (error?.message || ''));
+    } finally {
+      setIsImporting(false);
+      // Reset input value to allow selecting the same file again
+      e.target.value = '';
+    }
+  };
 
   const { data: usersData, isLoading: loading, error: queryError, refetch } = useQuery({
     queryKey: ['admin-users', page, pageSize],
@@ -183,10 +267,6 @@ export default function AdminUsersPage() {
       meta: { title: "Vai trò" },
       cell: ({ row }) => {
         const role = row.getValue("role") as string;
-        let variant: "default" | "destructive" | "outline" | "secondary" | "success" | "warning" = "outline";
-        if (role === 'ADMIN') variant = "destructive";
-        else if (role === 'STAFF') variant = "default";
-        else if (role === 'FUND_OWNER') variant = "success";
         
         return (
           <Badge variant="outline" className={`uppercase tracking-widest text-[10px] font-black ${
@@ -252,6 +332,43 @@ export default function AdminUsersPage() {
         searchValue={['fullName', 'email', 'phoneNumber']}
         searchPlaceholder="Tên, email, sđt..."
         onRowClick={handleViewDetails}
+        headerActions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-10 px-4 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 gap-2"
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              <FileDown className="h-4 w-4" />
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+            </Button>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleImport}
+                disabled={isImporting}
+              />
+              <Button
+                variant="outline"
+                className="h-10 px-4 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 pointer-events-none"
+                disabled={isImporting}
+              >
+                <FileUp className="h-4 w-4" />
+                <span>{isImporting ? 'Đang nhập...' : 'Nhập Excel'}</span>
+              </Button>
+            </div>
+            <button
+              onClick={handleDownloadTemplate}
+              disabled={isExporting || isImporting}
+              className="text-xs font-black text-[#1A685B] hover:text-[#155349] hover:underline disabled:opacity-40 disabled:no-underline transition-all cursor-pointer"
+            >
+              Tải mẫu
+            </button>
+          </div>
+        }
         filterContent={
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
@@ -289,6 +406,7 @@ export default function AdminUsersPage() {
           </div>
         }
       />
+      <Toaster position="top-right" />
 
       {/* Modals */}
       <UserDetailsModal

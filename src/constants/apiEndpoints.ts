@@ -60,6 +60,9 @@ export const API_ENDPOINTS = {
     UPGRADE_TO_FUND_OWNER: (id: number | string) => `/api/users/${id}/upgrade-role`,
     UPGRADE_TO_FUND_DONOR: (id: number | string) => `/api/users/${id}/upgrade-to-fund-donor`,
     STAFF: "/api/users/staff",
+    EXPORT: "/api/users/export",
+    IMPORT: "/api/users/import",
+    IMPORT_TEMPLATE: "/api/users/import/template",
   },
   GOALS: {
     BASE: "/api/fundraising-goals",

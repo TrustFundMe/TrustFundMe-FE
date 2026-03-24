@@ -267,14 +267,11 @@ export function DataTable<TData, TValue>({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-slate-400 hover:bg-slate-100">
-            <FileUp className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-slate-400 hover:bg-slate-100">
-            <FileDown className="h-4 w-4" />
-          </Button>
-          <Separator orientation="vertical" className="h-6 mx-1" />
-          {headerActions}
+          {headerActions && (
+            <>
+              {headerActions}
+            </>
+          )}
         </div>
       </div>
 
