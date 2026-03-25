@@ -168,37 +168,37 @@ export default function ModulesPage() {
   const createGroup = useMutation({
     mutationFn: moduleGroupApi.createModuleGroup,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã tạo nhóm menu'); setGroupDialog(null); },
-    onError: () => toast.error('Tạo nhóm thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Tạo nhóm thất bại'),
   });
 
   const updateGroup = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<ModuleGroup> }) => moduleGroupApi.updateModuleGroup(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã cập nhật nhóm'); setGroupDialog(null); },
-    onError: () => toast.error('Cập nhật nhóm thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Cập nhật nhóm thất bại'),
   });
 
   const deleteGroup = useMutation({
     mutationFn: moduleGroupApi.deleteModuleGroup,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã xóa nhóm'); setDeleteTarget(null); },
-    onError: () => toast.error('Xóa nhóm thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Xóa nhóm thất bại'),
   });
 
   const createModule = useMutation({
     mutationFn: moduleApi.createModule,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã tạo mục menu'); setModuleDialog(null); },
-    onError: () => toast.error('Tạo mục thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Tạo mục thất bại'),
   });
 
   const updateModule = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Module> }) => moduleApi.updateModule(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã cập nhật mục'); setModuleDialog(null); },
-    onError: () => toast.error('Cập nhật mục thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Cập nhật mục thất bại'),
   });
 
   const deleteModule = useMutation({
     mutationFn: moduleApi.deleteModule,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['module-groups-admin'] }); toast.success('Đã xóa mục'); setDeleteTarget(null); },
-    onError: () => toast.error('Xóa mục thất bại'),
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Xóa mục thất bại'),
   });
 
   // ── Handlers ──
@@ -350,40 +350,40 @@ export default function ModulesPage() {
 
       {/* ── Group Dialog ── */}
       <Dialog open={!!groupDialog} onOpenChange={() => setGroupDialog(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 gap-0">
+          <DialogHeader className="pb-4 mb-0">
             <DialogTitle>{groupDialog?.type === 'create' ? 'Tạo nhóm menu' : 'Chỉnh sửa nhóm'}</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <div className="grid gap-1.5">
+          <div className="flex flex-col gap-5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Tên nhóm *</Label>
               <Input
                 placeholder="VD: User Management"
                 value={groupForm.name || ''}
                 onChange={e => setGroupForm(p => ({ ...p, name: e.target.value }))}
-                className="rounded-xl"
+                className="rounded-xl h-11"
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Mô tả</Label>
               <Input
                 placeholder="Mô tả ngắn..."
                 value={groupForm.description || ''}
                 onChange={e => setGroupForm(p => ({ ...p, description: e.target.value }))}
-                className="rounded-xl"
+                className="rounded-xl h-11"
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Thứ tự hiển thị</Label>
               <Input
                 type="number" min={0}
                 value={groupForm.displayOrder ?? ''}
                 onChange={e => setGroupForm(p => ({ ...p, displayOrder: Number(e.target.value) }))}
-                className="rounded-xl"
+                className="rounded-xl h-11"
               />
             </div>
             {groupDialog?.type === 'edit' && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-1">
                 <Label className="text-xs font-bold text-slate-600">Hiển thị</Label>
                 <Switch
                   checked={!!groupForm.isActive}
@@ -392,7 +392,7 @@ export default function ModulesPage() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6 gap-2">
             <Button variant="ghost" onClick={() => setGroupDialog(null)}>Hủy</Button>
             <Button
               onClick={handleGroupSubmit}
@@ -407,32 +407,32 @@ export default function ModulesPage() {
 
       {/* ── Module Dialog ── */}
       <Dialog open={!!moduleDialog} onOpenChange={() => setModuleDialog(null)}>
-        <DialogContent className="sm:max-w-lg rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-xl rounded-2xl p-6 gap-0">
+          <DialogHeader className="pb-4 mb-0">
             <DialogTitle>
               {moduleDialog?.type === 'create' ? 'Thêm mục menu' : 'Chỉnh sửa mục menu'}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            <div className="grid gap-1.5">
+          <div className="flex flex-col gap-5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Tiêu đề *</Label>
               <Input
                 placeholder="VD: Users"
                 value={moduleForm.title || ''}
                 onChange={e => setModuleForm(p => ({ ...p, title: e.target.value }))}
-                className="rounded-xl"
+                className="rounded-xl h-11"
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Đường dẫn (URL)</Label>
               <Input
                 placeholder="VD: /users"
                 value={moduleForm.url || ''}
                 onChange={e => setModuleForm(p => ({ ...p, url: e.target.value }))}
-                className="rounded-xl font-mono"
+                className="rounded-xl h-11 font-mono"
               />
             </div>
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <Label className="text-xs font-bold text-slate-600">Icon</Label>
               <IconPicker
                 value={moduleForm.icon}
@@ -440,17 +440,17 @@ export default function ModulesPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
                 <Label className="text-xs font-bold text-slate-600">Thứ tự</Label>
                 <Input
                   type="number" min={0}
                   value={moduleForm.displayOrder ?? ''}
                   onChange={e => setModuleForm(p => ({ ...p, displayOrder: Number(e.target.value) }))}
-                  className="rounded-xl"
+                  className="rounded-xl h-11"
                 />
               </div>
-              <div className="flex flex-col gap-1.5 justify-end pb-1">
+              <div className="flex flex-col gap-2 justify-end pb-1">
                 <Label className="text-xs font-bold text-slate-600">Hiển thị</Label>
                 <Switch
                   checked={!!moduleForm.isActive}
@@ -459,7 +459,7 @@ export default function ModulesPage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6 gap-2">
             <Button variant="ghost" onClick={() => setModuleDialog(null)}>Hủy</Button>
             <Button
               onClick={handleModuleSubmit}
@@ -474,7 +474,7 @@ export default function ModulesPage() {
 
       {/* ── Delete Confirm ── */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-sm rounded-2xl">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 gap-0">
           <DialogHeader>
             <DialogTitle>Xác nhận xóa</DialogTitle>
           </DialogHeader>

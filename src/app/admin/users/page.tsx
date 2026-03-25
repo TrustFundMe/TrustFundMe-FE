@@ -15,6 +15,7 @@ import {
   CheckCircle,
   FileDown,
   FileUp,
+  Plus,
 } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 import {
@@ -56,6 +57,7 @@ export default function AdminUsersPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const handleExport = async () => {
     try {
@@ -338,6 +340,14 @@ export default function AdminUsersPage() {
         headerActions={
           <div className="flex items-center gap-2">
             <Button
+              variant="default"
+              className="h-10 px-4 rounded-xl font-bold text-white bg-blue-700 hover:bg-blue-800 gap-2 shadow-sm"
+              onClick={() => setIsCreateOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Tạo mới</span>
+            </Button>
+            <Button
               variant="outline"
               className="h-10 px-4 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 gap-2"
               onClick={handleExport}
@@ -429,6 +439,15 @@ export default function AdminUsersPage() {
         title={confirmConfig.title}
         message={confirmConfig.message}
         isDestructive={confirmConfig.isDestructive}
+      />
+
+      <CreateUserModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          refetch();
+          setIsCreateOpen(false);
+        }}
       />
 
       {error && (
@@ -730,6 +749,212 @@ function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, isDestructi
               }`}
           >
             Xác nhận
+          </button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+}
+
+function CreateUserModal({ isOpen, onClose, onSuccess }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    email: '',
+    fullName: '',
+    phoneNumber: '',
+    role: 'USER',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+    fullName: '',
+    phoneNumber: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setForm({ email: '', fullName: '', phoneNumber: '', role: 'USER' });
+    setErrors({ email: '', fullName: '', phoneNumber: '' });
+  };
+
+  useEffect(() => {
+    if (isOpen) resetForm();
+  }, [isOpen]);
+
+  const validate = () => {
+    const newErrors = { email: '', fullName: '', phoneNumber: '' };
+    let isValid = true;
+
+    const emailTrimmed = form.email.trim();
+    if (!emailTrimmed) {
+      newErrors.email = 'Email không được để trống';
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      newErrors.email = 'Email không hợp lệ';
+      isValid = false;
+    }
+
+    const nameTrimmed = form.fullName.trim();
+    if (!nameTrimmed) {
+      newErrors.fullName = 'Họ tên không được để trống';
+      isValid = false;
+    } else if (nameTrimmed.length < 2 || nameTrimmed.length > 100) {
+      newErrors.fullName = 'Họ tên phải từ 2 đến 100 ký tự';
+      isValid = false;
+    }
+
+    const phoneTrimmed = form.phoneNumber.trim();
+    if (phoneTrimmed && !/^0[0-9]{9}$/.test(phoneTrimmed)) {
+      newErrors.phoneNumber = 'SĐT phải có 10 chữ số và bắt đầu bằng số 0';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    const res = await userService.createUser({
+      email: form.email.trim(),
+      fullName: form.fullName.trim(),
+      phoneNumber: form.phoneNumber.trim() || undefined,
+      role: form.role || 'USER',
+    });
+
+    if (res.success) {
+      toast.success('Tạo người dùng thành công');
+      onSuccess();
+    } else {
+      const msg = res.error || '';
+      // Map field-specific validation errors from BE
+      const fieldErrors = (res as any).errors;
+      if (fieldErrors) {
+        const newErrors = { email: '', fullName: '', phoneNumber: '' };
+        if (fieldErrors.email) newErrors.email = fieldErrors.email;
+        if (fieldErrors.fullName) newErrors.fullName = fieldErrors.fullName;
+        if (fieldErrors.phoneNumber) newErrors.phoneNumber = fieldErrors.phoneNumber;
+        if (Object.values(newErrors).some(e => e)) {
+          setErrors(newErrors);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      // Generic error
+      toast.error(msg || 'Lỗi khi tạo người dùng');
+    }
+    setIsSubmitting(false);
+  };
+
+  const field = (name: 'email' | 'fullName' | 'phoneNumber') => ({
+    value: form[name],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm(prev => ({ ...prev, [name]: e.target.value }));
+      if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    },
+    error: errors[name],
+  });
+
+  return (
+    <Modal open={isOpen} onOpenChange={onClose}>
+      <ModalContent className="max-w-md">
+        <ModalHeader>
+          <ModalTitle className="text-slate-900 flex items-center gap-2">
+            <UserRound className="h-5 w-5 text-blue-700" />
+            Tạo người dùng mới
+          </ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4 py-2">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                placeholder="nguoidung@example.com"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('email')}
+              />
+              {errors.email && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.email}</p>}
+            </div>
+
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Họ tên <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Nguyễn Văn A"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.fullName ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('fullName')}
+              />
+              {errors.fullName && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.fullName}</p>}
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Số điện thoại
+              </label>
+              <input
+                type="tel"
+                placeholder="0912345678"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.phoneNumber ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('phoneNumber')}
+              />
+              {errors.phoneNumber && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.phoneNumber}</p>}
+            </div>
+
+            {/* Role */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Vai trò
+              </label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
+              >
+                <option value="USER">Người dùng</option>
+                <option value="FUND_OWNER">Chủ quỹ</option>
+                <option value="STAFF">Nhân viên</option>
+              </select>
+            </div>
+
+            {/* Password hint */}
+            <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+              <p className="text-[10px] font-bold text-blue-600 leading-relaxed">
+                Mật khẩu mặc định: <span className="font-mono font-black">TrustFund123@</span>. Người dùng có thể đổi sau khi đăng nhập.
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter className="gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-100 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black uppercase tracking-widest shadow-sm transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? 'Đang tạo...' : 'Tạo người dùng'}
           </button>
         </ModalFooter>
       </ModalContent>

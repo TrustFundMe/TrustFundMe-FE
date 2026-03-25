@@ -210,6 +210,51 @@ export const userService = {
     },
 
     /**
+     * Create a new user
+     */
+    async createUser(userData: {
+        email: string;
+        fullName: string;
+        phoneNumber?: string;
+        role?: string;
+    }): Promise<{
+        success: boolean;
+        data?: UserInfo;
+        error?: string;
+    }> {
+        try {
+            const response = await fetch(`http://localhost:8080/api/users`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+                },
+                body: JSON.stringify(userData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data?.message || "Lỗi khi tạo người dùng",
+                };
+            }
+
+            return {
+                success: true,
+                data: data?.data,
+            };
+        } catch (error: any) {
+            console.error("User service error (create):", error);
+            return {
+                success: false,
+                error: error?.message || "Lỗi khi tạo người dùng",
+            };
+        }
+    },
+
+    /**
      * Update user information
      */
     async updateUser(id: number | string, userData: Partial<UserInfo> & { password?: string }): Promise<{
