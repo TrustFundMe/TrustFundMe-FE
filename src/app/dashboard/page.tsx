@@ -13,7 +13,7 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <section className="about-section section-padding">
           <div className="container">
             <div className="row g-4">

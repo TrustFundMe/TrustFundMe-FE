@@ -152,7 +152,7 @@ export default function AdminTasksPage() {
       </div>
 
       {/* Tasks Table */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-auto custom-scrollbar">
         <table className="w-full text-left">
           <thead className="bg-gray-50/50 border-b border-gray-100">
             <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em]">

@@ -1,15 +1,18 @@
 
+import "@css/swiper-bundle.min.css";
+import "@css/animate.css";
+import "@css/magnific-popup.css";
+import "@css/meanmenu.css";
+import "@css/nice-select.css";
 import "@css/main.css";
 import type { Metadata } from "next";
-import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google"; // 1. Import
+import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Preloader from "@/layout/Preloader";
 
 // Using Proxy Mode: FE → Next.js API (service_role) → Supabase
 // This allows using service_role key safely (server-side only)
-import { AuthProvider } from "@/contexts/AuthContextProxy";
-import { ToastProvider } from "@/components/ui/Toast";
-import BannedAccountWrapper from "@/components/BannedAccountWrapper";
+import { ClientProviders } from "@/components/Providers";
 
 const dmSans = Inter({
   subsets: ["latin", "vietnamese"],
@@ -23,7 +26,7 @@ const chelsea_market = Chelsea_Market({
   variable: "--font-chelsea_market",
   display: "swap",
 });
-const playfair = Playfair_Display({ // 2. Configure
+const playfair = Playfair_Display({
   subsets: ["latin", "vietnamese"],
   variable: "--font-playfair",
   display: "swap",
@@ -50,36 +53,12 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/magnific-popup.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/meanmenu/2.0.8/meanmenu.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/jquery-nice-select/1.1.0/css/nice-select.min.css"
-        />
       </head>
       <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
-        <AuthProvider>
-          <BannedAccountWrapper>
-            <ToastProvider>
-              <Preloader />
-              {children}
-            </ToastProvider>
-          </BannedAccountWrapper>
-        </AuthProvider>
+        <ClientProviders>
+          <Preloader />
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

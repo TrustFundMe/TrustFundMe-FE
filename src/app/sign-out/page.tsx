@@ -19,7 +19,7 @@ export default function SignOutPage() {
   }, [isAuthenticated, logout]);
 
   return (
-    <DanboxLayout header={2} footer={2}>
+    <DanboxLayout header={4} footer={2}>
       <section className="section-padding" style={{ minHeight: "80vh" }}>
         <div className="container">
           <div className="row justify-content-center">

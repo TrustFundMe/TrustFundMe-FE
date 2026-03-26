@@ -1,22 +1,21 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { toast, Toaster } from 'react-hot-toast';
 import {
   Eye,
-  Search,
   Ban,
   CheckCircle2,
-  MoreVertical,
-  UserRound,
-  Users,
-  ChevronRight,
   ShieldAlert,
+  UserRound,
   Mail,
   Phone,
   Calendar,
-  ArrowLeft,
   CheckCircle,
+  FileDown,
+  FileUp,
+  Plus,
 } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 import {
@@ -27,25 +26,440 @@ import {
   ModalBody,
   ModalFooter,
 } from '@/components/ui/modal';
+import { DataTable } from '@/components/admin/DataTable';
+import { ColumnDef } from '@tanstack/react-table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { TooltipWrapper } from '@/components/TooltipWrapper';
 
-const ITEMS_PER_PAGE = 7;
+export default function AdminUsersPage() {
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  
+  const [selectedUser, setSelectedUser] = useState<UserInfo | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  
+  const [confirmConfig, setConfirmConfig] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+  });
 
-function StatusPill({ status }: { status: string | boolean | number }) {
-  const isActive = status === 'ACTIVE' || status === true || status === 1 || status === '1';
-  if (isActive) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1A685B]/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-[#1A685B]">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />
-        Hoạt động
-      </span>
-    );
-  }
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await userService.exportUsers();
+
+      let filename = `quanlynguoidung_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Xuất file Excel thành công');
+    } catch (error: any) {
+      toast.error('Lỗi khi xuất file Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await userService.downloadUsersTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template_import_nguoidung.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Đã tải file mẫu');
+    } catch (error) {
+      toast.error('Lỗi khi tải file mẫu');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('[handleImport] triggered, files:', e.target.files);
+    const file = e.target.files?.[0];
+    if (!file) {
+      console.log('[handleImport] no file selected');
+      return;
+    }
+    console.log('[handleImport] file:', file.name, file.size);
+
+    try {
+      setIsImporting(true);
+      const loadingToast = toast.loading('Đang xử lý file Excel...');
+      const res = await userService.importUsers(file);
+      toast.dismiss(loadingToast);
+
+      if (res.success) {
+        console.log('[handleImport] success:', res.message);
+        if (res.imported === 0 && res.skipped && res.skipped > 0) {
+          // All rows skipped
+          toast(res.message || 'Tất cả dòng bị bỏ qua', {
+            icon: '⚠️',
+            style: { maxWidth: '500px', whiteSpace: 'pre-line' },
+          });
+        } else {
+          toast.success(res.message || 'Nhập dữ liệu thành công');
+        }
+        refetch();
+      } else {
+        console.log('[handleImport] failed:', res.error);
+        toast.error(res.error || 'Lỗi khi nhập dữ liệu');
+      }
+    } catch (error: any) {
+      console.error('[handleImport] catch error:', error);
+      toast.error('Lỗi khi nhập dữ liệu: ' + (error?.message || ''));
+    } finally {
+      setIsImporting(false);
+      // Reset input value to allow selecting the same file again
+      e.target.value = '';
+    }
+  };
+
+  const { data: usersData, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['admin-users', page, pageSize],
+    queryFn: async () => {
+      const res = await userService.getAllUsers(page, pageSize);
+      if (!res.success) throw new Error(res.error || 'Failed to fetch users');
+      return res.data;
+    }
+  });
+
+  const error = queryError ? (queryError as Error).message : null;
+  const totalPages = usersData?.totalPages || 0;
+
+  // DEBUG pagination
+  console.log('[DEBUG] usersData.content.length:', usersData?.content?.length, '| pageSize prop:', pageSize, '| totalPages:', totalPages);
+
+  // Áp dụng bộ lọc Role/Status và cắt gộp nếu API BE bị cứng pageSize=10
+  const users = useMemo(() => {
+    let list = usersData?.content || [];
+    
+    // Client-side Filter
+    list = list.filter(u => {
+      const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'ACTIVE' ? u.isActive : !u.isActive);
+      const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+      const isNotAdmin = u.role !== 'ADMIN';
+      return matchesStatus && matchesRole && isNotAdmin;
+    });
+
+    return list;
+  }, [usersData, statusFilter, roleFilter]);
+
+  const handleBanClick = (u: UserInfo) => {
+    setConfirmConfig({
+      show: true,
+      title: 'Khóa tài khoản',
+      message: `Bạn có chắc muốn khóa tài khoản ${u.fullName}? Hành động này sẽ tạm dừng quyền truy cập của họ vào hệ thống.`,
+      isDestructive: true,
+      onConfirm: async () => {
+        const res = await userService.banUser(u.id);
+        if (res.success) {
+          refetch();
+          toast.success('Đã khóa tài khoản');
+        } else {
+          toast.error(res.error || 'Lỗi khi khóa người dùng');
+        }
+        setConfirmConfig(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  const handleUnbanClick = (u: UserInfo) => {
+    setConfirmConfig({
+      show: true,
+      title: 'Mở khóa tài khoản',
+      message: `Bạn có chắc muốn khôi phục quyền truy cập cho ${u.fullName}?`,
+      isDestructive: false,
+      onConfirm: async () => {
+        const res = await userService.unbanUser(u.id);
+        if (res.success) {
+          refetch();
+          toast.success('Đã mở khóa tài khoản');
+        } else {
+          toast.error(res.error || 'Lỗi khi mở khóa người dùng');
+        }
+        setConfirmConfig(prev => ({ ...prev, show: false }));
+      }
+    });
+  };
+
+  const handleViewDetails = (u: UserInfo) => {
+    setSelectedUser(u);
+    setIsDetailsOpen(true);
+  };
+
+  const columns: ColumnDef<UserInfo>[] = useMemo(() => [
+    {
+      id: "index",
+      header: () => <div className="text-center font-black uppercase tracking-[0.2em] text-slate-400 text-[10px] w-10">STT</div>,
+      cell: ({ row }) => (
+        <div className="text-center text-xs font-bold text-slate-500 w-10">
+          {page * pageSize + row.index + 1}
+        </div>
+      ),
+      size: 40,
+    },
+    {
+      accessorKey: "fullName",
+      header: "Người dùng",
+      meta: { title: "Người dùng" },
+      cell: ({ row }) => {
+        const u = row.original;
+        const initials = u.fullName
+          .split(' ')
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((p) => p[0]?.toUpperCase())
+          .join('');
+        return (
+          <div className="flex items-center gap-3">
+            {u.avatarUrl ? (
+              <img src={u.avatarUrl} alt={u.fullName} className="h-10 w-10 rounded-2xl object-cover shadow-sm" />
+            ) : (
+              <div className="h-10 w-10 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs leading-none">
+                {initials || <UserRound className="h-5 w-5" />}
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="font-bold text-slate-900 leading-tight">{u.fullName}</span>
+              <span className="text-[11px] text-slate-400 font-medium">{u.email}</span>
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: "isActive",
+      header: "Trạng thái",
+      meta: { title: "Trạng thái" },
+      cell: ({ row }) => {
+        const isActive = row.getValue("isActive");
+        return (
+          <Badge variant="secondary" className={`uppercase tracking-wider text-[10px] font-black ${isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
+            {isActive ? "Hoạt động" : "Đã khóa"}
+          </Badge>
+        );
+      }
+    },
+    {
+      accessorKey: "role",
+      header: "Vai trò",
+      meta: { title: "Vai trò" },
+      cell: ({ row }) => {
+        const role = row.getValue("role") as string;
+        
+        return (
+          <Badge variant="outline" className={`uppercase tracking-widest text-[10px] font-black ${
+            role === 'ADMIN' ? 'border-red-500 text-red-600 bg-red-50' : 
+            role === 'STAFF' ? 'border-blue-500 text-blue-600 bg-blue-50' : 
+            role === 'FUND_OWNER' ? 'border-orange-500 text-orange-600 bg-orange-50' : ''
+          }`}>
+            {role}
+          </Badge>
+        );
+      }
+    },
+    {
+      accessorKey: "phoneNumber",
+      header: "Liên lạc",
+      meta: { title: "Liên lạc" },
+      cell: ({ row }) => <span className="text-sm font-bold text-slate-700">{row.getValue("phoneNumber") || '—'}</span>
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Thao tác</div>,
+      cell: ({ row }) => {
+        const u = row.original;
+        return (
+          <div className="flex justify-end gap-1">
+            <TooltipWrapper content="Chi tiết">
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewDetails(u); }} className="h-8 w-8 text-slate-400 hover:text-slate-900">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </TooltipWrapper>
+            {u.isActive ? (
+              <TooltipWrapper content="Khóa tài khoản">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleBanClick(u); }} className="h-8 w-8 text-slate-400 hover:text-red-500">
+                  <Ban className="h-4 w-4" />
+                </Button>
+              </TooltipWrapper>
+            ) : (
+              <TooltipWrapper content="Mở khóa tài khoản">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleUnbanClick(u); }} className="h-8 w-8 text-slate-400 hover:text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                </Button>
+              </TooltipWrapper>
+            )}
+          </div>
+        );
+      }
+    }
+  ], [page, pageSize]);
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
-      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-      Đã khóa
-    </span>
+    <div className="flex flex-col flex-1 min-h-0 gap-4 h-full">
+      <DataTable
+        columns={columns}
+        data={users || []}
+        isLoading={loading}
+        manualPagination={true}
+        pageIndex={page}
+        pageSize={pageSize}
+        totalPage={totalPages}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        isSearch={true}
+        searchValue={['fullName', 'email', 'phoneNumber']}
+        searchPlaceholder="Tên, email, sđt..."
+        onRowClick={handleViewDetails}
+        headerActions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              className="h-10 px-4 rounded-xl font-bold text-white bg-blue-700 hover:bg-blue-800 gap-2 shadow-sm"
+              onClick={() => setIsCreateOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Tạo mới</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 px-4 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 gap-2"
+              onClick={handleExport}
+              disabled={isExporting}
+            >
+              <FileDown className="h-4 w-4" />
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+            </Button>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                onChange={handleImport}
+                disabled={isImporting}
+              />
+              <Button
+                variant="outline"
+                className="h-10 px-4 rounded-xl font-bold text-slate-600 border-slate-200 hover:bg-slate-50 gap-2 pointer-events-none"
+                disabled={isImporting}
+              >
+                <FileUp className="h-4 w-4" />
+                <span>{isImporting ? 'Đang nhập...' : 'Nhập Excel'}</span>
+              </Button>
+            </div>
+            <button
+              onClick={handleDownloadTemplate}
+              disabled={isExporting || isImporting}
+              className="text-xs font-black text-[#1A685B] hover:text-[#155349] hover:underline disabled:opacity-40 disabled:no-underline transition-all cursor-pointer"
+            >
+              Tải mẫu
+            </button>
+          </div>
+        }
+        filterContent={
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Trạng thái</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="text-xs h-10 border border-slate-200 rounded-xl px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-bold shadow-sm w-full"
+              >
+                <option value="ALL">Tất cả</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="DISABLED">Đã khóa</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Vai trò</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="text-xs h-10 border border-slate-200 rounded-xl px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-bold shadow-sm w-full"
+              >
+                <option value="ALL">Tất cả</option>
+                <option value="STAFF">Nhân viên</option>
+                <option value="FUND_OWNER">Chủ quỹ</option>
+                <option value="USER">Người dùng</option>
+              </select>
+            </div>
+
+            {(statusFilter !== 'ALL' || roleFilter !== 'ALL') && (
+              <Button variant="ghost" className="h-10 mt-2 rounded-xl text-xs font-black uppercase text-rose-500 hover:bg-rose-50 w-full" onClick={() => { setStatusFilter('ALL'); setRoleFilter('ALL'); }}>
+                Xóa bộ lọc
+              </Button>
+            )}
+          </div>
+        }
+      />
+      <Toaster position="top-right" />
+
+      {/* Modals */}
+      <UserDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        user={selectedUser}
+        onUpdate={(updatedUser) => {
+          refetch();
+          setSelectedUser(updatedUser);
+        }}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmConfig.show}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, show: false }))}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        isDestructive={confirmConfig.isDestructive}
+      />
+
+      <CreateUserModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={() => {
+          refetch();
+          setIsCreateOpen(false);
+        }}
+      />
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 flex items-center gap-4 flex-shrink-0 shadow-sm">
+          <ShieldAlert className="h-5 w-5" />
+          <div className="flex-1">
+            <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Lỗi hệ thống</p>
+            <p className="text-sm font-bold">{error}</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -65,369 +479,6 @@ function RoleBadge({ role }: { role: string }) {
     </span>
   );
 }
-
-export default function AdminUsersPage() {
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
-  const [users, setUsers] = useState<UserInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<UserInfo | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [confirmConfig, setConfirmConfig] = useState<{
-    show: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    isDestructive?: boolean;
-  }>({
-    show: false,
-    title: '',
-    message: '',
-    onConfirm: () => { },
-  });
-
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    const res = await userService.getAllUsers();
-    if (res.success && res.data) {
-      setUsers(res.data);
-    } else {
-      setError(res.error || 'Failed to load users');
-    }
-    setLoading(false);
-  };
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const result = users.filter((u) => {
-      const isSearchMatch =
-        u.fullName.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
-        (u.phoneNumber && u.phoneNumber.includes(q));
-
-      const matchesStatus =
-        statusFilter === 'ALL'
-          ? true
-          : statusFilter === 'ACTIVE'
-            ? u.isActive
-            : !u.isActive;
-
-      const matchesRole = roleFilter === 'ALL' ? true : u.role === roleFilter;
-
-      // Never show ADMIN accounts in this list
-      const isNotAdmin = u.role !== 'ADMIN';
-
-      return isSearchMatch && matchesStatus && matchesRole && isNotAdmin;
-    });
-    return result;
-  }, [query, users, statusFilter, roleFilter]);
-
-  const totalPages = useMemo(() => Math.ceil(filtered.length / ITEMS_PER_PAGE), [filtered, ITEMS_PER_PAGE]);
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filtered.slice(start, start + ITEMS_PER_PAGE);
-  }, [filtered, currentPage, ITEMS_PER_PAGE]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, statusFilter, roleFilter]);
-
-  const hasActiveFilters = query !== '' || statusFilter !== 'ALL' || roleFilter !== 'ALL';
-
-  const clearFilters = () => {
-    setQuery('');
-    setStatusFilter('ALL');
-    setRoleFilter('ALL');
-  };
-
-  const handleBanClick = (u: UserInfo) => {
-    setConfirmConfig({
-      show: true,
-      title: 'Khóa tài khoản',
-      message: `Bạn có chắc muốn khóa tài khoản ${u.fullName}? Hành động này sẽ tạm dừng quyền truy cập của họ vào hệ thống.`,
-      isDestructive: true,
-      onConfirm: async () => {
-        const res = await userService.banUser(u.id);
-        if (res.success) {
-          setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, isActive: false } : user)));
-        } else {
-          setError(res.error || 'Lỗi khi khóa người dùng');
-        }
-        setConfirmConfig(prev => ({ ...prev, show: false }));
-      }
-    });
-  };
-
-  const handleUnbanClick = (u: UserInfo) => {
-    setConfirmConfig({
-      show: true,
-      title: 'Mở khóa tài khoản',
-      message: `Bạn có chắc muốn khôi phục quyền truy cập cho ${u.fullName}?`,
-      isDestructive: false,
-      onConfirm: async () => {
-        const res = await userService.unbanUser(u.id);
-        if (res.success) {
-          setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, isActive: true } : user)));
-        } else {
-          setError(res.error || 'Lỗi khi mở khóa người dùng');
-        }
-        setConfirmConfig(prev => ({ ...prev, show: false }));
-      }
-    });
-  };
-
-  const handleViewDetails = (u: UserInfo) => {
-    setSelectedUser(u);
-    setIsDetailsOpen(true);
-  };
-
-  return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-3 flex-shrink-0">
-        <div className="relative group/search flex-[2] max-w-2xl w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo tên, email hoặc số điện thoại..."
-            className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto flex-shrink-0">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
-          >
-            <option value="ALL">Trạng thái</option>
-            <option value="ACTIVE">Hoạt động</option>
-            <option value="DISABLED">Đã khóa</option>
-          </select>
-
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full md:w-48 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
-          >
-            <option value="ALL">Tất cả vai trò</option>
-            <option value="STAFF">Nhân viên</option>
-            <option value="FUND_OWNER">Chủ quỹ</option>
-            <option value="USER">Người dùng</option>
-          </select>
-
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="px-6 py-3.5 rounded-3xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-200 hover:text-slate-900 transition-all ml-auto"
-            >
-              Xóa lọc
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/50 relative flex-1 min-h-0 overflow-hidden">
-        {loading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-
-        <div className="h-full overflow-auto custom-scrollbar">
-          <table className="min-w-full text-sm border-separate border-spacing-0">
-            <thead className="bg-slate-50">
-              <tr className="text-left">
-                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Người dùng</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Trạng thái</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Vai trò</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Liên lạc</th>
-                <th className="py-3.5 pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right border-b border-slate-100">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {paginatedData.map((u) => {
-                const initials = u.fullName
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((p) => p[0]?.toUpperCase())
-                  .join('');
-
-                return (
-                  <tr key={u.id} className="h-[68px] group hover:bg-slate-50/30 transition-colors">
-                    <td className="py-2 pl-8 pr-4">
-                      <div className="flex items-center gap-3">
-                        {u.avatarUrl ? (
-                          <img src={u.avatarUrl} alt={u.fullName} className="h-10 w-10 rounded-2xl object-cover shadow-md ring-2 ring-white" />
-                        ) : (
-                          <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 flex items-center justify-center font-black text-xs shadow-md ring-2 ring-white">
-                            {initials || <UserRound className="h-5 w-5" />}
-                          </div>
-                        )}
-                        <div className="leading-tight">
-                          <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors">{u.fullName}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5 font-medium">{u.email}</div>
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <StatusPill status={u.isActive} />
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <RoleBadge role={u.role} />
-                    </td>
-
-                    <td className="py-3 pr-4">
-                      <span className="text-sm font-bold text-slate-700">{u.phoneNumber || '—'}</span>
-                    </td>
-
-                    <td className="py-3 pr-8 text-right">
-                      <div className="flex justify-end gap-1 transition-all">
-                        <button
-                          onClick={() => handleViewDetails(u)}
-                          title="Chi tiết"
-                          className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        {u.isActive ? (
-                          <button
-                            onClick={() => handleBanClick(u)}
-                            title="Khóa tài khoản"
-                            className="p-2 rounded-xl text-slate-400 hover:text-[#F84D43] hover:bg-white hover:shadow-lg transition-all"
-                          >
-                            <Ban className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleUnbanClick(u)}
-                            title="Mở khóa tài khoản"
-                            className="p-2 rounded-xl text-slate-400 hover:text-[#1A685B] hover:bg-white hover:shadow-lg transition-all"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {!loading && paginatedData.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-24 text-center">
-                    <div className="flex flex-col items-center justify-center text-slate-400">
-                      <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                        <Search className="h-8 w-8 text-slate-300" />
-                      </div>
-                      <p className="font-bold text-slate-500">Không tìm thấy người dùng phù hợp.</p>
-                      <button onClick={clearFilters} className="mt-4 text-red-500 text-sm font-black uppercase tracking-widest hover:text-red-600 transition-colors">
-                        Thử xóa bộ lọc
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {/* Spacer to maintain height if less than 7 items */}
-              {!loading && paginatedData.length < ITEMS_PER_PAGE && paginatedData.length > 0 && (
-                Array.from({ length: ITEMS_PER_PAGE - paginatedData.length }).map((_, i) => (
-                  <tr key={`spacer-${i}`} className="h-[68px] border-none">
-                    <td colSpan={5}></td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Section - Always visible at bottom */}
-        <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-3 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            Trang {currentPage} / {totalPages} (Tổng {filtered.length})
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
-            >
-              <ChevronRight className="h-4 w-4 rotate-180" />
-            </button>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((p, i, arr) => (
-                  <div key={p} className="flex items-center">
-                    {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
-                    <button
-                      onClick={() => setCurrentPage(p)}
-                      className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                    >
-                      {p}
-                    </button>
-                  </div>
-                ))}
-            </div>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <UserDetailsModal
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        user={selectedUser}
-        onUpdate={(updatedUser) => {
-          setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
-          setSelectedUser(updatedUser);
-        }}
-      />
-
-      {/* Custom Confirm Dialog */}
-      <ConfirmDialog
-        isOpen={confirmConfig.show}
-        onClose={() => setConfirmConfig(prev => ({ ...prev, show: false }))}
-        onConfirm={confirmConfig.onConfirm}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        isDestructive={confirmConfig.isDestructive}
-      />
-
-      {error && (
-        <div className="mt-4 p-4 rounded-[20px] bg-red-50 border-2 border-red-100 text-red-600 flex items-center gap-4 flex-shrink-0 shadow-xl shadow-red-500/5">
-          <div className="h-10 w-10 bg-white rounded-2xl flex items-center justify-center shadow-md">
-            <ShieldAlert className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1">Cảnh báo hệ thống</p>
-            <p className="text-sm font-bold">{error}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 function UserDetailsModal({
   isOpen,
@@ -467,17 +518,14 @@ function UserDetailsModal({
       newErrors.fullName = 'Tên không được để trống';
       isValid = false;
     } else {
-      // 1. Độ dài (Length) 3-50 (tăng lên để chứa được tên đầy đủ có dấu cách)
       if (nameTrimmed.length < 3 || nameTrimmed.length > 50) {
         newErrors.fullName = 'Tên phải từ 3 đến 50 ký tự';
         isValid = false;
       }
-      // 2. Định dạng khởi đầu (Bắt đầu bằng chữ cái) & Ký tự cho phép (Unicode chữ, số, dấu gạch dưới, dấu chấm và khoảng trắng)
       else if (!/^[\p{L}][\p{L}0-9._ ]*$/u.test(nameTrimmed)) {
         newErrors.fullName = 'Tên phải bắt đầu bằng chữ cái; chỉ cho phép chữ, số, dấu gạch dưới, dấu chấm và khoảng trắng';
         isValid = false;
       }
-      // 3. Danh sách từ cấm (Banned words)
       else {
         const lowerName = nameTrimmed.toLowerCase();
         const bannedWords = ['admin', 'support', 'root'];
@@ -516,8 +564,6 @@ function UserDetailsModal({
       const errorMsg = res.error || '';
       if (errorMsg.toLowerCase().includes('phone number already exists')) {
         setErrors(prev => ({ ...prev, phoneNumber: 'Số điện thoại này đã được sử dụng' }));
-      } else if (errorMsg.toLowerCase().includes('email already exists')) {
-        alert('Email này đã được sử dụng');
       } else {
         alert(errorMsg || 'Lỗi khi cập nhật thông tin');
       }
@@ -673,7 +719,6 @@ function UserDetailsModal({
   );
 }
 
-// Confirmation Dialog Component
 function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, isDestructive }: {
   isOpen: boolean;
   onClose: () => void;
@@ -704,6 +749,212 @@ function ConfirmDialog({ isOpen, onClose, onConfirm, title, message, isDestructi
               }`}
           >
             Xác nhận
+          </button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+}
+
+function CreateUserModal({ isOpen, onClose, onSuccess }: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    email: '',
+    fullName: '',
+    phoneNumber: '',
+    role: 'USER',
+  });
+  const [errors, setErrors] = useState({
+    email: '',
+    fullName: '',
+    phoneNumber: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setForm({ email: '', fullName: '', phoneNumber: '', role: 'USER' });
+    setErrors({ email: '', fullName: '', phoneNumber: '' });
+  };
+
+  useEffect(() => {
+    if (isOpen) resetForm();
+  }, [isOpen]);
+
+  const validate = () => {
+    const newErrors = { email: '', fullName: '', phoneNumber: '' };
+    let isValid = true;
+
+    const emailTrimmed = form.email.trim();
+    if (!emailTrimmed) {
+      newErrors.email = 'Email không được để trống';
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      newErrors.email = 'Email không hợp lệ';
+      isValid = false;
+    }
+
+    const nameTrimmed = form.fullName.trim();
+    if (!nameTrimmed) {
+      newErrors.fullName = 'Họ tên không được để trống';
+      isValid = false;
+    } else if (nameTrimmed.length < 2 || nameTrimmed.length > 100) {
+      newErrors.fullName = 'Họ tên phải từ 2 đến 100 ký tự';
+      isValid = false;
+    }
+
+    const phoneTrimmed = form.phoneNumber.trim();
+    if (phoneTrimmed && !/^0[0-9]{9}$/.test(phoneTrimmed)) {
+      newErrors.phoneNumber = 'SĐT phải có 10 chữ số và bắt đầu bằng số 0';
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    const res = await userService.createUser({
+      email: form.email.trim(),
+      fullName: form.fullName.trim(),
+      phoneNumber: form.phoneNumber.trim() || undefined,
+      role: form.role || 'USER',
+    });
+
+    if (res.success) {
+      toast.success('Tạo người dùng thành công');
+      onSuccess();
+    } else {
+      const msg = res.error || '';
+      // Map field-specific validation errors from BE
+      const fieldErrors = (res as any).errors;
+      if (fieldErrors) {
+        const newErrors = { email: '', fullName: '', phoneNumber: '' };
+        if (fieldErrors.email) newErrors.email = fieldErrors.email;
+        if (fieldErrors.fullName) newErrors.fullName = fieldErrors.fullName;
+        if (fieldErrors.phoneNumber) newErrors.phoneNumber = fieldErrors.phoneNumber;
+        if (Object.values(newErrors).some(e => e)) {
+          setErrors(newErrors);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      // Generic error
+      toast.error(msg || 'Lỗi khi tạo người dùng');
+    }
+    setIsSubmitting(false);
+  };
+
+  const field = (name: 'email' | 'fullName' | 'phoneNumber') => ({
+    value: form[name],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm(prev => ({ ...prev, [name]: e.target.value }));
+      if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    },
+    error: errors[name],
+  });
+
+  return (
+    <Modal open={isOpen} onOpenChange={onClose}>
+      <ModalContent className="max-w-md">
+        <ModalHeader>
+          <ModalTitle className="text-slate-900 flex items-center gap-2">
+            <UserRound className="h-5 w-5 text-blue-700" />
+            Tạo người dùng mới
+          </ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4 py-2">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                placeholder="nguoidung@example.com"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.email ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('email')}
+              />
+              {errors.email && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.email}</p>}
+            </div>
+
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Họ tên <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Nguyễn Văn A"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.fullName ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('fullName')}
+              />
+              {errors.fullName && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.fullName}</p>}
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Số điện thoại
+              </label>
+              <input
+                type="tel"
+                placeholder="0912345678"
+                className={`w-full h-11 rounded-xl border bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all
+                  focus:outline-none focus:ring-2 focus:ring-blue-200
+                  ${errors.phoneNumber ? 'border-red-400 focus:border-red-500' : 'border-slate-200 focus:border-blue-400'}`}
+                {...field('phoneNumber')}
+              />
+              {errors.phoneNumber && <p className="text-[10px] text-red-500 font-bold pl-1">{errors.phoneNumber}</p>}
+            </div>
+
+            {/* Role */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">
+                Vai trò
+              </label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
+              >
+                <option value="USER">Người dùng</option>
+                <option value="FUND_OWNER">Chủ quỹ</option>
+                <option value="STAFF">Nhân viên</option>
+              </select>
+            </div>
+
+            {/* Password hint */}
+            <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+              <p className="text-[10px] font-bold text-blue-600 leading-relaxed">
+                Mật khẩu mặc định: <span className="font-mono font-black">TrustFund123@</span>. Người dùng có thể đổi sau khi đăng nhập.
+              </p>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter className="gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-100 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black uppercase tracking-widest shadow-sm transition-all disabled:opacity-50"
+          >
+            {isSubmitting ? 'Đang tạo...' : 'Tạo người dùng'}
           </button>
         </ModalFooter>
       </ModalContent>

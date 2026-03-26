@@ -1,10 +1,13 @@
 import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest, FundraisingGoal } from "@/types/campaign";
+import { PaginatedResponse } from "@/types/pagination";
 
 export const campaignService = {
-  async getAll(): Promise<CampaignDto[]> {
-    const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BASE);
+  async getAll(page: number = 0, size: number = 10): Promise<PaginatedResponse<CampaignDto>> {
+    const res = await api.get<PaginatedResponse<CampaignDto>>(API_ENDPOINTS.CAMPAIGNS.BASE, {
+      params: { page, size }
+    });
     return res.data;
   },
 
@@ -117,21 +120,32 @@ export const campaignService = {
     try {
       const res = await api.get<any[]>(API_ENDPOINTS.TASKS.BY_STAFF(staffId));
       return res.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.warn(`Access forbidden for staff tasks (StaffId: ${staffId}).`);
+        return [];
+      }
+      
       // Fallback for environments where staff-task endpoint is unstable (500).
-      const allRes = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
-      const allTasks = allRes.data ?? [];
-      return allTasks.filter((task) => {
-        const candidateIds = [
-          task.staffId,
-          task.assignedStaffId,
-          task.assigneeId,
-          task.assignee?.id,
-          task.staff?.id,
-          task.assignedTo?.id,
-        ];
-        return candidateIds.some((id) => Number(id) === Number(staffId));
-      });
+      console.log('Attempting fallback to total tasks list for staff:', staffId);
+      try {
+        const allRes = await api.get<any[]>(API_ENDPOINTS.TASKS.BASE);
+        const allTasks = allRes.data ?? [];
+        return allTasks.filter((task) => {
+          const candidateIds = [
+            task.staffId,
+            task.assignedStaffId,
+            task.assigneeId,
+            task.assignee?.id,
+            task.staff?.id,
+            task.assignedTo?.id,
+          ];
+          return candidateIds.some((id) => Number(id) === Number(staffId));
+        });
+      } catch (fallbackError) {
+        console.error('Fallback failed:', fallbackError);
+        return [];
+      }
     }
   },
 
@@ -145,5 +159,14 @@ export const campaignService = {
       params: { newStaffId }
     });
     return res.data;
+  },
+
+  async getTaskByCampaign(campaignId: number | string): Promise<any | null> {
+    try {
+      const res = await api.get(API_ENDPOINTS.TASKS.BY_CAMPAIGN(campaignId));
+      return res.data;
+    } catch {
+      return null;
+    }
   },
 };

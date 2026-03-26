@@ -102,7 +102,7 @@ const EditFeedPostPage = () => {
 
   if (loading) {
     return (
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <PageBanner pageName="Edit Post" />
         <div className="min-h-[50vh] flex items-center justify-center">
           <div className="text-zinc-500">Loading post...</div>
@@ -113,7 +113,7 @@ const EditFeedPostPage = () => {
 
   if (!post) {
     return (
-      <DanboxLayout header={2} footer={2}>
+      <DanboxLayout header={4} footer={2}>
         <PageBanner pageName="Edit Post" />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-red-500">Post not found</div>
@@ -128,7 +128,7 @@ const EditFeedPostPage = () => {
   }
 
   return (
-    <DanboxLayout header={2} footer={2}>
+    <DanboxLayout header={4} footer={2}>
       <PageBanner pageName="Edit Post" />
 
       <div className="bg-zinc-50 dark:bg-black min-h-screen py-12 md:py-20">

@@ -60,6 +60,9 @@ export const API_ENDPOINTS = {
     UPGRADE_TO_FUND_OWNER: (id: number | string) => `/api/users/${id}/upgrade-role`,
     UPGRADE_TO_FUND_DONOR: (id: number | string) => `/api/users/${id}/upgrade-to-fund-donor`,
     STAFF: "/api/users/staff",
+    EXPORT: "/api/users/export",
+    IMPORT: "/api/users/import",
+    IMPORT_TEMPLATE: "/api/users/import/template",
   },
   GOALS: {
     BASE: "/api/fundraising-goals",
@@ -105,6 +108,7 @@ export const API_ENDPOINTS = {
     BASE: "/api/admin/tasks",
     BY_STAFF: (staffId: number | string) => `/api/admin/tasks/staff/${staffId}`,
     REASSIGN: (taskId: number | string) => `/api/admin/tasks/${taskId}/reassign`,
+    BY_CAMPAIGN: (campaignId: number | string) => `/api/admin/tasks/campaign/${campaignId}`,
   },
   NOTIFICATIONS: {
     BASE: "/api/notifications",
@@ -112,5 +116,8 @@ export const API_ENDPOINTS = {
     LATEST: (userId: number | string) => `/api/notifications/user/${userId}/latest`,
     UNREAD_COUNT: (userId: number | string) => `/api/notifications/user/${userId}/unread-count`,
     MARK_AS_READ: (id: number | string) => `/api/notifications/${id}/read`,
+  },
+  USER_POST_SEEN: {
+    BASE: "/api/user-post-seen",
   },
 } as const;

@@ -3,8 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle,
-  MessageSquare, Filter, RefreshCw, Pin, Lock, LockOpen, PinOff, Flag,
-  // status toggle removed (PUBLISHED/DRAFT now read-only in table)
+  MessageSquare, RefreshCw, Pin, Lock, LockOpen, PinOff,
 } from 'lucide-react';
 import Link from 'next/link';
 import { feedPostService } from '@/services/feedPostService';
@@ -16,30 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 const STATUS_OPTIONS = ['ALL', 'PUBLISHED', 'DRAFT'];
 const TYPE_OPTIONS = ['ALL', 'GENERAL', 'CAMPAIGN'];
 const PAGE_SIZE = 15;
-
-function StatusPill({ status }: { status: string }) {
-  const base = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider';
-  switch (status) {
-    case 'PUBLISHED':
-      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B] animate-pulse" />Đã đăng</span>;
-    case 'DRAFT':
-      return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500" />Bản nháp</span>;
-    default:
-      return <span className={`${base} bg-slate-100 text-slate-500`}>{status}</span>;
-  }
-}
-
-function normalizeType(type: string) {
-  return type?.toUpperCase().includes('CAMPAIGN') ? 'CAMPAIGN' : 'GENERAL';
-}
-
-function TypePill({ type }: { type: string }) {
-  const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider';
-  const normalized = normalizeType(type);
-  return normalized === 'CAMPAIGN'
-    ? <span className={`${base} bg-blue-50 text-blue-700`}>Chiến dịch</span>
-    : <span className={`${base} bg-slate-100 text-slate-500`}>Chung</span>;
-}
 
 function formatDate(str: string) {
   return new Date(str).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -138,6 +113,8 @@ export default function AdminFeedPostsPage() {
     }
   };
 
+  const normalizeType = (type: string) => type?.toUpperCase().includes('CAMPAIGN') ? 'CAMPAIGN' : 'GENERAL';
+
   const filtered = useMemo(() => {
     return posts.filter((p) => {
       const matchSearch = !search ||
@@ -152,7 +129,6 @@ export default function AdminFeedPostsPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pagePosts = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
   const pinnedCount = posts.filter((p) => p.isPinned).length;
   const lockedCount = posts.filter((p) => p.isLocked).length;
 
@@ -160,238 +136,131 @@ export default function AdminFeedPostsPage() {
     processingId === id && processingAction === action;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-shrink-0">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <MessageSquare className="w-6 h-6 text-[#1A685B]" />
-            Quản lý bảng tin
-          </h1>
-        </div>
-        <button
-          onClick={loadPosts}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-3xl border-2 border-slate-100 text-sm font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all"
-        >
-          <RefreshCw className="w-4 h-4" />
+    <div className="flex flex-col flex-1 min-h-0 gap-1.5 p-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
+        <h1 className="text-base font-black text-slate-900 flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-[#1A685B]" />
+          Quản lý bảng tin
+        </h1>
+        <button onClick={loadPosts} className="flex items-center gap-1 px-3 py-1 rounded-xl border border-slate-100 text-xs font-bold text-slate-500 hover:bg-slate-50">
+          <RefreshCw className="w-3 h-3" />
           Làm mới
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
+      {/* Compact Stats */}
+      <div className="grid grid-cols-4 gap-1.5 flex-shrink-0">
         {[
           { label: 'Tổng bài viết', value: posts.length, color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100' },
           { label: 'Đã đăng', value: posts.filter((p) => p.status === 'PUBLISHED').length, color: 'text-[#1A685B]', bg: 'bg-[#1A685B]/5', border: 'border-[#1A685B]/10' },
           { label: 'Đang ghim', value: pinnedCount, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
           { label: 'Đang khóa', value: lockedCount, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
         ].map((stat) => (
-          <div key={stat.label} className={`${stat.bg} ${stat.border} rounded-2xl p-4 border shadow-sm`}>
-            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
-            <p className="text-xs text-slate-500 mt-1 font-bold">{stat.label}</p>
+          <div key={stat.label} className={`${stat.bg} ${stat.border} rounded-xl px-3 py-2 border flex items-center gap-2`}>
+            <p className={`text-xl font-black ${stat.color}`}>{stat.value}</p>
+            <p className="text-[10px] text-slate-500 font-bold leading-tight">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-3 flex-shrink-0">
-        <div className="relative group/search flex-[2] max-w-2xl w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/search:text-[#F84D43] transition-colors" />
+      {/* Compact Filter Bar */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Tìm kiếm theo tiêu đề, nội dung, tác giả..."
+            placeholder="Tìm kiếm..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            className="w-full bg-white border-2 border-slate-100 rounded-3xl pl-12 pr-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50"
+            className="w-full bg-white border border-slate-100 rounded-xl pl-8 pr-3 py-1.5 text-xs font-bold outline-none focus:ring-2 focus:ring-[#F84D43]/10 focus:border-[#F84D43] transition-all"
           />
         </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto flex-shrink-0">
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s === 'ALL'
-                  ? 'Tất cả trạng thái'
-                  : s === 'PUBLISHED'
-                    ? 'Đã đăng'
-                    : s === 'DRAFT'
-                      ? 'Bản nháp'
-                      : s}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-            className="w-full md:w-44 rounded-3xl border-2 border-slate-100 bg-white px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-[#F84D43]/5 focus:border-[#F84D43] transition-all shadow-xl shadow-slate-100/50 cursor-pointer appearance-none"
-            style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2003/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1.25rem center', backgroundSize: '1rem' }}
-          >
-            {TYPE_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {t === 'ALL' ? 'Tất cả loại' : t === 'GENERAL' ? 'Chung' : t === 'CAMPAIGN' ? 'Chiến dịch' : t}
-              </option>
-            ))}
-          </select>
-
-          {(search !== '' || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
-            <button
-              onClick={() => { setSearch(''); setStatusFilter('ALL'); setTypeFilter('ALL'); setCurrentPage(1); }}
-              className="px-6 py-3.5 rounded-3xl bg-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-200 hover:text-slate-900 transition-all ml-auto"
-            >
-              Xóa lọc
-            </button>
-          )}
-        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+          className="rounded-xl border border-slate-100 bg-white px-2 py-1.5 text-xs font-bold text-slate-700 cursor-pointer"
+        >
+          {STATUS_OPTIONS.map((s) => (
+            <option key={s} value={s}>{s === 'ALL' ? 'Tất cả' : s === 'PUBLISHED' ? 'Đã đăng' : s === 'DRAFT' ? 'Bản nháp' : s}</option>
+          ))}
+        </select>
+        <select
+          value={typeFilter}
+          onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+          className="rounded-xl border border-slate-100 bg-white px-2 py-1.5 text-xs font-bold text-slate-700 cursor-pointer"
+        >
+          {TYPE_OPTIONS.map((t) => (
+            <option key={t} value={t}>{t === 'ALL' ? 'Tất cả' : t === 'GENERAL' ? 'Chung' : t === 'CAMPAIGN' ? 'Chiến dịch' : t}</option>
+          ))}
+        </select>
+        {(search !== '' || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
+          <button onClick={() => { setSearch(''); setStatusFilter('ALL'); setTypeFilter('ALL'); setCurrentPage(1); }}
+            className="px-2 py-1.5 rounded-xl bg-slate-100 text-xs font-bold text-slate-600 hover:bg-slate-200">
+            Xóa lọc
+          </button>
+        )}
       </div>
 
-      {/* Table */}
-      <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/50 relative flex-1 min-h-0 overflow-hidden">
+      {/* Table - 80% height */}
+      <div className="flex flex-col rounded-2xl border border-slate-100 bg-white relative flex-1 overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
-            <Loader2 className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-
         {error && (
-          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center">
-            <AlertCircle className="h-10 w-10 text-red-500 mb-4" />
-            <p className="text-sm font-bold text-slate-600">{error}</p>
-            <button onClick={loadPosts} className="mt-4 text-red-500 text-sm font-black uppercase tracking-widest hover:text-red-600 transition-colors">Thử lại</button>
+          <div className="absolute inset-0 bg-white/60 z-10 flex flex-col items-center justify-center">
+            <AlertCircle className="h-8 w-8 text-red-500 mb-3" />
+            <p className="text-xs font-bold text-slate-600">{error}</p>
+            <button onClick={loadPosts} className="mt-3 text-red-500 text-xs font-bold hover:text-red-600">Thử lại</button>
           </div>
         )}
 
         <div className="h-full overflow-auto custom-scrollbar">
-          <table className="min-w-full text-sm border-separate border-spacing-0">
-            <thead className="sticky top-0 z-30 bg-slate-50">
+          <table className="min-w-full text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr className="text-left">
-                <th className="py-3.5 pl-8 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">STT</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Bài viết</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Tác giả</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Loại</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Trạng thái</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Flags</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Thống kê</th>
-                <th className="py-3.5 pr-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">Ngày tạo</th>
-                <th className="py-3.5 pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right border-b border-slate-100">Thao tác</th>
+                <th className="py-2 pl-6 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400">STT</th>
+                <th className="py-2 pr-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Bài viết</th>
+                <th className="py-2 pr-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {pagePosts.map((post, rowIndex) => (
-                <tr key={post.id} className={`h-[68px] group hover:bg-slate-50/30 transition-colors ${post.isPinned ? 'bg-orange-50/30' : ''}`}>
-                  <td className="py-2 pl-8 pr-4 text-slate-400 font-mono text-xs">
-                    {(currentPage - 1) * PAGE_SIZE + rowIndex + 1}.
-                  </td>
-                  <td className="py-2 pr-4 max-w-[220px]">
+                <tr key={post.id} className={`group hover:bg-slate-50/50 ${post.isPinned ? 'bg-orange-50/30' : ''}`}>
+                  <td className="py-2 pl-6 pr-3 text-slate-400 font-mono">{(currentPage - 1) * PAGE_SIZE + rowIndex + 1}.</td>
+                  <td className="py-2 pr-3">
                     <div className="flex items-start gap-1.5">
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate text-xs">
-                          {post.title || '(Không có tiêu đề)'}
+                        <div className="font-bold text-slate-900 truncate group-hover:text-[#F84D43]">{post.title || '(Không có tiêu đề)'}</div>
+                        <div className="text-slate-400 text-[11px] truncate mt-0.5">
+                          {post.author.name} · {post.likeCount} thích · {post.viewCount} xem
                         </div>
-                        <div className="text-slate-400 text-xs truncate mt-0.5 font-medium">{post.content.replace(/<[^>]+>/g, '').slice(0, 55)}...</div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         {post.isPinned && <Pin className="w-3 h-3 text-orange-500" />}
                         {post.isLocked && <Lock className="w-3 h-3 text-red-500" />}
                       </div>
                     </div>
                   </td>
-                  <td className="py-2 pr-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 flex-shrink-0">
-                        {post.author.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-slate-700 font-bold text-xs truncate max-w-[90px]">{post.author.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-2 pr-4"><TypePill type={post.type} /></td>
-                  <td className="py-2 pr-4">
-                    <StatusPill status={post.status} />
-                  </td>
-                  <td className="py-2 pr-4">
-                    {(post.flagCount ?? 0) > 0 ? (
-                      <Link href="/admin/flags" className="inline-flex items-center gap-1 text-xs text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full hover:bg-red-100 transition-colors">
-                        <Flag className="w-3 h-3" />
-                        {post.flagCount}
-                      </Link>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 text-xs text-slate-500 space-y-0.5">
-                    <div className="font-medium">{post.likeCount} likes · {post.replyCount} comments</div>
-                    <div>{post.viewCount} views</div>
-                  </td>
-                  <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">
-                    <button
-                      type="button"
-                      className="hover:text-[#1A685B] transition-colors"
-                      onClick={() => {
-                        setCreatedAtDetails({ postTitle: post.title ?? undefined, createdAt: post.createdAt });
-                        setCreatedAtOpen(true);
-                      }}
-                      aria-label="Xem chi tiết ngày tạo"
-                    >
-                      {formatDate(post.createdAt)}
-                    </button>
-                  </td>
-                  <td className="py-2 pr-8 text-right">
-                    <div className="flex justify-end gap-1 transition-all">
-                      {/* View */}
+                  <td className="py-2 pr-6 text-right">
+                    <div className="flex justify-end gap-0.5">
                       <Link href={`/post/${post.id}`} target="_blank"
-                        className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all" title="Xem bài viết">
-                        <Eye className="h-4 w-4" />
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-white transition-all" title="Xem">
+                        <Eye className="h-3.5 w-3.5" />
                       </Link>
-
-                      {/* Pin / Unpin */}
-                      <button
-                        onClick={() => handleTogglePin(post)}
-                        disabled={processingId === post.id}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-50 ${post.isPinned ? 'bg-orange-100 text-orange-600 hover:bg-orange-200' : 'text-slate-400 hover:text-orange-600 hover:bg-white hover:shadow-lg'}`}
-                        title={post.isPinned ? 'Bỏ ghim' : 'Ghim bài viết'}
-                      >
-                        {isProcessing(post.id, 'pin') ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : post.isPinned ? (
-                          <PinOff className="h-4 w-4" />
-                        ) : (
-                          <Pin className="h-4 w-4" />
-                        )}
+                      <button onClick={() => handleTogglePin(post)} disabled={processingId === post.id}
+                        className={`p-1.5 rounded-lg transition-all disabled:opacity-50 ${post.isPinned ? 'bg-orange-100 text-orange-600' : 'text-slate-400 hover:text-orange-600'}`}>
+                        {isProcessing(post.id, 'pin') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : post.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                       </button>
-
-                      {/* Lock / Unlock */}
-                      <button
-                        onClick={() => handleToggleLock(post)}
-                        disabled={processingId === post.id}
-                        className={`p-2 rounded-xl transition-all disabled:opacity-50 ${post.isLocked ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'text-slate-400 hover:text-red-600 hover:bg-white hover:shadow-lg'}`}
-                        title={post.isLocked ? 'Mở khóa' : 'Khóa bình luận'}
-                      >
-                        {isProcessing(post.id, 'lock') ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : post.isLocked ? (
-                          <LockOpen className="h-4 w-4" />
-                        ) : (
-                          <Lock className="h-4 w-4" />
-                        )}
+                      <button onClick={() => handleToggleLock(post)} disabled={processingId === post.id}
+                        className={`p-1.5 rounded-lg transition-all disabled:opacity-50 ${post.isLocked ? 'bg-red-100 text-red-600' : 'text-slate-400 hover:text-red-600'}`}>
+                        {isProcessing(post.id, 'lock') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : post.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
                       </button>
-
-                      {/* Delete */}
-                      <button
-                        onClick={() => handleDelete(post)}
-                        disabled={processingId === post.id}
-                        className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
-                        title="Xóa bài viết"
-                      >
-                        {isProcessing(post.id, 'delete') ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
+                      <button onClick={() => handleDelete(post)} disabled={processingId === post.id}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 transition-all disabled:opacity-50">
+                        {isProcessing(post.id, 'delete') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </button>
                     </div>
                   </td>
@@ -400,10 +269,10 @@ export default function AdminFeedPostsPage() {
 
               {!loading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-24 text-center">
+                  <td colSpan={3} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
-                      <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                        <MessageSquare className="h-8 w-8 text-slate-300" />
+                      <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                        <MessageSquare className="h-6 w-6 text-slate-300" />
                       </div>
                       <p className="font-bold text-slate-500">Không tìm thấy bài viết nào.</p>
                     </div>
@@ -414,64 +283,47 @@ export default function AdminFeedPostsPage() {
           </table>
         </div>
 
-        {/* Pagination Section - Always visible at bottom */}
-        <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-3 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-            Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} / {filtered.length} bài viết
+        {/* Pagination */}
+        <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-6 py-2 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-slate-400 uppercase">
+            Hiển thị {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} / {filtered.length} bài
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(p => p - 1)}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
-            >
-              <ChevronRight className="h-4 w-4 rotate-180" />
+          <div className="flex items-center gap-1">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}
+              className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-900 disabled:opacity-30">
+              <ChevronRight className="h-3.5 w-3.5 rotate-180" />
             </button>
-            <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                .map((p, i, arr) => (
-                  <div key={p} className="flex items-center">
-                    {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
-                    <button
-                      onClick={() => setCurrentPage(p)}
-                      className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${currentPage === p ? 'bg-slate-900 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}
-                    >
-                      {p}
-                    </button>
-                  </div>
-                ))}
-            </div>
-            <button
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(p => p + 1)}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-none"
-            >
-              <ChevronRight className="h-4 w-4" />
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .map((p, i, arr) => (
+                <div key={p} className="flex items-center">
+                  {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300 text-xs">...</span>}
+                  <button onClick={() => setCurrentPage(p)}
+                    className={`w-7 h-7 rounded-lg text-xs font-black transition-all ${currentPage === p ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                    {p}
+                  </button>
+                </div>
+              ))}
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}
+              className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-slate-900 disabled:opacity-30">
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </div>
 
       <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
-        <DialogContent className="max-w-[560px]">
+        <DialogContent className="max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Chi tiết ngày tạo</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             <div className="text-sm text-slate-600">
-              {createdAtDetails?.postTitle ? (
-                <span className="font-bold text-slate-900">Bài viết:</span>
-              ) : null}
+              {createdAtDetails?.postTitle ? <span className="font-bold text-slate-900">Bài viết: </span> : null}
               {createdAtDetails?.postTitle ?? '—'}
             </div>
-            <div className="text-sm text-slate-900 font-bold">
-              {createdAtDetails?.createdAt
-                ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : '—'}
-            </div>
-            <div className="text-xs text-slate-500 break-all">
-              Raw: {createdAtDetails?.createdAt ?? '—'}
+            <div className="text-sm font-bold text-slate-900">
+              {createdAtDetails?.createdAt ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
             </div>
           </div>
         </DialogContent>

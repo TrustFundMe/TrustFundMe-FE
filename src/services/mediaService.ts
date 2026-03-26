@@ -133,10 +133,8 @@ export const mediaService = {
     },
 
     async getMediaByPostId(postId: number): Promise<MediaUploadResponse[]> {
-        const res = await fetch(`/api/media/posts/${postId}`, { credentials: "include" });
-        if (!res.ok) throw new Error(`getMediaByPostId failed: ${res.status}`);
-        const data = await res.json();
-        return Array.isArray(data) ? data : (data.content ?? []);
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/posts/${postId}`);
+        return res.data;
     },
 
     async getMediaByExpenditureId(expenditureId: number): Promise<MediaUploadResponse[]> {

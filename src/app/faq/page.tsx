@@ -1,15 +1,13 @@
+import DanboxLayout from "@/layout/DanboxLayout";
 import { Faq2, Faq3 } from "@/components/Faq";
 import PageBanner from "@/components/PageBanner";
-import DanboxLayout from "@/layout/DanboxLayout";
 
-const CausesPage = () => {
+export default function FaqPage() {
   return (
     <DanboxLayout>
-      <PageBanner pageName="Faq" />
+      <PageBanner pageName="Câu hỏi thường gặp" />
       <Faq3 />
       <Faq2 />
     </DanboxLayout>
   );
-};
-
-export default CausesPage;
+}

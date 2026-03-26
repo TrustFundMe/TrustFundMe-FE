@@ -12,6 +12,7 @@ import UserChatModal from '@/components/chat/UserChatModal';
 import { chatService, Conversation } from '@/services/chatService';
 import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
+import { userService, UserInfo } from '@/services/userService';
 
 export default function CampaignsPage() {
   const { user } = useAuth();
@@ -112,9 +113,72 @@ export default function CampaignsPage() {
   // States for enriched data (goals, images)
   const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
   const [enriching, setEnriching] = useState<Record<number, boolean>>({});
+  const [campaignStaffMap, setCampaignStaffMap] = useState<Record<number, string>>({});
+
+  // Fetch all staff names once
+  useEffect(() => {
+    const loadStaffs = async () => {
+      try {
+        const res = await userService.getAllStaffs();
+        if (res.success && res.data) {
+          const map: Record<number, string> = {};
+          res.data.forEach((s: UserInfo) => { if (s.id) map[s.id] = s.fullName || s.email || `Staff #${s.id}`; });
+          setStaffNameMap(map);
+        }
+      } catch (err) {
+        console.error('Failed to load staff list', err);
+      }
+    };
+    loadStaffs();
+  }, []);
+
+  const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
 
   // paginatedCampaigns is directly the filtered results since we fetch by page
   const paginatedCampaigns = useMemo(() => filteredCampaigns, [filteredCampaigns]);
+
+  // Separate effect: fetch tasks for pending campaigns and store staffId -> campaign map
+  useEffect(() => {
+    const pending = paginatedCampaigns.filter(c =>
+      c.id && ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(c.status?.toUpperCase())
+    );
+    if (pending.length === 0) return;
+
+    Promise.all(pending.map(async (c) => {
+      if (!c.id) return;
+      try {
+        const task = await campaignService.getTaskByCampaign(c.id);
+        if (task?.staffId) {
+          setCampaignStaffMap(prev => {
+            if (prev[c.id!]) return prev; // already resolved
+            return { ...prev, [c.id!]: task.staffId };
+          });
+        }
+      } catch { }
+    }));
+  }, [paginatedCampaigns]);
+
+  // When staffNameMap is ready, resolve staffId -> name
+  useEffect(() => {
+    if (Object.keys(staffNameMap).length === 0) return;
+    setCampaignStaffMap(prev => {
+      const next: Record<number, string> = {};
+      let changed = false;
+      Object.entries(prev).forEach(([cid, val]) => {
+        const id = Number(cid);
+        if (typeof val === 'number') {
+          // val is staffId, resolve to name
+          const name = staffNameMap[val] || `Staff #${val}`;
+          next[id] = name;
+          changed = true;
+        } else {
+          // already a name string
+          next[id] = val;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [staffNameMap]);
 
   useEffect(() => {
     const enrichVisible = async () => {

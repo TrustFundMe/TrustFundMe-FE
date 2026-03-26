@@ -102,13 +102,17 @@ function ExpenditureItemRow({ item }: { item: ExpenditureItem }) {
 }
 
 /* ══════════════════════════════ ExpenditureRound ══════════════════════════════ */
-function ExpenditureRound({ exp: initialExp, index, campaignType }:
-    { exp: Expenditure; index: number; campaignType?: string | null }) {
+function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle }:
+    { exp: Expenditure; index: number; campaignType?: string | null; onModalToggle?: (open: boolean) => void }) {
     const [open, setOpen] = useState(index === 0);
     const [exp, setExp] = useState<Expenditure>(initialExp);
     const [items, setItems] = useState<ExpenditureItem[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    
+    useEffect(() => {
+        onModalToggle?.(showRejectModal);
+    }, [showRejectModal, onModalToggle]);
     const [approving, setApproving] = useState(false);
     const { user } = useAuth();
 
@@ -248,7 +252,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType }:
 }
 
 /* ══════════════════════════════ CampaignDetail ══════════════════════════════ */
-function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
+function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; onModalToggle?: (open: boolean) => void }) {
     const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
     const [ownerName, setOwnerName] = useState<string>(`Owner #${campaign.fundOwnerId}`);
     const [loading, setLoading] = useState(true);
@@ -327,14 +331,18 @@ function CampaignDetail({ campaign }: { campaign: CampaignDto }) {
                         <FileText className="h-8 w-8 text-gray-300" />
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Danh sách trống</p>
                     </div>
-                ) : expenditures.map((exp, i) => <ExpenditureRound key={exp.id} exp={exp} index={i} campaignType={campaign.type} />)}
+                ) : expenditures.map((exp, i) => <ExpenditureRound key={exp.id} exp={exp} index={i} campaignType={campaign.type} onModalToggle={onModalToggle} />)}
             </div>
         </div>
     );
 }
 
 /* ══════════════════════════════ Main ExpenditureTab ══════════════════════════════ */
-export default function ExpenditureTab() {
+interface ExpenditureTabProps {
+    onModalToggle?: (open: boolean) => void;
+}
+
+export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
     const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
     const [filtered, setFiltered] = useState<CampaignDto[]>([]);
     const [selected, setSelected] = useState<CampaignDto | null>(null);
@@ -517,7 +525,7 @@ export default function ExpenditureTab() {
             {/* Main Content Detail */}
             <div className="flex-1 overflow-hidden flex flex-col border border-gray-100 rounded-2xl shadow-sm bg-white p-4">
                 {selected ? (
-                    <CampaignDetail key={selected.id} campaign={selected} />
+                    <CampaignDetail key={selected.id} campaign={selected} onModalToggle={onModalToggle} />
                 ) : (
                     <div className="flex flex-col h-full items-center justify-center opacity-20">
                         <FileText className="h-10 w-10" />
