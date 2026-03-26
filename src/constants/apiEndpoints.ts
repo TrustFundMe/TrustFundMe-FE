@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
     UNBAN: (id: number | string) => `/api/users/${id}/unban`,
     UPGRADE_TO_FUND_OWNER: (id: number | string) => `/api/users/${id}/upgrade-role`,
     UPGRADE_TO_FUND_DONOR: (id: number | string) => `/api/users/${id}/upgrade-to-fund-donor`,
+    STAFF: "/api/users/staff",
   },
   GOALS: {
     BASE: "/api/fundraising-goals",

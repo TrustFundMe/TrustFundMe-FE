@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import ChatSidebar from '@/components/staff/chat/ChatSidebar';
-import ChatMessages from '@/components/staff/chat/ChatMessages';
-import ChatDetails from '@/components/staff/chat/ChatDetails';
-import type { Conversation, MessageItem, Appointment, MediaItem } from '@/components/staff/chat/types';
+import ChatSidebar from '@/components/chat/ChatSidebar';
+import ChatMessages from '@/components/chat/ChatMessages';
+import ChatDetails from '@/components/chat/ChatDetails';
+import type { Conversation, MessageItem, Appointment, MediaItem } from '@/components/chat/types';
 import { chatService } from '@/services/chatService';
 import { userService } from '@/services/userService';
 import { campaignService } from '@/services/campaignService';
@@ -148,9 +148,9 @@ export default function ChatWithDonorPage() {
 
         // Fetch first image from media-service if needed
         try {
-          const firstImage = await mediaService.getCampaignFirstImage(activeConversation.campaignId!);
+          const firstImage = await mediaService.getCampaignFirstImage(Number(activeConversation.campaignId));
           if (firstImage && firstImage.url) {
-            campaign.coverImage = firstImage.url;
+            campaign.coverImageUrl = firstImage.url;
           }
         } catch (mediaError) {
           console.error("Failed to fetch campaign media:", mediaError);

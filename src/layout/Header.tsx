@@ -10,6 +10,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { Menu } from "lucide-react";
 
 const Header = ({ header }: { header?: number }) => {
+  if (header === 0) return null;
   useStickyHeader();
   const headers = { 1: Header1, 3: Header3, 4: Header4 };
   const HeaderComponent = headers[header as keyof typeof headers] || Header3;
@@ -291,7 +292,7 @@ const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
             <input
               type="search"
               className="main-search-input"
-                  placeholder="Tìm kiếm..."
+              placeholder="Tìm kiếm..."
             />
           </div>
         </form>

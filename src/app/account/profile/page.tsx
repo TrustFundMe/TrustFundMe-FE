@@ -3,245 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useToast } from '@/components/ui/Toast';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import DanboxLayout from '@/layout/DanboxLayout';
 import Link from 'next/link';
 import {
   User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
-  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag,
+  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag, Search, Box
 } from 'lucide-react';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { appointmentService, AppointmentScheduleDto, AppointmentStatus } from '@/services/appointmentService';
+import { appointmentService, AppointmentScheduleDto } from '@/services/appointmentService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { BankAccountDto } from '@/types/bankAccount';
 import { flagService, FlagDto } from '@/services/flagService';
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<AppointmentStatus, { label: string; pill: string }> = {
-  PENDING: { label: 'Chờ xác nhận', pill: 'bg-amber-100 text-amber-700' },
-  CONFIRMED: { label: 'Đã xác nhận', pill: 'bg-blue-100 text-blue-700' },
-  COMPLETED: { label: 'Hoàn thành', pill: 'bg-green-100 text-green-700' },
-  CANCELLED: { label: 'Đã hủy', pill: 'bg-red-100 text-red-500' },
-};
-
-const TABS: { key: 'ALL' | AppointmentStatus; label: string }[] = [
-  { key: 'ALL', label: 'Tất cả' },
-  { key: 'PENDING', label: 'Chờ xác nhận' },
-  { key: 'CONFIRMED', label: 'Đã xác nhận' },
-  { key: 'COMPLETED', label: 'Hoàn thành' },
-  { key: 'CANCELLED', label: 'Đã hủy' },
-];
-
-function fmt(iso: string) {
-  const d = new Date(iso);
-  return {
-    date: d.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }),
-    time: d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-  };
-}
-
-// ─── Appointment Modal ───────────────────────────────────────────────────────
-
-interface ModalProps {
-  appointments: AppointmentScheduleDto[];
-  loading: boolean;
-  error: string;
-  onClose: () => void;
-  onRetry: () => void;
-}
-
-function AppointmentModal({ appointments, loading, error, onClose, onRetry }: ModalProps) {
-  const [tab, setTab] = useState<'ALL' | AppointmentStatus>('ALL');
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', h);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
-
-  const list = (tab === 'ALL' ? appointments : appointments.filter(a => a.status === tab))
-    .slice()
-    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
-      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ maxHeight: '90vh', animation: 'apptSlideUp .25s cubic-bezier(.34,1.56,.64,1)' }}
-      >
-        {/* ── Header ── */}
-        <div className="relative flex items-center justify-between px-7 pt-6 pb-16"
-          style={{ background: 'linear-gradient(135deg,#ff5e14,#ff8338)' }}>
-          <div>
-            <h2 className="text-xl font-bold text-white">Lịch Hẹn Của Tôi</h2>
-            <p className="text-sm text-white/70 mt-0.5">Lịch hẹn giữa bạn và nhân viên hỗ trợ</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 transition-colors"
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
-
-          {/* Wave layer 1 – semi-transparent, higher crest */}
-          <svg
-            className="absolute bottom-0 left-0 w-full"
-            viewBox="0 0 1200 60"
-            preserveAspectRatio="none"
-            style={{ display: 'block', height: '56px' }}
-          >
-            <path
-              d="M0,25 C200,60 400,0 600,28 C800,58 1000,0 1200,28 L1200,60 L0,60 Z"
-              fill="rgba(255,255,255,0.4)"
-            />
-          </svg>
-
-          {/* Wave layer 2 – solid white */}
-          <svg
-            className="absolute bottom-0 left-0 w-full"
-            viewBox="0 0 1200 50"
-            preserveAspectRatio="none"
-            style={{ display: 'block', height: '38px' }}
-          >
-            <path
-              d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z"
-              fill="white"
-            />
-          </svg>
-        </div>
-
-        {/* White cover — kills any orange bleed from waves */}
-        <div className="bg-white w-full" style={{ height: '6px', marginTop: '-6px', position: 'relative', zIndex: 1 }} />
-
-        {/* ── Filter tabs ── */}
-        <div className="flex flex-wrap gap-2 px-7 pt-3 pb-3 border-b border-gray-100 bg-white relative z-10">
-          {TABS.map(t => {
-            const count = t.key === 'ALL' ? appointments.length : appointments.filter(a => a.status === t.key).length;
-            const active = tab === t.key;
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 whitespace-nowrap"
-                style={active
-                  ? { background: 'linear-gradient(135deg,#ff5e14,#ff8338)', color: '#fff' }
-                  : { background: '#f3f4f6', color: '#6b7280' }}
-              >
-                {t.label}
-                <span
-                  className="px-1.5 py-0.5 rounded-full font-bold text-[10px]"
-                  style={active ? { background: 'rgba(255,255,255,0.25)', color: '#fff' } : { background: '#e5e7eb', color: '#374151' }}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Content ── */}
-        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-4">
-
-          {/* Loading */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="h-10 w-10 animate-spin text-[#ff5e14]" />
-              <p className="text-gray-500 text-sm">Đang tải lịch hẹn...</p>
-            </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <p className="text-gray-500 text-sm">{error}</p>
-              <button
-                onClick={onRetry}
-                className="px-6 py-2.5 rounded-full text-sm font-semibold text-white"
-                style={{ background: 'linear-gradient(135deg,#ff5e14,#ff8338)' }}
-              >
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {/* Empty */}
-          {!loading && !error && list.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 gap-3 text-center">
-              <div className="h-16 w-16 rounded-2xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,#ff5e14,#ff8338)' }}>
-                <CalendarClock className="h-8 w-8 text-white" />
-              </div>
-              <p className="font-semibold text-gray-700 text-base">Chưa có lịch hẹn nào</p>
-              <p className="text-sm text-gray-400">
-                {tab === 'ALL' ? 'Bạn chưa có lịch hẹn nào với nhân viên.' : `Không có lịch hẹn ở trạng thái "${STATUS_CONFIG[tab as AppointmentStatus]?.label}".`}
-              </p>
-            </div>
-          )}
-
-          {/* Appointment Cards */}
-          {!loading && !error && list.map((appt) => {
-            const cfg = STATUS_CONFIG[appt.status];
-            const start = fmt(appt.startTime);
-            const end = fmt(appt.endTime);
-            return (
-              <div
-                key={appt.id}
-                className="rounded-xl border border-gray-200 bg-white p-5 hover:shadow-md transition-shadow duration-200"
-              >
-                {/* Row 1: date + status */}
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[15px] font-bold text-gray-800 capitalize">{start.date}</p>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${cfg.pill}`}>
-                    {cfg.label}
-                  </span>
-                </div>
-
-                {/* Row 2: time */}
-                <p className="text-[#ff5e14] font-semibold text-sm mb-3">
-                  {start.time} — {end.time}
-                </p>
-
-                {/* Row 3: staff / location / purpose */}
-                <div className="space-y-1.5 text-sm text-gray-600">
-                  {appt.staffName && (
-                    <p><span className="text-gray-400 font-medium">Nhân viên:</span> {appt.staffName}</p>
-                  )}
-                  {appt.location && (
-                    <p><span className="text-gray-400 font-medium">Địa điểm:</span> {appt.location}</p>
-                  )}
-                  {appt.purpose && (
-                    <p className="text-gray-500 italic">{appt.purpose}</p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-
-      </div>
-
-      <style jsx global>{`
-        @keyframes apptSlideUp {
-          from { opacity:0; transform: translateY(24px) scale(.97); }
-          to   { opacity:1; transform: translateY(0)    scale(1);   }
-        }
-      `}</style>
-    </div>
-  );
-}
 
 // ─── Flags Modal ─────────────────────────────────────────────────────────────
 
@@ -267,8 +41,8 @@ function FlagsModal({
   }, [onClose]);
 
   const campaignFlags = flags.filter(f => f.campaignId != null);
-  const postFlags     = flags.filter(f => f.postId != null);
-  const list          = tab === 'CAMPAIGN' ? campaignFlags : postFlags;
+  const postFlags = flags.filter(f => f.postId != null);
+  const list = tab === 'CAMPAIGN' ? campaignFlags : postFlags;
 
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -389,12 +163,6 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  // Appointment state
-  const [showAppts, setShowAppts] = useState(false);
-  const [appts, setAppts] = useState<AppointmentScheduleDto[]>([]);
-  const [apptsLoading, setApptsLoading] = useState(false);
-  const [apptsError, setApptsError] = useState('');
-
   // Flags state
   const [showFlags, setShowFlags] = useState(false);
   const [myFlags, setMyFlags] = useState<FlagDto[]>([]);
@@ -447,21 +215,6 @@ export default function ProfilePage() {
     if (user?.id) fetchBankData();
   }, [user?.id]);
 
-  const fetchAppts = useCallback(async () => {
-    if (!user?.id) return;
-    setApptsLoading(true);
-    setApptsError('');
-    try {
-      const data = await appointmentService.getByDonor(user.id);
-      setAppts(data);
-    } catch {
-      setApptsError('Không thể tải lịch hẹn. Vui lòng thử lại.');
-    } finally {
-      setApptsLoading(false);
-    }
-  }, [user?.id]);
-
-  const openAppts = () => { setShowAppts(true); fetchAppts(); };
 
   const fetchFlags = useCallback(async () => {
     setFlagsLoading(true);
@@ -530,63 +283,91 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ── Validation ──
+    const trFirstName = firstName.trim();
+    const trLastName = lastName.trim();
+    if (!trFirstName || !trLastName) {
+      toast('Vui lòng nhập đầy đủ Họ và Tên', 'error');
+      return;
+    }
+
+    const trPhone = phone.trim();
+    if (trPhone) {
+      const phoneRegex = /^0\d{9}$/;
+      if (!phoneRegex.test(trPhone)) {
+        toast('Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0', 'error');
+        return;
+      }
+    }
+
+    // Bank info validation (matching campaign creation step 4)
+    const trBankCode = bankCode.trim();
+    const trAccNum = accountNumber.trim();
+    const trAccName = accountHolderName.trim();
+
+    const hasAnyBankInfo = trBankCode || trAccNum || trAccName;
+    if (hasAnyBankInfo) {
+      if (!trBankCode) { toast('Vui lòng nhập mã ngân hàng', 'error'); return; }
+      if (trBankCode.length < 2 || trBankCode.length > 50) { toast('Mã ngân hàng phải từ 2-50 ký tự', 'error'); return; }
+
+      if (!trAccNum) { toast('Vui lòng nhập số tài khoản', 'error'); return; }
+      if (!/^\d+$/.test(trAccNum)) { toast('Số tài khoản chỉ được chứa chữ số', 'error'); return; }
+      if (trAccNum.length < 6 || trAccNum.length > 50) { toast('Số tài khoản phải từ 6-50 chữ số', 'error'); return; }
+
+      if (!trAccName) { toast('Vui lòng nhập tên chủ tài khoản', 'error'); return; }
+      if (trAccName.length < 6 || trAccName.length > 255) { toast('Tên chủ tài khoản phải từ 6-255 ký tự', 'error'); return; }
+    }
+
     setSaving(true);
     try {
-      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      if (!user?.id) { toast('Thiếu thông tin người dùng, vui lòng đăng nhập lại', 'error'); return; }
+      if (!user?.id) throw new Error('Thiếu thông tin người dùng, vui lòng đăng nhập lại');
 
-      // 1. Update Profile (Base User)
-      try {
-        const profileRes = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), {
-          fullName: fullName || undefined,
-          phoneNumber: phone.trim()
-        });
-        updateUser({ fullName: profileRes.data.fullName ?? fullName, phoneNumber: profileRes.data.phoneNumber ?? phone.trim() });
-      } catch (err: any) {
-        console.error('Profile update 403/error:', err);
-        const detail = err.response?.data?.message || err.response?.data?.error || err.message;
-        throw new Error(`Lỗi lưu hồ sơ: ${detail}`);
-      }
+      // 1. Update Profile (User Info)
+      const fullName = `${trFirstName} ${trLastName}`.trim();
+      const profileRes = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), {
+        fullName,
+        phoneNumber: trPhone || undefined
+      });
+      updateUser({
+        fullName: profileRes.data.fullName ?? fullName,
+        phoneNumber: profileRes.data.phoneNumber ?? trPhone
+      });
 
-      // 2. Handle Bank Account update / create
-      try {
+      // 2. Handle Bank Account (Update or Create)
+      if (hasAnyBankInfo) {
         const bankPayload = {
-          bankCode: bankCode.trim(),
-          accountNumber: accountNumber.trim(),
-          accountHolderName: accountHolderName.trim()
+          bankCode: trBankCode,
+          accountNumber: trAccNum,
+          accountHolderName: trAccName.toUpperCase() // Always uppercase for banking
         };
 
-        if (bankCode.trim() || accountNumber.trim() || accountHolderName.trim()) {
-          if (bankAccount) {
-            const updatedBank = await bankAccountService.update(bankAccount.id, bankPayload);
-            setBankAccount(updatedBank);
-          } else {
-            const newBank = await bankAccountService.create(bankPayload);
-            setBankAccount(newBank);
-          }
+        if (bankAccount) {
+          const updatedBank = await bankAccountService.update(bankAccount.id, bankPayload);
+          setBankAccount(updatedBank);
+        } else {
+          const newBank = await bankAccountService.create(bankPayload);
+          setBankAccount(newBank);
         }
-      } catch (bankErr: any) {
-        console.error('Bank update 403/error:', bankErr);
-        const detail = bankErr.response?.data?.message || bankErr.response?.data?.error || bankErr.message;
-        toast(`Hồ sơ đã lưu nhưng cập nhật tài khoản ngân hàng thất bại: ${detail}`, 'error');
-        setIsEditing(false);
-        return;
       }
 
       toast('Cập nhật hồ sơ và thông tin ngân hàng thành công', 'success');
       setIsEditing(false);
     } catch (err: any) {
+      console.error('Submit failed:', err);
       const detail = err.response?.data?.message || err.response?.data?.error || err.message;
-      toast(detail || 'Đã xảy ra lỗi không mong muốn', 'error');
-    } finally { setSaving(false); }
+      toast(detail || 'Đã xảy ra lỗi khi lưu thông tin', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!user) return null;
 
   // Quick access "Lịch Hẹn" button
   const LichHenBtn = () => (
-    <button
-      onClick={openAppts}
+    <Link
+      href="/account/schedule"
       className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 group w-full text-left"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10 group-hover:bg-[#ff5e14]/15 transition-colors">
@@ -594,7 +375,7 @@ export default function ProfilePage() {
       </div>
       <span className="text-sm font-medium text-gray-700 flex-1">Lịch Hẹn</span>
       <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#ff5e14] transition-colors" />
-    </button>
+    </Link>
   );
 
   // Quick access "Tố Cáo" button
@@ -612,271 +393,166 @@ export default function ProfilePage() {
   );
 
   return (
-    <ProtectedRoute requireVerified={true}>
-      <DanboxLayout header={2} footer={2}>
-        <section className="about-section section-padding">
-          <div className="container">
-            <div className="row">
-              <div className="col-12">
+    <div className="h-full bg-[#f8fafe] flex items-center justify-center overflow-hidden p-6">
+      {/* ── Main Single Card ── */}
+      <div className="w-full max-w-4xl bg-white rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden flex flex-col md:flex-row h-fit animate-in fade-in zoom-in duration-500">
 
-                {/* ── Profile Card – wider ── */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 md:p-10 max-w-3xl mx-auto">
+        {/* LEFT SECTION: Basic Info & Avatar */}
+        <div className="md:w-2/5 p-10 bg-gray-50/50 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
+          <div className="relative mb-6">
+            <AvatarUploader
+              onUpload={handleAvatarUpload}
+              onError={(m) => { if (m?.trim()) toast(m, 'error'); }}
+              maxSizeMB={5}
+              acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
+            >
+              <div className="relative cursor-pointer group">
+                <Avatar className="h-32 w-32 ring-8 ring-white shadow-xl group-hover:scale-105 transition-transform duration-300">
+                  <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
+                  <AvatarFallback className="bg-white text-3xl font-bold text-gray-400">
+                    {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-1 right-1 bg-[#ff715e] p-2.5 rounded-full shadow-lg border-4 border-white">
+                  <Pencil className="h-4.5 w-4.5 text-white" />
+                </div>
+              </div>
+            </AvatarUploader>
+          </div>
 
-                  {!isEditing ? (
-                    <>
-                      {/* Edit button */}
-                      <div className="flex justify-end mb-6">
-                        <button type="button" onClick={handleEdit}
-                          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                          <Pencil className="w-4 h-4 mr-2" /> Chỉnh sửa
-                        </button>
-                      </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
+            {user.fullName || 'Thành viên'}
+          </h2>
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">
+            Hội viên TrustFundMe
+          </p>
 
-                      {/* Avatar */}
-                      <div className="mb-8">
-                        <p className="text-sm font-medium text-gray-500 mb-3">Ảnh đại diện</p>
-                        <Avatar className="h-28 w-28 border-2 border-gray-200 shadow-sm">
-                          <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
-                          <AvatarFallback className="bg-gray-100 text-2xl font-bold text-gray-500">
-                            {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
+          <div className="w-full space-y-4">
+            {!isEditing && (
+              <button
+                onClick={handleEdit}
+                className="w-full py-3.5 bg-gray-900 text-white rounded-2xl text-sm font-bold shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                Sửa hồ sơ
+              </button>
+            )}
+          </div>
+        </div>
 
-                      {/* Info */}
-                      <div className="divide-y divide-gray-100">
-                        {[
-                          { label: 'Họ và tên', value: user.fullName || '—' },
-                          { label: 'Email', value: user.email || '—', icon: <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
-                          { label: 'Số điện thoại', value: user.phoneNumber || '—', icon: <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
-                          { label: 'Trạng thái email', value: user.verified ? 'Đã xác minh' : 'Chưa xác minh', icon: <ShieldCheck className="w-4 h-4 inline mr-2 text-[#ff5e14]" /> },
-                        ].map(row => (
-                          <div key={row.label} className="flex flex-col sm:flex-row sm:items-center py-4 gap-1">
-                            <span className="text-sm text-gray-500 min-w-[160px]">{row.icon}{row.label}</span>
-                            <span className="text-gray-800 font-medium">{row.value}</span>
-                          </div>
-                        ))}
-                      </div>
+        {/* RIGHT SECTION: Details & Bank */}
+        <div className="flex-1 p-10 flex flex-col justify-center">
+          {isEditing ? (
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Họ</label>
+                  <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Tên</label>
+                  <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                </div>
+              </div>
 
-                      {/* Bank Account */}
-                      <div className="mt-8 pt-6 border-t border-gray-100">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
-                            <Landmark className="w-4 h-4 text-[#ff5e14]" /> Tài khoản ngân hàng
-                          </h3>
-                        </div>
-                        <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                          {isBankLoading ? (
-                            <div className="flex items-center gap-2 text-gray-400 text-sm">
-                              <Loader2 className="w-4 h-4 animate-spin" /> Đang tải thông tin ngân hàng...
-                            </div>
-                          ) : bankAccount ? (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Ngân hàng</p>
-                                  <p className="text-sm font-bold text-gray-800">{bankAccount.bankCode}</p>
-                                </div>
-                                <div className="text-right">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                                    <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> ĐÃ XÁC THỰC
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Chủ tài khoản</p>
-                                  <p className="text-sm font-black text-gray-900 uppercase">{bankAccount.accountHolderName}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Số tài khoản</p>
-                                  <p className="text-lg font-mono font-black text-[#ff5e14] tracking-widest">{bankAccount.accountNumber}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-gray-400 italic">Chưa liên kết tài khoản ngân hàng. Nhấn "Chỉnh sửa" để thêm.</div>
-                          )}
-                        </div>
-                      </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Số điện thoại</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" placeholder="+84 ..." />
+              </div>
 
-                      {/* Quick access */}
-                      <div className="mt-8 pt-6 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Truy cập nhanh</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <Link href="/account/campaigns"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <FolderOpen className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">Chiến dịch của tôi</span>
-                          </Link>
-                          <Link href="/account/impact"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <Heart className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">Tác động của bạn</span>
-                          </Link>
-                          <LichHenBtn />
-                          <MyFlagsBtn />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <form onSubmit={handleSubmit}>
-                      {/* Avatar upload */}
-                      <div className="mb-8">
-                          <label className="block text-sm font-medium text-gray-600 mb-3">Ảnh đại diện</label>
-                        <div className="flex items-center gap-6">
-                          <AvatarUploader
-                            onUpload={handleAvatarUpload}
-                            onError={(m) => { if (m?.trim()) toast(m, 'error'); }}
-                            maxSizeMB={5}
-                            acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
-                          >
-                            <Avatar className="h-28 w-28 cursor-pointer border-2 border-gray-200 shadow-sm hover:opacity-80 transition-opacity">
-                              <AvatarImage src={avatarPreview ?? undefined} alt="Avatar" />
-                              <AvatarFallback className="bg-gray-100 text-2xl font-bold text-gray-500">
-                                {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                          </AvatarUploader>
-                          <p className="text-sm text-gray-400">Nhấn vào ảnh để tải lên.<br />Hỗ trợ JPG, PNG, WebP hoặc GIF. Tối đa 5MB.</p>
-                        </div>
-                      </div>
+              <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
+                <h3 className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                  <Landmark className="h-4 w-4" /> THÔNG TIN NGÂN HÀNG
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <input type="text" placeholder="Mã ngân hàng" value={bankCode} onChange={e => setBankCode(e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                  <input type="text" placeholder="Số tài khoản" value={accountNumber} onChange={e => setAccountNumber(e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                </div>
+                <input type="text" placeholder="Tên chủ thẻ" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none uppercase" />
+              </div>
 
-                      {/* Name */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-600 mb-2">
-                            <User className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Họ
-                          </label>
-                          <input id="firstName" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
-                        </div>
-                        <div>
-                          <label htmlFor="lastName" className="block text-sm font-medium text-gray-600 mb-2">Tên</label>
-                          <input id="lastName" type="text" value={lastName} onChange={e => setLastName(e.target.value)} required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
-                        </div>
-                      </div>
-
-                      {/* Email */}
-                      <div className="mb-6">
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-600 mb-2">
-                          <Mail className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Email
-                        </label>
-                        <input id="email" type="email" value={email} disabled
-                          className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed" />
-                        <p className="mt-1 text-xs text-gray-400">Email không thể thay đổi</p>
-                      </div>
-
-                      {/* Phone */}
-                      <div className="mb-8">
-                        <label htmlFor="phone" className="block text-sm font-medium text-gray-600 mb-2">
-                          <Phone className="w-4 h-4 inline mr-2 text-[#ff5e14]" />Số điện thoại
-                        </label>
-                        <input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+84 123 456 789"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ff5e14] focus:border-[#ff5e14] outline-none transition-all" />
-                      </div>
-
-                      {/* Bank Fields */}
-                      <div className="mb-8 p-6 bg-orange-50/30 rounded-2xl border border-orange-100">
-                        <h3 className="text-sm font-bold text-orange-800 mb-6 flex items-center gap-2">
-                          <Landmark className="w-4 h-4" /> Thông tin tài khoản ngân hàng
-                        </h3>
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Ngân hàng / Mã</label>
-                            <input
-                              type="text"
-                              value={bankCode}
-                              onChange={e => setBankCode(e.target.value)}
-                              placeholder="Ví dụ: MB Bank, Vietcombank"
-                              className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-bold"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Số tài khoản</label>
-                              <input
-                                type="text"
-                                value={accountNumber}
-                                onChange={e => setAccountNumber(e.target.value)}
-                                placeholder="038 xxxx xxxx"
-                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-mono font-bold"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[11px] font-bold text-gray-400 uppercase mb-2">Tên chủ tài khoản</label>
-                              <input
-                                type="text"
-                                value={accountHolderName}
-                                onChange={e => setAccountHolderName(e.target.value)}
-                                placeholder="NGUYEN VAN A"
-                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#ff5e14] outline-none text-sm font-bold uppercase"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex justify-end gap-3 mb-8">
-                        <button type="button"
-                          onClick={() => { const p = user.fullName?.split(' ') || []; setFirstName(p[0] || ''); setLastName(p.slice(1).join(' ') || ''); setPhone(user.phoneNumber || ''); setIsEditing(false); }}
-                          className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                          <X className="w-4 h-4 inline mr-1.5" />Hủy
-                        </button>
-                        <button type="submit" disabled={saving}
-                          className="px-6 py-2.5 bg-[#ff5e14] text-white rounded-lg text-sm font-semibold hover:bg-[#e04e08] transition-colors disabled:opacity-50">
-                          {saving ? <Loader2 className="w-4 h-4 inline mr-1.5 animate-spin" /> : <Save className="w-4 h-4 inline mr-1.5" />}
-                          {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                        </button>
-                      </div>
-
-                      {/* Quick access (edit mode) */}
-                      <div className="pt-6 border-t border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-600 mb-4">Truy cập nhanh</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <Link href="/account/campaigns"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <FolderOpen className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">Chiến dịch của tôi</span>
-                          </Link>
-                          <Link href="/account/impact"
-                            className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-colors">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10">
-                              <Heart className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-                            </div>
-                            <span className="text-sm font-medium text-gray-700">Tác động của bạn</span>
-                          </Link>
-                          <LichHenBtn />
-                          <MyFlagsBtn />
-                        </div>
-                      </div>
-                    </form>
-                  )}
+              <div className="flex gap-3 pt-6">
+                <button type="submit" disabled={saving} className="flex-1 bg-[#ff715e] text-white py-4 rounded-2xl text-sm font-bold shadow-xl shadow-red-100 hover:bg-[#e04332] transition-all disabled:opacity-50">
+                  {saving ? <Loader2 className="h-5 w-5 animate-spin mx-auto text-white" /> : 'Lưu tất cả'}
+                </button>
+                <button type="button" onClick={() => setIsEditing(false)} className="px-8 py-4 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all">
+                  Hủy
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-10">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400">Email cá nhân</p>
+                    <p className="text-sm font-bold text-gray-700">{user.email}</p>
+                  </div>
                 </div>
 
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500">
+                    <Phone className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400">Số điện thoại</p>
+                    <p className="text-sm font-bold text-gray-700">{user.phoneNumber || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-500">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-gray-400">Xác minh tài khoản</p>
+                    <p className="text-sm font-bold text-gray-700">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Summary Area */}
+              <div className="pt-8 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold text-gray-400 flex items-center gap-2">
+                    <Landmark className="h-3.5 w-3.5" /> THÔNG TIN THANH TOÁN
+                  </h3>
+                  {bankAccount && <span className="text-[10px] font-black text-green-500 bg-green-50 px-2.5 py-1 rounded-full">ACTIVE</span>}
+                </div>
+
+                {bankAccount ? (
+                  <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden flex items-center justify-between">
+                    <div className="relative z-10">
+                      <p className="text-[10px] font-bold text-white/40 mb-1">{bankAccount.bankCode}</p>
+                      <p className="text-base font-mono tracking-widest mb-3">{bankAccount.accountNumber}</p>
+                      <p className="text-[10px] font-bold uppercase">{bankAccount.accountHolderName}</p>
+                    </div>
+                    <div className="h-10 w-10 flex items-center justify-center bg-white/10 rounded-full">
+                      <Landmark className="h-5 w-5 text-white/50" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-2xl p-6 border border-dashed border-gray-200 text-center">
+                    <p className="text-xs text-gray-400 italic mb-3">Chưa có thông tin ngân hàng</p>
+                    <button onClick={handleEdit} className="text-xs font-bold text-[#ff715e] hover:underline">Thêm ngay</button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </section>
-      </DanboxLayout>
+          )}
+        </div>
+      </div>
 
-      {showAppts && (
-        <AppointmentModal
-          appointments={appts}
-          loading={apptsLoading}
-          error={apptsError}
-          onClose={() => setShowAppts(false)}
-          onRetry={fetchAppts}
-        />
-      )}
+      {/* ── Flags Modal ── */}
       {showFlags && (
         <FlagsModal
           flags={myFlags}
@@ -884,6 +560,6 @@ export default function ProfilePage() {
           onClose={() => setShowFlags(false)}
         />
       )}
-    </ProtectedRoute>
+    </div>
   );
 }
