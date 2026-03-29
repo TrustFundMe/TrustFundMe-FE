@@ -296,7 +296,8 @@ header .header-left {
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Mobile menu open - hide header */
+/* Updated: 2026-03-29 19:26 MS */
+/*CSS Table Of Content Ends Here*/
 .mobile-menu-open #header-sticky,
 body:has(.offcanvas__overlay.overlay-open) #header-sticky,
 .offcanvas__overlay.overlay-open ~ * #header-sticky {
@@ -2047,3 +2048,5 @@ nextjs-portal {
   .array-button .array-prev { width: 45px; height: 45px; line-height: 45px; }
   .array-button .array-next { width: 45px; height: 45px; line-height: 45px; }
 }
+
+
