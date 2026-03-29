@@ -81,7 +81,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
         <div id={`campaign-${campaign.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
             <div className="flex flex-col md:flex-row">
                 {/* Campaign Image */}
-                <div className="relative w-full md:w-64 h-48 md:h-auto overflow-hidden">
+                <div className="relative w-full md:w-56 h-40 md:h-auto overflow-hidden">
                     <Image
                         src={withFallbackImage((campaign.coverImageUrl || campaign.coverImage) as string, '/assets/img/campaign/1.png')}
                         alt={campaign.title}
@@ -95,7 +95,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                 </div>
 
                 {/* Campaign Info */}
-                <div className="flex-1 p-6 flex flex-col justify-between">
+                <div className="flex-1 p-4 md:p-5 flex flex-col justify-between">
                     <div>
                         <div className="flex justify-between items-start mb-2">
                             <span className="text-sm font-medium text-orange-600 uppercase tracking-wider">
@@ -137,12 +137,12 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                             </div>
                         ) : !isRejected ? (
                             <>
-                                <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+                                <p className="text-gray-600 text-sm line-clamp-1 mb-3">
                                     {campaign.description}
                                 </p>
 
                                 {/* Progress Bar */}
-                                <div className="mb-4">
+                                <div className="mb-2">
                                     <div className="flex justify-between text-sm mb-1">
                                         <span className="font-semibold text-gray-900">
                                             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign.balance)}
@@ -172,7 +172,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                         )}
                     </div>
 
-                    <div className="flex flex-wrap gap-3 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-2">
                         {isRejected ? (
                             <>
                                 <button
