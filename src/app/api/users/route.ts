@@ -26,24 +26,45 @@ export async function GET(request: NextRequest) {
         const response = await fetch(beUrl, {
             method: "GET",
             headers: headers,
+        }).catch(err => {
+            console.error("Fetch error:", err);
+            return null;
         });
 
-        if (!response.ok) {
-            const error = await response
-                .json()
-                .catch(() => ({ message: "Failed to fetch users" }));
+        if (!response) {
             return NextResponse.json(
-                { error: error.message || "Failed to fetch users" },
+                { error: "Không thể kết nối đến máy chủ backend (localhost:8080). Vui lòng kiểm tra lại server backend." },
+                { status: 503 }
+            );
+        }
+
+        if (!response.ok) {
+            const body = await response.text();
+            let errorMessage = "Failed to fetch users";
+            try {
+                const errorJson = JSON.parse(body);
+                errorMessage = errorJson.error || errorJson.message || errorMessage;
+            } catch (e) {
+                // If not JSON, use standard error or peek at HTML if short
+                if (body.includes("<!DOCTYPE html>") || body.includes("<html>")) {
+                    errorMessage = `Backend error (${response.status}): ${response.statusText}`;
+                } else {
+                    errorMessage = body || errorMessage;
+                }
+            }
+            
+            return NextResponse.json(
+                { error: errorMessage },
                 { status: response.status }
             );
         }
 
         const data = await response.json();
         return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching users:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "Internal server error: " + (error?.message || "Unknown error") },
             { status: 500 }
         );
     }

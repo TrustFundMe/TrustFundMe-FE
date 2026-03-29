@@ -13,8 +13,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <SidebarProvider defaultOpen={true} className="overflow-hidden">
         <AdminSidebar />
         <SidebarInset className="h-screen flex flex-col overflow-hidden max-h-[calc(100vh-18px)]">
-          <AdminHeader />
-          <main className="flex-1 overflow-y-auto min-h-0 flex flex-col px-6 pb-6 pt-6 custom-scrollbar">
+          <div className="hidden">
+            <AdminHeader />
+          </div>
+          <main className="flex-1 overflow-hidden min-h-0 flex flex-col px-6 pb-6 pt-6 custom-scrollbar">
             {children}
           </main>
         </SidebarInset>
