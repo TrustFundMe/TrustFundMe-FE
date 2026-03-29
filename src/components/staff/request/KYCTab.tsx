@@ -71,7 +71,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
       setLoading(true);
 
       const [usersResult, kycData] = await Promise.all([
-        userService.getAllUsers(),
+        userService.getAllUsers(0, 1000),
         kycService.getAll().catch(() => ({ content: [] as KycResponse[] }))
       ]);
 
@@ -81,8 +81,8 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
         kycMapNew.set(kyc.userId, kyc);
       });
 
-      if (usersResult.success && usersResult.data) {
-        const regularUsers = usersResult.data.filter(user => user.role !== 'STAFF' && user.role !== 'ADMIN');
+      if (usersResult.success && usersResult.data && usersResult.data.content) {
+        const regularUsers = usersResult.data.content.filter(user => user.role !== 'STAFF' && user.role !== 'ADMIN');
 
         const allUsersWithKyc: UserWithKyc[] = regularUsers.map(user => {
           const kyc = kycMapNew.get(user.id);
@@ -168,8 +168,8 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
               key={s}
               onClick={() => setFilter(s)}
               className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${filter === s
-                  ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
-                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                 }`}
             >
               {s === 'ALL' ? 'Tất cả' : s === 'NO_KYC' ? 'Chưa KYC' : statusConfig[s as KycStatus]?.label || s}
@@ -275,11 +275,10 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                             setShowKycForm(true);
                             onModalToggle?.(true);
                           }}
-                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
-                            kycStatus === 'REJECTED'
+                          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${kycStatus === 'REJECTED'
                               ? 'bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white'
                               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           <Eye className="h-3 w-3" />
                           {kycStatus === 'REJECTED' ? 'Nhập lại' : 'Xem chi tiết'}

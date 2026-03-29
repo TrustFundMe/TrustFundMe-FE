@@ -53,7 +53,7 @@ function AccountSidebar() {
             {/* Back Arrow at Top */}
             <div className="pt-8 pb-10 flex justify-center">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push('/')}
                     className="p-1 text-white/80 hover:text-white transition-colors"
                 >
                     <ArrowLeft className="h-6 w-6" />

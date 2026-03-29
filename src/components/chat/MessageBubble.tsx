@@ -38,7 +38,14 @@ export default function MessageBubble({ item }: MessageBubbleProps) {
     if (item.fromMe) {
         return (
             <div className="flex justify-end mb-2">
-                <div className={`${base} shadow-sm border border-red-100`} style={{ backgroundColor: '#dc2626' }}>
+                <div
+                    className={`${base} text-white shadow-sm`}
+                    style={{
+                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                        borderRadius: '20px',
+                        borderBottomRightRadius: '4px'
+                    }}
+                >
                     {images.length > 0 && (
                         <div className="mb-2 space-y-2">
                             {images.map((imgUrl, idx) => (
@@ -66,26 +73,23 @@ export default function MessageBubble({ item }: MessageBubbleProps) {
                             ))}
                         </div>
                     )}
-                    {item.text && <p className="text-white">{contentText}</p>}
-                    <div className="text-[10px] mt-1 text-right text-red-100 opacity-80">{item.time}</div>
+                    {item.text && <span className="block text-white leading-relaxed">{contentText}</span>}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex justify-start mb-2 items-end gap-2">
-            {item.senderAvatar ? (
-                <img src={item.senderAvatar} alt={item.senderName || 'User'} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-            ) : (
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0" style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}>
-                    {(item.senderName?.trim() || 'U').charAt(0).toUpperCase()}
-                </div>
-            )}
-            <div className={`${base} bg-white shadow-sm border border-gray-100`}>
-                {item.senderName && !item.fromMe && (
-                    <p className="text-[10px] font-semibold mb-1 text-gray-700">{item.senderName}</p>
-                )}
+        <div className="flex justify-start mb-2">
+            <div
+                className={`${base} text-[#1e293b] shadow-sm`}
+                style={{
+                    backgroundColor: '#f1f5f9',
+                    borderRadius: '20px',
+                    borderBottomLeftRadius: '4px',
+                    border: '1px dashed #cbd5e1'
+                }}
+            >
                 {images.length > 0 && (
                     <div className="mb-2 space-y-2">
                         {images.map((imgUrl, idx) => (
@@ -113,8 +117,7 @@ export default function MessageBubble({ item }: MessageBubbleProps) {
                         ))}
                     </div>
                 )}
-                {item.text && <p className="text-gray-900">{contentText}</p>}
-                <div className="text-[10px] mt-1" style={{ color: '#5f6777' }}>{item.time}</div>
+                {item.text && <span className="block leading-relaxed">{contentText}</span>}
             </div>
         </div>
     );

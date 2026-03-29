@@ -1,9 +1,3 @@
-
-import "@css/swiper-bundle.min.css";
-import "@css/animate.css";
-import "@css/magnific-popup.css";
-import "@css/meanmenu.css";
-import "@css/nice-select.css";
 import "@css/main.css";
 import type { Metadata } from "next";
 import { Chelsea_Market, Inter, Playfair_Display } from "next/font/google";

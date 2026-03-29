@@ -77,8 +77,8 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
             setLoadingCampaigns(true);
             try {
                 // Fetch campaigns
-                const campaignData = await campaignService.getAll();
-                const approvedCampaigns = campaignData.filter(c => c.status === 'APPROVED');
+                const campaignResp = await campaignService.getAll(0, 1000);
+                const approvedCampaigns = (campaignResp.content || []).filter((c: CampaignDto) => c.status === 'APPROVED');
                 setCampaigns(approvedCampaigns);
 
                 // Fetch users for approved campaigns
@@ -86,9 +86,9 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                 const userMap = new Map<number, UserInfo>();
 
                 // Fetch all users and filter
-                const allUsersResult = await userService.getAllUsers();
-                if (allUsersResult.success && allUsersResult.data) {
-                    allUsersResult.data.forEach(user => {
+                const allUsersResult = await userService.getAllUsers(0, 1000);
+                if (allUsersResult.success && allUsersResult.data && allUsersResult.data.content) {
+                    allUsersResult.data.content.forEach(user => {
                         if (userIds.includes(user.id)) {
                             userMap.set(user.id, user);
                         }
@@ -129,8 +129,8 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
         e.preventDefault();
 
         // Convert Date objects to ISO strings for API
-        const startTimeISO = form.startTime instanceof Date ? form.startTime.toISOString() : form.startTime;
-        const endTimeISO = form.endTime instanceof Date ? form.endTime.toISOString() : form.endTime;
+        const startTimeISO = (form.startTime as any) instanceof Date ? (form.startTime as any).toISOString() : form.startTime;
+        const endTimeISO = (form.endTime as any) instanceof Date ? (form.endTime as any).toISOString() : form.endTime;
 
         if (!form.donorId || !startTimeISO || !endTimeISO) {
             toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
@@ -258,7 +258,7 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                 dateFormat="dd/MM/yyyy HH:mm"
                                 placeholderText="dd/mm/yyyy --:--"
                                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
-                                minDate={form.startTime ? new Date(form.startTime) : null}
+                                minDate={form.startTime ? new Date(form.startTime) : undefined}
                                 required
                             />
                         </div>

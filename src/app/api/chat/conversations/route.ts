@@ -10,12 +10,16 @@ export async function GET(request: NextRequest) {
     try {
         const accessToken = request.cookies.get("access_token")?.value;
 
+        // Support both cookie and Authorization header
+        const authHeader = request.headers.get("Authorization");
+        const token = accessToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
         };
 
-        if (accessToken) {
-            headers["Authorization"] = `Bearer ${accessToken}`;
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${BE_API_URL}/api/conversations`, {
@@ -58,12 +62,16 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const accessToken = request.cookies.get("access_token")?.value;
 
+        // Support both cookie and Authorization header
+        const authHeader = request.headers.get("Authorization");
+        const token = accessToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
         };
 
-        if (accessToken) {
-            headers["Authorization"] = `Bearer ${accessToken}`;
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${BE_API_URL}/api/conversations`, {

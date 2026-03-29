@@ -89,19 +89,17 @@ export default function ChatMessages({
                 <div className="p-3 border-b bg-white flex items-center justify-between flex-shrink-0" style={{ borderColor: '#e5e7eb' }}>
                     <button
                         onClick={onShowDetails}
-                        className="flex items-center cursor-pointer hover:opacity-90 focus:outline-none"
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-90 focus:outline-none"
                         title="Xem thông tin khách hàng"
                     >
                         {activeConversationAvatar ? (
-                            <img src={activeConversationAvatar} alt={activeConversationName} className="w-9 h-9 rounded-full mr-2 object-cover" />
+                            <img src={activeConversationAvatar} alt={activeConversationName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
                         ) : (
-                            <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold mr-2" style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}>
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center font-semibold flex-shrink-0" style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}>
                                 {activeConversationName.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className="text-left">
-                            <p className="text-sm font-semibold" style={{ color: '#dc2626' }}>{activeConversationName}</p>
-                        </div>
+                        <span className="text-sm font-semibold leading-none" style={{ color: '#dc2626' }}>{activeConversationName}</span>
                     </button>
                 </div>
             )}
@@ -130,12 +128,12 @@ export default function ChatMessages({
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.98 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="relative w-[440px] mx-auto h-48 rounded-[2.8rem] overflow-hidden shadow-2xl mb-10 group"
+                                    className="relative w-full h-48 rounded-[2.8rem] overflow-hidden shadow-2xl mb-10 group"
                                 >
                                     {/* Background Image */}
                                     <div
                                         className="absolute inset-0 bg-cover bg-center transition-transform duration-[2.5s] group-hover:scale-110"
-                                        style={{ backgroundImage: `url(${campaignInfo.coverImage || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800&auto=format&fit=crop'})` }}
+                                        style={{ backgroundImage: `url(${campaignInfo.coverImageUrl || 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800&auto=format&fit=crop'})` }}
                                     >
                                         {/* Dark Gradient Overlay for better text readability */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -177,9 +175,55 @@ export default function ChatMessages({
                                 </div>
                             ) : (
                                 <>
-                                    {messages.map((m) => (
-                                        <MessageBubble key={m.id} item={m} />
-                                    ))}
+                                    {messages.map((m, idx) => {
+                                        // Hiện time separator nếu cách tin nhắn trước > 1 giờ
+                                        const prev = messages[idx - 1];
+                                        let showSeparator = false;
+                                        let separatorLabel = '';
+                                        if (prev) {
+                                            // item.time là string dạng 'vừa xong', 'X phút trước', etc.
+                                            // messageItem có senderId — dùng thứ tự index làm proxy cho thời gian
+                                            // Thực tế: so sánh raw timestamp nếu có, fallback dùng time string
+                                            const rawTime = (m as any).rawTime as string | undefined;
+                                            const prevRawTime = (prev as any).rawTime as string | undefined;
+                                            if (rawTime && prevRawTime) {
+                                                const diff = new Date(rawTime).getTime() - new Date(prevRawTime).getTime();
+                                                if (diff >= 60 * 60 * 1000) {
+                                                    showSeparator = true;
+                                                    const d = new Date(rawTime);
+                                                    const now = new Date();
+                                                    const isToday = d.toDateString() === now.toDateString();
+                                                    separatorLabel = isToday
+                                                        ? `Hôm nay ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+                                                        : `${d.getDate()}/${d.getMonth() + 1} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                                                }
+                                            }
+                                        } else {
+                                            // First message — show its time as a separator
+                                            const rawTime = (m as any).rawTime as string | undefined;
+                                            if (rawTime) {
+                                                showSeparator = true;
+                                                const d = new Date(rawTime);
+                                                const now = new Date();
+                                                const isToday = d.toDateString() === now.toDateString();
+                                                separatorLabel = isToday
+                                                    ? `Hôm nay ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+                                                    : `${d.getDate()}/${d.getMonth() + 1} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+                                            }
+                                        }
+                                        return (
+                                            <div key={m.id}>
+                                                {showSeparator && (
+                                                    <div className="flex items-center justify-center my-3">
+                                                        <span className="text-[11px] text-gray-400 px-3 py-0.5 rounded-full" style={{ backgroundColor: '#f1f5f9' }}>
+                                                            {separatorLabel}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <MessageBubble item={m} />
+                                            </div>
+                                        );
+                                    })}
                                 </>
                             )}
                             <div ref={messagesEndRef} />

@@ -51,13 +51,14 @@ export default function StaffRequestPage() {
         tasks.filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED').map(t => t.targetId)
       );
 
-      const allCampaigns = await campaignService.getAll();
+      const allCampaignsResp = await campaignService.getAll(0, 1000);
+      const allCampaigns = allCampaignsResp.content || [];
 
       // Fetch users for campaign owners
-      const allUsersResult = await userService.getAllUsers();
+      const allUsersResult = await userService.getAllUsers(0, 1000);
       const userMap = new Map<number, UserInfo>();
-      if (allUsersResult.success && allUsersResult.data) {
-        allUsersResult.data.forEach(user => {
+      if (allUsersResult.success && allUsersResult.data && allUsersResult.data.content) {
+        allUsersResult.data.content.forEach(user => {
           userMap.set(user.id, user);
         });
       }
@@ -186,37 +187,37 @@ export default function StaffRequestPage() {
       {/* Folder Tabs Headers */}
       {!isModalOpen && (
         <div className="flex items-end px-6 gap-2 h-14">
-        {[
-          { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
-          { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
-          { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
-          { id: 'KYC', label: 'Xác thực người dùng (KYC)', icon: ShieldCheck },
-          { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
-        ].map((tab) => {
-          const Icon = (tab as any).icon || Shield;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
-                ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
-                : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
-                }`}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className={`h-4 w-4 ${isActive ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                <span className="whitespace-nowrap">{tab.label}</span>
-                {tab.count !== undefined && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
-                    {tab.count}
-                  </span>
-                )}
-              </div>
-              {isActive && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
-            </button>
-          );
-        })}
+          {[
+            { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
+            { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
+            { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
+            { id: 'KYC', label: 'Xác thực người dùng (KYC)', icon: ShieldCheck },
+            { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
+          ].map((tab) => {
+            const Icon = (tab as any).icon || Shield;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
+                  ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                  : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
+                  }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                  <span className="whitespace-nowrap">{tab.label}</span>
+                  {tab.count !== undefined && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </div>
+                {isActive && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
+              </button>
+            );
+          })}
         </div>
       )}
 

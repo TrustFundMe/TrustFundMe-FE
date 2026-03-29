@@ -1,21 +1,22 @@
 'use client';
 
 
-import { ChevronLeft, ChevronRight, Heart, LayoutGrid, Loader2, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, LayoutGrid, Loader2, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
 import MyCampaignCard from '@/components/account/MyCampaignCard';
-import UserChatModal from '@/components/chat/UserChatModal';
-import { chatService, Conversation } from '@/services/chatService';
+import { chatService } from '@/services/chatService';
+import { useRouter } from 'next/navigation';
 import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 import { userService, UserInfo } from '@/services/userService';
 
 export default function CampaignsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -26,11 +27,6 @@ export default function CampaignsPage() {
   const itemsPerPage = 6;
   const { toast } = useToast();
 
-  // Chat Modal State
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDto | null>(null);
-  const [existingConversation, setExistingConversation] = useState<Conversation | null>(null);
-  const [isCheckingChat, setIsCheckingChat] = useState(false);
 
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const targetId = searchParams?.get('id');
@@ -119,7 +115,7 @@ export default function CampaignsPage() {
   useEffect(() => {
     const loadStaffs = async () => {
       try {
-        const res = await userService.getAllStaffs();
+        const res = await userService.getAllStaff();
         if (res.success && res.data) {
           const map: Record<number, string> = {};
           res.data.forEach((s: UserInfo) => { if (s.id) map[s.id] = s.fullName || s.email || `Staff #${s.id}`; });
@@ -140,7 +136,7 @@ export default function CampaignsPage() {
   // Separate effect: fetch tasks for pending campaigns and store staffId -> campaign map
   useEffect(() => {
     const pending = paginatedCampaigns.filter(c =>
-      c.id && ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(c.status?.toUpperCase())
+      c.id && ['PENDING', 'PENDING_APPROVAL', 'PENDING_REVIEW'].includes(c.status?.toUpperCase() || '')
     );
     if (pending.length === 0) return;
 
@@ -229,8 +225,7 @@ export default function CampaignsPage() {
   }, [searchTerm]);
 
   const handleChatClick = async (campaign: CampaignDto) => {
-    setSelectedCampaign(campaign);
-    setIsCheckingChat(true);
+    if (!user?.id) return;
 
     try {
       console.log(`[Campaigns] Checking chat for campaign ${campaign.id}...`);
@@ -238,18 +233,20 @@ export default function CampaignsPage() {
 
       if (res.success && res.data) {
         console.log(`[Campaigns] Found existing conversation: ${res.data.id}`);
-        setExistingConversation(res.data);
+        router.push(`/account/chat?conversationId=${res.data.id}`);
       } else {
-        console.log(`[Campaigns] No conversation found (Status: ${res.isNotFound ? '404' : 'Error'}).`);
-        setExistingConversation(null);
+        console.log(`[Campaigns] No conversation found, creating new...`);
+        const createRes = await chatService.createConversation(user.id, campaign.id);
+        if (createRes.success && createRes.data) {
+          console.log(`[Campaigns] Created new conversation: ${createRes.data.id}`);
+          router.push(`/account/chat?conversationId=${createRes.data.id}`);
+        } else {
+          toast('Không thể tạo cuộc trò chuyện.', 'error');
+        }
       }
-      setIsChatOpen(true);
     } catch (error) {
       console.error('[Campaigns] Error checking conversation:', error);
-      setExistingConversation(null);
-      setIsChatOpen(true);
-    } finally {
-      setIsCheckingChat(false);
+      toast('Đã xảy ra lỗi khi mở trò chuyện.', 'error');
     }
   };
 
@@ -308,6 +305,8 @@ export default function CampaignsPage() {
                     <MyCampaignCard
                       key={campaign.id}
                       campaign={campaign}
+                      assignedReviewerName={campaign.id ? campaignStaffMap[campaign.id] : undefined}
+                      hasStaff={!!(campaign.id && campaignStaffMap[campaign.id])}
                       onChatClick={() => {
                         console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
                         handleChatClick(campaign);
@@ -386,20 +385,6 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      {
-        selectedCampaign && (
-          <UserChatModal
-            isOpen={isChatOpen}
-            onClose={() => {
-              setIsChatOpen(false);
-              setSelectedCampaign(null);
-              setExistingConversation(null);
-            }}
-            campaign={selectedCampaign}
-            initialConversation={existingConversation}
-          />
-        )
-      }
     </>
   );
 }

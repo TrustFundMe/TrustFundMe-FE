@@ -2,12 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Settings, Eye, Edit, BarChart, MessageSquare, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Eye, Edit, BarChart, MessageSquare, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { CampaignDto } from '@/types/campaign';
-import { useToast } from '@/components/ui/Toast';
-import UserChatModal from '@/components/chat/UserChatModal';
 import { withFallbackImage } from '@/lib/image';
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, ModalTitle } from '@/components/ui/modal';
 import Image from 'next/image';
@@ -15,15 +12,15 @@ import Image from 'next/image';
 interface MyCampaignCardProps {
     campaign: CampaignDto;
     assignedReviewerName?: string;
+    /** True when a staff member has been assigned to this campaign */
+    hasStaff?: boolean;
     onChatClick: (campaign: CampaignDto) => void;
 }
 
-const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, onChatClick }) => {
+const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, hasStaff, onChatClick }) => {
     const targetAmount = campaign.activeGoal?.targetAmount || 0;
     const progress = targetAmount > 0 ? Math.min(100, (campaign.balance / targetAmount) * 100) : 0;
 
-    const { toast } = useToast();
-    const router = useRouter();
     const handleChatClick = (e: React.MouseEvent) => {
         e.preventDefault();
         onChatClick(campaign);
@@ -222,25 +219,17 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                                         Sửa
                                     </Link>
                                 )}
-                                <button
-                                    onClick={(e) => {
-                                        if (isDisabled) {
-                                            toast('Chiến dịch đã bị vô hiệu hóa, không thể nhắn tin.', 'error');
-                                            return;
-                                        }
-                                        if (isPending) {
-                                            toast('Chiến dịch đang trong quá trình xét duyệt, chưa có nhân viên tiếp nhận. Vui lòng nhắn tin sau.', 'info');
-                                            return;
-                                        }
-                                        handleChatClick(e);
-                                    }}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border ${isDisabled || isPending
-                                        ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
-                                        : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
-                                >
-                                    <MessageSquare className="w-4 h-4" />
-                                    Nhắn tin
-                                </button>
+                                {isPending && hasStaff && (
+                                    <button
+                                        onClick={(e) => {
+                                            handleChatClick(e);
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium border bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                        Nhắn tin
+                                    </button>
+                                )}
                             </>
                         )}
                     </div>

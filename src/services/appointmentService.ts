@@ -49,6 +49,39 @@ export const appointmentService = {
     },
 
     async create(payload: CreateAppointmentRequest): Promise<AppointmentScheduleDto> {
+        try {
+            const storedUser = localStorage.getItem('be_user');
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                let existingAppts: AppointmentScheduleDto[] = [];
+
+                if (user.role && user.role.includes('ROLE_STAFF')) {
+                    const resApi = await api.get<AppointmentScheduleDto[]>(API_ENDPOINTS.APPOINTMENTS.BY_STAFF(user.id));
+                    existingAppts = resApi.data || [];
+                } else {
+                    const resApi = await api.get<AppointmentScheduleDto[]>(API_ENDPOINTS.APPOINTMENTS.BY_DONOR(user.id));
+                    existingAppts = resApi.data || [];
+                }
+
+                const newStart = new Date(payload.startTime).getTime();
+
+                for (const appt of existingAppts) {
+                    if (appt.status === 'CANCELLED') continue;
+
+                    const existingStart = new Date(appt.startTime).getTime();
+                    const diffHours = (existingStart - newStart) / (1000 * 60 * 60);
+
+                    if (diffHours >= 0 && diffHours <= 5) {
+                        throw new Error(`Bạn đã có một lịch hẹn khác vào lúc ${new Date(appt.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ngày ${new Date(appt.startTime).toLocaleDateString('vi-VN')}. Không thể tạo lịch mới đè lên khoảng 5 tiếng sắp tới!`);
+                    }
+                }
+            }
+        } catch (error: any) {
+            if (error.message && error.message.includes('khoảng 5 tiếng sắp tới')) {
+                throw error;
+            }
+        }
+
         const res = await api.post<AppointmentScheduleDto>(API_ENDPOINTS.APPOINTMENTS.BASE, payload);
         return res.data;
     },

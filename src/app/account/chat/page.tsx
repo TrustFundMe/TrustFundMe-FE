@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatMessages from '@/components/chat/ChatMessages';
 import ChatDetails from '@/components/chat/ChatDetails';
+import ScheduleFormModal from '@/components/chat/ScheduleFormModal';
 import type { Conversation, MessageItem, Appointment, MediaItem } from '@/components/chat/types';
 import { chatService } from '@/services/chatService';
 import { userService } from '@/services/userService';
@@ -31,11 +33,14 @@ export default function AccountChatPage() {
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+    const [showScheduleForm, setShowScheduleForm] = useState(false);
     const [detectedScheduleText, setDetectedScheduleText] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const hasFetchedRef = useRef<boolean>(false);
     const { user } = useAuth();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+    const autoSelectedRef = useRef<boolean>(false);
 
     // Connect WebSocket on mount
     useEffect(() => {
@@ -74,10 +79,25 @@ export default function AccountChatPage() {
                                 }
                             }
 
+                            // Fetch latest message preview
+                            let lastMessage = 'Bắt đầu cuộc trò chuyện...';
+                            try {
+                                const msgResult = await chatService.getMessagesByConversationId(conv.id);
+                                if (msgResult.success && msgResult.data && msgResult.data.length > 0) {
+                                    const latest = msgResult.data[msgResult.data.length - 1];
+                                    const rawContent: string = latest.content || latest.message || '';
+                                    // Strip media payload (format: text|||imageUrls|||videoUrls)
+                                    const textOnly = rawContent.split('|||')[0].trim();
+                                    lastMessage = textOnly || 'Đã gửi media';
+                                }
+                            } catch (err) {
+                                console.error(`Failed to fetch messages for conv ${conv.id}:`, err);
+                            }
+
                             return {
                                 id: conv.id.toString(),
                                 name: staff?.fullName || `Staff ${conv.staffId}`,
-                                lastMessage: 'Nhấn để xem cuộc trò chuyện',
+                                lastMessage,
                                 time: conv.lastMessageAt ? formatTimeAgo(conv.lastMessageAt) : '',
                                 avatar: staff?.avatarUrl,
                                 unread: 0,
@@ -90,8 +110,55 @@ export default function AccountChatPage() {
                     );
 
                     setConversations(mappedConversations);
-                    if (mappedConversations.length > 0 && !activeId) {
+
+                    // Handle query params AFTER conversations are set
+                    const convId = searchParams.get('conversationId');
+                    const campaignId = searchParams.get('campaignId');
+
+                    if (convId) {
+                        const found = mappedConversations.find(c => c.id === convId);
+                        if (found) {
+                            setActiveId(convId);
+                            autoSelectedRef.current = true;
+                        }
+                    } else if (campaignId) {
+                        // Find conversation by campaignId
+                        const found = mappedConversations.find(c => c.campaignId?.toString() === campaignId);
+                        if (found) {
+                            setActiveId(found.id);
+                            autoSelectedRef.current = true;
+                        } else {
+                            // Create new conversation for this campaign
+                            try {
+                                const createResult = await chatService.createConversationByCampaign(
+                                    Number(campaignId)
+                                );
+                                if (createResult.success && createResult.data) {
+                                    // Add new conversation to list
+                                    const newConv = {
+                                        id: createResult.data.id.toString(),
+                                        name: 'Staff',
+                                        lastMessage: 'Nhấn để xem cuộc trò chuyện',
+                                        time: '',
+                                        avatar: undefined,
+                                        unread: 0,
+                                        staffId: createResult.data.staffId,
+                                        fundOwnerId: createResult.data.fundOwnerId,
+                                        campaignId: createResult.data.campaignId,
+                                        campaignTitle: undefined,
+                                    };
+                                    setConversations(prev => [newConv, ...prev]);
+                                    setActiveId(newConv.id);
+                                    autoSelectedRef.current = true;
+                                }
+                            } catch (err) {
+                                console.error("Failed to create conversation:", err);
+                            }
+                        }
+                    } else if (mappedConversations.length > 0 && !autoSelectedRef.current) {
+                        // Không có query params → tự động mở conversation đầu tiên
                         setActiveId(mappedConversations[0].id);
+                        autoSelectedRef.current = true;
                     }
                 }
             } catch (error) {
@@ -176,18 +243,21 @@ export default function AccountChatPage() {
                         videoUrls?: string[];
                     }
                     const mappedMessages: MessageItem[] = (result.data as ApiMessage[])
-                        .filter((msg) => msg.senderId !== 0)
                         .map((msg) => {
-                            const fromMe = user?.id && msg.senderId === Number(user.id);
+                            const isBot = msg.senderId === 0;
+                            const fromMe = !isBot && user?.id && msg.senderId === Number(user.id);
                             return {
                                 id: msg.id.toString(),
                                 text: msg.content || msg.message || '',
                                 fromMe: !!fromMe,
                                 time: formatTimeAgo(msg.createdAt),
-                                senderName: fromMe ? user?.fullName : activeConversation?.name,
+                                rawTime: msg.createdAt,
+                                senderName: isBot ? 'Bot' : (fromMe ? user?.fullName : activeConversation?.name),
                                 senderAvatar: fromMe ? user?.avatarUrl : activeConversation?.avatar,
                                 imageUrls: msg.imageUrls,
-                                videoUrls: msg.videoUrls
+                                videoUrls: msg.videoUrls,
+                                isBot,
+                                senderId: msg.senderId,
                             };
                         });
                     setActiveMessages(mappedMessages);
@@ -235,10 +305,13 @@ export default function AccountChatPage() {
 
     // Handle schedule detection (Optional for donor, but usually staff initiates. We can keep it if needed)
     useEffect(() => {
-        if (!inputMessage.trim()) return;
-        const scheduleRegex = /(?:vào|lúc|ngày|thứ|mai|mốt|\d{1,2}[\/\-]\d{1,2})|(\d{2,})/;
+        if (!inputMessage.trim()) {
+            setShowSchedulePopup(false);
+            return;
+        }
+        const scheduleRegex = /(?:\d|ngày|mai|mốt|kia|thứ|lúc|giờ)/i;
         const match = inputMessage.match(scheduleRegex);
-        if (match && inputMessage.length > 3) {
+        if (match) {
             setDetectedScheduleText(inputMessage);
             setShowSchedulePopup(true);
         } else {
@@ -246,7 +319,12 @@ export default function AccountChatPage() {
         }
     }, [inputMessage]);
 
-    const handleScheduleConfirm = async () => {
+    const handleStartSchedule = () => {
+        setShowSchedulePopup(false);
+        setShowScheduleForm(true);
+    };
+
+    const handleScheduleSubmit = async (data: { purpose: string, location: string, startTime: string, endTime: string }) => {
         if (!user || !activeConversation || !activeConversation.staffId) {
             toast("Không tìm thấy thông tin nhân viên để tạo lịch!", "error");
             return;
@@ -254,36 +332,24 @@ export default function AccountChatPage() {
 
         setIsSending(true);
         try {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(9, 0, 0, 0);
-
-            const endHour = new Date(tomorrow);
-            endHour.setHours(10, 0, 0, 0);
-
             const res = await appointmentService.create({
                 donorId: Number(user.id),
                 staffId: Number(activeConversation.staffId),
-                startTime: tomorrow.toISOString(),
-                endTime: endHour.toISOString(),
-                location: 'Trao đổi qua chat / Online',
-                purpose: `Người dùng đặt lịch hẹn thảo luận. Nội dung gợi ý: "${detectedScheduleText}"`
+                startTime: data.startTime,
+                endTime: data.endTime,
+                location: data.location,
+                purpose: data.purpose
             });
 
             if (res) {
                 toast('Đã gửi yêu cầu đặt lịch!', 'success');
-                setShowSchedulePopup(false);
-
-                webSocketService.sendMessage(`/app/chat/${activeId}`, {
-                    conversationId: Number(activeId),
-                    content: `[HỆ THỐNG] Người dùng đã yêu cầu một lịch hẹn mới vào lúc 9:00 AM ngày ${tomorrow.toLocaleDateString('vi-VN')}.`,
-                    senderId: Number(user.id),
-                    senderRole: 'ROLE_USER'
-                });
+                setShowScheduleForm(false);
+                setDetectedScheduleText('');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create appointment:", error);
-            toast("Có lỗi xảy ra khi tạo lịch!", "error");
+            const msg = error?.response?.data?.message || error?.message || "Có lỗi xảy ra khi tạo lịch !";
+            toast(msg, "error");
         } finally {
             setIsSending(false);
         }
@@ -303,24 +369,50 @@ export default function AccountChatPage() {
             videoUrls?: string[];
         }) => {
             if (msg.conversationId.toString() !== activeId.toString()) return;
-            if (msg.senderId === 0) return;
 
-            const isFromMe = user?.id && msg.senderId === Number(user.id);
+            const isBot = msg.senderId === 0;
+            const isFromMe = !isBot && user?.id && msg.senderId === Number(user.id);
 
             const newMsg: MessageItem = {
                 id: msg.id.toString(),
                 text: msg.content,
                 fromMe: !!isFromMe,
                 time: formatTimeAgo(msg.createdAt),
-                senderName: isFromMe ? user?.fullName : activeConversation?.name,
+                senderName: isBot ? 'Bot' : (isFromMe ? user?.fullName : activeConversation?.name),
                 senderAvatar: isFromMe ? user?.avatarUrl : activeConversation?.avatar,
                 imageUrls: msg.imageUrls,
-                videoUrls: msg.videoUrls
+                videoUrls: msg.videoUrls,
+                isBot,
+                senderId: msg.senderId,
             };
 
             setActiveMessages(prev => {
                 if (prev.some(m => m.id === newMsg.id)) return prev;
                 return [...prev, newMsg];
+            });
+
+            // Update conversations list real-time (update last message, time, and move to top)
+            setConversations(prev => {
+                const convIndex = prev.findIndex(c => c.id.toString() === msg.conversationId.toString());
+                if (convIndex === -1) return prev; // If conversation not loaded, let it be
+
+                let lastMessageText = 'Đã gửi media';
+                if (msg.content) {
+                    const textOnly = msg.content.split('|||')[0].trim();
+                    if (textOnly) lastMessageText = textOnly;
+                }
+
+                const updatedConv = {
+                    ...prev[convIndex],
+                    lastMessage: lastMessageText,
+                    time: 'vừa xong', // It just arrived
+                    unread: prev[convIndex].id !== activeId ? (prev[convIndex].unread || 0) + 1 : 0
+                };
+
+                const nextConvs = [...prev];
+                nextConvs.splice(convIndex, 1);
+                nextConvs.unshift(updatedConv);
+                return nextConvs;
             });
         };
 
@@ -446,8 +538,8 @@ export default function AccountChatPage() {
     }, [inputMessage, selectedImages, activeId, activeConversation, isSending, user?.id, toast]);
 
     return (
-        <div className="h-full bg-white rounded-lg shadow-sm overflow-hidden p-4">
-            <div className="flex h-full border rounded-xl overflow-hidden shadow-sm" style={{ borderColor: '#f1f5f9' }}>
+        <div className="h-full">
+            <div className="flex h-full">
                 <ChatSidebar
                     conversations={filteredConversations}
                     activeId={activeId}
@@ -480,7 +572,7 @@ export default function AccountChatPage() {
                     campaignInfo={activeCampaignInfo}
                     showSchedulePopup={showSchedulePopup}
                     detectedScheduleText={detectedScheduleText}
-                    onScheduleConfirm={handleScheduleConfirm}
+                    onScheduleConfirm={handleStartSchedule}
                     onScheduleCancel={() => setShowSchedulePopup(false)}
                 />
 
@@ -500,6 +592,13 @@ export default function AccountChatPage() {
                     />
                 )}
             </div>
+
+            <ScheduleFormModal
+                isVisible={showScheduleForm}
+                onClose={() => setShowScheduleForm(false)}
+                onSubmit={handleScheduleSubmit}
+                isSubmitting={isSending}
+            />
         </div>
     );
 }

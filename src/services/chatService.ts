@@ -109,6 +109,31 @@ export const chatService = {
     },
 
     /**
+     * Create a new conversation for a specific campaign (current user is fund owner)
+     */
+    async createConversationByCampaign(campaignId: number): Promise<{
+        success: boolean;
+        data?: Conversation;
+        error?: string;
+    }> {
+        try {
+            const response = await api.post<Conversation>(API_ENDPOINTS.CHAT.CONVERSATIONS, {
+                campaignId,
+            });
+            return {
+                success: true,
+                data: response.data,
+            };
+        } catch (error: any) {
+            console.error("Chat service error:", error);
+            return {
+                success: false,
+                error: error?.response?.data?.message || error?.message || "Failed to create conversation",
+            };
+        }
+    },
+
+    /**
      * Get conversation for a specific campaign (current user)
      */
     async getConversationByCampaignId(campaignId: string | number): Promise<{

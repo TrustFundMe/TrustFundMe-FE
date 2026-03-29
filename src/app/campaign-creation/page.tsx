@@ -538,7 +538,7 @@ export default function CampaignCreationPage() {
       });
 
       setTimeout(() => {
-        router.push('/');
+        router.push('/account/campaigns');
       }, 1500);
     } catch (err: any) {
       console.error('DEBUG [SUBMISSION FAILED]:', err);

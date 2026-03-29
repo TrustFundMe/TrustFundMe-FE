@@ -5,7 +5,7 @@ import axios from "axios";
 // withCredentials ensures the access_token cookie is sent so the proxy can authenticate
 // with the BE identity token (not the Supabase token from localStorage).
 const uploadApi = axios.create({
-  withCredentials: true,
+    withCredentials: true,
 });
 
 export interface MediaUploadResponse {
@@ -79,7 +79,7 @@ export const mediaService = {
         if (mediaType) formData.append("mediaType", mediaType);
 
         try {
-            const res = await api.post<MediaUploadResponse>("/api/media/upload/conversation", formData, {
+            const res = await uploadApi.post<MediaUploadResponse>("/api/media/upload", formData, {
                 headers: {
                     "Content-Type": undefined,
                 },

@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatMessages from '@/components/chat/ChatMessages';
 import ChatDetails from '@/components/chat/ChatDetails';
+import ScheduleFormModal from '@/components/chat/ScheduleFormModal';
+import { useSearchParams } from 'next/navigation';
 import type { Conversation, MessageItem, Appointment, MediaItem } from '@/components/chat/types';
 import { chatService } from '@/services/chatService';
 import { userService } from '@/services/userService';
@@ -33,9 +35,12 @@ export default function ChatWithDonorPage() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [showSchedulePopup, setShowSchedulePopup] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [detectedScheduleText, setDetectedScheduleText] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const hasFetchedRef = useRef<boolean>(false);
+  const autoSelectedRef = useRef<boolean>(false);
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -96,8 +101,25 @@ export default function ChatWithDonorPage() {
           );
 
           setConversations(mappedConversations);
-          if (mappedConversations.length > 0 && !activeId) {
+
+          const convId = searchParams.get('conversationId');
+          const campaignId = searchParams.get('campaignId');
+
+          if (convId) {
+            const found = mappedConversations.find(c => c.id === convId);
+            if (found) {
+              setActiveId(convId);
+              autoSelectedRef.current = true;
+            }
+          } else if (campaignId) {
+            const found = mappedConversations.find(c => c.campaignId?.toString() === campaignId);
+            if (found) {
+              setActiveId(found.id);
+              autoSelectedRef.current = true;
+            }
+          } else if (!autoSelectedRef.current && mappedConversations.length > 0 && !activeId) {
             setActiveId(mappedConversations[0].id);
+            autoSelectedRef.current = true;
           }
         }
       } catch (error) {
@@ -239,14 +261,14 @@ export default function ChatWithDonorPage() {
   // Handle schedule detection
   useEffect(() => {
     if (!inputMessage.trim()) {
-      // Don't reset if it's already shown, only if input is actually changed to empty by typing
+      setShowSchedulePopup(false);
       return;
     }
 
-    const scheduleRegex = /(?:vào|lúc|ngày|thứ|mai|mốt|\d{1,2}[\/\-]\d{1,2})|(\d{2,})/;
+    const scheduleRegex = /(?:\d|ngày|mai|mốt|kia|thứ|lúc|giờ)/i;
     const match = inputMessage.match(scheduleRegex);
 
-    if (match && inputMessage.length > 3) {
+    if (match) {
       setDetectedScheduleText(inputMessage);
       setShowSchedulePopup(true);
     } else {
@@ -254,8 +276,12 @@ export default function ChatWithDonorPage() {
     }
   }, [inputMessage]);
 
-  // Handle schedule confirmation
-  const handleScheduleConfirm = async () => {
+  const handleStartSchedule = () => {
+    setShowSchedulePopup(false);
+    setShowScheduleForm(true);
+  };
+
+  const handleScheduleSubmit = async (data: { purpose: string, location: string, startTime: string, endTime: string }) => {
     if (!user || !activeConversation || !activeConversation.fundOwnerId) {
       toast("Không tìm thấy thông tin người dùng để tạo lịch!", "error");
       return;
@@ -263,37 +289,24 @@ export default function ChatWithDonorPage() {
 
     setIsSending(true);
     try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(9, 0, 0, 0);
-
-      const endHour = new Date(tomorrow);
-      endHour.setHours(10, 0, 0, 0);
-
       const res = await appointmentService.create({
         donorId: Number(activeConversation.fundOwnerId),
         staffId: Number(user.id),
-        startTime: tomorrow.toISOString(),
-        endTime: endHour.toISOString(),
-        location: 'Trao đổi qua chat / Online',
-        purpose: `Staff đặt lịch hẹn thảo luận. Nội dung gợi ý: "${detectedScheduleText}"`
+        startTime: data.startTime,
+        endTime: data.endTime,
+        location: data.location,
+        purpose: data.purpose
       });
 
       if (res) {
-        toast('Đã tạo lịch hẹn thành công!', 'success');
-        setShowSchedulePopup(false);
-
-        // Optionally send a message notify
-        webSocketService.sendMessage(`/app/chat/${activeId}`, {
-          conversationId: Number(activeId),
-          content: `[HỆ THỐNG] Staff đã tạo một lịch hẹn mới vào lúc 9:00 AM ngày ${tomorrow.toLocaleDateString('vi-VN')}. Vui lòng kiểm tra lịch của bạn.`,
-          senderId: Number(user.id),
-          senderRole: 'ROLE_STAFF'
-        });
+        toast('Đã gửi yêu cầu đặt lịch!', 'success');
+        setShowScheduleForm(false);
+        setDetectedScheduleText('');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create appointment:", error);
-      toast("Có lỗi xảy ra khi tạo lịch!", "error");
+      const msg = error?.response?.data?.message || error?.message || "Có lỗi xảy ra khi tạo lịch !";
+      toast(msg, "error");
     } finally {
       setIsSending(false);
     }
@@ -480,7 +493,7 @@ export default function ChatWithDonorPage() {
   }, [inputMessage, selectedImages, activeId, activeConversation, isSending, formatTimeAgo, user?.id, toast]);
 
   return (
-    <div className="h-full bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="h-full">
       <div className="flex h-full">
         <ChatSidebar
           conversations={filteredConversations}
@@ -514,7 +527,7 @@ export default function ChatWithDonorPage() {
           campaignInfo={activeCampaignInfo}
           showSchedulePopup={showSchedulePopup}
           detectedScheduleText={detectedScheduleText}
-          onScheduleConfirm={handleScheduleConfirm}
+          onScheduleConfirm={handleStartSchedule}
           onScheduleCancel={() => setShowSchedulePopup(false)}
         />
 
@@ -534,6 +547,13 @@ export default function ChatWithDonorPage() {
           />
         )}
       </div>
+
+      <ScheduleFormModal
+        isVisible={showScheduleForm}
+        onClose={() => setShowScheduleForm(false)}
+        onSubmit={handleScheduleSubmit}
+        isSubmitting={isSending}
+      />
     </div>
   );
 }

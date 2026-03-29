@@ -94,43 +94,7 @@ export const userService = {
         }
     },
 
-    /**
-     * Get all active staff members
-     */
-    async getAllStaffs(): Promise<{
-        success: boolean;
-        data?: UserInfo[];
-        error?: string;
-    }> {
-        try {
-            const response = await fetch(API_ENDPOINTS.USERS.STAFF, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                return {
-                    success: false,
-                    error: data.error || data.message || "Failed to fetch staffs",
-                };
-            }
-
-            return {
-                success: true,
-                data: data,
-            };
-        } catch (error: any) {
-            console.error("User service error (getAllStaffs):", error);
-            return {
-                success: false,
-                error: error?.message || "Failed to fetch staffs",
-            };
-        }
-    },
 
     /**
      * Ban/deactivate user
@@ -329,7 +293,7 @@ export const userService = {
     /**
      * Get all staff and admin users
      */
-    async getStaffs(): Promise<{
+    async getAllStaff(): Promise<{
         success: boolean;
         data?: UserInfo[];
         error?: string;
@@ -356,7 +320,7 @@ export const userService = {
                 data: data,
             };
         } catch (error: any) {
-            console.error("User service error (getStaffs):", error);
+            console.error("User service error (getAllStaff):", error);
             return {
                 success: false,
                 error: error?.message || "Failed to fetch staff members",

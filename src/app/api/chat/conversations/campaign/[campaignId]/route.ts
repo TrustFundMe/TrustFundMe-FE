@@ -14,12 +14,16 @@ export async function GET(
         const { campaignId } = await params;
         const accessToken = request.cookies.get("access_token")?.value;
 
+        // Support both cookie and Authorization header
+        const authHeader = request.headers.get("Authorization");
+        const token = accessToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
+
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
         };
 
-        if (accessToken) {
-            headers["Authorization"] = `Bearer ${accessToken}`;
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
         }
 
         const response = await fetch(`${BE_API_URL}/api/chat/conversations/campaign/${campaignId}`, {

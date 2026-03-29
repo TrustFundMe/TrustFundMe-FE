@@ -109,7 +109,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
     const [items, setItems] = useState<ExpenditureItem[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
-    
+
     useEffect(() => {
         onModalToggle?.(showRejectModal);
     }, [showRejectModal, onModalToggle]);
@@ -365,14 +365,14 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                 );
 
                 // Fetch all campaigns and filter for APPROVED
-                const allCampaigns = await campaignService.getAll();
-                const relevantCampaigns = allCampaigns.filter(c =>
+                const campaignResp = await campaignService.getAll(0, 1000);
+                const relevantCampaigns = (campaignResp.content || []).filter((c: CampaignDto) =>
                     c.status === 'APPROVED'
                 );
 
                 // For each relevant campaign, fetch its expenditures to check for pending stuff
                 const enrichedCampaigns = await Promise.all(
-                    relevantCampaigns.map(async (c) => {
+                    relevantCampaigns.map(async (c: CampaignDto) => {
                         try {
                             const exps = await expenditureService.getByCampaignId(c.id);
                             // Only keep expenditures that are assigned to this staff in tasks

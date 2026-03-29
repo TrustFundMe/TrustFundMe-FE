@@ -16,12 +16,17 @@ export interface MessageItem {
     fromMe: boolean;
     text?: string;
     time: string;
+    rawTime?: string;  // ISO timestamp for time separator calculation
     senderName?: string;
     senderAvatar?: string;
     imageUrl?: string;
     imageUrls?: string[];
     videoUrl?: string;
     videoUrls?: string[];
+    /** True if this message was sent by the bot (senderId = 0) */
+    isBot?: boolean;
+    /** Original sender ID for internal use */
+    senderId?: number;
 }
 
 export interface Appointment {

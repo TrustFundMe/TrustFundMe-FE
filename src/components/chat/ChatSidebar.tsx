@@ -56,55 +56,93 @@ export default function ChatSidebar({
                             <button
                                 key={c.id}
                                 onClick={() => onConversationClick(c.id)}
-                                className={`w-full flex items-center p-2 rounded-xl mb-1.5 text-left transition-colors ${active ? 'text-white' : ''}`}
-                                style={{ backgroundColor: active ? '#dc2626' : 'white', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.04)' }}
+                                className={`w-full flex items-center px-3 py-2 rounded-xl mb-1 text-left transition-all duration-150 ${active ? 'text-white shadow-md' : 'hover:bg-gray-50'}`}
+                                style={{
+                                    backgroundColor: active ? '#dc2626' : 'white',
+                                    boxShadow: active
+                                        ? '0 4px 12px rgba(220,38,38,0.25)'
+                                        : '0 1px 3px rgba(0,0,0,0.06)',
+                                    borderLeft: active ? '3px solid #b91c1c' : '3px solid transparent',
+                                }}
                             >
-                                {c.avatar ? (
-                                    <img
-                                        src={c.avatar}
-                                        alt={c.name}
-                                        className={`w-10 h-10 rounded-full mr-3 object-cover ${active ? 'ring-2 ring-white' : ''}`}
+                                {/* Avatar 28px */}
+                                <div className="relative flex-shrink-0 mr-2">
+                                    {c.avatar ? (
+                                        <img
+                                            src={c.avatar}
+                                            alt={c.name}
+                                            className={`w-7 h-7 rounded-full object-cover ${active ? 'ring-2 ring-white' : ''}`}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                            style={{
+                                                backgroundColor: active ? 'rgba(255,255,255,0.25)' : '#fee2e2',
+                                                color: active ? 'white' : '#dc2626',
+                                            }}
+                                        >
+                                            {c.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <span
+                                        className="absolute bottom-0 right-0 w-2 h-2 rounded-full border"
+                                        style={{
+                                            backgroundColor: '#22c55e',
+                                            borderColor: active ? '#dc2626' : 'white',
+                                        }}
                                     />
-                                ) : (
-                                    <div
-                                        className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 text-sm font-semibold ${active ? '' : 'text-gray-600'}`}
-                                        style={{ backgroundColor: active ? 'white' : '#fee2e2', color: '#dc2626' }}
-                                    >
-                                        {c.name.charAt(0).toUpperCase()}
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
+                                </div>
+
+                                {/* Text — dùng span thay p để tránh Bootstrap margin-bottom:1rem trên p */}
+                                <div className="flex-1 min-w-0" style={{ lineHeight: 1.4 }}>
+                                    {/* Row 1: Tên + Thời gian — cùng hàng */}
                                     <div className="flex items-center justify-between">
-                                        <p
-                                            className={`truncate text-sm font-medium ${active ? '' : ''}`}
-                                            style={{ color: active ? 'white' : '#374151' }}
+                                        <span
+                                            className="block truncate text-xs font-bold"
+                                            style={{ color: active ? 'white' : '#111827' }}
                                         >
                                             {c.name}
-                                        </p>
-                                        <span className={`text-[10px]`} style={{ color: active ? '#fca5a5' : '#9CA3AF' }}>
+                                        </span>
+                                        <span
+                                            className="text-xs ml-2 flex-shrink-0"
+                                            style={{ color: active ? '#fca5a5' : '#9CA3AF' }}
+                                        >
                                             {c.time}
                                         </span>
                                     </div>
+
+                                    {/* Row 2: Tên campaign */}
                                     {c.campaignTitle && (
-                                        <p
-                                            className="truncate text-[10px] font-medium italic mb-0.5"
+                                        <span
+                                            className="block truncate text-xs font-medium"
                                             style={{ color: active ? '#fecaca' : '#dc2626' }}
                                         >
                                             {c.campaignTitle}
-                                        </p>
+                                        </span>
                                     )}
-                                    <p className={`truncate text-xs`} style={{ color: active ? '#fca5a5' : '#4b5563' }}>
-                                        {c.lastMessage}
-                                    </p>
+
+                                    {/* Row 3: Tin nhắn mới nhất + badge */}
+                                    <div className="flex items-center justify-between">
+                                        <span
+                                            className="block truncate text-xs"
+                                            style={{ color: active ? '#fca5a5' : '#6B7280' }}
+                                        >
+                                            {c.lastMessage}
+                                        </span>
+                                        {c.unread && c.unread > 0 ? (
+                                            <span
+                                                className="ml-2 flex-shrink-0 min-w-[16px] h-4 flex items-center justify-center text-[10px] rounded-full font-bold"
+                                                style={{
+                                                    backgroundColor: active ? 'white' : '#dc2626',
+                                                    color: active ? '#dc2626' : 'white',
+                                                    padding: '0 3px',
+                                                }}
+                                            >
+                                                {c.unread}
+                                            </span>
+                                        ) : null}
+                                    </div>
                                 </div>
-                                {c.unread && c.unread > 0 ? (
-                                    <span
-                                        className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-bold`}
-                                        style={{ backgroundColor: active ? 'white' : '#dc2626', color: active ? '#dc2626' : 'white' }}
-                                    >
-                                        {c.unread}
-                                    </span>
-                                ) : null}
                             </button>
                         );
                     })

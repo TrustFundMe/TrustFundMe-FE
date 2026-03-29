@@ -92,7 +92,7 @@ export const CalendarGrid = ({
             if (hasFetchedStaffs.current) return;
             hasFetchedStaffs.current = true;
 
-            const res = await userService.getStaffs();
+            const res = await userService.getAllStaff();
             if (res.success && res.data) {
                 setStaffs(res.data);
             } else {
@@ -216,20 +216,14 @@ export const CalendarGrid = ({
 
         const selectedDateStr = formData.date;
         const now = new Date();
-        const nowStr = now.toISOString().split('T')[0];
-
-        // Date check
-        if (selectedDateStr < nowStr) {
-            setError('Không thể đặt lịch cho ngày trong quá khứ.');
-            return;
-        }
+        const minStartDate = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
         const startDateTime = new Date(`${selectedDateStr}T${formData.startTime}`);
         const endDateTime = new Date(`${selectedDateStr}T${formData.endTime}`);
 
-        // Past time check (for today)
-        if (selectedDateStr === nowStr && startDateTime < now) {
-            setError('Thời gian bắt đầu không được ở quá khứ.');
+        // Past time check (for today or tomorrow)
+        if (startDateTime < minStartDate) {
+            setError('Lịch hẹn phải cách thời điểm hiện tại ít nhất 25 tiếng.');
             return;
         }
 
@@ -578,7 +572,7 @@ export const CalendarGrid = ({
                                     </div>
                                 </div>
                             ) : (
-                                <form onSubmit={handleFormSubmit} className="space-y-4">
+                                <form onSubmit={handleFormSubmit} noValidate className="space-y-4">
                                     <div className="space-y-2">
                                         <div className="relative group">
                                             <input
@@ -626,7 +620,7 @@ export const CalendarGrid = ({
                                         <input
                                             required
                                             type="date"
-                                            min={new Date().toISOString().split('T')[0]}
+                                            min={new Date(Date.now() + 25 * 3600 * 1000 - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                                             value={formData.date}
                                             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                             className={`w-full bg-gray-50 border ${error && !formData.date ? 'border-rose-400 ring-2 ring-rose-100' : 'border-none'} rounded-2xl px-6 py-4 text-sm font-black text-gray-900 outline-none focus:ring-2 focus:ring-rose-100 transition-all`}
