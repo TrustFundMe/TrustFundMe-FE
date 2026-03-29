@@ -154,7 +154,7 @@ const FeedPostDetailPage = () => {
 
       const [listRes, campaignsRes] = await Promise.all([
         feedPostService.getAll(),
-        campaignService.getAll().catch(() => []),
+        campaignService.getAll(0, 100).catch(() => ({ content: [] })),
       ]);
       const list = Array.isArray(listRes) ? listRes : [];
       const allFeedPosts = list.map((p) => dtoToFeedPost(p));
@@ -167,7 +167,7 @@ const FeedPostDetailPage = () => {
       setRelatedPosts(sameCampaignPosts.slice(0, 4));
       setFeedPosts(allFeedPosts);
       setCategories([...new Set(allFeedPosts.map((p) => p.category).filter((c): c is string => Boolean(c)))]);
-      const campaigns = Array.isArray(campaignsRes) ? campaignsRes : [];
+      const campaigns = (campaignsRes as { content?: typeof list }).content ?? [];
       const titles: Record<string, string> = {};
       const cList: { id: number; title: string; coverImage?: string }[] = [];
       const imgPromises = campaigns.map(async (c) => {

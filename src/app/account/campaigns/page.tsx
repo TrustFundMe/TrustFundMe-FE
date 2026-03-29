@@ -22,8 +22,6 @@ export default function CampaignsPage() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
   const itemsPerPage = 6;
   const { toast } = useToast();
 
@@ -31,34 +29,15 @@ export default function CampaignsPage() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const targetId = searchParams?.get('id');
 
-  // Fetch campaigns for the current page
+  // Fetch ALL campaigns once (client-side pagination)
   useEffect(() => {
     const fetchCampaigns = async () => {
       if (!user?.id) return;
       try {
         setLoading(true);
-        const data = await campaignService.getUserCampaignsPaginated(user.id, currentPage - 1, itemsPerPage);
-        let fetchedCampaigns = data.content;
-
-        // If we have a targetId from notification, ensure it's in the list (prepend if not present)
-        if (targetId && currentPage === 1) {
-          const tId = parseInt(targetId);
-          const isIncluded = fetchedCampaigns.some(c => c.id === tId);
-          if (!isIncluded) {
-            try {
-              const targetCampaign = await campaignService.getById(tId);
-              if (targetCampaign && targetCampaign.fundOwnerId === user.id) {
-                fetchedCampaigns = [targetCampaign, ...fetchedCampaigns];
-              }
-            } catch (err) {
-              console.error('Failed to fetch target campaign:', err);
-            }
-          }
-        }
-
-        setCampaigns(fetchedCampaigns);
-        setTotalPages(data.totalPages);
-        setTotalElements(data.totalElements);
+        // Load all campaigns at once for client-side filter + paginate
+        const data = await campaignService.getUserCampaignsPaginated(user.id, 0, 1000);
+        setCampaigns(data.content);
       } catch (error) {
         console.error('Failed to fetch user campaigns:', error);
       } finally {
@@ -67,7 +46,7 @@ export default function CampaignsPage() {
       }
     };
     fetchCampaigns();
-  }, [user?.id, currentPage, targetId]);
+  }, [user?.id]);
 
   // Handle scrolling to target ID with retries
   useEffect(() => {
@@ -98,13 +77,18 @@ export default function CampaignsPage() {
     }
   }, [loading, targetId, campaigns]);
 
-  // When using server-side pagination, filtered campaigns are just the campaigns on the current page
+  // Filter campaigns by search term (client-side, applied on all loaded campaigns)
   const filteredCampaigns = useMemo(() =>
     campaigns.filter(c =>
       c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.description?.toLowerCase().includes(searchTerm.toLowerCase())
     ), [campaigns, searchTerm]
   );
+
+  // Compute total pages from filtered list
+  const computedTotalPages = useMemo(() =>
+    Math.max(1, Math.ceil(filteredCampaigns.length / itemsPerPage))
+    , [filteredCampaigns.length, itemsPerPage]);
 
   // States for enriched data (goals, images)
   const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
@@ -130,8 +114,10 @@ export default function CampaignsPage() {
 
   const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
 
-  // paginatedCampaigns is directly the filtered results since we fetch by page
-  const paginatedCampaigns = useMemo(() => filteredCampaigns, [filteredCampaigns]);
+  const paginatedCampaigns = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredCampaigns.slice(start, start + itemsPerPage);
+  }, [filteredCampaigns, currentPage, itemsPerPage]);
 
   // Separate effect: fetch tasks for pending campaigns and store staffId -> campaign map
   useEffect(() => {
@@ -224,6 +210,11 @@ export default function CampaignsPage() {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleChatClick = async (campaign: CampaignDto) => {
     if (!user?.id) return;
 
@@ -252,10 +243,10 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#F8FAFC] py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-[#F8FAFC] py-4 flex flex-col">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col w-full">
           {/* Filters & Search Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2 mt-2">
             <div className="md:col-span-3 relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -268,19 +259,19 @@ export default function CampaignsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg text-orange-600">
-                  <LayoutGrid className="w-5 h-5" />
+            <div className="bg-white py-2 px-4 rounded-2xl border border-gray-200 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-orange-100 rounded-lg text-orange-600">
+                  <LayoutGrid className="w-4 h-4" />
                 </div>
-                <span className="font-semibold text-gray-700">Tổng số</span>
+                <span className="font-semibold text-gray-700 text-sm">Tổng số</span>
               </div>
-              <span className="text-2xl font-bold text-gray-900">{totalElements}</span>
+              <span className="text-xl font-extrabold text-gray-900">{campaigns.length}</span>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="relative min-h-[400px]">
+          <div className="relative flex-1 min-h-0">
             {/* Subtle loading indicator for pagination */}
             {loading && !isInitialLoad && (
               <div className="absolute inset-x-0 -top-6 flex justify-center z-20">
@@ -299,62 +290,23 @@ export default function CampaignsPage() {
                 </div>
               </div>
             ) : filteredCampaigns.length > 0 ? (
-              <div className={`space-y-10 animate-in fade-in duration-700 ${loading ? 'opacity-40 pointer-events-none transition-opacity duration-300' : 'opacity-100 transition-opacity duration-500'}`}>
-                <div className="grid grid-cols-1 gap-6">
-                  {displayCampaigns.map((campaign) => (
-                    <MyCampaignCard
-                      key={campaign.id}
-                      campaign={campaign}
-                      assignedReviewerName={campaign.id ? campaignStaffMap[campaign.id] : undefined}
-                      hasStaff={!!(campaign.id && campaignStaffMap[campaign.id])}
-                      onChatClick={() => {
-                        console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
-                        handleChatClick(campaign);
-                      }}
-                    />
-                  ))}
-                </div>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-gray-100">
-                    <p className="text-sm font-medium text-gray-500">
-                      Hiển thị <span className="text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="text-gray-900">{Math.min(currentPage * itemsPerPage, totalElements)}</span> trong tổng số <span className="text-gray-900">{totalElements}</span> chiến dịch
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                      </button>
-
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`w-10 h-10 rounded-xl font-bold transition-all ${currentPage === page
-                              ? 'bg-orange-600 text-white shadow-lg shadow-orange-200'
-                              : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
-                              }`}
-                          >
-                            {page}
-                          </button>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="p-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    </div>
+              <div className="animate-in fade-in duration-700 flex flex-col pb-3">
+                <div className="overflow-y-auto pr-2 custom-scrollbar flex-1">
+                  <div className="grid grid-cols-1 gap-6">
+                    {displayCampaigns.map((campaign) => (
+                      <MyCampaignCard
+                        key={campaign.id}
+                        campaign={campaign}
+                        assignedReviewerName={campaign.id ? campaignStaffMap[campaign.id] : undefined}
+                        hasStaff={!!(campaign.id && campaignStaffMap[campaign.id])}
+                        onChatClick={() => {
+                          console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
+                          handleChatClick(campaign);
+                        }}
+                      />
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 p-12 text-center animate-in zoom-in duration-500">
@@ -382,6 +334,47 @@ export default function CampaignsPage() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls Moved Out - Sticky at bottom */}
+          {!loading && !isInitialLoad && filteredCampaigns.length > 0 && computedTotalPages > 1 && (
+            <div className="sticky bottom-0 bg-[#F8FAFC] py-1 border-t border-gray-100 mt-0 z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-xs font-medium text-gray-500 italic">
+                Hiển thị <span className="text-gray-900 font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, filteredCampaigns.length)}</span>-<span className="text-gray-900 font-bold">{Math.min(currentPage * itemsPerPage, filteredCampaigns.length)}</span> / <span className="text-gray-900 font-bold">{filteredCampaigns.length}</span> chiến dịch
+              </p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: computedTotalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 rounded-lg text-sm font-bold transition-all ${currentPage === page
+                        ? 'bg-orange-600 text-white shadow-md shadow-orange-100'
+                        : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
+                        }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(computedTotalPages, p + 1))}
+                  disabled={currentPage === computedTotalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

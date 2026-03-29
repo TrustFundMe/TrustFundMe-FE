@@ -406,7 +406,8 @@ export default function ForumPage() {
 
   // Load campaigns for create-post modal (independent from feed)
   useEffect(() => {
-    campaignService.getAll().then((camps: { id: number; title?: string; fundOwnerId?: number }[]) => {
+    campaignService.getAll(0, 100).then((res: { content?: { id: number; title?: string; fundOwnerId?: number }[]; totalElements?: number } | null) => {
+      const camps = Array.isArray(res) ? res : (res?.content ?? []);
       const titles: Record<string, string> = {};
       const list: { id: number; title: string }[] = [];
       camps.forEach(c => {

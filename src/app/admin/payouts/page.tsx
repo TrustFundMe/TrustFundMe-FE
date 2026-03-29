@@ -121,7 +121,7 @@ export default function AdminPayoutsPage() {
     const filteredExpenditures = useMemo(() => {
         return expenditureRows.filter((r) => {
             const matchesStatus = statusFilter === 'ALL' ?
-                ((r.status as string) === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' || r.status === 'DISBURSED') :
+                ((r.status as string) === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'DISBURSED') :
                 r.status === statusFilter;
             const matchesSearch = searchQuery === '' ||
                 r.campaignTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -292,11 +292,11 @@ export default function AdminPayoutsPage() {
                                         {new Date(r.createdAt).toLocaleDateString('vi-VN')}
                                     </td>
                                     <td className="py-2 pr-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'bg-blue-100 text-blue-700' :
-                                            r.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
-                                                'bg-amber-100 text-amber-800'
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${r.status === 'WITHDRAWAL_REQUESTED' ? 'bg-blue-100 text-blue-700' :
+                                                r.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
+                                                'bg-gray-100 text-gray-700'
                                             }`}>
-                                            {r.status === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'CLOSED' ? 'Chờ giải ngân' :
+                                            {r.status === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' :
                                                 r.status === 'DISBURSED' ? 'Đã giải ngân' : r.status}
                                         </span>
                                     </td>
