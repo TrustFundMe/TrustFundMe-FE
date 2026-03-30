@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       const postId = formData.get("postId") ? Number(formData.get("postId")) : undefined;
       const campaignId = formData.get("campaignId") ? Number(formData.get("campaignId")) : undefined;
       const expenditureId = formData.get("expenditureId") ? Number(formData.get("expenditureId")) : undefined;
+      const expenditureItemId = formData.get("expenditureItemId") ? Number(formData.get("expenditureItemId")) : undefined;
       const conversationId = formData.get("conversationId") ? Number(formData.get("conversationId")) : undefined;
       const description = (formData.get("description") as string | null) ?? undefined;
 
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
         ...(postId != null && { postId }),
         ...(campaignId != null && { campaignId }),
         ...(expenditureId != null && { expenditureId }),
+        ...(expenditureItemId != null && { expenditureItemId }),
         ...(conversationId != null && { conversationId }),
         ...(description != null && { description }),
       };

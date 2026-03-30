@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, Fragment } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
+import { mediaService } from '@/services/mediaService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
-import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, Trash2, ChevronDown } from 'lucide-react';
+import type { MediaUploadResponse } from '@/services/mediaService';
+import { toast } from 'react-hot-toast';
 
 export default function ExpenditureDetailPage() {
     const router = useRouter();
@@ -25,6 +28,12 @@ export default function ExpenditureDetailPage() {
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number; }[]>([]);
     const [updating, setUpdating] = useState(false);
+
+    // Item media state
+    const [itemMedia, setItemMedia] = useState<Record<number, MediaUploadResponse[]>>({});
+    const [itemMediaLoading, setItemMediaLoading] = useState<Record<number, boolean>>({});
+    const [itemUploadState, setItemUploadState] = useState<Record<number, { uploading: boolean; files: File[]; previews: string[] }>>({});
+    const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -70,9 +79,11 @@ export default function ExpenditureDetailPage() {
         if (items.length > 0) {
             setUpdateItems(items.map(item => ({
                 id: item.id,
-                actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0, // Default to 0 if null
-                price: item.price !== undefined ? item.price : 0 // Default to 0 if null
+                actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
+                price: item.price !== undefined ? item.price : 0
             })));
+            // Load media for all items
+            items.forEach(item => loadItemMedia(item.id));
         }
         setIsUpdateModalOpen(true);
     };
@@ -144,6 +155,83 @@ export default function ExpenditureDetailPage() {
             setLoading(false);
         }
     };
+
+    // Load media for a specific expenditure item
+    const loadItemMedia = useCallback(async (itemId: number) => {
+        if (itemMedia[itemId]) return;
+        setItemMediaLoading(prev => ({ ...prev, [itemId]: true }));
+        try {
+            const media = await mediaService.getMediaByExpenditureItemId(itemId);
+            setItemMedia(prev => ({ ...prev, [itemId]: media }));
+        } catch (err) {
+            console.error('Failed to load item media:', err);
+        } finally {
+            setItemMediaLoading(prev => ({ ...prev, [itemId]: false }));
+        }
+    }, [itemMedia]);
+
+    // Upload media for a specific item
+    const handleItemMediaUpload = useCallback(async (itemId: number) => {
+        const state = itemUploadState[itemId];
+        if (!state || state.files.length === 0) return;
+        setItemUploadState(prev => ({ ...prev, [itemId]: { ...prev[itemId], uploading: true } }));
+        try {
+            const uploadResults = await Promise.all(
+                state.files.map(file =>
+                    mediaService.uploadMedia(
+                        file,
+                        expenditure?.campaignId,
+                        undefined,
+                        Number(id),
+                        `Minh chứng vật phẩm #${itemId}`,
+                        'PHOTO',
+                        undefined,
+                        itemId
+                    )
+                )
+            );
+            setItemMedia(prev => ({
+                ...prev,
+                [itemId]: [...(prev[itemId] || []), ...uploadResults],
+            }));
+            setItemUploadState(prev => ({ ...prev, [itemId]: { uploading: false, files: [], previews: [] } }));
+            toast.success(`Đã tải lên ${uploadResults.length} ảnh minh chứng!`);
+        } catch (err: any) {
+            console.error('Item media upload failed:', err);
+            toast.error(err.response?.data?.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+            setItemUploadState(prev => ({ ...prev, [itemId]: { ...prev[itemId], uploading: false } }));
+        }
+    }, [itemUploadState, expenditure, id]);
+
+    // Delete media for a specific item
+    const handleDeleteItemMedia = useCallback(async (itemId: number, mediaId: number) => {
+        try {
+            await mediaService.deleteMedia(mediaId);
+            setItemMedia(prev => ({
+                ...prev,
+                [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId),
+            }));
+            toast.success('Đã xóa ảnh minh chứng.');
+        } catch (err) {
+            console.error('Failed to delete media:', err);
+            toast.error('Không thể xóa ảnh. Vui lòng thử lại.');
+        }
+    }, []);
+
+    // Handle file selection
+    const handleItemFileChange = useCallback((itemId: number, files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const fileArray = Array.from(files);
+        const previews = fileArray.map(f => URL.createObjectURL(f));
+        setItemUploadState(prev => ({
+            ...prev,
+            [itemId]: {
+                uploading: false,
+                files: [...(prev[itemId]?.files || []), ...fileArray].slice(0, 10),
+                previews: [...(prev[itemId]?.previews || []), ...previews].slice(0, 10),
+            },
+        }));
+    }, []);
 
     if (loading) {
         return (
@@ -296,54 +384,188 @@ export default function ExpenditureDetailPage() {
                                                     <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi</th>
                                                 </>
                                             )}
+                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
-                                        {items.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-gray-900">{item.category}</div>
-                                                    {item.note && <div className="text-xs text-gray-500 mt-1">{item.note}</div>}
-                                                </td>
-                                                {campaign?.type === 'AUTHORIZED' ? (
-                                                    <td className="px-6 py-4 text-right bg-orange-50/30">
-                                                        <div className="text-sm font-bold text-orange-700">
-                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 mt-1">
-                                                            {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                        </div>
-                                                    </td>
-                                                ) : (
-                                                    <>
-                                                        {/* Plan Column */}
-                                                        <td className="px-6 py-4 text-right bg-blue-50/30">
-                                                            <div className="text-sm font-bold text-blue-700">
-                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500 mt-1">
-                                                                {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                            </div>
+                                        {items.map((item) => {
+                                            const isExpanded = expandedItemId === item.id;
+                                            const media = itemMedia[item.id] || [];
+                                            const uploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
+                                            return (
+                                                <Fragment key={item.id}>
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (!isExpanded) {
+                                                                        setExpandedItemId(item.id);
+                                                                        loadItemMedia(item.id);
+                                                                    } else {
+                                                                        setExpandedItemId(null);
+                                                                    }
+                                                                }}
+                                                                className="w-full text-left group"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform group-hover:text-gray-600 ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                    <div>
+                                                                        <div className="text-sm font-medium text-gray-900">{item.category}</div>
+                                                                        {item.note && <div className="text-xs text-gray-500 mt-1">{item.note}</div>}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right bg-green-50/30">
-                                                            <div className="text-sm font-bold text-green-700">
-                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
-                                                            </div>
-                                                            <div className="text-xs text-gray-400 mt-1 italic">(Chưa có dữ liệu)</div>
+                                                        {campaign?.type === 'AUTHORIZED' ? (
+                                                            <td className="px-6 py-4 text-right bg-orange-50/30">
+                                                                <div className="text-sm font-bold text-orange-700">
+                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 mt-1">
+                                                                    {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
+                                                                </div>
+                                                            </td>
+                                                        ) : (
+                                                            <>
+                                                                <td className="px-6 py-4 text-right bg-blue-50/30">
+                                                                    <div className="text-sm font-bold text-blue-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right bg-green-50/30">
+                                                                    <div className="text-sm font-bold text-green-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400 mt-1 italic">(Chưa có dữ liệu)</div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right bg-orange-50/30">
+                                                                    <div className="text-sm font-bold text-orange-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                        {item.actualQuantity || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                        <td className="px-6 py-4 text-center">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (!isExpanded) {
+                                                                        setExpandedItemId(item.id);
+                                                                        loadItemMedia(item.id);
+                                                                    } else {
+                                                                        setExpandedItemId(null);
+                                                                    }
+                                                                }}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border border-orange-200 text-orange-700 hover:bg-orange-50"
+                                                            >
+                                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                                {itemMediaLoading[item.id] ? (
+                                                                    <div className="w-3 h-3 border border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                ) : (
+                                                                    media.length
+                                                                )}
+                                                            </button>
                                                         </td>
-                                                        {/* Actual Column */}
-                                                        <td className="px-6 py-4 text-right bg-orange-50/30">
-                                                            <div className="text-sm font-bold text-orange-700">
-                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500 mt-1">
-                                                                {item.actualQuantity || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                )}
-                                            </tr>
-                                        ))}
+                                                    </tr>
+                                                    {/* Expanded: Image Upload per Item */}
+                                                    {isExpanded && (
+                                                        <tr key={`${item.id}-expanded`}>
+                                                            <td colSpan={campaign?.type === 'AUTHORIZED' ? 3 : 5} className="px-6 py-6 bg-orange-50/20 border-t border-orange-100">
+                                                                <div className="space-y-4">
+                                                                    {/* Header */}
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h4 className="text-xs font-black uppercase tracking-widest text-orange-800">
+                                                                            Ảnh minh chứng cho: <span className="font-bold">{item.category}</span>
+                                                                        </h4>
+                                                                        <span className="text-[10px] font-bold text-gray-400">{media.length} / 10 ảnh</span>
+                                                                    </div>
+
+                                                                    {/* Existing Images */}
+                                                                    {media.length > 0 && (
+                                                                        <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                                                            {media.map((m) => (
+                                                                                <div key={m.id} className="relative aspect-square rounded-xl overflow-hidden group/img border border-gray-200 shadow-sm">
+                                                                                    <img
+                                                                                        src={m.url}
+                                                                                        alt={`Minh chứng ${m.id}`}
+                                                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
+                                                                                        onError={(e) => { (e.target as HTMLImageElement).src = '/assets/img/placeholder.png'; }}
+                                                                                    />
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteItemMedia(item.id, m.id)}
+                                                                                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-all hover:bg-red-500"
+                                                                                    >
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Upload Area */}
+                                                                    {media.length < 10 && (
+                                                                        <div className="space-y-3">
+                                                                            {/* Preview New Files */}
+                                                                            {uploadState.previews.length > 0 && (
+                                                                                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                                                                    {uploadState.previews.map((preview, idx) => (
+                                                                                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-dashed border-emerald-300 bg-emerald-50">
+                                                                                            <img src={preview} alt={`Preview ${idx}`} className="w-full h-full object-cover opacity-80" />
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Upload Button */}
+                                                                            <div className="relative group/upload">
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept="image/*"
+                                                                                    multiple
+                                                                                    onChange={(e) => handleItemFileChange(item.id, e.target.files)}
+                                                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                                                    disabled={uploadState.uploading}
+                                                                                />
+                                                                                <div className="border-2 border-dashed border-gray-300 hover:border-orange-400 hover:bg-orange-50/30 rounded-xl p-4 flex flex-col items-center gap-2 transition-all cursor-pointer">
+                                                                                    {uploadState.uploading ? (
+                                                                                        <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                                    ) : (
+                                                                                        <>
+                                                                                            <Upload className="w-6 h-6 text-gray-400 group-hover/upload:text-orange-400" />
+                                                                                            <p className="text-xs font-bold text-gray-400 group-hover/upload:text-orange-600">Tải ảnh minh chứng</p>
+                                                                                        </>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {uploadState.files.length > 0 && (
+                                                                                <button
+                                                                                    onClick={() => handleItemMediaUpload(item.id)}
+                                                                                    disabled={uploadState.uploading}
+                                                                                    className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg transition-all ${uploadState.uploading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'}`}
+                                                                                >
+                                                                                    <Upload className="w-4 h-4" />
+                                                                                    Tải lên {uploadState.files.length} ảnh
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {media.length >= 10 && (
+                                                                        <p className="text-center text-xs font-bold text-gray-400 italic py-4">Đã đạt giới hạn 10 ảnh cho mỗi vật phẩm.</p>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -371,7 +593,7 @@ export default function ExpenditureDetailPage() {
                                     </p>
                                 </div>
 
-                                {/* TODO: Add logic/button to upload evidence here */}
+                                {/* Evidence is now managed per item — see item rows above */}
                                 <div className="mt-6 pt-4 border-t border-gray-100">
                                     <button disabled className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed">
                                         Cập nhật minh chứng (Sắp ra mắt)
@@ -433,70 +655,136 @@ export default function ExpenditureDetailPage() {
                                                                         <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
                                                                     )}
                                                                     <th className="px-4 py-3 text-center text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi (Nhập liệu)</th>
+                                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="bg-white divide-y divide-gray-200">
-                                                                {items.map((item, index) => (
-                                                                    <tr key={item.id}>
-                                                                        <td className="px-4 py-3 text-sm text-gray-900">
-                                                                            <div className="font-medium">{item.category}</div>
-                                                                            {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
-                                                                        </td>
+                                                                {items.map((item, index) => {
+                                                                    const modalMedia = itemMedia[item.id] || [];
+                                                                    const modalUploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
+                                                                    return (
+                                                                        <Fragment key={item.id}>
+                                                                            <tr>
+                                                                                <td className="px-4 py-3 text-sm text-gray-900">
+                                                                                    <div className="font-medium">{item.category}</div>
+                                                                                    {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
+                                                                                </td>
 
-                                                                        {/* Plan Info */}
-                                                                        <td className="px-4 py-3 text-right text-sm text-gray-500 bg-blue-50/30">
-                                                                            <div className="font-medium text-blue-700">
-                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
-                                                                            </div>
-                                                                            <div className="text-xs text-gray-400">
-                                                                                {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                            </div>
-                                                                        </td>
-
-                                                                        {campaign?.type !== 'AUTHORIZED' && (
-                                                                            <td className="px-4 py-3 text-right text-sm text-gray-500 bg-green-50/30">
-                                                                                <div className="font-medium text-green-700">
-                                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
-                                                                                </div>
-                                                                            </td>
-                                                                        )}
-
-                                                                        {/* Actual Input */}
-                                                                        <td className="px-4 py-3 bg-orange-50/30">
-                                                                            <div className="flex flex-col gap-2">
-                                                                                <div className="flex items-center justify-end gap-2">
-                                                                                    <label className="text-xs text-gray-500">SL:</label>
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0"
-                                                                                        className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
-                                                                                        placeholder="SL"
-                                                                                        value={updateItems[index]?.actualQuantity}
-                                                                                        onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="flex items-center justify-end gap-2">
-                                                                                    <label className="text-xs text-gray-500">ĐG:</label>
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        min="0"
-                                                                                        step="1"
-                                                                                        className="w-28 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
-                                                                                        placeholder="Đơn giá"
-                                                                                        value={updateItems[index]?.price}
-                                                                                        onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="text-right pt-1 border-t border-orange-200">
-                                                                                    <div className="text-xs text-gray-500">Thành tiền:</div>
-                                                                                    <div className="font-bold text-orange-700">
-                                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((updateItems[index]?.actualQuantity || 0) * (updateItems[index]?.price || 0))}
+                                                                                {/* Plan Info */}
+                                                                                <td className="px-4 py-3 text-right text-sm text-gray-500 bg-blue-50/30">
+                                                                                    <div className="font-medium text-blue-700">
+                                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
                                                                                     </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
+                                                                                    <div className="text-xs text-gray-400">
+                                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {campaign?.type !== 'AUTHORIZED' && (
+                                                                                    <td className="px-4 py-3 text-right text-sm text-gray-500 bg-green-50/30">
+                                                                                        <div className="font-medium text-green-700">
+                                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                )}
+
+                                                                                {/* Actual Input */}
+                                                                                <td className="px-4 py-3 bg-orange-50/30">
+                                                                                    <div className="flex flex-col gap-2">
+                                                                                        <div className="flex items-center justify-end gap-2">
+                                                                                            <label className="text-xs text-gray-500">SL:</label>
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
+                                                                                                placeholder="SL"
+                                                                                                value={updateItems[index]?.actualQuantity}
+                                                                                                onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-end gap-2">
+                                                                                            <label className="text-xs text-gray-500">ĐG:</label>
+                                                                                            <input
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                step="1"
+                                                                                                className="w-28 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
+                                                                                                placeholder="Đơn giá"
+                                                                                                value={updateItems[index]?.price}
+                                                                                                onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div className="text-right pt-1 border-t border-orange-200">
+                                                                                            <div className="text-xs text-gray-500">Thành tiền:</div>
+                                                                                            <div className="font-bold text-orange-700">
+                                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((updateItems[index]?.actualQuantity || 0) * (updateItems[index]?.price || 0))}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {/* Image Column */}
+                                                                                <td className="px-4 py-3 align-top">
+                                                                                    {itemMediaLoading[item.id] ? (
+                                                                                        <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto" />
+                                                                                    ) : (
+                                                                                        <div className="space-y-1.5">
+                                                                                            {/* Existing thumbnails */}
+                                                                                            {modalMedia.slice(0, 3).map((m) => (
+                                                                                                <div key={m.id} className="relative group w-10 h-10 mx-auto">
+                                                                                                    <img src={m.url} alt="Minh chứng" className="w-full h-full object-cover rounded border border-gray-200" />
+                                                                                                    <button
+                                                                                                        onClick={() => handleDeleteItemMedia(item.id, m.id)}
+                                                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                                    >
+                                                                                                        <Trash2 className="w-2 h-2" />
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                            {modalMedia.length > 3 && (
+                                                                                                <div className="text-[9px] text-gray-400 text-center">+{modalMedia.length - 3}</div>
+                                                                                            )}
+
+                                                                                            {/* Upload trigger */}
+                                                                                            {modalMedia.length < 10 && (
+                                                                                                <div className="relative group/upload w-10 h-10 mx-auto">
+                                                                                                    <input
+                                                                                                        type="file"
+                                                                                                        accept="image/*"
+                                                                                                        multiple
+                                                                                                        onChange={(e) => {
+                                                                                                            handleItemFileChange(item.id, e.target.files);
+                                                                                                        }}
+                                                                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                                                                                        disabled={modalUploadState.uploading}
+                                                                                                    />
+                                                                                                    <div className="w-full h-full border-2 border-dashed border-gray-300 hover:border-orange-400 rounded flex items-center justify-center transition-all">
+                                                                                                        {modalUploadState.uploading ? (
+                                                                                                            <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                                                        ) : (
+                                                                                                            <Upload className="w-3.5 h-3.5 text-gray-400 group-hover/upload:text-orange-500" />
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {/* Upload button */}
+                                                                                            {modalUploadState.files.length > 0 && (
+                                                                                                <button
+                                                                                                    onClick={() => handleItemMediaUpload(item.id)}
+                                                                                                    disabled={modalUploadState.uploading}
+                                                                                                    className={`w-full py-1 rounded text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all ${modalUploadState.uploading ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
+                                                                                                >
+                                                                                                    <Upload className="w-2.5 h-2.5" />{modalUploadState.files.length}
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </td>
+                                                                            </tr>
+                                                                        </Fragment>
+                                                                    );
+                                                                })}
                                                             </tbody>
                                                         </table>
                                                     </div>
