@@ -26,6 +26,7 @@ export async function GET(
     );
 
     const data = await response.json().catch(() => []);
+    console.log(`[media/posts/${postId}] media-service status=${response.status}, count=${Array.isArray(data) ? data.length : "non-array"}`);
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("[media/posts/id] Error:", error);

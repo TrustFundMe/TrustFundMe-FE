@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContextProxy";
 import CampaignCard, { type CampaignInfo } from "./CampaignCard";
 import { likeService } from "@/services/likeService";
 import { commentService } from "@/services/commentService";
+import { mediaService } from "@/services/mediaService";
 import ImageZoomModal, { type ZoomImage } from "./ImageZoomModal";
 
 interface FeedPostCardProps {
@@ -41,10 +42,31 @@ export default function FeedPostCard({
   const commentInputRef = useRef<HTMLInputElement>(null);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
+  const [attachments, setAttachments] = useState(post.attachments ?? []);
+
+  // Fetch media attachments if not already loaded
+  useEffect(() => {
+    if (attachments && attachments.length > 0) return;
+    const postNumId = Number(post.id);
+    if (Number.isNaN(postNumId)) return;
+    console.log(`[FeedPostCard] Fetching media for post ${postNumId}`);
+    mediaService.getMediaByPostId(postNumId).then((mediaList) => {
+      console.log(`[FeedPostCard] Media for post ${postNumId}:`, mediaList?.length, "items");
+      if (!mediaList?.length) return;
+      const atts = mediaList.map((m) => ({
+        type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
+        url: m.url,
+        name: m.fileName,
+      }));
+      setAttachments(atts);
+    }).catch((err) => {
+      console.error(`[FeedPostCard] Failed to fetch media for post ${postNumId}:`, err);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isAuthor = user?.id && String(user.id) === String(post.author.id);
 
-  const imageAttachments = (post.attachments || []).filter((a) => a.type === "image");
+  const imageAttachments = (attachments || []).filter((a) => a.type === "image");
   const seenUrls = new Set<string>();
   const images = imageAttachments.filter((a) => {
     if (seenUrls.has(a.url)) return false;
@@ -55,7 +77,7 @@ export default function FeedPostCard({
   const campaign = (post as any).campaign as CampaignInfo | undefined;
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content || "");
 
-  const zoomImages: ZoomImage[] = images.map((a) => ({ url: a.url, alt: post.title || "Ảnh" }));
+  const zoomImages: ZoomImage[] = images.map((a) => ({ url: a.url, alt: (post.title || "Ảnh") as string }));
 
   const handleClick = () => {
     if (onOpen) {

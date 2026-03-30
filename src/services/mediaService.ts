@@ -16,6 +16,8 @@ export interface MediaUploadResponse {
     contentType: string;
     sizeBytes: number;
     createdAt: string;
+    expenditureId?: number;
+    expenditureItemId?: number;
 }
 
 export const mediaService = {
@@ -26,7 +28,8 @@ export const mediaService = {
         expenditureId?: number,
         description?: string,
         mediaType?: "PHOTO" | "VIDEO" | "FILE",
-        onProgress?: (progress: number) => void
+        onProgress?: (progress: number) => void,
+        expenditureItemId?: number
     ): Promise<MediaUploadResponse> {
         console.log(`[mediaService] Starting upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB), type: ${mediaType}`);
         const formData = new FormData();
@@ -35,6 +38,7 @@ export const mediaService = {
         if (campaignId) formData.append("campaignId", campaignId.toString());
         if (postId) formData.append("postId", postId.toString());
         if (expenditureId) formData.append("expenditureId", expenditureId.toString());
+        if (expenditureItemId) formData.append("expenditureItemId", expenditureItemId.toString());
         if (description) formData.append("description", description);
         if (mediaType) formData.append("mediaType", mediaType);
 
@@ -104,10 +108,12 @@ export const mediaService = {
     },
 
     async updateMedia(id: number, payload: { postId?: number; campaignId?: number; description?: string }): Promise<void> {
+        const token = typeof window !== "undefined" ? window.localStorage.getItem("token") : null;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`/api/media/${id}`, {
             method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(`updateMedia failed: ${res.status}`);
@@ -139,6 +145,11 @@ export const mediaService = {
 
     async getMediaByExpenditureId(expenditureId: number): Promise<MediaUploadResponse[]> {
         const res = await api.get<MediaUploadResponse[]>(`/api/media/expenditures/${expenditureId}`);
+        return res.data;
+    },
+
+    async getMediaByExpenditureItemId(expenditureItemId: number): Promise<MediaUploadResponse[]> {
+        const res = await api.get<MediaUploadResponse[]>(`/api/media/expenditure-items/${expenditureItemId}`);
         return res.data;
     }
 };

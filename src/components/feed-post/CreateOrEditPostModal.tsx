@@ -48,8 +48,8 @@ export default function CreateOrEditPostModal({
   const [selectedExpenditureId, setSelectedExpenditureId] = useState<number | null>(null);
   const [expendituresOfCampaign, setExpendituresOfCampaign] = useState<{ id: number; plan: string }[]>([]);
   const [existingImages, setExistingImages] = useState<{ url: string; mediaId: number }[]>([]);
-  /** Ảnh đang upload: preview local, xong thì chuyển sang existingImages */
-  const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string }[]>([]);
+  /** Ảnh đang upload: preview local, xong thì done=true */
+  const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string; done: boolean }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
@@ -147,25 +147,9 @@ export default function CreateOrEditPostModal({
       if (!file.type.startsWith("image/")) continue;
       newItems.push({ file, preview: URL.createObjectURL(file) });
     }
-    setUploadingItems((prev) => [...prev, ...newItems]);
+    // Chỉ tạo preview — KHÔNG upload ngay. Upload trong handleSubmit sau khi có postId.
+    setUploadingItems((prev) => [...prev, ...newItems.map((item) => ({ ...item, done: false }))]);
     if (fileInputRef.current) fileInputRef.current.value = "";
-
-    newItems.forEach(({ file, preview }) => {
-      const p = feedPostService
-        .uploadImage(file)
-        .then((result) => {
-          if (result?.url) setExistingImages((prev) => [...prev, result]);
-          setUploadingItems((prev) => prev.filter((x) => x.preview !== preview));
-          URL.revokeObjectURL(preview);
-          return result;
-        })
-        .catch((err) => {
-          console.error("Upload failed", file.name, err);
-          setUploadingItems((prev) => prev.filter((x) => x.preview !== preview));
-          URL.revokeObjectURL(preview);
-        });
-      inFlightUploadsRef.current.push(p);
-    });
   };
 
   const removeAt = (kind: "url" | "uploading", index: number) => {
@@ -189,20 +173,6 @@ export default function CreateOrEditPostModal({
 
     setIsSubmitting(true);
     try {
-      const baseImages = [...existingImages];
-      let allImages = baseImages;
-      if (inFlightUploadsRef.current.length) {
-        const results = await Promise.all(inFlightUploadsRef.current);
-        const newImages = results.filter(
-          (r): r is { url: string; mediaId: number } => Boolean(r?.url)
-        );
-        inFlightUploadsRef.current = [];
-        setUploadingItems([]);
-        setExistingImages((prev) => [...prev, ...newImages]);
-        allImages = [...baseImages, ...newImages];
-      }
-
-      // Resolve targetId based on selected linkType
       const effectiveTargetId =
         linkType === "CAMPAIGN"
           ? linkedCampaignId ? Number(linkedCampaignId) : null
@@ -210,46 +180,61 @@ export default function CreateOrEditPostModal({
           ? selectedExpenditureId
           : null;
 
+      const postTitle = title || content.slice(0, 50);
+
       if (isEdit && initialData?.id) {
-        await feedPostService.update(Number(initialData.id), {
-          title: title || content.slice(0, 50),
+        // === EDIT MODE ===
+        const postId = Number(initialData.id);
+        await feedPostService.update(postId, {
+          title: postTitle,
           content,
           status: "PUBLISHED",
           targetId: effectiveTargetId ?? null,
           targetType: linkType === "none" ? null : linkType,
         });
-        // Link any newly uploaded media to this post
-        const postId = Number(initialData.id);
-        await Promise.all(
-          allImages
-            .filter(({ mediaId }) => mediaId != null && !Number.isNaN(mediaId))
-            .map(({ mediaId }) =>
-              mediaService.updateMedia(mediaId, { postId }).catch(() => {})
-            )
-        );
-        if (!initialData.title && title) localStorage.removeItem(DRAFT_KEY);
+        // Re-link existing images
+        for (const img of existingImages) {
+          if (img.mediaId) {
+            try { await mediaService.updateMedia(img.mediaId, { postId }); } catch { /* noop */ }
+          }
+        }
+        // Upload new images WITH postId, mark each as done
+        for (const { file } of uploadingItems) {
+          try { await feedPostService.uploadImage(file, postId); } catch (e) { console.error("Upload failed:", e); }
+          setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+        }
+        if (!initialData?.title && title) localStorage.removeItem(DRAFT_KEY);
         onPostUpdated?.();
       } else {
+        // === CREATE MODE: DRAFT → upload images → PUBLIC ===
+        // Step 1: create post as DRAFT to get postId
         const newPost = await feedPostService.create({
           type: "DISCUSSION",
           visibility: "PUBLIC",
-          title: title || content.slice(0, 50),
+          title: postTitle,
           content,
-          status: "PUBLISHED",
+          status: "DRAFT",
           targetId: effectiveTargetId ?? null,
           targetType: linkType === "none" ? null : linkType,
         });
-        // Link all uploaded media to the newly created post
-        if (newPost?.id && allImages.length > 0) {
-          const postId = Number(newPost.id);
-          await Promise.all(
-            allImages
-              .filter(({ mediaId }) => mediaId != null && !Number.isNaN(mediaId))
-              .map(({ mediaId }) =>
-                mediaService.updateMedia(mediaId, { postId }).catch(() => {})
-              )
-          );
+        const postId = Number(newPost.id);
+
+        // Step 2: upload all images with postId, mark each as done
+        for (const { file } of uploadingItems) {
+          try { await feedPostService.uploadImage(file, postId); } catch (e) { console.error("Upload failed:", e); }
+          setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
         }
+
+        // Step 3: publish the post
+        await feedPostService.update(postId, {
+          title: postTitle,
+          content,
+          status: "PUBLISHED",
+          visibility: "PUBLIC",
+          targetId: effectiveTargetId ?? null,
+          targetType: linkType === "none" ? null : linkType,
+        });
+
         localStorage.removeItem(DRAFT_KEY);
         onPostCreated?.();
       }
@@ -466,12 +451,23 @@ export default function CreateOrEditPostModal({
 
             const renderThumb = (
               globalIndex: number,
-              content: { type: "url"; url: string } | { type: "uploading"; preview: string }
+              content: { type: "url"; url: string } | { type: "uploading"; preview: string; done: boolean }
             ) => (
               <div key={content.type === "url" ? `url-${globalIndex}-${content.url}` : `up-${content.preview}`} className={thumbClass}>
                 {content.type === "url" ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={content.url} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                ) : content.done ? (
+                  <>
+                    <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[1]">
+                      <div className="w-7 h-7 bg-[#1A685B] rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <>
                     <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
@@ -496,9 +492,9 @@ export default function CreateOrEditPostModal({
               </div>
             );
 
-            const items: ({ type: "url"; url: string } | { type: "uploading"; preview: string })[] = [
+            const items: ({ type: "url"; url: string } | { type: "uploading"; preview: string; done: boolean })[] = [
               ...existingImages.map(({ url }) => ({ type: "url" as const, url })),
-              ...uploadingItems.map((item) => ({ type: "uploading" as const, preview: item.preview })),
+              ...uploadingItems.map((item) => ({ type: "uploading" as const, preview: item.preview, done: item.done })),
             ];
 
             if (useSwipe) {
