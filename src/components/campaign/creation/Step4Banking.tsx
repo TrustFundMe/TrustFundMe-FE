@@ -15,9 +15,11 @@ interface Step4BankingProps {
     onChange: (key: any, value: any) => void;
     errors: Record<string, string>;
     showErrors: boolean;
+    onPrev: () => void;
+    onNext: () => void;
 }
 
-export default function Step4Banking({ data, onChange, errors, showErrors }: Step4BankingProps) {
+export default function Step4Banking({ data, onChange, errors, showErrors, onPrev, onNext }: Step4BankingProps) {
     const { user } = useAuth();
     const [existingAccounts, setExistingAccounts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -120,7 +122,7 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
                 </p>
             </div>
 
-            <div className="relative bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)]">
+            <div className="relative bg-white rounded-[2.5rem] pt-8 px-8 pb-4 border border-gray-100 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)]">
                 <div className="space-y-6">
                     {/* Ngân hàng */}
                     <div className="space-y-2">
@@ -215,6 +217,25 @@ export default function Step4Banking({ data, onChange, errors, showErrors }: Ste
                         </div>
                         <ErrorText show={showErrors && !isReadOnly} message={errors.accountHolderName} />
                     </div>
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="mt-6 flex justify-end items-center gap-4 py-2 px-1 border-t border-black/5 pt-6">
+                    <button
+                        type="button"
+                        onClick={onPrev}
+                        className="text-sm font-black text-black/20 hover:text-black transition-colors"
+                    >
+                        Prev
+                    </button>
+                    <div className="h-4 w-px bg-black/10" />
+                    <button
+                        type="button"
+                        onClick={onNext}
+                        className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors"
+                    >
+                        Next
+                    </button>
                 </div>
             </div>
 

@@ -125,7 +125,7 @@ export const campaignService = {
         console.warn(`Access forbidden for staff tasks (StaffId: ${staffId}).`);
         return [];
       }
-      
+
       // Fallback for environments where staff-task endpoint is unstable (500).
       console.log('Attempting fallback to total tasks list for staff:', staffId);
       try {
@@ -168,5 +168,11 @@ export const campaignService = {
     } catch {
       return null;
     }
+  },
+
+  async updateBalance(id: number, amount: number): Promise<void> {
+    await api.put(API_ENDPOINTS.CAMPAIGNS.UPDATE_BALANCE(id), null, {
+      params: { amount }
+    });
   },
 };

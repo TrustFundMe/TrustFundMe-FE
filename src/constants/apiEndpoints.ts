@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
     BY_STATUS: (status: string) => `/api/campaigns/status/${status}`,
     BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
+    UPDATE_BALANCE: (id: number | string) => `/api/campaigns/${id}/update-balance`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",
@@ -103,6 +104,7 @@ export const API_ENDPOINTS = {
     CHECK_ITEM_LIMIT: (id: number | string) => `/api/payments/expenditure-item/${id}/check`,
     CAMPAIGN_PROGRESS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/progress`,
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
+    CAMPAIGN_ANALYTICS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/analytics`,
   },
   TASKS: {
     BASE: "/api/admin/tasks",

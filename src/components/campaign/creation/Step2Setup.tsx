@@ -14,6 +14,8 @@ interface Step2SetupProps {
     onChange: (key: any, value: any) => void;
     errors: Record<string, string>;
     showErrors: boolean;
+    onPrev: () => void;
+    onNext: () => void;
 }
 
 const LIMITS = {
@@ -22,7 +24,7 @@ const LIMITS = {
     FILE: 20 * 1024 * 1024, // 20MB
 };
 
-export default function Step2Setup({ data, onChange, errors, showErrors }: Step2SetupProps) {
+export default function Step2Setup({ data, onChange, errors, showErrors, onPrev, onNext }: Step2SetupProps) {
     const { toast } = useToast();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadFilter, setUploadFilter] = useState<string>('*');
@@ -157,7 +159,7 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
     return (
         <div className="max-w-4xl mx-auto w-full h-full flex flex-col justify-center">
             <div className="bg-white rounded-[3rem] shadow-[0_20px_70px_-20px_rgba(0,0,0,0.1)] overflow-hidden border border-gray-100">
-                <div className="p-10 space-y-8">
+                <div className="pt-10 px-10 pb-5 space-y-8">
                     {/* Top Row: Title and Goals */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
                         <div className="md:col-span-12">
@@ -287,6 +289,7 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                     <div className="text-[10px] font-bold text-red-500 uppercase tracking-widest ml-1">{errors.description}</div>
                                 )}
                             </div>
+
                         </div>
 
                         {/* Right Side: Media Manager */}
@@ -307,15 +310,15 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                                 key={opt.id}
                                                 type="button"
                                                 onClick={() => triggerUpload(opt.accept)}
-                                                className="flex flex-col items-center justify-center p-4 rounded-[2rem] border-2 border-transparent bg-gray-50/50 hover:bg-white hover:border-[#dc2626] transition-all group"
+                                                className="flex flex-col items-center justify-center p-2.5 rounded-[1.5rem] border-2 border-transparent bg-gray-50/50 hover:bg-white hover:border-[#dc2626] transition-all group"
                                             >
-                                                <div className="h-10 w-10 rounded-full flex items-center justify-center mb-2 bg-white text-black/20 group-hover:bg-[#dc2626] group-hover:text-white transition-all">
-                                                    <Icon className="h-5 w-5" />
+                                                <div className="h-9 w-9 rounded-full flex items-center justify-center mb-1.5 bg-white text-black/20 group-hover:bg-[#dc2626] group-hover:text-white transition-all">
+                                                    <Icon className="h-4 w-4" />
                                                 </div>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-black/30 group-hover:text-black">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-black/30 group-hover:text-black">
                                                     + {opt.label}
                                                 </span>
-                                                <span className="mt-1 text-[8px] font-bold text-red-500/80 uppercase tracking-tighter">Tối đa {opt.limit}</span>
+                                                <span className="mt-0.5 text-[7px] font-bold text-red-500/80 uppercase tracking-tighter">Tối đa {opt.limit}</span>
                                             </button>
                                         );
                                     })}
@@ -331,7 +334,7 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                             </div>
 
                             {/* Media List */}
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            <div className="space-y-3 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
                                 {currentAttachments.map((item: any, idx: number) => (
                                     <div key={idx} className="flex items-center gap-4 p-3 rounded-2xl bg-gray-50/50 border border-transparent hover:border-gray-100 transition-all group">
                                         <div className="relative h-12 w-12 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0 border border-gray-100">
@@ -378,13 +381,46 @@ export default function Step2Setup({ data, onChange, errors, showErrors }: Step2
                                 ))}
 
                                 {currentAttachments.length === 0 && (
-                                    <div className="py-10 flex flex-col items-center justify-center opacity-20 italic">
+                                    <div className="py-8 flex flex-col items-center justify-center opacity-20 italic">
                                         <Paperclip className="h-8 w-8 mb-2" />
                                         <span className="text-[10px] font-bold uppercase tracking-widest">Chưa có tệp đính kèm</span>
                                     </div>
                                 )}
                             </div>
+
+                            {/* Thank You Message */}
+                            <div className="space-y-2 pt-2 border-t border-gray-50">
+                                <label className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-1">
+                                    Lời cảm ơn người ủng hộ <span className="text-[#dc2626] ml-1">* bắt buộc</span>
+                                </label>
+                                <textarea
+                                    value={data.thankMessage || ''}
+                                    onChange={(e) => onChange('thankMessage', e.target.value)}
+                                    rows={3}
+                                    placeholder="Lời tri ân chân thành đến những người sẽ ủng hộ..."
+                                    className="w-full p-5 rounded-2xl border-2 transition-all text-sm font-bold outline-none resize-none leading-relaxed overflow-y-auto custom-scrollbar bg-gray-50/50 border-transparent focus:border-[#dc2626] focus:bg-white"
+                                />
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Navigation Buttons */}
+                    <div className="mt-12 flex justify-end items-center gap-4 py-2 px-1 border-t border-black/5 pt-6">
+                        <button
+                            type="button"
+                            onClick={onPrev}
+                            className="text-sm font-black text-black/20 hover:text-black transition-colors"
+                        >
+                            Prev
+                        </button>
+                        <div className="h-4 w-px bg-black/10" />
+                        <button
+                            type="button"
+                            onClick={onNext}
+                            className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             </div>

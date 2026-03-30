@@ -1,6 +1,4 @@
 'use client';
-// Force refresh
-
 
 import { useState } from 'react';
 import { ShieldCheck, Target, CheckCircle2 } from 'lucide-react';
@@ -9,9 +7,10 @@ import Image from 'next/image';
 interface Step1TypeProps {
     data: any;
     onChange: (key: any, value: any) => void;
+    onNext: () => void;
 }
 
-export default function Step1Type({ data, onChange }: Step1TypeProps) {
+export default function Step1Type({ data, onChange, onNext }: Step1TypeProps) {
     const [flipped, setFlipped] = useState<string | null>(null);
 
     const isAuthorized = data.fundType === 'AUTHORIZED';
@@ -142,6 +141,23 @@ export default function Step1Type({ data, onChange }: Step1TypeProps) {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div className="mt-8 flex justify-end items-center gap-4 py-2 px-1 border-t border-black/5 pt-6 w-full max-w-2xl">
+                <button
+                    type="button"
+                    className="text-sm font-black text-black/20 opacity-0 cursor-default"
+                >
+                    Prev
+                </button>
+                <div className="h-4 w-px bg-black/10" />
+                <button
+                    type="button"
+                    onClick={onNext}
+                    className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors"
+                >
+                    Next
+                </button>
             </div>
 
             <style jsx global>{`

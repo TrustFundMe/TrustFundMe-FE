@@ -35,26 +35,29 @@ export default function SuccessPage({ campaign, amount }: SuccessPageProps) {
             <div className="relative z-10 w-full max-w-2xl bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-700">
                 <div className="p-10 md:p-14 text-center text-white">
                     <h1 className="text-5xl md:text-6xl font-black mb-4 tracking-tight text-white">Cảm Ơn Bạn!</h1>
-                    <p className="text-lg md:text-xl font-bold text-[#fbbf24] mb-10 tracking-wide">
-                        Sự đóng góp của bạn có ý nghĩa vô cùng lớn với thế giới và chúng tôi.
+                    <p className="text-lg md:text-xl font-bold text-[#fbbf24] mb-10 tracking-wide max-w-xl mx-auto italic">
+                        {campaign?.thankMessage || 'Sự đóng góp của bạn có ý nghĩa vô cùng lớn với thế giới và chúng tôi.'}
                     </p>
 
-                    <div className="max-w-lg mx-auto mb-10">
+                    <div className="max-w-lg mx-auto mb-10 space-y-6">
                         <p className="text-sm md:text-base text-gray-300 leading-relaxed font-medium">
                             Chúng tôi vô cùng trân trọng sự tin tưởng của bạn. Khoản quyên góp{' '}
                             <span className="font-bold text-white">
                                 {amount.toLocaleString('vi-VN')}₫
                             </span>{' '}
-                            đã được nhận thành công. Chúng tôi đang làm việc miệt mài để thực hiện chiến dịch này.
-                            Nếu bạn có bất kỳ thắc mắc nào, đừng ngần ngại liên hệ với đội ngũ hỗ trợ.
+                            đã được nhận thành công.
+                        </p>
+
+                        <p className="text-[11px] text-gray-400 font-medium pt-4">
+                            Nếu bạn có bất kỳ thắc mắc nào, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của TrustFundMe.
                         </p>
                     </div>
 
                     <button
-                        onClick={() => router.push('/')}
+                        onClick={() => router.push(campaign ? `/campaigns-details?id=${campaign.id}` : '/')}
                         className="px-8 py-3 bg-[#fbbf24] hover:bg-[#f59e0b] text-black font-extrabold rounded-lg transition-all hover:scale-105 active:scale-95 shadow-lg text-xs uppercase tracking-wider"
                     >
-                        Quay về trang chủ
+                        {campaign ? 'Quay về chiến dịch' : 'Quay về trang chủ'}
                     </button>
                 </div>
             </div>

@@ -110,6 +110,7 @@ export default function CampaignsPage() {
   const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
   const [enriching, setEnriching] = useState<Record<number, boolean>>({});
   const [campaignStaffMap, setCampaignStaffMap] = useState<Record<number, string>>({});
+  const [campaignRawStaffIdMap, setCampaignRawStaffIdMap] = useState<Record<number, number>>({});
 
   // Fetch all staff names once
   useEffect(() => {
@@ -149,6 +150,7 @@ export default function CampaignsPage() {
             if (prev[c.id!]) return prev; // already resolved
             return { ...prev, [c.id!]: task.staffId };
           });
+          setCampaignRawStaffIdMap(prev => ({ ...prev, [c.id!]: task.staffId }));
         }
       } catch { }
     }));
@@ -236,9 +238,11 @@ export default function CampaignsPage() {
         router.push(`/account/chat?conversationId=${res.data.id}`);
       } else {
         console.log(`[Campaigns] No conversation found, creating new...`);
-        const createRes = await chatService.createConversation(user.id, campaign.id);
+        // Get staffId if available (either from campaign.approvedByStaff or our mapped staffId)
+        const staffId = campaign.approvedByStaff || (campaign.id ? campaignRawStaffIdMap[campaign.id] : undefined);
+        const createRes = await chatService.createConversation(user.id, campaign.id, staffId);
         if (createRes.success && createRes.data) {
-          console.log(`[Campaigns] Created new conversation: ${createRes.data.id}`);
+          console.log(`[Campaigns] Created new conversation: ${createRes.data.id} with staff: ${staffId}`);
           router.push(`/account/chat?conversationId=${createRes.data.id}`);
         } else {
           toast('Không thể tạo cuộc trò chuyện.', 'error');

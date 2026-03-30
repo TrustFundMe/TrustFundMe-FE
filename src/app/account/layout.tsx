@@ -18,7 +18,7 @@ const NAV_ITEMS = [
 ];
 
 // Lighter red for the sidebar
-const SIDEBAR_COLOR = '#ff715e';
+const SIDEBAR_COLOR = '#2d3a30';
 
 /**
  * ConcaveCorner creates the "reverse curve" effect where the red sidebar
@@ -74,13 +74,13 @@ function AccountSidebar() {
                             <Link
                                 href={item.href}
                                 className={`relative flex items-center gap-3 pl-8 pr-4 py-3 text-sm font-bold transition-all duration-200 ${isActive
-                                    ? 'text-[#f74938] rounded-l-[2rem] shadow-[-4px_0_12px_rgba(0,0,0,0.05)]'
+                                    ? 'text-[#2d3a30] rounded-l-[2rem] shadow-[-4px_0_12px_rgba(0,0,0,0.05)]'
                                     : 'text-white/80 hover:text-white hover:bg-white/10 rounded-l-[1.5rem] ml-2'
                                     }`}
                                 style={isActive ? { backgroundColor: '#ffffff' } : {}}
                             >
-                                <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#f74938]' : 'text-white/60'}`} />
-                                <span className={isActive ? 'text-[#f74938]' : 'text-white'}>{item.label}</span>
+                                <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#2d3a30]' : 'text-white/60'}`} />
+                                <span className={isActive ? 'text-[#2d3a30]' : 'text-white'}>{item.label}</span>
                             </Link>
 
                             {/* Concave bridge BELOW active tab */}

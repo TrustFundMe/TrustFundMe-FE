@@ -27,7 +27,7 @@ export default function CreateExpenditurePage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [plan, setPlan] = useState('');
+    const [plan, setPlan] = useState('Chi tiêu đợt 1');
     const [evidenceDueAt, setEvidenceDueAt] = useState('');
     const [items, setItems] = useState<CreateExpenditureItemRequest[]>([
         { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }

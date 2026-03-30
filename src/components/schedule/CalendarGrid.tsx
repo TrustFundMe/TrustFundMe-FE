@@ -166,8 +166,13 @@ export const CalendarGrid = ({
     const getWeekDays = () => {
         const start = new Date(currentDate);
         const day = start.getDay();
+
         const diff = start.getDate() - (day === 0 ? 6 : day - 1);
+        start.setHours(0, 0, 0, 0);
         start.setDate(diff);
+
+
+
 
         return Array.from({ length: 7 }, (_, i) => {
             const d = new Date(start);
@@ -307,6 +312,7 @@ export const CalendarGrid = ({
 
     const WeeklyView = () => (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white rounded-xl border border-gray-100 mx-5 mb-5 relative">
+            {/* Header Row */}
             <div className="grid grid-cols-[80px_1fr] border-b border-gray-100 bg-gray-50/50 shrink-0">
                 <div className="border-r border-gray-100" />
                 <div className="grid grid-cols-7">
@@ -322,49 +328,90 @@ export const CalendarGrid = ({
                 </div>
             </div>
 
+            {/* Scrollable Body */}
             <div className="flex-1 overflow-y-auto relative no-scrollbar">
-                <div className="grid grid-cols-[80px_1fr] min-h-full">
+                <div className="grid grid-cols-[80px_1fr] relative">
+                    {/* Time Column */}
                     <div className="border-r border-gray-100 bg-gray-50/20">
                         {HOURS.map(h => (
-                            <div key={h} className="h-20 border-b border-gray-100/50 flex flex-col justify-start p-2">
-                                <span className="text-[10px] font-bold text-gray-400">{h.toString().padStart(2, '0')}:00</span>
+                            <div key={h} className="h-[80px] border-b border-gray-100/50 flex flex-col justify-start items-center pt-1">
+                                <span className="text-[10px] font-bold text-gray-400">
+                                    {h.toString().padStart(2, '0')}:00
+                                </span>
                             </div>
                         ))}
                     </div>
 
+                    {/* Grid and Events */}
                     <div className="relative">
-                        {HOURS.map(h => <div key={h} className="h-20 border-b border-gray-100/30 w-full" />)}
+                        {/* Hour Background lines */}
+                        {HOURS.map(h => (
+                            <div key={h} className="h-[80px] border-b border-gray-100/30 w-full" />
+                        ))}
+
+                        {/* Day Column lines */}
                         <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
-                            {Array.from({ length: 7 }).map((_, i) => <div key={i} className="border-r border-gray-100/30 last:border-r-0" />)}
+                            {Array.from({ length: 7 }).map((_, i) => (
+                                <div key={i} className="border-r border-gray-100/30 last:border-r-0" />
+                            ))}
                         </div>
 
+                        {/* Current Time line */}
                         {weekDays.some(d => d.toDateString() === now.toDateString()) && (
-                            <div className="absolute left-0 right-0 z-20 pointer-events-none flex items-center" style={{ top: `${((now.getHours() - 6) * 60 + now.getMinutes()) / (17 * 60) * 100}%` }}>
-                                <div className="absolute -left-[84px] bg-black text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-lg">{now.getHours().toString().padStart(2, '0')}:{now.getMinutes().toString().padStart(2, '0')}</div>
-                                <div className="w-full h-[2px] bg-black relative"><div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-black shadow-sm" /></div>
+                            <div
+                                className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                                style={{ top: `${(((now.getHours() - 6) * 60 + now.getMinutes()) * 80) / 60}px` }}
+                            >
+                                <div className="absolute -left-[84px] bg-black text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-lg">
+                                    {now.getHours().toString().padStart(2, '0')}:{now.getMinutes().toString().padStart(2, '0')}
+                                </div>
+                                <div className="w-full h-[2px] bg-black relative">
+                                    <div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-black shadow-sm" />
+                                </div>
                             </div>
                         )}
 
+                        {/* Events Layer */}
                         <div className="absolute inset-0 grid grid-cols-7 text-xs">
                             {weekDays.map((date, dayIdx) => (
                                 <div key={dayIdx} className="relative h-full">
                                     {getDayEvents(date).map(appt => {
                                         const start = new Date(appt.startTime);
                                         const end = new Date(appt.endTime);
-                                        const startMin = (start.getHours() - 6) * 60 + start.getMinutes();
+
+                                        // Calculate minutes since 06:00 of this specific day
+                                        const dayStart = new Date(date);
+                                        dayStart.setHours(6, 0, 0, 0);
+
+                                        const startMin = (start.getTime() - dayStart.getTime()) / (1000 * 60);
                                         const originalDuration = (end.getTime() - start.getTime()) / (1000 * 60);
                                         const displayDuration = Math.max(30, originalDuration);
+
+                                        const topPosPx = (startMin * 80) / 60;
+                                        const heightPosPx = (displayDuration * 80) / 60;
+
                                         return (
                                             <div
                                                 key={appt.id}
                                                 data-calendar-event
                                                 onClick={() => handleEventClick(appt)}
                                                 className={`absolute left-0.5 right-0.5 rounded-md p-1 group/card text-left border shadow-sm z-10 hover:shadow-md hover:scale-[1.01] cursor-pointer transition-all ${STATUS_COLORS[appt.status] || 'bg-gray-50 text-gray-400 border-gray-200'}`}
-                                                style={{ top: `${(startMin / (17 * 60)) * 100}%`, height: `${(displayDuration / (17 * 60)) * 100}%` }}
+                                                style={{
+                                                    top: `${topPosPx}px`,
+                                                    height: `${heightPosPx}px`,
+                                                    minHeight: '20px'
+                                                }}
                                             >
                                                 <div className="flex flex-col h-full justify-start items-start gap-0.5 overflow-hidden">
-                                                    <h4 className="text-[9px] font-black uppercase leading-none mb-0.5 text-ellipsis line-clamp-2 md:line-clamp-none">{appt.purpose || 'HẸN HỖ TRỢ'}</h4>
-                                                    <div className="flex items-center gap-1 opacity-80 overflow-hidden"><Clock className="w-2 h-2 shrink-0" /><span className="text-[8px] font-bold whitespace-nowrap">{start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                                                    <h4 className="text-[9px] font-black uppercase leading-none mb-0.5 text-ellipsis line-clamp-2 md:line-clamp-none">
+                                                        {appt.purpose || 'HẸN HỖ TRỢ'}
+                                                    </h4>
+                                                    <div className="flex items-center gap-1 opacity-80 overflow-hidden">
+                                                        <Clock className="w-2 h-2 shrink-0" />
+                                                        <span className="text-[8px] font-bold whitespace-nowrap">
+                                                            {start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         );
@@ -545,27 +592,33 @@ export const CalendarGrid = ({
                                         <div className="flex flex-col">
                                             <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1.5">Trạng thái đặt lịch</p>
                                             <div className="flex items-center gap-4 flex-wrap">
-                                                <p className="text-2xl font-black text-gray-900 leading-none">09:30 - 10:00</p>
+                                                <p className="text-2xl font-black text-gray-900 leading-none">
+                                                    {new Date(selectedEvent.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(selectedEvent.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100">
                                                     <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                                                    <span className="text-[11px] font-black text-gray-600">{selectedEvent.location || 'Vinhomes Central Park'}</span>
+                                                    <span className="text-[11px] font-black text-gray-600">{selectedEvent.location || 'Tại văn phòng'}</span>
                                                 </div>
                                             </div>
+                                            <p className="text-[11px] font-bold text-gray-400 mt-1">
+                                                Ngày: {new Date(selectedEvent.startTime).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                            </p>
                                         </div>
 
                                         <div className="py-3 border-y border-gray-100/50">
                                             <div className="flex flex-col gap-1">
                                                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nhân viên tiếp nhận</p>
-                                                <p className="text-[15px] font-black text-gray-900">{selectedEvent.staffName || 'Staff 3'}</p>
-                                                <p className="text-[11px] font-bold text-gray-400">038 923 1234</p>
+                                                <p className="text-[15px] font-black text-gray-900">{selectedEvent.staffName || 'Chưa phân công'}</p>
+                                                <p className="text-[11px] font-bold text-gray-400">ID Nhân viên: {selectedEvent.staffId}</p>
                                             </div>
                                         </div>
 
                                         <div className="flex flex-col gap-1 pt-1">
-                                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Thông tin chi tiết</p>
-                                            <p className="text-base font-black text-gray-900 leading-tight uppercase tracking-tight">{selectedEvent.purpose || 'XÁC NHẬN THÔNG TIN CAMPAGIN'}</p>
+                                            <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Mục đích cuộc hẹn</p>
+                                            <p className="text-base font-black text-gray-900 leading-tight uppercase tracking-tight">{selectedEvent.purpose || 'HẸN HỖ TRỢ'}</p>
                                         </div>
                                     </div>
+
 
                                     <div className="pt-2">
                                         <button className="w-full py-2.5 bg-white border border-rose-100 text-rose-500 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-rose-50 transition-all shadow-sm">Hủy Lịch Hẹn</button>

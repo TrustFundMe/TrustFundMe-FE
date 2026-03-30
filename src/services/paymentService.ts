@@ -23,6 +23,7 @@ export interface PaymentResponse {
     paymentLinkId: string;
     donationId?: number;
     campaignId?: number;
+    donationAmount?: number;
     totalAmount?: number;
     status: string;
 }
@@ -126,5 +127,33 @@ export const paymentService = {
             console.error("❌ [Payment] Recent Donors Error:", err);
             throw err;
         }
+    },
+    async getCampaignAnalytics(campaignId: number, period: string = 'Tháng'): Promise<CampaignAnalyticsResponse> {
+        console.log(`📈 [Payment] Fetching analytics for campaign: ${campaignId}, period: ${period}`);
+        try {
+            const res = await api.get<CampaignAnalyticsResponse>(API_ENDPOINTS.PAYMENTS.CAMPAIGN_ANALYTICS(campaignId), {
+                params: { period }
+            });
+            return res.data;
+        } catch (err: any) {
+            console.error("❌ [Payment] Analytics Error:", err);
+            throw err;
+        }
     }
 };
+
+export interface ChartPoint {
+    date: string;
+    balanceGreen: number | null;
+    balanceRed: number | null;
+}
+
+export interface CampaignAnalyticsResponse {
+    campaignId: number;
+    totalReceived: number;
+    totalSpent: number;
+    currentBalance: number;
+    targetAmount: number;
+    approvedAt: string;
+    chartData: ChartPoint[];
+}

@@ -7,7 +7,7 @@ import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
 import CampaignHeader from '@/components/campaign/CampaignHeader';
-import CampaignCommentsCard from '@/components/campaign/CampaignCommentsCard';
+import CampaignAnalyticsChart from '@/components/campaign/CampaignAnalyticsChart';
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower } from '@/components/campaign/types';
@@ -19,7 +19,6 @@ import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 import { usePermissions } from '@/hooks/usePermissions';
-import type { Expenditure } from '@/types/expenditure';
 import { mediaService } from '@/services/mediaService';
 import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymentService';
 import { flagService } from '@/services/flagService';
@@ -79,7 +78,7 @@ function mapFeedPostDtoToCampaignPost(dto: FeedPostDto): CampaignPost {
       .map((a) => ({
         type: (a.type?.toUpperCase() === 'IMAGE' ? 'image' : 'file') as 'image' | 'file',
         url: a.url!,
-        name: a.fileName || a.name,
+        name: a.fileName || (a as any).name,
       })),
     liked: dto.isLiked ?? false,
     likeCount: dto.likeCount ?? 0,
@@ -131,8 +130,8 @@ function CampaignDetailsInner() {
 
         // Map expenditures to CampaignPlan (only DISBURSED)
         const mappedPlans: CampaignPlan[] = (expenditures || [])
-          .filter((exp: Expenditure) => exp.status === 'DISBURSED')
-          .map((exp: Expenditure) => ({
+          .filter((exp: any) => exp.status === 'DISBURSED')
+          .map((exp: any) => ({
             id: String(exp.id),
             title: `Giải ngân: ${exp.plan || 'Chi tiết chi tiêu'}`,
             amount: exp.totalAmount,
@@ -399,7 +398,7 @@ function CampaignDetailsInner() {
                 </div>
               )}
 
-              <CampaignCommentsCard comments={comments} />
+              <CampaignAnalyticsChart campaignId={campaign.id} />
             </div>
 
             <div style={{ minWidth: 0, marginTop: 86 }}>

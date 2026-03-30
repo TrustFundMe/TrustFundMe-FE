@@ -61,10 +61,10 @@ export default function CancelPage({ campaign }: CancelPageProps) {
                             Thử lại quyên góp
                         </button>
                         <button
-                            onClick={() => router.push('/')}
+                            onClick={() => router.push(campaign ? `/campaigns-details?id=${campaign.id}` : '/')}
                             className="px-8 py-3 bg-transparent border border-white/20 hover:bg-white/10 text-white font-extrabold rounded-lg transition-all hover:scale-105 active:scale-95 shadow-lg text-xs uppercase tracking-wider"
                         >
-                            Quay về trang chủ
+                            {campaign ? 'Xem chiến dịch' : 'Quay về trang chủ'}
                         </button>
                     </div>
                 </div>

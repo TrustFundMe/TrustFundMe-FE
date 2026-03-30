@@ -8,9 +8,10 @@ interface Step5ReviewProps {
     onSubmit: () => void;
     isSubmitting: boolean;
     result: any;
+    onPrev: () => void;
 }
 
-export default function Step5Review({ data, onSubmit, isSubmitting, result }: Step5ReviewProps) {
+export default function Step5Review({ data, onSubmit, isSubmitting, result, onPrev }: Step5ReviewProps) {
     const [showModal, setShowModal] = useState(false);
     const [isAgreed, setIsAgreed] = useState(false);
     const isAuthorized = data.fundType === 'AUTHORIZED';
@@ -106,7 +107,7 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result }: St
             </div>
 
             {/* Bottom Actions */}
-            <div className="pt-10 border-t border-black/5 space-y-6">
+            <div className="pt-6 border-t border-black/5 space-y-6">
                 <div className="p-6 rounded-[2rem] bg-[#dc2626]/5 border border-[#dc2626]/10 transition-all hover:bg-[#dc2626]/10">
                     <label className="flex items-start gap-4 cursor-pointer">
                         <div className="shrink-0 mt-1">
@@ -132,12 +133,12 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result }: St
                     </label>
                 </div>
 
-                <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
                     <button
                         type="button"
                         onClick={onSubmit}
                         disabled={isSubmitting || !isAgreed}
-                        className="w-full flex items-center justify-center gap-3 rounded-[2rem] bg-[#dc2626] py-2.5 text-sm font-black text-white shadow-2xl shadow-red-200 transition-all hover:bg-red-700 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 disabled:grayscale-[0.5]"
+                        className="flex-1 flex items-center justify-center gap-3 rounded-[2rem] bg-[#dc2626] py-2.5 text-sm font-black text-white shadow-2xl shadow-red-200 transition-all hover:bg-red-700 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 disabled:grayscale-[0.5]"
                     >
                         {isSubmitting ? (
                             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -145,17 +146,17 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result }: St
                             <CheckCircle2 className="h-5 w-5" />
                         )}
                         <span className="uppercase tracking-[2px]">
-                            {isSubmitting ? 'Đang gửi request campaign...' : 'Hoàn tất & Gửi duyệt chiến dịch'}
+                            {isSubmitting ? 'Đang gửi duyệt...' : 'Hoàn tất & Gửi duyệt chiến dịch'}
                         </span>
                     </button>
-
-                    {result.type === 'error' && (
-                        <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-[#dc2626] animate-shake">
-                            <AlertCircle className="h-5 w-5 shrink-0" />
-                            <div className="text-xs font-black uppercase tracking-tight">{result.message}</div>
-                        </div>
-                    )}
                 </div>
+
+                {result.type === 'error' && (
+                    <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-4 text-[#dc2626] animate-shake">
+                        <AlertCircle className="h-5 w-5 shrink-0" />
+                        <div className="text-xs font-black uppercase tracking-tight">{result.message}</div>
+                    </div>
+                )}
             </div>
 
             {/* Commitment Modal */}

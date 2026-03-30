@@ -23,14 +23,31 @@ function SuccessContent() {
                 paymentService.verifyPayment(id).then(() => {
                     // 1. Fetch donation details to get campaignId and totalAmount
                     paymentService.getDonation(id)
-                        .then(donationData => {
+                        .then(async donationData => {
                             setAmount(donationData.totalAmount || 0);
 
-                            // 2. Fetch campaign details for background image
+                            // 2. Call campaign-service to update balance (Explicit Axios call as requested)
+                            if (donationData.campaignId && donationData.donationAmount) {
+                                try {
+                                    console.info('🚀 Triggering campaign balance update via FE axios...');
+                                    await campaignService.updateBalance(donationData.campaignId, donationData.donationAmount);
+                                    console.info('✅ Campaign balance updated successfully.');
+                                } catch (err) {
+                                    console.error('❌ Failed to update campaign balance:', err);
+                                }
+                            }
+
+                            // 3. Fetch campaign details for background image and thankMessage
                             if (donationData.campaignId) {
+                                console.info(`🔍 Fetching campaign details for ID: ${donationData.campaignId}...`);
                                 campaignService.getById(donationData.campaignId)
-                                    .then(data => setCampaign(data))
-                                    .catch(err => console.error('Error fetching campaign details:', err));
+                                    .then(data => {
+                                        console.info('✅ Campaign details fetched:', data);
+                                        setCampaign(data);
+                                    })
+                                    .catch(err => console.error('❌ Error fetching campaign details:', err));
+                            } else {
+                                console.warn('⚠️ No campaignId found in donation details.');
                             }
                         })
                         .catch(err => console.error('Error fetching donation details:', err));

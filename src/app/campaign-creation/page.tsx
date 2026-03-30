@@ -65,6 +65,7 @@ const initialCampaignState = {
   discount: 0,
   taxRate: 11,
   categoryId: undefined as number | undefined,
+  evidenceDueAt: '',
 };
 
 function formatApiError(err: unknown): string {
@@ -245,12 +246,16 @@ export default function CampaignCreationPage() {
     else if (desc.length < 50) e.description = 'Mô tả phải từ 50 ký tự trở lên.';
     else if (desc.length > 10000) e.description = 'Mô tả tối đa 10,000 ký tự.';
 
+    const thank = campaign.thankMessage.trim();
+    if (!thank) e.thankMessage = 'Lời cảm ơn không được để trống.';
+    else if (thank.length < 10) e.thankMessage = 'Lời cảm ơn phải từ 10 ký tự trở lên.';
+
     if (campaign.fundType !== 'ITEMIZED' && campaign.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
     if (!campaign.categoryId) e.categoryId = 'Vui lòng chọn danh mục chiến dịch.';
 
     return e;
-  }, [campaign.title, campaign.description, campaign.targetAmount, campaign.categoryId, campaign.fundType]);
+  }, [campaign.title, campaign.description, campaign.thankMessage, campaign.targetAmount, campaign.categoryId, campaign.fundType]);
 
   const campaignBankingErrors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -275,10 +280,8 @@ export default function CampaignCreationPage() {
 
   const campaignScheduleErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    // Date requirements removed as requested
-
     return e;
-  }, [campaign]);
+  }, [campaign.fundType, campaign.evidenceDueAt]);
 
   const canGoNext = useMemo(() => {
     switch (currentStep.id) {
@@ -287,7 +290,7 @@ export default function CampaignCreationPage() {
       case 'setup':
         return Object.keys(campaignBasicErrors).length === 0;
       case 'plan':
-        return totalExpenditure <= campaign.targetAmount;
+        return campaign.fundType === 'ITEMIZED' ? (totalExpenditure > 0) : true;
       case 'banking':
         return Object.keys(campaignBankingErrors).length === 0;
       case 'review':
@@ -295,7 +298,15 @@ export default function CampaignCreationPage() {
       default:
         return true;
     }
-  }, [campaignBasicErrors, campaignBankingErrors, campaignScheduleErrors, currentStep.id]);
+  }, [
+    campaignBasicErrors,
+    campaignBankingErrors,
+    campaignScheduleErrors,
+    currentStep.id,
+    totalExpenditure,
+    campaign.fundType,
+    campaign.evidenceDueAt
+  ]);
 
   const onPrev = () => {
     setResult({ type: 'idle' });
@@ -304,10 +315,21 @@ export default function CampaignCreationPage() {
 
   const onNext = async () => {
     setStepTouched(currentStep.id);
-    if (!canGoNext) return;
 
-    // Intermediate steps no longer call APIs as requested. 
-    // All persistence is moved to the final submit in Step 5.
+    if (!canGoNext) {
+      if (currentStep.id === 'setup') {
+        const firstError = Object.values(campaignBasicErrors)[0] || Object.values(campaignScheduleErrors)[0];
+        if (firstError) toast(firstError, 'error');
+      } else if (currentStep.id === 'plan' && campaign.fundType === 'ITEMIZED') {
+        if (totalExpenditure === 0) {
+          toast('Vui lòng thêm ít nhất một vật phẩm có giá tiền để tiếp tục.', 'error');
+        }
+      } else if (currentStep.id === 'banking') {
+        const firstError = Object.values(campaignBankingErrors)[0];
+        if (firstError) toast(firstError, 'error');
+      }
+      return;
+    }
 
     setResult({ type: 'idle' });
     setActiveIndex((i) => Math.min(steps.length - 1, i + 1));
@@ -485,9 +507,6 @@ export default function CampaignCreationPage() {
       console.log('DEBUG [STAGE 5: GOAL]');
 
       let finalTargetAmount = campaign.targetAmount;
-      if (campaign.fundType === 'ITEMIZED') {
-        finalTargetAmount = (campaign.expenditureItems || []).reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0);
-      }
 
       if (finalTargetAmount > 0 && !submissionSuccess.goal) {
         try {
@@ -509,25 +528,25 @@ export default function CampaignCreationPage() {
         try {
           const itemsToCreate = campaign.expenditureItems.map((item: any) => ({
             category: item.name + (item.unit ? ` (${item.unit})` : ''),
-            quantity: item.quantity,
+            quantity: Number(item.quantity) || 0,
             price: 0,
-            expectedPrice: item.price,
+            expectedPrice: Number(item.price) || 0,
             note: item.note || ''
           }));
 
-          const deadline = new Date();
-          deadline.setDate(deadline.getDate() + 30);
-          const formattedDeadline = deadline.toISOString().split('.')[0];
-
-          await expenditureService.create({
-            campaignId,
+          const createReq = {
+            campaignId: Number(campaignId),
             items: itemsToCreate,
-            plan: 'Kế hoạch chi tiêu chi tiết (Quỹ Vật Phẩm)',
-            evidenceDueAt: formattedDeadline
-          });
+            plan: 'Chi tiêu đợt 1',
+            evidenceDueAt: campaign.evidenceDueAt ? `${campaign.evidenceDueAt}T23:59:59` : undefined
+          };
+
+          console.log('DEBUG [EXPENDITURE PAYLOAD]:', createReq);
+          await expenditureService.create(createReq);
           setSubmissionSuccess(prev => ({ ...prev, expenditure: true }));
         } catch (e) {
-          console.error('Failed to create expenditure:', e);
+          console.error('Failed to create expenditure. Payload was:', campaign.expenditureItems);
+          console.error('Error detail:', e);
           throw new Error('Lỗi khi tạo bản kế hoạch chi tiêu. Vui lòng thử lại.');
         }
       }
@@ -563,6 +582,7 @@ export default function CampaignCreationPage() {
           <Step1Type
             data={campaign}
             onChange={setCampaignField}
+            onNext={onNext}
           />
         );
       case 'setup':
@@ -572,10 +592,19 @@ export default function CampaignCreationPage() {
             onChange={setCampaignField}
             errors={{ ...campaignBasicErrors, ...campaignScheduleErrors }}
             showErrors={touchedSteps.setup}
+            onPrev={onPrev}
+            onNext={onNext}
           />
         );
       case 'plan':
-        return <Step3FinancialPlan data={campaign} onChange={setCampaignField} />;
+        return (
+          <Step3FinancialPlan
+            data={campaign}
+            onChange={setCampaignField}
+            onPrev={onPrev}
+            onNext={onNext}
+          />
+        );
       case 'banking':
         return (
           <Step4Banking
@@ -583,6 +612,8 @@ export default function CampaignCreationPage() {
             onChange={setCampaignField}
             errors={campaignBankingErrors}
             showErrors={touchedSteps.banking}
+            onPrev={onPrev}
+            onNext={onNext}
           />
         );
       case 'review':
@@ -592,6 +623,7 @@ export default function CampaignCreationPage() {
             onSubmit={submit}
             isSubmitting={isSubmitting}
             result={result}
+            onPrev={onPrev}
           />
         );
       default:
@@ -610,29 +642,6 @@ export default function CampaignCreationPage() {
           <div className="h-full flex flex-col">
             <div className="flex-1 flex flex-col justify-center">{renderStep()}</div>
 
-            {currentStep.id !== 'review' && (
-              <div className="mt-12 flex justify-end">
-                <div className="flex items-center gap-4 py-2 px-1">
-                  <button
-                    type="button"
-                    onClick={onPrev}
-                    disabled={activeIndex === 0}
-                    className="text-sm font-black text-black/20 hover:text-black transition-colors disabled:opacity-0 disabled:cursor-default"
-                  >
-                    Prev
-                  </button>
-                  <div className="h-4 w-px bg-black/10" />
-                  <button
-                    type="button"
-                    onClick={onNext}
-                    disabled={isSaving}
-                    className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors disabled:opacity-50"
-                  >
-                    {isSaving ? 'Saving...' : 'Next'}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
