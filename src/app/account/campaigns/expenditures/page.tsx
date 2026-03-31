@@ -22,6 +22,7 @@ import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { CampaignDto } from '@/types/campaign';
 import { FileUp, Send } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
+import ImageZoomModal from '@/components/feed-post/ImageZoomModal';
 
 export default function CampaignExpendituresPage() {
     const router = useRouter();
@@ -60,6 +61,8 @@ export default function CampaignExpendituresPage() {
 
     // Lightbox state
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+    const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
 
     // Create post modal state
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);

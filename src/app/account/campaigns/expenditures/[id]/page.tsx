@@ -8,9 +8,11 @@ import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { mediaService } from '@/services/mediaService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
-import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, Trash2, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
 import { toast } from 'react-hot-toast';
+import ImageZoomModal from '@/components/feed-post/ImageZoomModal';
+import ExpenditureItemGallery from '@/components/campaign/ExpenditureItemGallery';
 
 export default function ExpenditureDetailPage() {
     const router = useRouter();
@@ -34,6 +36,11 @@ export default function ExpenditureDetailPage() {
     const [itemMediaLoading, setItemMediaLoading] = useState<Record<number, boolean>>({});
     const [itemUploadState, setItemUploadState] = useState<Record<number, { uploading: boolean; files: File[]; previews: string[] }>>({});
     const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+
+    // Gallery modal state
+    const [galleryOpen, setGalleryOpen] = useState(false);
+    const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
+    const [galleryIndex, setGalleryIndex] = useState(0);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -485,27 +492,11 @@ export default function ExpenditureDetailPage() {
                                                                         <span className="text-[10px] font-bold text-gray-400">{media.length} / 10 ảnh</span>
                                                                     </div>
 
-                                                                    {/* Existing Images */}
-                                                                    {media.length > 0 && (
-                                                                        <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                                                                            {media.map((m) => (
-                                                                                <div key={m.id} className="relative aspect-square rounded-xl overflow-hidden group/img border border-gray-200 shadow-sm">
-                                                                                    <img
-                                                                                        src={m.url}
-                                                                                        alt={`Minh chứng ${m.id}`}
-                                                                                        className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
-                                                                                        onError={(e) => { (e.target as HTMLImageElement).src = '/assets/img/placeholder.png'; }}
-                                                                                    />
-                                                                                    <button
-                                                                                        onClick={() => handleDeleteItemMedia(item.id, m.id)}
-                                                                                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-all hover:bg-red-500"
-                                                                                    >
-                                                                                        <Trash2 className="w-3 h-3" />
-                                                                                    </button>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
+                                                                    {/* Existing Images — 3x3 thumbnail grid gallery */}
+                                                                    <ExpenditureItemGallery
+                                                                        media={media}
+                                                                        onDelete={(mediaId) => handleDeleteItemMedia(item.id, mediaId)}
+                                                                    />
 
                                                                     {/* Upload Area */}
                                                                     {media.length < 10 && (
@@ -729,20 +720,18 @@ export default function ExpenditureDetailPage() {
                                                                                         <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto" />
                                                                                     ) : (
                                                                                         <div className="space-y-1.5">
-                                                                                            {/* Existing thumbnails */}
-                                                                                            {modalMedia.slice(0, 3).map((m) => (
-                                                                                                <div key={m.id} className="relative group w-10 h-10 mx-auto">
-                                                                                                    <img src={m.url} alt="Minh chứng" className="w-full h-full object-cover rounded border border-gray-200" />
-                                                                                                    <button
-                                                                                                        onClick={() => handleDeleteItemMedia(item.id, m.id)}
-                                                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                                                    >
-                                                                                                        <Trash2 className="w-2 h-2" />
-                                                                                                    </button>
+                                                                                            {/* 3x3 Thumbnail grid gallery */}
+                                                                                            {modalMedia.length > 0 && (
+                                                                                                <div className="flex justify-center">
+                                                                                                    <div style={{ width: compact ? 100 : 120 }}>
+                                                                                                        <ExpenditureItemGallery
+                                                                                                            media={modalMedia}
+                                                                                                            compact={true}
+                                                                                                            maxGrid={6}
+                                                                                                            onDelete={(mediaId) => handleDeleteItemMedia(item.id, mediaId)}
+                                                                                                        />
+                                                                                                    </div>
                                                                                                 </div>
-                                                                                            ))}
-                                                                                            {modalMedia.length > 3 && (
-                                                                                                <div className="text-[9px] text-gray-400 text-center">+{modalMedia.length - 3}</div>
                                                                                             )}
 
                                                                                             {/* Upload trigger */}
@@ -818,6 +807,14 @@ export default function ExpenditureDetailPage() {
                     )
                 }
             </div>
+
+            {/* Image Gallery Modal */}
+            <ImageZoomModal
+                open={galleryOpen}
+                onOpenChange={setGalleryOpen}
+                images={galleryImages}
+                initialIndex={galleryIndex}
+            />
         </div>
     );
 }
