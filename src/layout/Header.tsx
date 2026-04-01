@@ -43,7 +43,7 @@ const Logo = ({
       height={54}
       alt="logo-img"
       style={{
-        height: '40px',
+        height: '44px',
         width: 'auto',
         filter: logo.includes('white')
           ? 'brightness(0) invert(1)'
@@ -100,6 +100,7 @@ const Header1 = ({ open }: { open: () => void }) => (
                 <i className="ps-2 far fa-heart" />
               </Link>
             </div>
+            <NotificationBell />
             <AuthButton />
             <div className="header__hamburger d-xl-none my-auto">
               <div className="sidebar__toggle" onClick={open}>
@@ -137,7 +138,7 @@ const Header3 = ({ open }: { open: () => void }) => {
                     className="search-trigger search-icon"
                     onClick={() => setToggle(true)}
                   >
-                    <i className="fa-light fa-magnifying-glass"></i>
+                    <i className="fas fa-search"></i>
                   </a>
                   <div className="header-button">
                     <Link href="/contact" className="theme-btn">
@@ -168,10 +169,10 @@ const Header4 = ({ open }: { open: () => void }) => {
     <Fragment>
       <SearchPopup open={toggle} close={() => setToggle(false)} />
       {/* Main header — trắng, sticky */}
-      <header id="header-sticky" className="header-4" style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+      <header id="header-sticky" className="header-4" style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '6px 0' }}>
         <div className="container">
           <div className="mega-menu-wrapper">
-            <div className="header-main style-2">
+            <div className="header-main style-2 flex items-center justify-between">
               <div className="header-left d-flex align-items-center">
                 <Logo logo="black-logo.png" />
               </div>
@@ -185,7 +186,7 @@ const Header4 = ({ open }: { open: () => void }) => {
                   onClick={() => setToggle(true)}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', transition: 'all 0.3s' }}
                 >
-                  <i className="fa-light fa-magnifying-glass" style={{ color: '#333' }}></i>
+                  <i className="fas fa-search" style={{ color: '#333' }}></i>
                 </a>
                 <div className="header-button d-none d-sm-block">
                   <Link href="/donation-details" className="theme-btn" style={{ padding: '10px 20px', fontSize: '13px', backgroundColor: '#F84D43', color: '#fff', border: 'none', borderRadius: '6px' }}>
@@ -193,6 +194,7 @@ const Header4 = ({ open }: { open: () => void }) => {
                     <i className="ps-2 far fa-heart" />
                   </Link>
                 </div>
+                <NotificationBell />
                 <AuthButton />
                 <div className="header__hamburger d-xl-none my-auto">
                   <div className="sidebar__toggle" onClick={open}>
@@ -256,7 +258,7 @@ const Nav = () => (
 const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
   <div className="search-wrap" style={{ display: open ? "block" : "none" }}>
     <div className="search-inner">
-      <i className="fa fa-light fa-xmark search-close" onClick={close}></i>
+      <i className="fas fa-times search-close" onClick={close}></i>
       <div className="search-cell">
         <form method="get">
           <div className="search-field-holder">
@@ -302,17 +304,17 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
                 <ul>
                   {[
                     {
-                      icon: "fal fa-map-marker-alt",
+                      icon: "fas fa-map-marker-alt",
                       link: "#",
                       text: "FPT University, Long Thạnh Mỹ, Thủ Đức, Thành phố Hồ Chí Minh, Vietnam",
                     },
                     {
-                      icon: "fal fa-envelope",
+                      icon: "fas fa-envelope",
                       link: "mailto:trustfundme@co.vn",
                       text: "trustfundme@co.vn",
                     },
                     {
-                      icon: "fal fa-clock",
+                      icon: "fas fa-clock",
                       link: "#",
                       text: "Mod-friday, 09am -05pm",
                     },

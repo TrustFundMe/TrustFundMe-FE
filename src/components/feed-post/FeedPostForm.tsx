@@ -38,7 +38,8 @@ export default function FeedPostForm({
     type: initialData?.type || "UPDATE",
     visibility: initialData?.visibility || "PUBLIC",
     status: initialData?.status || "PUBLISHED",
-    expenditureId: initialData?.expenditureId || null,
+    targetId: initialData?.targetId || null,
+    targetType: initialData?.targetType || null,
     category: initialData?.category || "",
   });
 
@@ -57,11 +58,11 @@ export default function FeedPostForm({
       try {
         const [mine, all] = await Promise.all([
           user?.id ? campaignService.getByFundOwner(Number(user.id)).catch(() => []) : [] as CampaignDto[],
-          campaignService.getAll().catch(() => []),
+          campaignService.getAll(0, 100).catch(() => ({ content: [] as CampaignDto[] })),
         ]);
         if (cancelled) return;
         const mineList = Array.isArray(mine) ? mine : [];
-        const allList = Array.isArray(all) ? all : [];
+        const allList = (all as { content?: CampaignDto[] })?.content ?? [];
         setMyCampaigns(mineList);
         setOtherCampaigns(allList.filter((c) => c.fundOwnerId !== user?.id).slice(0, 50));
       } finally {
@@ -89,7 +90,7 @@ export default function FeedPostForm({
         type: formData.type,
         visibility: formData.visibility,
         status: formData.status,
-        ...(formData.expenditureId && { expenditureId: formData.expenditureId }),
+        ...(formData.targetId && { targetId: formData.targetId, targetType: formData.targetType }),
         ...(formData.category && { category: formData.category }),
         attachments: files.length ? files.map((url) => ({ type: "image" as const, url })) : undefined,
       };
@@ -250,8 +251,8 @@ export default function FeedPostForm({
               Gắn với chiến dịch
             </label>
             <select
-              value={formData.expenditureId != null ? String(formData.expenditureId) : ""}
-              onChange={(e) => setFormData({ ...formData, expenditureId: e.target.value ? Number(e.target.value) : null })}
+              value={formData.targetId != null ? String(formData.targetId) : ""}
+              onChange={(e) => setFormData({ ...formData, targetId: e.target.value ? Number(e.target.value) : null, targetType: e.target.value ? "CAMPAIGN" : null })}
               className="w-full appearance-none px-4 pr-10 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800 border-none focus:ring-2 focus:ring-[#ff5e14]/30 outline-none text-zinc-700 dark:text-zinc-200"
             >
               <option value="">Không gắn với chiến dịch nào</option>

@@ -89,8 +89,8 @@ export const feedPostService = {
     await api.delete(`/api/feed-posts/${id}`);
   },
 
-  async uploadImage(file: File): Promise<{ url: string; mediaId: number }> {
-    const result = await mediaService.uploadMedia(file, undefined, undefined, undefined, undefined, "PHOTO");
+  async uploadImage(file: File, postId?: number): Promise<{ url: string; mediaId: number }> {
+    const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, "PHOTO");
     return { url: result.url ?? "", mediaId: result.id };
   },
 };

@@ -28,6 +28,8 @@ export interface ExpenditureItem {
     note?: string;
     createdAt?: string;
     updatedAt?: string;
+    /** Hình ảnh minh chứng cho item này (loaded separately) */
+    media?: { id: number; url: string; description?: string; mediaType: string }[];
 }
 
 export interface Expenditure {

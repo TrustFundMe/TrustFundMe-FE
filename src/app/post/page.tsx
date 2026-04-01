@@ -108,7 +108,7 @@ function PostCard({
         border border-zinc-100 dark:border-zinc-800
         hover:border-zinc-200 dark:hover:border-zinc-700
         hover:shadow-md transition-all duration-200"
-      style={{ opacity: isSeen ? 0.7 : 1, transition: "opacity 0.3s" }}
+      style={{ /* no dimming on seen posts */ }}
     >
       {/* ── Header ── */}
       <div className="flex items-start gap-3 p-4 pb-3">
@@ -384,7 +384,9 @@ export default function ForumPage() {
     toFetch.forEach(post => {
       const id = String(post.id);
       setEnrichingPosts(prev => new Set([...prev, id]));
+      console.log(`[/post] Fetching media for post ${id}`);
       mediaService.getMediaByPostId(Number(id)).then(mediaList => {
+        console.log(`[/post] Media for post ${id}:`, mediaList?.length, "items", mediaList);
         if (mediaList?.length) {
           const attachments = mediaList.map((m: { mediaType: string; url: string; fileName?: string }) => ({
             type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
@@ -393,7 +395,9 @@ export default function ForumPage() {
           }));
           setPostMedia(prev => ({ ...prev, [id]: attachments }));
         }
-      }).catch(() => {}).finally(() => {
+      }).catch((err) => {
+        console.error(`[/post] Failed to fetch media for post ${id}:`, err);
+      }).finally(() => {
         setEnrichingPosts(prev => {
           const next = new Set(prev);
           next.delete(id);
@@ -406,7 +410,8 @@ export default function ForumPage() {
 
   // Load campaigns for create-post modal (independent from feed)
   useEffect(() => {
-    campaignService.getAll().then((camps: { id: number; title?: string; fundOwnerId?: number }[]) => {
+    campaignService.getAll(0, 100).then((res: { content?: { id: number; title?: string; fundOwnerId?: number }[]; totalElements?: number } | null) => {
+      const camps = Array.isArray(res) ? res : (res?.content ?? []);
       const titles: Record<string, string> = {};
       const list: { id: number; title: string }[] = [];
       camps.forEach(c => {
