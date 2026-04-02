@@ -38,7 +38,14 @@ export const kycService = {
     return res.data;
   },
   async getByUserId(userId: number | string) {
-    const res = await api.get<KycResponse>(`/api/kyc/user/${userId}`);
-    return res.data;
+    try {
+      const res = await api.get<KycResponse>(`/api/kyc/user/${userId}`);
+      return res.data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        return null; // Return null if KYC doesn't exist yet
+      }
+      throw error;
+    }
   }
 };

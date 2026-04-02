@@ -107,7 +107,7 @@ export default function EvidenceTab() {
         <div className="flex-1 flex gap-4 h-full overflow-hidden">
             {/* Sidebar */}
             <div className="w-80 flex-shrink-0 flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#db5945,#f19082)' }}>
+                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
                     <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Xác minh Minh chứng</h3>
                 </div>
                 <div className="p-3 border-b border-gray-50 flex-shrink-0">
@@ -129,7 +129,7 @@ export default function EvidenceTab() {
                                     <p className="text-[11px] font-black text-gray-800 line-clamp-1 uppercase tracking-tighter">{r.plan}</p>
                                     <p className="text-[10px] font-bold text-gray-400 truncate">{r.campaignTitle}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-black text-[#db5945]">{fmt(r.totalAmount)}</span>
+                                        <span className="text-[10px] font-black text-[#446b5f]">{fmt(r.totalAmount)}</span>
                                         <span className="text-[10px] text-gray-300">•</span>
                                         <span className="text-[9px] font-bold text-blue-500 uppercase">{EVIDENCE_STATUS_MAP[r.evidenceStatus] || r.evidenceStatus}</span>
                                     </div>
@@ -153,7 +153,7 @@ export default function EvidenceTab() {
                         <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex-shrink-0">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-[10px] font-black text-[#db5945] uppercase tracking-widest mb-1">CHIẾN DỊCH: {selected.campaignTitle}</p>
+                                    <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-1">CHIẾN DỊCH: {selected.campaignTitle}</p>
                                     <h2 className="text-xl font-black text-gray-900 uppercase leading-none">{selected.plan}</h2>
                                     <p className="text-xs font-bold text-gray-400 mt-2">Người nộp: {selected.requesterName}</p>
                                 </div>
@@ -176,10 +176,18 @@ export default function EvidenceTab() {
                                 <div className="p-4 rounded-2xl border-2 border-dashed border-blue-100 bg-blue-50/30 flex items-center justify-between">
                                     <div>
                                         <p className="text-xs font-bold text-gray-600">Số điện thoại liên hệ:</p>
-                                        <p className="text-lg font-black text-blue-700">{selected.phoneNumber || 'N/A'}</p>
+                                        <p className="text-lg font-black text-blue-700">
+                                            {selected.phoneNumber || <span className="text-gray-400 font-bold italic text-sm">Chưa cập nhật</span>}
+                                        </p>
                                     </div>
-                                    <a href={`tel:${selected.phoneNumber}`} className="px-6 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-black shadow-lg hover:shadow-blue-200 transition-all active:scale-95 flex items-center gap-2">
-                                        <Phone className="h-4 w-4" /> GỌI NGAY
+                                    <a 
+                                        href={selected.phoneNumber ? `tel:${selected.phoneNumber}` : '#'} 
+                                        onClick={(e) => !selected.phoneNumber && e.preventDefault()}
+                                        className={`px-6 py-2.5 rounded-xl text-white text-xs font-black shadow-lg transition-all active:scale-95 flex items-center gap-2 ${
+                                            selected.phoneNumber ? 'bg-blue-600 hover:shadow-blue-200' : 'bg-gray-300 cursor-not-allowed shadow-none'
+                                        }`}
+                                    >
+                                        <Phone className="h-5 w-5" /> GỌI NGAY
                                     </a>
                                 </div>
                                 <p className="text-[10px] text-gray-400 mt-2 italic">* Vui lòng gọi điện cho các bên liên quan (người nộp hoặc nơi bán) để xác thực tính chính xác của hóa đơn.</p>
@@ -209,12 +217,12 @@ export default function EvidenceTab() {
                         {/* Actions */}
                         <div className="p-6 border-t border-gray-50 flex gap-4 bg-gray-50/30 flex-shrink-0">
                             <button onClick={() => handleVerify('REJECTED')}
-                                className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-400 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2">
-                                <X className="h-4 w-4" /> TỪ CHỐI MINH CHỨNG
+                                className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-600 text-xs font-black uppercase tracking-widest hover:bg-white hover:text-red-500 hover:border-red-100 transition-all shadow-sm flex items-center justify-center gap-2">
+                                <X className="h-5 w-5" /> TỪ CHỐI MINH CHỨNG
                             </button>
                             <button onClick={() => handleVerify('APPROVED')}
                                 className="flex-[2] py-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-green-100 hover:shadow-green-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                                <CheckCircle className="h-4 w-4" /> XÁC NHẬN ĐÃ GỌI & DUYỆT
+                                <CheckCircle className="h-5 w-5" /> XÁC NHẬN ĐÃ GỌI & DUYỆT
                             </button>
                         </div>
                     </div>

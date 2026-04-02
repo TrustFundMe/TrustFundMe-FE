@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
     Search, ChevronDown, ChevronRight, AlertCircle,
-    X, FileText, CreditCard
+    X, FileText, CreditCard, CheckCircle
 } from 'lucide-react';
 import type { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import type { CampaignDto } from '@/types/campaign';
@@ -20,7 +20,7 @@ import { useSearchParams } from 'next/navigation';
 const FMT = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 const fmt = (n: number) => FMT.format(n);
 const fmtDate = (s?: string | null) =>
-    s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+    s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>;
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
     PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
@@ -188,16 +188,18 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
 
                         {/* Status: Pending Review - for AUTHORIZED and ITEMIZED campaigns */}
                         {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (campaignType === 'AUTHORIZED' || campaignType === 'ITEMIZED') && (
-                            <div className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50/50 p-3 shadow-sm">
-                                <p className="text-[10px] font-black text-amber-700 mb-2.5 uppercase tracking-wider">Đang chờ phê duyệt</p>
-                                <div className="flex gap-2">
+                            <div className="mx-4 mt-4 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/40 p-4 shadow-sm">
+                                <p className="text-[11px] font-black text-amber-700 mb-4 uppercase tracking-widest flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" /> Đang chờ quản trị viên phê duyệt
+                                </p>
+                                <div className="flex gap-3">
                                     <button onClick={handleApprove} disabled={approving}
-                                        className="flex-1 py-1.5 rounded-lg text-xs font-black text-white bg-green-600 shadow-sm transition-all hover:brightness-105 active:scale-95">
-                                        {approving ? '...' : 'DUYỆT'}
+                                        className="flex-[2] py-3 rounded-xl text-xs font-black text-white bg-gradient-to-r from-green-600 to-emerald-500 shadow-lg shadow-green-100 transition-all hover:shadow-green-200 active:scale-95 flex items-center justify-center gap-2">
+                                        <CheckCircle className="h-4 w-4" /> {approving ? 'ĐANG XỬ LÝ...' : 'PHÊ DUYỆT KẾ HOẠCH'}
                                     </button>
                                     <button onClick={() => setShowRejectModal(true)}
-                                        className="flex-1 py-1.5 rounded-lg text-xs font-black text-white bg-red-600 shadow-sm transition-all hover:brightness-105 active:scale-95">
-                                        TỪ CHỐI
+                                        className="flex-1 py-3 rounded-xl text-xs font-black text-white bg-red-600 shadow-lg shadow-red-100 transition-all hover:bg-red-700 active:scale-95 flex items-center justify-center gap-2">
+                                        <X className="h-4 w-4" /> TỪ CHỐI
                                     </button>
                                 </div>
                             </div>
@@ -213,17 +215,21 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                             ) : (
                                 <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                     <table className="w-full text-xs bg-white">
-                                        <thead className="bg-gray-50">
-                                            <tr className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                                <th className="py-2 px-3 text-left">Hàng hóa</th>
-                                                <th className="py-2 px-3 text-right text-blue-600 bg-blue-50/50">Kế hoạch</th>
-                                                <th className="py-2 px-3 text-right text-orange-600 bg-orange-50/50">Đã chi (Nhập liệu)</th>
+                                        <thead className="bg-[#446b5f] text-white">
+                                            <tr className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
+                                                <th className="py-2 px-3 text-left border-r border-white/10 w-[50px]">STT</th>
+                                                <th className="py-2 px-3 text-left border-r border-white/10">Hàng hóa</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/10 w-[120px]">Kế hoạch</th>
+                                                <th className="py-2 px-3 text-right w-[120px]">Đã chi (Nhập liệu)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
-                                            {items.map(it => (
+                                            {items.map((it, idx) => (
                                                 <tr key={it.id} className="hover:bg-gray-50/50 transition-colors">
-                                                    <td className="py-2.5 px-3">
+                                                    <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 border-r border-gray-50">
+                                                        {String(idx + 1).padStart(2, '0')}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 border-r border-gray-50">
                                                         <div className="font-bold text-gray-800 leading-tight">{it.category}</div>
                                                         {it.note && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.note}</div>}
                                                     </td>
@@ -237,7 +243,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {items.length === 0 && <tr><td colSpan={3} className="py-4 text-center text-[10px] text-gray-300 italic">Không có dữ liệu</td></tr>}
+                                            {items.length === 0 && <tr><td colSpan={4} className="py-4 text-center text-[10px] text-gray-300 italic">Không có dữ liệu</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
@@ -256,6 +262,24 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
     const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
     const [ownerName, setOwnerName] = useState<string>(`Owner #${campaign.fundOwnerId}`);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const fetchExpenditures = async () => {
+        setLoading(true);
+        try {
+            const resp = await campaignService.getAllExpenditures(currentPage, pageSize);
+            setExpenditures((resp.content || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setTotalPages(resp.totalPages || 0);
+        } catch (error) {
+            console.error('Failed to fetch expenditures:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExpenditures();
+    }, [currentPage]);
 
     useEffect(() => {
         setLoading(true);
@@ -317,9 +341,9 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
                         <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">THỰC TẾ CHI</p>
                         <p className="font-bold text-[#446b5f] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
                     </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#db5945]/20">
-                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">DƯ</p>
-                        <p className="font-black text-[#db5945] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
+                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">DƯ</p>
+                        <p className="font-black text-[#446b5f] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
                     </div>
                 </div>
             )}
@@ -332,6 +356,29 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Danh sách trống</p>
                     </div>
                 ) : expenditures.map((exp, i) => <ExpenditureRound key={exp.id} exp={exp} index={i} campaignType={campaign.type} onModalToggle={onModalToggle} />)}
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-50 flex-shrink-0">
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    Trang {currentPage + 1} / {totalPages || 1}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        Trước
+                    </button>
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                        Sau
+                    </button>
+                </div>
             </div>
         </div>
     );

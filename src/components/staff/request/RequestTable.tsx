@@ -26,33 +26,37 @@ export default function RequestTable<T extends StaffRequestBase>({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs text-gray-500">
-          <tr>
+      <table className="w-full text-sm border-separate border-spacing-0">
+        <thead className="sticky top-0 z-10 bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
+          <tr className="whitespace-nowrap">
+            <th className="px-4 py-2 text-left w-[50px] border-r border-white/5 whitespace-nowrap">STT</th>
             {columns.map((c) => (
-              <th key={c.key} className={`px-4 py-3 text-left font-semibold ${c.className || ''}`}>
+              <th key={c.key} className={`px-4 py-2 text-left border-r border-white/5 last:border-r-0 whitespace-nowrap ${c.className || ''}`}>
                 {c.title}
               </th>
             ))}
-            <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
+            <th className="px-4 py-2 text-left whitespace-nowrap">TRẠNG THÁI</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
           {hasRows ? (
-            rows.map((r) => {
+            rows.map((r, index) => {
               const isSelected = selectedId === r.id;
               return (
                 <tr
                   key={r.id}
-                  className={`cursor-pointer ${isSelected ? 'bg-orange-50/40' : 'hover:bg-gray-50'}`}
+                  className={`group cursor-pointer transition-colors ${isSelected ? 'bg-[#446b5f]/5' : 'hover:bg-gray-50'}`}
                   onClick={() => onSelect(r)}
                 >
+                  <td className="px-4 py-2 text-[10px] font-black text-gray-400 border-r border-gray-50/50 whitespace-nowrap">
+                    {String(index + 1).padStart(2, '0')}
+                  </td>
                   {columns.map((c) => (
-                    <td key={c.key} className={`px-4 py-3 ${c.className || ''}`}>
-                      {c.render(r)}
+                    <td key={c.key} className={`px-4 py-2 text-xs font-bold text-gray-600 border-r border-gray-50/50 last:border-r-0 whitespace-nowrap ${c.className || ''}`}>
+                      {c.render(r) || <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>}
                     </td>
                   ))}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-2 whitespace-nowrap">
                     <RequestStatusPill status={r.status as RequestStatus} />
                   </td>
                 </tr>
@@ -60,8 +64,10 @@ export default function RequestTable<T extends StaffRequestBase>({
             })
           ) : (
             <tr>
-              <td className="px-4 py-10 text-center text-sm text-gray-500" colSpan={columns.length + 1}>
-                Không tìm thấy yêu cầu nào.
+              <td className="px-4 py-20 text-center" colSpan={columns.length + 2}>
+                <div className="flex flex-col items-center opacity-20">
+                  <span className="text-[10px] font-black uppercase tracking-widest mt-2">Không có yêu cầu nào</span>
+                </div>
               </td>
             </tr>
           )}
