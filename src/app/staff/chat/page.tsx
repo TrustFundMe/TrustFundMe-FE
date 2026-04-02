@@ -52,83 +52,83 @@ export default function ChatWithDonorPage() {
     };
   }, []);
 
-  // Fetch conversations on mount
-  useEffect(() => {
-    const fetchConversations = async () => {
-      // Prevent duplicate fetch in Strict Mode
-      if (hasFetchedRef.current) return;
-      hasFetchedRef.current = true;
+  const fetchConversations = async (isRefresh = false) => {
+    // Prevent duplicate fetch in Strict Mode, but allow if it's a manual refresh
+    if (!isRefresh && hasFetchedRef.current) return;
+    if (!isRefresh) hasFetchedRef.current = true;
 
-      setIsLoading(true);
-      try {
-        const result = await chatService.getAllConversations();
+    setIsLoading(true);
+    try {
+      const result = await chatService.getAllConversations();
 
-        if (result.success && result.data) {
-          // Map API conversations to UI format
-          // Need to fetch user info for each conversation
-          const mappedConversations = await Promise.all(
-            result.data.map(async (conv) => {
-              // Fetch user info based on fundOwnerId
-              // Assuming we are staff, talking to fundOwner
-              const userResult = await userService.getUserById(conv.fundOwnerId || conv.id); // Fallback to id if fundOwnerId missing
+      if (result.success && result.data) {
+        // Map API conversations to UI format
+        // Need to fetch user info for each conversation
+        const mappedConversations = await Promise.all(
+          result.data.map(async (conv) => {
+            // Fetch user info based on fundOwnerId
+            // Assuming we are staff, talking to fundOwner
+            const userResult = await userService.getUserById(conv.fundOwnerId || conv.id); // Fallback to id if fundOwnerId missing
 
-              const user = userResult.success && userResult.data ? userResult.data : null;
+            const user = userResult.success && userResult.data ? userResult.data : null;
 
-              let campaignTitle = undefined;
-              if (conv.campaignId) {
-                try {
-                  const campaign = await campaignService.getById(conv.campaignId);
-                  campaignTitle = campaign.title;
-                } catch (err) {
-                  console.error(`Failed to fetch title for campaign ${conv.campaignId}:`, err);
-                }
+            let campaignTitle = undefined;
+            if (conv.campaignId) {
+              try {
+                const campaign = await campaignService.getById(conv.campaignId);
+                campaignTitle = campaign.title;
+              } catch (err) {
+                console.error(`Failed to fetch title for campaign ${conv.campaignId}:`, err);
               }
-
-              return {
-                id: conv.id.toString(),
-                name: user?.fullName || `User ${conv.fundOwnerId}`,
-                // API doesn't provide last message content, so we leave it empty or use placeholder
-                lastMessage: 'Tap to view conversation',
-                time: conv.lastMessageAt ? formatTimeAgo(conv.lastMessageAt) : '',
-                avatar: user?.avatarUrl,
-                unread: 0,
-                staffId: conv.staffId,
-                fundOwnerId: conv.fundOwnerId,
-                campaignId: conv.campaignId,
-                campaignTitle: campaignTitle,
-              };
-            })
-          );
-
-          setConversations(mappedConversations);
-
-          const convId = searchParams.get('conversationId');
-          const campaignId = searchParams.get('campaignId');
-
-          if (convId) {
-            const found = mappedConversations.find(c => c.id === convId);
-            if (found) {
-              setActiveId(convId);
-              autoSelectedRef.current = true;
             }
-          } else if (campaignId) {
-            const found = mappedConversations.find(c => c.campaignId?.toString() === campaignId);
-            if (found) {
-              setActiveId(found.id);
-              autoSelectedRef.current = true;
-            }
-          } else if (!autoSelectedRef.current && mappedConversations.length > 0 && !activeId) {
-            setActiveId(mappedConversations[0].id);
+
+            return {
+              id: conv.id.toString(),
+              name: user?.fullName || `User ${conv.fundOwnerId}`,
+              // API doesn't provide last message content, so we leave it empty or use placeholder
+              lastMessage: 'Tap to view conversation',
+              time: conv.lastMessageAt ? formatTimeAgo(conv.lastMessageAt) : '',
+              avatar: user?.avatarUrl,
+              unread: 0,
+              staffId: conv.staffId,
+              fundOwnerId: conv.fundOwnerId,
+              campaignId: conv.campaignId,
+              campaignTitle: campaignTitle,
+            };
+          })
+        );
+
+        setConversations(mappedConversations);
+
+        const convId = searchParams.get('conversationId');
+        const campaignId = searchParams.get('campaignId');
+
+        if (convId) {
+          const found = mappedConversations.find(c => c.id === convId);
+          if (found) {
+            setActiveId(convId);
             autoSelectedRef.current = true;
           }
+        } else if (campaignId) {
+          const found = mappedConversations.find(c => c.campaignId?.toString() === campaignId);
+          if (found) {
+            setActiveId(found.id);
+            autoSelectedRef.current = true;
+          }
+        } else if (!autoSelectedRef.current && mappedConversations.length > 0 && !activeId) {
+          setActiveId(mappedConversations[0].id);
+          autoSelectedRef.current = true;
         }
-      } catch (error) {
-        console.error("Failed to fetch conversations:", error);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch conversations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Fetch conversations on mount
+  useEffect(() => {
     fetchConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -504,6 +504,7 @@ export default function ChatWithDonorPage() {
           onConversationClick={setActiveId}
           onShowNewClick={() => { }}
           newCustomersCount={0}
+          onRefresh={() => fetchConversations(true)}
         />
 
         <ChatMessages

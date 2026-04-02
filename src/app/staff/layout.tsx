@@ -87,10 +87,10 @@ function Sidebar() {
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
     <RequireRole allowedRoles={['STAFF', 'ADMIN']}>
-      <div className="h-screen flex overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
+      <div className="h-screen flex overflow-hidden bg-white">
         <Sidebar />
-        <main className="flex-1 h-screen overflow-hidden" style={{ backgroundColor: '#f8fafc' }}>
-          <div className="h-full p-2 relative">
+        <main className="flex-1 h-screen overflow-hidden bg-white">
+          <div className="h-full relative">
             <Toaster position="top-right" reverseOrder={false} />
             {children}
           </div>

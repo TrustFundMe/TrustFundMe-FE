@@ -29,10 +29,11 @@ export default function ExpenditureItemGallery({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(0);
 
-  const visible = media.slice(0, maxGrid);
-  const hasMore = media.length > maxGrid;
+  const safeMedia = Array.isArray(media) ? media : [];
+  const visible = safeMedia.slice(0, maxGrid);
+  const hasMore = safeMedia.length > maxGrid;
 
-  const zoomImages: ZoomImage[] = media.map((m) => ({
+  const zoomImages: ZoomImage[] = safeMedia.map((m) => ({
     url: m.url,
     alt: m.description || `Minh chứng ${m.id}`,
   }));

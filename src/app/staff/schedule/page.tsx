@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3, ChevronDown } from 'lucide-react';
+import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3, ChevronDown, ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -14,10 +14,10 @@ import type { CampaignDto } from '@/types/campaign';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: React.ReactNode }> = {
-    PENDING: { label: 'Pending', color: 'text-amber-700', bg: 'bg-amber-50 ring-amber-200', dot: 'bg-amber-400', icon: <Clock className="h-3 w-3" /> },
-    CONFIRMED: { label: 'Confirmed', color: 'text-emerald-700', bg: 'bg-emerald-50 ring-emerald-200', dot: 'bg-emerald-400', icon: <CheckCircle className="h-3 w-3" /> },
-    CANCELLED: { label: 'Cancelled', color: 'text-red-700', bg: 'bg-red-50 ring-red-200', dot: 'bg-red-400', icon: <XCircle className="h-3 w-3" /> },
-    COMPLETED: { label: 'Completed', color: 'text-blue-700', bg: 'bg-blue-50 ring-blue-200', dot: 'bg-blue-400', icon: <CheckCircle className="h-3 w-3" /> },
+    PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bg: 'bg-amber-50 ring-amber-200', dot: 'bg-amber-400', icon: <Clock className="h-3 w-3" /> },
+    CONFIRMED: { label: 'Đã xác nhận', color: 'text-[#446b5f]', bg: 'bg-[#446b5f]/10 ring-[#446b5f]/20', dot: 'bg-[#446b5f]', icon: <CheckCircle className="h-3 w-3" /> },
+    CANCELLED: { label: 'Đã hủy', color: 'text-gray-500', bg: 'bg-gray-50 ring-gray-200', dot: 'bg-gray-400', icon: <XCircle className="h-3 w-3" /> },
+    COMPLETED: { label: 'Hoàn thành', color: 'text-blue-700', bg: 'bg-blue-50 ring-blue-200', dot: 'bg-blue-400', icon: <CheckCircle className="h-3 w-3" /> },
 };
 
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -166,27 +166,27 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-                <div className="bg-gradient-to-r from-red-500 to-rose-600 px-6 py-5 flex items-center justify-between">
+            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-white/20">
+                <div className="bg-gradient-to-br from-[#446b5f] to-[#2d4a42] px-6 py-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl bg-white/20 flex items-center justify-center"><Calendar className="h-5 w-5 text-white" /></div>
-                        <div><h2 className="text-white font-bold text-base">Tạo lịch hẹn mới</h2><p className="text-red-100 text-xs">Đặt lịch gặp với người dùng</p></div>
+                        <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10"><Calendar className="h-5 w-5 text-white" /></div>
+                        <div><h2 className="text-white font-black text-sm uppercase tracking-widest">Tạo lịch hẹn mới</h2><p className="text-white/60 text-[10px] font-bold uppercase tracking-wider">Đặt lịch gặp với người dùng</p></div>
                     </div>
-                    <button onClick={onClose} className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center hover:bg-white/30 transition"><X className="h-4 w-4 text-white" /></button>
+                    <button onClick={onClose} className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center hover:bg-white/20 transition text-white border border-white/10"><X className="h-4 w-4" /></button>
                 </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
                     <div className="relative">
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Người dùng <span className="text-red-500">*</span></label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Người dùng <span className="text-[#db5945]">*</span></label>
                         <div className="relative">
                             <button
                                 type="button"
                                 onClick={() => setShowDropdown(!showDropdown)}
-                                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition bg-white text-left flex items-center justify-between"
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white text-left flex items-center justify-between shadow-sm"
                             >
                                 {selectedCampaign ? (
-                                    <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900 truncate">{users.get(form.donorId)?.fullName || `User #${form.donorId}`}</span>
-                                        <span className="text-xs text-gray-500 truncate">{selectedCampaign.title}</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-black text-gray-900 truncate uppercase tracking-tight">{users.get(form.donorId)?.fullName || `User #${form.donorId}`}</span>
+                                        <span className="text-[10px] text-gray-400 font-bold truncate italic">{selectedCampaign.title}</span>
                                     </div>
                                 ) : (
                                     <span className="text-gray-400">Chọn người dùng (có chiến dịch)</span>
@@ -194,22 +194,22 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                 <ChevronDown className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
                             </button>
                             {showDropdown && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-hidden">
-                                    <div className="p-2 border-b border-gray-100">
+                                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-64 overflow-hidden border-t-4 border-t-[#446b5f]">
+                                    <div className="p-3 border-b border-gray-50 bg-gray-50/30">
                                         <input
                                             type="text"
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                             placeholder="Tìm kiếm chiến dịch..."
-                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300"
+                                            className="w-full px-4 py-2 text-xs border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 focus:border-[#446b5f]/30 font-bold shadow-sm"
                                             autoFocus
                                         />
                                     </div>
-                                    <div className="overflow-y-auto max-h-48">
+                                    <div className="overflow-y-auto max-h-48 custom-scrollbar">
                                         {loadingCampaigns ? (
-                                            <div className="p-4 text-center text-gray-500 text-sm">Đang tải...</div>
+                                            <div className="p-6 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest italic animate-pulse whitespace-nowrap">Đang tải dữ liệu...</div>
                                         ) : filteredCampaigns.length === 0 ? (
-                                            <div className="p-4 text-center text-gray-500 text-sm">Không có chiến dịch nào</div>
+                                            <div className="p-6 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest italic">Không thấy kết quả</div>
                                         ) : (
                                             filteredCampaigns.map(campaign => {
                                                 const user = users.get(campaign.fundOwnerId);
@@ -218,10 +218,10 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                                         key={campaign.id}
                                                         type="button"
                                                         onClick={() => handleSelectDonor(campaign.fundOwnerId, campaign.title)}
-                                                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition ${form.donorId === campaign.fundOwnerId ? 'bg-red-50' : ''}`}
+                                                        className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition border-b border-gray-50 last:border-0 ${form.donorId === campaign.fundOwnerId ? 'bg-orange-50/50' : ''}`}
                                                     >
-                                                        <div className="font-medium text-sm text-gray-900 truncate">{campaign.title}</div>
-                                                        <div className="text-xs text-gray-500 mt-0.5">{user?.fullName || `User #${campaign.fundOwnerId}`}</div>
+                                                        <div className="font-black text-[11px] text-gray-900 truncate uppercase tracking-tight">{campaign.title}</div>
+                                                        <div className="text-[10px] text-gray-400 mt-0.5 font-bold">{user?.fullName || `User #${campaign.fundOwnerId}`}</div>
                                                     </button>
                                                 );
                                             })
@@ -232,9 +232,9 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                         </div>
                         <input type="hidden" value={form.donorId} required />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Bắt đầu <span className="text-red-500">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#db5945]">*</span></label>
                             <DatePicker
                                 selected={form.startTime ? new Date(form.startTime) : null}
                                 onChange={(date: Date | null) => setForm(f => ({ ...f, startTime: date ? date.toISOString() : '' }))}
@@ -242,13 +242,13 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                 timeFormat="HH:mm"
                                 timeIntervals={15}
                                 dateFormat="dd/MM/yyyy HH:mm"
-                                placeholderText="dd/mm/yyyy --:--"
-                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                placeholderText="Ngày & giờ bắt đầu"
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm"
                                 required
                             />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">Kết thúc <span className="text-red-500">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#db5945]">*</span></label>
                             <DatePicker
                                 selected={form.endTime ? new Date(form.endTime) : null}
                                 onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? date.toISOString() : '' }))}
@@ -256,26 +256,26 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                                 timeFormat="HH:mm"
                                 timeIntervals={15}
                                 dateFormat="dd/MM/yyyy HH:mm"
-                                placeholderText="dd/mm/yyyy --:--"
-                                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition"
+                                placeholderText="Ngày & giờ kết thúc"
+                                className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm"
                                 minDate={form.startTime ? new Date(form.startTime) : undefined}
                                 required
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Địa điểm</label>
-                        <input type="text" value={form.location || ''} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Địa điểm gặp mặt (tùy chọn)" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" />
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Địa điểm</label>
+                        <input type="text" value={form.location || ''} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Nhập địa điểm gặp mặt..." className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm" />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">Mục đích</label>
-                        <textarea value={form.purpose || ''} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} placeholder="Mô tả mục đích cuộc hẹn..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition resize-none" />
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Mục đích</label>
+                        <textarea value={form.purpose || ''} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} placeholder="Mô tả nội dung cuộc hẹn..." rows={3} className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm resize-none" />
                     </div>
-                    <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">Hủy</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-bold hover:from-red-600 hover:to-rose-700 transition disabled:opacity-60 flex items-center justify-center gap-2">
+                    <div className="flex gap-4 pt-4 border-t border-gray-50">
+                        <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition active:scale-95 shadow-sm">Hủy bỏ</button>
+                        <button type="submit" disabled={loading} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#446b5f] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#446b5f]/20 active:scale-95">
                             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                            {loading ? 'Đang tạo...' : 'Tạo lịch hẹn'}
+                            {loading ? 'Đang xử lý...' : 'Tạo lịch hẹn'}
                         </button>
                     </div>
                 </form>
@@ -293,9 +293,9 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
 
     if (!appointment) {
         return (
-            <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-400">
-                <div className="h-16 w-16 rounded-2xl bg-gray-100 flex items-center justify-center"><Calendar className="h-8 w-8 text-gray-300" /></div>
-                <p className="text-sm font-medium">Chọn một lịch hẹn để xem chi tiết</p>
+            <div className="h-full flex flex-col items-center justify-center gap-3 text-gray-400 bg-gray-50/20 rounded-[20px] border border-dashed border-gray-100 m-1">
+                <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center border border-gray-100"><Calendar className="h-6 w-6 text-gray-200 grayscale opacity-30" /></div>
+                <p className="text-[9px] font-black uppercase tracking-widest italic opacity-60">Chọn lịch hẹn để xem chi tiết</p>
             </div>
         );
     }
@@ -306,7 +306,6 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
     const cfg = STATUS_CONFIG[appointment.status];
     const hoursUntilStart = (new Date(appointment.startTime).getTime() - Date.now()) / 3600000;
     const confirmDeadlinePassed = hoursUntilStart < 24;
-    // Complete chỉ được bấm khi đã qua giờ kết thúc
     const appointmentEnded = Date.now() > new Date(appointment.endTime).getTime();
 
     const handleStatus = async (status: AppointmentStatus) => {
@@ -317,89 +316,89 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
     const nextStatuses: AppointmentStatus[] = appointment.status === 'PENDING' ? ['CONFIRMED', 'CANCELLED'] : appointment.status === 'CONFIRMED' ? ['COMPLETED', 'CANCELLED'] : [];
 
     return (
-        <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden h-full flex flex-col">
-            <div className="bg-gradient-to-br from-[#446b5f] to-[#2d4a42] px-4 py-3">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">Lịch hẹn #{appointment.id}</p>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ring-1 whitespace-nowrap flex-shrink-0 ${cfg.bg} ${cfg.color}`}>{cfg.icon}{cfg.label}</span>
+        <div className="rounded-[24px] border border-gray-100 bg-white shadow-sm overflow-hidden h-full flex flex-col transition-all duration-300">
+            {/* Header - Compact */}
+            <div className="px-5 py-4 border-b border-gray-100 bg-white">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-gray-400 text-[9px] font-black uppercase tracking-[0.2em]">Lịch hẹn #{appointment.id}</p>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.05em] border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')}`}>
+                         {cfg.label}
+                    </span>
                 </div>
-                <h3 className="text-white font-bold text-sm leading-snug line-clamp-1">{appointment.purpose || 'Không có mô tả'}</h3>
+                <h3 className="text-gray-900 font-black text-sm uppercase tracking-tight line-clamp-2 leading-snug">{appointment.purpose || 'Không có mô tả'}</h3>
             </div>
-            <div className="flex-1 overflow-auto p-4 space-y-3">
-                {/* Time section — compact single row */}
-                <div className="bg-red-50 rounded-xl p-3 border border-red-100">
-                    <div className="flex items-center gap-1.5 mb-2">
-                        <Clock className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
-                        <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider">Thời gian</span>
-                        <span className="ml-auto text-[11px] font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">{duration}</span>
+
+            <div className="flex-1 overflow-auto p-4 space-y-4 custom-scrollbar">
+                {/* Simplified Time Display */}
+                <div className="flex items-center gap-2 pb-3 border-b border-gray-50">
+                    <div className="flex-1">
+                        <p className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1">Thời gian gặp</p>
+                        <div className="flex items-center gap-2">
+                             <span className="text-lg font-black text-gray-800 tracking-tighter leading-none">{start.time}</span>
+                             <span className="text-gray-300 font-light">—</span>
+                             <span className="text-lg font-black text-gray-800 tracking-tighter leading-none">{end.time}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-red-500/80 italic mt-1">{start.date}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white rounded-lg p-2">
-                            <p className="text-[9px] text-gray-400 font-medium">Bắt đầu</p>
-                            <p className="text-[11px] font-semibold text-gray-700">{start.date}</p>
-                            <p className="text-sm font-black text-red-600">{start.time}</p>
-                        </div>
-                        <div className="text-gray-300 font-bold text-lg">→</div>
-                        <div className="flex-1 bg-white rounded-lg p-2">
-                            <p className="text-[9px] text-gray-400 font-medium">Kết thúc</p>
-                            <p className="text-[11px] font-semibold text-gray-700">{end.date}</p>
-                            <p className="text-sm font-black text-red-600">{end.time}</p>
-                        </div>
+                    <div className="text-right">
+                         <div className="text-[10px] font-black text-[#db5945] uppercase tracking-wider">{duration}</div>
                     </div>
                 </div>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
-                        <div className="h-7 w-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"><User className="h-3.5 w-3.5 text-blue-600" /></div>
-                        <div><p className="text-[10px] text-gray-500 font-medium">Donor</p><p className="text-sm font-bold text-gray-800">{appointment.donorName || `User #${appointment.donorId}`}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
-                        <div className="h-7 w-7 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0"><User className="h-3.5 w-3.5 text-purple-600" /></div>
-                        <div><p className="text-[10px] text-gray-500 font-medium">Staff phụ trách</p><p className="text-sm font-bold text-gray-800">{appointment.staffName || `Staff #${appointment.staffId}`}</p></div>
-                    </div>
-                    {appointment.location && (
-                        <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50">
-                            <div className="h-7 w-7 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0"><MapPin className="h-3.5 w-3.5 text-green-600" /></div>
-                            <div><p className="text-[10px] text-gray-500 font-medium">Địa điểm</p><p className="text-sm font-bold text-gray-800">{appointment.location}</p></div>
+
+                {/* Simplified Info List - NO BOXES */}
+                <div className="space-y-3 px-1 pt-1">
+                    {[
+                        { label: 'Người tham gia', value: appointment.donorName || `User #${appointment.donorId}` },
+                        { label: 'Staff phụ trách', value: appointment.staffName || `Staff #${appointment.staffId}` },
+                        { label: 'Địa điểm gặp', value: appointment.location || 'Chưa xác định' },
+                    ].map((item, id) => (
+                        <div key={id} className="min-w-0">
+                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">{item.label}</p>
+                            <p className="text-[11px] font-black text-gray-800 tracking-tight uppercase leading-relaxed">{item.value}</p>
                         </div>
-                    )}
+                    ))}
                 </div>
+
+                {/* Actions */}
                 {nextStatuses.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Cập nhật trạng thái</p>
-
-                        {/* Warning: confirm deadline passed */}
+                    <div className="pt-3 border-t border-gray-50 space-y-2">
                         {appointment.status === 'PENDING' && confirmDeadlinePassed && (
-                            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-red-50 border border-red-200">
-                                <Clock className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
-                                <p className="text-[11px] text-red-700 font-medium leading-tight">Đã quá hạn xác nhận (phải confirm trước 24h). Lịch hẹn này không thể được xác nhận.</p>
+                            <div className="p-2 rounded-lg bg-red-50/50 border border-red-100 text-[8px] text-red-700 font-bold uppercase tracking-tight italic text-center">
+                                Quá hạn xác nhận (phải confirm trước 24h)
                             </div>
                         )}
 
-                        {/* Warning: appointment not ended yet */}
                         {appointment.status === 'CONFIRMED' && !appointmentEnded && (
-                            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200">
-                                <Clock className="h-3.5 w-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-                                <p className="text-[11px] text-amber-700 font-medium leading-tight">Chỉ có thể hoàn thành sau khi qua giờ kết thúc lịch hẹn.</p>
+                            <div className="p-2 rounded-lg bg-amber-50/50 border border-amber-100 text-[8px] text-amber-700 font-bold uppercase tracking-tight italic text-center">
+                                Có thể hoàn thành sau khi kết thúc lịch
                             </div>
                         )}
 
-                        {nextStatuses.map(s => {
-                            const c = STATUS_CONFIG[s];
-                            const isConfirm = s === 'CONFIRMED' || s === 'COMPLETED';
-                            const isDisabledByConfirmRule = s === 'CONFIRMED' && confirmDeadlinePassed;
-                            const isDisabledByEndRule = s === 'COMPLETED' && !appointmentEnded;
-                            const isDisabled = isDisabledByConfirmRule || isDisabledByEndRule;
-                            const disabledLabel = isDisabledByConfirmRule ? 'Quá hạn xác nhận' : isDisabledByEndRule ? 'Chưa đến giờ kết thúc' : c.label;
-                            const disabledTitle = isDisabledByConfirmRule ? 'Phải confirm trước 24h so với giờ hẹn' : isDisabledByEndRule ? 'Chỉ được hoàn thành sau khi qua giờ kết thúc lịch hẹn' : undefined;
-                            return (
-                                <button key={s} onClick={() => !isDisabled && handleStatus(s)} disabled={updating !== null || isDisabled}
-                                    title={disabledTitle}
-                                    className={`w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition ${isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : isConfirm ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700' : 'bg-gradient-to-r from-red-500 to-rose-600 text-white hover:from-red-600 hover:to-rose-700'} disabled:opacity-60`}>
-                                    {updating === s ? <RefreshCw className="h-4 w-4 animate-spin" /> : c.icon}
-                                    {disabledLabel}
-                                </button>
-                            );
-                        })}
+                        <div className="flex flex-col gap-1.5">
+                            {nextStatuses.map(s => {
+                                const isAction = s === 'CONFIRMED' || s === 'COMPLETED';
+                                const isDisabledByConfirmRule = s === 'CONFIRMED' && confirmDeadlinePassed;
+                                const isDisabledByEndRule = s === 'COMPLETED' && !appointmentEnded;
+                                const isDisabled = isDisabledByConfirmRule || isDisabledByEndRule;
+                                
+                                return (
+                                    <button 
+                                        key={s} 
+                                        onClick={() => !isDisabled && handleStatus(s)} 
+                                        disabled={updating !== null || isDisabled}
+                                        className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                                            isDisabled 
+                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
+                                            : isAction 
+                                              ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10' 
+                                              : 'text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200'
+                                        } disabled:opacity-60`}
+                                    >
+                                        {updating === s ? <Loader2 className="h-3 w-3 animate-spin" /> : s === 'CONFIRMED' ? 'Duyệt lịch' : s === 'CANCELLED' ? 'Hủy lịch' : 'Hoàn thành'}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </div>
@@ -478,7 +477,7 @@ function CalendarView({ appointments, onSelect, selectedId }: CalendarViewProps)
                                 const isToday = isSameDay(day, today);
                                 return (
                                     <div key={i} className={`py-3 text-center border-r border-gray-100 last:border-r-0 ${isToday ? 'bg-red-50' : ''}`}>
-                                        <p className={`text-[10px] font-bold uppercase tracking-widest ${isToday ? 'text-red-500' : 'text-gray-400'}`}>{WEEKDAYS[day.getDay()]}</p>
+                                        <p className={`text-[10px] font-bold uppercase tracking-widest ${isToday ? 'text-red-500' : 'text-gray-400'}`} title={WEEKDAYS_FULL[day.getDay()]}>{WEEKDAYS[day.getDay()]}</p>
                                         <div className={`mx-auto mt-1.5 h-8 w-8 rounded-full flex items-center justify-center text-sm font-black ${isToday ? 'bg-red-500 text-white shadow-md shadow-red-200' : 'text-gray-700 hover:bg-gray-100'} transition`}>
                                             {day.getDate()}
                                         </div>
@@ -580,14 +579,15 @@ interface ListViewProps {
     appointments: AppointmentScheduleDto[];
     isLoading: boolean;
     onStatusChange: (id: number, status: AppointmentStatus) => void;
+    onOpenCreate: () => void;
+    onRefresh: () => void;
+    isRefreshing?: boolean;
 }
 
-function ListView({ appointments, isLoading, onStatusChange }: ListViewProps) {
-    const [selectedId, setSelectedId] = useState<number | null>(appointments[0]?.id ?? null);
+function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRefresh, isRefreshing }: ListViewProps) {
+    const [selectedId, setSelectedId] = useState<number | null>(null);
     const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'ALL'>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => { if (appointments.length > 0 && !selectedId) setSelectedId(appointments[0].id); }, [appointments]);
 
     const filtered = appointments.filter(a => {
         const matchStatus = statusFilter === 'ALL' || a.status === statusFilter;
@@ -599,69 +599,124 @@ function ListView({ appointments, isLoading, onStatusChange }: ListViewProps) {
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden gap-4">
-            {/* Toolbar */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="relative flex-1 max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Tìm kiếm lịch hẹn..." className="w-full pl-9 pr-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition" />
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <Filter className="h-4 w-4 text-gray-400" />
+            {/* Toolbar - Standardized Layout (Filters Left, Search Right) */}
+            <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100 pr-3">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {(['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
-                        <button key={s} onClick={() => setStatusFilter(s)} className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition ${statusFilter === s ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}>
+                        <button 
+                            key={s} 
+                            onClick={() => setStatusFilter(s)} 
+                            className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${
+                                statusFilter === s 
+                                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm' 
+                                : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
+                            }`}
+                        >
                             {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s as AppointmentStatus].label}
                         </button>
                     ))}
                 </div>
+                
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input 
+                        type="text" 
+                        value={searchQuery} 
+                        onChange={e => setSearchQuery(e.target.value)} 
+                        placeholder="Tìm nội dung lý do, người tham gia..." 
+                        className="w-full pl-11 pr-4 py-2 rounded-xl border border-gray-100 text-[11px] font-bold focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 bg-white transition-all placeholder:text-gray-300" 
+                    />
+                </div>
             </div>
 
             {/* Table + Detail */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden">
-                <div className="lg:col-span-7 overflow-hidden flex flex-col gap-2">
-                    <div className="flex items-center justify-between flex-shrink-0">
-                        <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Danh sách lịch hẹn</h2>
-                        <span className="text-xs font-medium text-gray-400">{filtered.length} kết quả</span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
+                <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedAppointment ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+                    <div className="flex items-center justify-between flex-shrink-0 px-2">
+                        <div className="flex items-center gap-3">
+                             <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">Danh sách nhiệm vụ lịch hẹn</h2>
+                             <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black">{filtered.length} kết quả</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={onRefresh}
+                                disabled={isLoading || isRefreshing}
+                                className="h-9 w-9 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95 disabled:opacity-50"
+                                title="Làm mới dữ liệu"
+                            >
+                                <RefreshCw className={`h-4 w-4 transition-transform group-hover:rotate-180 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button 
+                                onClick={onOpenCreate}
+                                className="flex items-center gap-2 px-6 py-2 rounded-2xl bg-gradient-to-r from-[#446b5f] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition shadow-lg shadow-green-100 active:scale-95"
+                            >
+                                <Plus className="h-4 w-4" /> Tạo lịch hẹn
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm">
+                    <div className="flex-1 overflow-auto rounded-[24px] border border-gray-100 shadow-sm transition-all duration-500 bg-white">
                         {isLoading ? (
-                            <div className="p-8 text-center"><RefreshCw className="h-6 w-6 animate-spin text-red-400 mx-auto mb-2" /><p className="text-sm text-gray-400">Đang tải dữ liệu...</p></div>
+                            <div className="p-20 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest italic animate-pulse whitespace-nowrap">Đang truy xuất dữ liệu...</div>
                         ) : filtered.length === 0 ? (
-                            <div className="p-8 text-center"><Calendar className="h-10 w-10 text-gray-200 mx-auto mb-3" /><p className="text-sm font-medium text-gray-400">Không có lịch hẹn nào</p></div>
+                            <div className="p-20 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest italic whitespace-nowrap">Dữ liệu trống</div>
                         ) : (
-                            <table className="w-full text-sm">
+                            <table className="w-full text-sm border-separate border-spacing-0">
                                 <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50/80">
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Lịch hẹn</th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Thời gian</th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Địa điểm</th>
-                                        <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                                        <th className="px-4 py-3"></th>
+                                    <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm">
+                                        <th className="px-4 py-2 text-left w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
+                                        <th className={`px-4 py-2 text-left border-r border-white/5 ${selectedId ? 'min-w-[100px]' : 'min-w-[140px]'}`}>NGƯỜI THAM GIA</th>
+                                        <th className={`px-4 py-2 text-left border-r border-white/5 ${selectedId ? 'min-w-[120px]' : 'min-w-[200px]'}`}>LÝ DO GẶP</th>
+                                        <th className="px-4 py-2 text-left border-r border-white/5 min-w-[140px]">THỜI GIAN GẶP</th>
+                                        {!selectedId && <th className="px-4 py-2 text-left border-r border-white/5 min-w-[180px]">ĐỊA ĐIỂM</th>}
+                                        <th className="px-4 py-2 text-center border-r border-white/5" title="Trình trạng xác nhận">TRẠNG THÁI</th>
+                                        <th className="px-4 py-2 text-center w-[80px]">THAO TÁC</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {filtered.map(appt => {
+                                <tbody className="divide-y divide-gray-50 bg-white">
+                                    {filtered.map((appt, idx) => {
                                         const s = formatDateTime(appt.startTime);
                                         const cfg = STATUS_CONFIG[appt.status];
                                         const isSelected = selectedId === appt.id;
                                         return (
-                                            <tr key={appt.id} onClick={() => setSelectedId(appt.id)} className={`border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-red-100' : 'bg-gray-100'}`}>
-                                                            <Calendar className={`h-4 w-4 ${isSelected ? 'text-red-500' : 'text-gray-400'}`} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-semibold text-gray-900 text-xs">#{appt.id} · {appt.donorName || `Donor #${appt.donorId}`}</p>
-                                                            <p className="text-[10px] text-gray-400 line-clamp-1">{appt.purpose || 'Không có mô tả'}</p>
-                                                        </div>
+                                            <tr 
+                                                key={appt.id} 
+                                                onClick={() => setSelectedId(appt.id)} 
+                                                className={`cursor-pointer transition-all duration-200 group relative z-10 ${isSelected ? 'bg-orange-50/60' : 'hover:bg-gray-50/80'}`}
+                                            >
+                                                <td className="px-4 py-1 text-[11px] font-black text-gray-400 border-r border-gray-50/50">
+                                                    {String(idx + 1).padStart(2, '0')}
+                                                </td>
+                                                <td className="px-4 py-1 border-r border-gray-50/50">
+                                                    <p className="font-black text-gray-900 text-[11px] uppercase tracking-tight truncate line-clamp-1">{appt.donorName || `User #${appt.donorId}`}</p>
+                                                </td>
+                                                <td className="px-4 py-1 border-r border-gray-50/50">
+                                                    <p className="text-[10px] font-bold text-gray-600 italic truncate line-clamp-1 leading-[1.2]">{appt.purpose || 'Không có mô tả'}</p>
+                                                </td>
+                                                <td className="px-4 py-1 border-r border-gray-50/50 whitespace-nowrap">
+                                                    <div className="flex items-center gap-2">
+                                                         <span className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{s.date}</span>
+                                                         <span className="text-[10px] font-bold text-red-500/70 italic">{s.time}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3"><p className="text-xs font-semibold text-gray-700">{s.date}</p><p className="text-[10px] text-gray-400">{s.time}</p></td>
-                                                <td className="px-4 py-3"><p className="text-xs text-gray-600 line-clamp-1">{appt.location || '—'}</p></td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ${cfg.bg} ${cfg.color}`}>{cfg.icon}{cfg.label}</span>
+                                                {!selectedId && (
+                                                    <td className="px-4 py-1 border-r border-gray-50/50">
+                                                        <p className="text-[11px] font-bold text-gray-600 line-clamp-1 italic">
+                                                            {appt.location || '—'}
+                                                        </p>
+                                                    </td>
+                                                )}
+                                                <td className="px-4 py-1 border-r border-gray-50/50">
+                                                    <div className="flex justify-center">
+                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')} whitespace-nowrap`}>
+                                                              {cfg.label}
+                                                         </span>
+                                                    </div>
                                                 </td>
-                                                <td className="px-4 py-3"><ChevronRight className={`h-4 w-4 ${isSelected ? 'text-red-400' : 'text-gray-300'}`} /></td>
+                                                <td className="px-4 py-1">
+                                                    <div className="flex justify-center">
+                                                         <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#db5945] translate-x-1' : 'text-gray-300'}`} />
+                                                    </div>
+                                                </td>
                                             </tr>
                                         );
                                     })}
@@ -670,9 +725,17 @@ function ListView({ appointments, isLoading, onStatusChange }: ListViewProps) {
                         )}
                     </div>
                 </div>
-                <div className="lg:col-span-5 overflow-auto">
-                    <AppointmentDetailPanel appointment={selectedAppointment} onStatusChange={onStatusChange} />
-                </div>
+                {selectedAppointment && (
+                    <div className="lg:col-span-4 overflow-hidden pt-[21px] animate-in slide-in-from-right duration-300">
+                         <div className="flex items-center justify-between px-1 mb-2">
+                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
+                             <button onClick={() => setSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
+                                 <X className="h-3.5 w-3.5 text-gray-400" />
+                             </button>
+                         </div>
+                        <AppointmentDetailPanel appointment={selectedAppointment} onStatusChange={onStatusChange} />
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -689,7 +752,6 @@ export default function StaffSchedulePage() {
     const [activeTab, setActiveTab] = useState<TabType>('list');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [calendarSelected, setCalendarSelected] = useState<AppointmentScheduleDto | null>(null);
-    const [myOnly, setMyOnly] = useState(false);
 
     const myId = user?.id ? Number(user.id) : null;
 
@@ -713,9 +775,9 @@ export default function StaffSchedulePage() {
         } catch (err: any) { toast.error(err?.response?.data?.message || 'Không thể cập nhật trạng thái'); }
     };
 
-    const displayedAppointments = myOnly && myId
+    const displayedAppointments = myId
         ? appointments.filter(a => Number(a.staffId) === myId)
-        : appointments;
+        : [];
 
     const stats = {
         total: displayedAppointments.length,
@@ -730,77 +792,49 @@ export default function StaffSchedulePage() {
     ];
 
     return (
-        <div className="flex flex-col h-full bg-[#f1f5f9]">
+        <div className="flex flex-col h-full bg-white relative">
             {/* Folder Tabs Header */}
-            <div className="flex items-end px-6 gap-2 h-14">
+            <div className="flex items-end px-3 gap-2 h-14 relative z-20 overflow-x-auto no-scrollbar">
                 {TABS.map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                        className={`relative px-5 py-2.5 text-sm font-bold transition-all duration-200 flex items-center gap-2 ${activeTab === tab.id
-                            ? 'bg-white text-red-600 rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
-                            : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'}`}>
+                        className={`relative px-6 py-2.5 text-[10px] font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2.5 ${activeTab === tab.id
+                            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.1)] z-20 h-11 border-t-2 border-[#db5945]'
+                            : 'bg-gray-100/50 text-gray-400 rounded-t-xl hover:bg-gray-200/50 z-10 h-9 mb-0.5'}`}>
                         {tab.icon}
                         <span className="whitespace-nowrap">{tab.label}</span>
-                        {tab.id === 'list' && <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'list' ? 'bg-red-50 text-red-600' : 'bg-gray-300 text-gray-500'}`}>{displayedAppointments.length}</span>}
+                        {tab.id === 'list' && (
+                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all ${
+                                 activeTab === 'list' 
+                                 ? 'bg-[#db5945]/10 text-[#db5945] border-[#db5945]/20' 
+                                 : 'bg-gray-200 text-gray-400 border-gray-300'
+                             }`}>
+                                 {displayedAppointments.length}
+                             </span>
+                        )}
                         {activeTab === tab.id && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
                     </button>
                 ))}
             </div>
 
             {/* Main Card */}
-            <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative z-10 flex flex-col">
-                <div className="flex-1 overflow-hidden p-6 flex flex-col gap-4">
-
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-                        {[
-                            { label: 'Tổng cộng', value: stats.total, color: 'from-[#446b5f] to-[#6a8d83]' },
-                            { label: 'Chờ xác nhận', value: stats.pending, color: 'from-[#db5945] to-[#f19082]' },
-                            { label: 'Đã xác nhận', value: stats.confirmed, color: 'from-[#446b5f] to-[#5a8075]' },
-                            { label: 'Hoàn thành', value: stats.completed, color: 'from-[#6a8d83] to-[#446b5f]' },
-                        ].map(s => (
-                            <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
-                                <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
-                                <p className="text-2xl font-black relative z-10">{s.value}</p>
-                                {/* Wave decoration */}
-                                <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill="white" fillOpacity="0.1" />
-                                    <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill="white" fillOpacity="0.05" />
-                                </svg>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Action bar */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 text-white text-sm font-bold hover:from-red-600 hover:to-rose-700 transition shadow-sm">
-                            <Plus className="h-4 w-4" />Tạo lịch hẹn
-                        </button>
-
-                        {/* My appointments iOS toggle */}
-                        <button
-                            onClick={() => setMyOnly(v => !v)}
-                            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-colors duration-200 ${myOnly ? 'border-green-400 bg-green-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
-                        >
-                            <span className={`text-sm font-semibold select-none ${myOnly ? 'text-green-700' : 'text-gray-500'}`}>Lịch của tôi</span>
-                            <span className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${myOnly ? 'bg-green-500' : 'bg-gray-300'}`}>
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-200 ease-in-out ${myOnly ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </span>
-                        </button>
-
-                        <button onClick={fetchAppointments} disabled={isLoading} className="h-9 w-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition disabled:opacity-50">
-                            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        </button>
-                    </div>
+            <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden relative z-10 flex flex-col">
+                <div className="flex-1 overflow-hidden p-3 flex flex-col pt-1">
 
                     {/* Tab content */}
                     {activeTab === 'list' && (
-                        <ListView appointments={displayedAppointments} isLoading={isLoading} onStatusChange={handleStatusChange} />
+                        <ListView 
+                            appointments={displayedAppointments} 
+                            isLoading={isLoading} 
+                            onStatusChange={handleStatusChange}
+                            onOpenCreate={() => setShowCreateModal(true)}
+                            onRefresh={fetchAppointments}
+                        />
                     )}
 
                     {activeTab === 'calendar' && (
                         <div className="flex-1 min-h-0 flex gap-4 overflow-hidden">
                             {/* Calendar takes remaining space */}
-                            <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+                            <div className={`transition-all duration-500 overflow-hidden flex flex-col ${calendarSelected ? 'flex-[2]' : 'flex-1'}`}>
                                 <CalendarView
                                     appointments={displayedAppointments}
                                     onSelect={appt => setCalendarSelected(appt)}
@@ -808,9 +842,17 @@ export default function StaffSchedulePage() {
                                 />
                             </div>
                             {/* Detail panel — fixed width, always visible */}
-                            <div className="w-[340px] flex-shrink-0 overflow-auto">
-                                <AppointmentDetailPanel appointment={calendarSelected} onStatusChange={handleStatusChange} />
-                            </div>
+                            {calendarSelected && (
+                                <div className="w-[340px] flex-shrink-0 overflow-auto animate-in slide-in-from-right duration-300">
+                                     <div className="flex items-center justify-between px-1 mb-2">
+                                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
+                                         <button onClick={() => setCalendarSelected(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
+                                             <X className="h-3.5 w-3.5 text-gray-400" />
+                                         </button>
+                                     </div>
+                                    <AppointmentDetailPanel appointment={calendarSelected} onStatusChange={handleStatusChange} />
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

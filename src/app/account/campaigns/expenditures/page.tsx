@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt, ChevronDown } from 'lucide-react';
 import CreateOrEditPostModal from '@/components/feed-post/CreateOrEditPostModal';
 import Image from 'next/image';
 
@@ -23,6 +23,8 @@ import { CampaignDto } from '@/types/campaign';
 import { FileUp, Send } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
 import ImageZoomModal from '@/components/feed-post/ImageZoomModal';
+import ExpenditureGalleryModal from '@/components/campaign/ExpenditureGalleryModal';
+import EvidenceDeadlineBanner from '@/components/campaign/EvidenceDeadlineBanner';
 
 export default function CampaignExpendituresPage() {
     const router = useRouter();
@@ -51,6 +53,7 @@ export default function CampaignExpendituresPage() {
     const [itemMediaLoading, setItemMediaLoading] = useState<Record<number, boolean>>({});
     const [itemUploadState, setItemUploadState] = useState<Record<number, { uploading: boolean; files: File[]; previews: string[] }>>({});
     const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+    const [galleryModalItemId, setGalleryModalItemId] = useState<number | null>(null);
 
     // Update Modal States (Step 4)
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -58,6 +61,7 @@ export default function CampaignExpendituresPage() {
     const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number }[]>([]);
     const [updateItemsData, setUpdateItemsData] = useState<ExpenditureItem[]>([]);
     const [updating, setUpdating] = useState(false);
+    const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
 
     // Lightbox state
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -67,6 +71,9 @@ export default function CampaignExpendituresPage() {
     // Create post modal state
     const [isPostModalOpen, setIsPostModalOpen] = useState(false);
     const [postExpenditure, setPostExpenditure] = useState<Expenditure | null>(null);
+    const [currentDraftPost, setCurrentDraftPost] = useState<any>(null);
+    // Track draft post per expenditure (loaded from BE)
+    const [expenditurePosts, setExpenditurePosts] = useState<Record<number, any[]>>({});
 
     // Evidence Submission States
     const [uploadingEvidence, setUploadingEvidence] = useState(false);
@@ -83,7 +90,22 @@ export default function CampaignExpendituresPage() {
 
             // Fetch expenditures
             const expendituresData = await expenditureService.getByCampaignId(Number(campaignId));
-            setExpenditures(expendituresData);
+            const exps = Array.isArray(expendituresData) ? expendituresData : [];
+
+            // Pre-load draft posts for DISBURSED expenditures
+            const disbursedExps = exps.filter((e: any) => e.status === 'DISBURSED');
+            const postPromises = disbursedExps.map((e: any) =>
+                feedPostService.getByTarget(e.id, 'EXPENDITURE')
+                    .catch(() => [] as any[])
+            );
+            const postResults = await Promise.all(postPromises);
+            const postsMap: Record<number, any[]> = {};
+            disbursedExps.forEach((e: any, i: number) => {
+                postsMap[e.id] = postResults[i];
+            });
+            setExpenditurePosts(postsMap);
+
+            setExpenditures(exps);
         } catch (err) {
             console.error('Không thể tải dữ liệu:', err);
             setError('Không thể tải dữ liệu chiến dịch hoặc khoản chi.');
@@ -306,6 +328,8 @@ export default function CampaignExpendituresPage() {
                 actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
                 price: item.price !== undefined ? item.price : 0
             })));
+            // Clear any pending deletes from previous opens
+            setPendingDeleteMediaIds([]);
             // Load media for all items
             itemsData.forEach(item => loadItemMedia(item.id));
             setIsUpdateModalOpen(true);
@@ -324,12 +348,26 @@ export default function CampaignExpendituresPage() {
         if (!updateExpenditure) return;
         try {
             setUpdating(true);
+
+            // 1. Process pending deletions if any
+            if (pendingDeleteMediaIds.length > 0) {
+                try {
+                    await Promise.all(pendingDeleteMediaIds.map(id => mediaService.deleteMedia(id)));
+                    setPendingDeleteMediaIds([]);
+                } catch (delErr) {
+                    console.error('Some media deletions failed during update:', delErr);
+                    // We continue anyway so the actuals are saved
+                }
+            }
+
+            // 2. Update actuals
             await expenditureService.updateActuals(updateExpenditure.id, updateItems);
             toast.success('Cập nhật thành công!');
             setIsUpdateModalOpen(false);
+
             // Refresh expenditures
             const expendituresData = await expenditureService.getByCampaignId(Number(campaignId));
-            setExpenditures(expendituresData);
+            setExpenditures(Array.isArray(expendituresData) ? expendituresData : []);
         } catch (err) {
             toast.error('Cập nhật thất bại. Vui lòng thử lại.');
         } finally {
@@ -388,19 +426,17 @@ export default function CampaignExpendituresPage() {
         }
     }, [itemUploadState, campaignId, isDisabled]);
 
-    // Delete media for a specific item
+    // Delete media for a specific item (Deferred to Save)
     const handleDeleteItemMedia = useCallback(async (itemId: number, mediaId: number) => {
-        try {
-            await mediaService.deleteMedia(mediaId);
-            setItemMedia(prev => ({
-                ...prev,
-                [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId),
-            }));
-            toast.success('Đã xóa ảnh minh chứng.');
-        } catch (err) {
-            console.error('Failed to delete media:', err);
-            toast.error('Không thể xóa ảnh. Vui lòng thử lại.');
-        }
+        // Just remove from local UI state
+        setItemMedia(prev => ({
+            ...prev,
+            [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId),
+        }));
+
+        // Add to pending deletions for later processing on Save
+        setPendingDeleteMediaIds(prev => [...prev, mediaId]);
+        toast.success('Đã đánh dấu xóa ảnh minh chứng.');
     }, []);
 
     // Handle file selection for item media
@@ -684,7 +720,7 @@ export default function CampaignExpendituresPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="w-full">
+                        <div className="w-full max-h-[500px] overflow-y-auto">
                             <table className="min-w-full">
                                 <thead className="bg-slate-50 border-b border-black/5">
                                     <tr>
@@ -868,13 +904,13 @@ export default function CampaignExpendituresPage() {
                                                                                                 onClick={(e) => { e.stopPropagation(); setSelectedLogStep(4); }}
                                                                                                 className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 4 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
                                                                                             >
-                                                                                                <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : (exp.status === 'DISBURSED' ? 'bg-amber-400 ring-4 ring-amber-50' : 'bg-gray-200 ring-4 ring-gray-50')}`}></div>
+                                                                                                <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : ((exp.evidenceStatus === 'ALLOWED_EDIT' || exp.status === 'DISBURSED') ? 'bg-amber-400 ring-4 ring-amber-50' : 'bg-gray-200 ring-4 ring-gray-50')}`}></div>
                                                                                                 <div className="flex flex-col">
-                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-red-900' : ((exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'text-emerald-700' : (exp.status === 'DISBURSED' ? 'text-amber-600' : 'text-black/30'))}`}>
+                                                                                                    <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-red-900' : ((exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'text-emerald-700' : ((exp.evidenceStatus === 'ALLOWED_EDIT' || exp.status === 'DISBURSED') ? 'text-amber-600' : 'text-black/30'))}`}>
                                                                                                         4. Cập nhật minh chứng
                                                                                                     </span>
                                                                                                     <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                        {exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng' : exp.evidenceStatus === 'APPROVED' ? 'Đã xác nhận' : exp.status === 'DISBURSED' ? 'Chờ nộp minh chứng' : 'Chưa giải ngân'}
+                                                                                                        {exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng' : exp.evidenceStatus === 'APPROVED' ? 'Đã xác nhận' : exp.evidenceStatus === 'ALLOWED_EDIT' ? 'Cho chỉnh sửa lại' : exp.status === 'DISBURSED' ? 'Chờ nộp minh chứng' : 'Chưa giải ngân'}
                                                                                                     </span>
                                                                                                 </div>
                                                                                             </button>
@@ -1058,78 +1094,143 @@ export default function CampaignExpendituresPage() {
                                                                                     )}
 
                                                                                     {selectedLogStep === 4 && (
-                                                                                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                                                                            <div className="flex items-center justify-between">
-                                                                                                <div className="flex items-center gap-3">
-                                                                                                    <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHI TIÊU</h4>
-                                                                                                    {exp.evidenceStatus === 'SUBMITTED' && (
-                                                                                                        <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-100">Đã nộp – chờ xác nhận</span>
-                                                                                                    )}
-                                                                                                    {exp.evidenceStatus === 'APPROVED' && (
-                                                                                                        <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã xác nhận</span>
-                                                                                                    )}
+                                                                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                                                            {/* Row 1: Tiêu đề + status badge */}
+                                                                                            <div className="flex items-center gap-3 flex-wrap">
+                                                                                                <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHI TIÊU</h4>
+                                                                                                {exp.evidenceStatus === 'SUBMITTED' && (
+                                                                                                    <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-100 animate-pulse">Đã nộp – chờ xác nhận</span>
+                                                                                                )}
+                                                                                                {exp.evidenceStatus === 'APPROVED' && (
+                                                                                                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã xác nhận</span>
+                                                                                                )}
+                                                                                                {exp.evidenceStatus === 'ALLOWED_EDIT' && (
+                                                                                                    <span className="px-3 py-1 bg-blue-50 text-blue-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-blue-100 animate-pulse">Cho chỉnh sửa lại</span>
+                                                                                                )}
+                                                                                            </div>
+
+                                                                                            {/* Deadline banner */}
+                                                                                            {exp.evidenceDueAt && exp.evidenceStatus !== 'SUBMITTED' && exp.evidenceStatus !== 'APPROVED' && (
+                                                                                                <EvidenceDeadlineBanner dueAt={exp.evidenceDueAt} />
+                                                                                            )}
+
+                                                                                            {/* Đã nộp — hiện thời gian nộp */}
+                                                                                            {(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') && (
+                                                                                                <div className="flex items-center gap-3 px-6 py-4 bg-emerald-50 border-2 border-emerald-200 rounded-[1.5rem]">
+                                                                                                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                                                                                        <CheckCircle className="w-6 h-6 text-emerald-600" />
+                                                                                                    </div>
+                                                                                                    <div>
+                                                                                                        <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Đã nộp minh chứng</p>
+                                                                                                        {exp.evidenceSubmittedAt && (
+                                                                                                            <p className="text-[10px] text-emerald-600 mt-0.5">
+                                                                                                                Lúc {new Date(exp.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                                                                            </p>
+                                                                                                        )}
+                                                                                                    </div>
                                                                                                 </div>
-                                                                                                <div className="flex gap-3">
+                                                                                            )}
+
+                                                                                            {/* Bước 1 */}
+                                                                                            {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (
+                                                                                                <div className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm p-6 flex items-center justify-between gap-4">
+                                                                                                    <div className="flex items-center gap-4">
+                                                                                                        <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                                                                                            <span className="text-sm font-black text-orange-600">1</span>
+                                                                                                        </div>
+                                                                                                        <div>
+                                                                                                            <p className="text-xs font-black text-black/70 uppercase tracking-widest mb-0.5">Cập nhật số liệu & Ảnh</p>
+                                                                                                            <p className="text-[10px] text-black/30">Nhập số lượng thực tế, giá tiền và đính kèm ảnh minh chứng cho từng vật phẩm</p>
+                                                                                                        </div>
+                                                                                                    </div>
                                                                                                     <button
                                                                                                         onClick={() => handleOpenUpdateModal(exp)}
-                                                                                                        className="px-6 py-3 bg-orange-500 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-orange-600 transition-colors shadow-md whitespace-nowrap"
+                                                                                                        className="px-5 py-2.5 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-600 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
                                                                                                     >
-                                                                                                        Cập nhật số liệu & Ảnh
+                                                                                                        Thực hiện
                                                                                                     </button>
-                                                                                                    {exp.evidenceStatus !== 'SUBMITTED' && exp.evidenceStatus !== 'APPROVED' && (
-                                                                                                        <button
-                                                                                                            onClick={() => { setPostExpenditure(exp); setIsPostModalOpen(true); }}
-                                                                                                            className="px-6 py-3 bg-emerald-500 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-emerald-600 transition-colors shadow-md whitespace-nowrap"
-                                                                                                        >
-                                                                                                            Đăng bài post
-                                                                                                        </button>
-                                                                                                    )}
                                                                                                 </div>
-                                                                                            </div>
+                                                                                            )}
 
-                                                                                            {/* Grid all item images */}
-                                                                                            <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm">
-                                                                                                <h5 className="text-[10px] font-black uppercase tracking-[2px] text-black/30 mb-6">Hình ảnh minh chứng theo vật phẩm</h5>
-
-                                                                                                {(() => {
-                                                                                                    const allItemIds = exp.items?.map(i => i.id) || [];
-                                                                                                    const hasAnyImages = allItemIds.some(id => (itemMedia[id] || []).length > 0);
-                                                                                                    if (!hasAnyImages) {
-                                                                                                        return (
-                                                                                                            <div className="text-center py-12 text-black/20">
-                                                                                                                <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                                                                                                <p className="text-sm font-bold">Chưa có hình ảnh minh chứng nào</p>
-                                                                                                                <p className="text-[10px] mt-1">Bấm "Cập nhật số liệu & Ảnh" để tải lên</p>
+                                                                                            {/* Bước 2 */}
+                                                                                            {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (() => {
+                                                                                                const posts = expenditurePosts[exp.id] || [];
+                                                                                                const draftPost = posts.find((p: any) => p.status === 'DRAFT');
+                                                                                                const publishedPost = posts.find((p: any) => p.status === 'PUBLISHED');
+                                                                                                const isPublished = !!publishedPost;
+                                                                                                return (
+                                                                                                    <div className="bg-white rounded-[1.5rem] border border-black/5 shadow-sm p-6 flex items-center justify-between gap-4">
+                                                                                                        <div className="flex items-center gap-4">
+                                                                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isPublished ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+                                                                                                                {isPublished ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <span className="text-sm font-black text-amber-600">2</span>}
                                                                                                             </div>
-                                                                                                        );
-                                                                                                    }
-                                                                                                    return (
-                                                                                                        <div className="space-y-6">
-                                                                                                            {exp.items?.map(item => {
-                                                                                                                const images = itemMedia[item.id] || [];
-                                                                                                                return (
-                                                                                                                    <div key={item.id}>
-                                                                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-black/40">{item.category}</span>
-                                                                                                                        </div>
-                                                                                                                        {images.length > 0 ? (
-                                                                                                                            <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-                                                                                                                                {images.map(m => (
-                                                                                                                                    <div key={m.id} className="relative group cursor-pointer" onClick={() => setLightboxImage(m.url)}>
-                                                                                                                                        <img src={m.url} alt="Minh chứng" className="w-full aspect-square object-cover rounded-xl border border-black/5" />
-                                                                                                                                    </div>
-                                                                                                                                ))}
-                                                                                                                            </div>
-                                                                                                                        ) : (
-                                                                                                                            <p className="text-[9px] text-black/20 italic">Chưa có ảnh</p>
-                                                                                                                        )}
-                                                                                                                    </div>
-                                                                                                                );
-                                                                                                            })}
+                                                                                                            <div>
+                                                                                                                <p className="text-xs font-black text-black/70 uppercase tracking-widest mb-0.5">Đăng bài post</p>
+                                                                                                                <p className="text-[10px] text-black/30">
+                                                                                                                    {isPublished
+                                                                                                                        ? `Đã đăng lúc ${new Date(publishedPost.updatedAt || publishedPost.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+                                                                                                                        : draftPost
+                                                                                                                        ? 'Bài nháp đang chờ — bấm để tiếp tục chỉnh sửa'
+                                                                                                                        : 'Chia sẻ minh chứng lên bảng tin để cộng đồng cùng theo dõi'}
+                                                                                                                </p>
+                                                                                                            </div>
                                                                                                         </div>
-                                                                                                    );
-                                                                                                })()}
-                                                                                            </div>
+                                                                                                        <button
+                                                                                                            onClick={() => {
+                                                                                                                setCurrentDraftPost(draftPost || null);
+                                                                                                                setPostExpenditure(exp);
+                                                                                                                setIsPostModalOpen(true);
+                                                                                                            }}
+                                                                                                            className="px-5 py-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-emerald-600 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
+                                                                                                        >
+                                                                                                            {draftPost || isPublished ? 'Chỉnh sửa' : 'Viết bài'}
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                );
+                                                                                            })()}
+
+                                                                                            {/* Nút NỘP */}
+                                                                                            {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (
+                                                                                                <div className="flex justify-center pt-2">
+                                                                                                    <button
+                                                                                                        onClick={async () => {
+                                                                                                            try {
+                                                                                                                setUploadingEvidence(true);
+
+                                                                                                                // 1. Nếu có draft post → publish nó
+                                                                                                                const posts = expenditurePosts[exp.id] || [];
+                                                                                                                const draftPost = posts.find((p: any) => p.status === 'DRAFT');
+                                                                                                                if (draftPost) {
+                                                                                                                    await feedPostService.updateStatus(Number(draftPost.id), 'PUBLISHED');
+                                                                                                                }
+
+                                                                                                                // 2. Update evidence status
+                                                                                                                await expenditureService.updateEvidenceStatus(exp.id, 'SUBMITTED');
+                                                                                                                toast.success('Đã nộp minh chứng thành công!');
+
+                                                                                                                // 3. Refresh data
+                                                                                                                const data = await expenditureService.getByCampaignId(Number(campaignId));
+                                                                                                                setExpenditures(Array.isArray(data) ? data : []);
+                                                                                                                // Refresh posts
+                                                                                                                const refreshedPosts = await feedPostService.getByTarget(exp.id, 'EXPENDITURE');
+                                                                                                                setExpenditurePosts(prev => ({ ...prev, [exp.id]: refreshedPosts }));
+                                                                                                            } catch (err: any) {
+                                                                                                                toast.error(err.response?.data?.message || 'Nộp minh chứng thất bại.');
+                                                                                                            } finally {
+                                                                                                                setUploadingEvidence(false);
+                                                                                                            }
+                                                                                                        }}
+                                                                                                        disabled={uploadingEvidence}
+                                                                                                        className="px-10 py-4 bg-red-600 text-white text-sm font-black uppercase tracking-widest rounded-full hover:bg-red-700 active:scale-95 transition-all shadow-lg flex items-center gap-3"
+                                                                                                    >
+                                                                                                        {uploadingEvidence ? (
+                                                                                                            <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang nộp...</>
+                                                                                                        ) : (
+                                                                                                            <><Send className="w-4 h-4" /> NỘP MINH CHỨNG</>
+                                                                                                        )}
+                                                                                                    </button>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
                                                                                     )}
 
@@ -1167,11 +1268,9 @@ export default function CampaignExpendituresPage() {
                                                                                                 <div className="space-y-6">
                                                                                                     {exp.items.map((item) => {
                                                                                                         const media = itemMedia[item.id] || [];
-                                                                                                        const uploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
                                                                                                         const isItemSelected = selectedItemId === item.id;
                                                                                                         return (
                                                                                                             <div key={item.id} className="bg-white rounded-[2rem] border border-black/5 shadow-sm overflow-hidden">
-                                                                                                                {/* Item Header */}
                                                                                                                 <div
                                                                                                                     onClick={() => {
                                                                                                                         if (!isItemSelected) {
@@ -1186,148 +1285,65 @@ export default function CampaignExpendituresPage() {
                                                                                                                     <div className="flex items-center justify-between">
                                                                                                                         <div className="flex-1 min-w-0">
                                                                                                                             <div className="flex items-center gap-3 mb-2">
-                                                                                                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isItemSelected ? 'bg-red-50 text-red-900 border border-red-100' : 'bg-zinc-100 text-zinc-600 border border-zinc-100'}`}>
-                                                                                                                                    {item.category || 'Chưa phân loại'}
-                                                                                                                                </span>
-                                                                                                                                {media.length > 0 && (
-                                                                                                                                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600">
-                                                                                                                                        <ImageIcon className="w-3 h-3" /> {media.length}
-                                                                                                                                    </span>
-                                                                                                                                )}
+                                                                                                                                <span className="px-3 py-1 rounded-full bg-slate-100 text-[9px] font-black uppercase text-slate-500 tracking-wider">#{item.id}</span>
+                                                                                                                                <h4 className="text-sm font-black text-black truncate">{item.category}</h4>
                                                                                                                             </div>
-                                                                                                                            <div className="flex items-baseline gap-4">
-                                                                                                                                <span className="text-sm font-black text-black">
-                                                                                                                                    {new Intl.NumberFormat('vi-VN').format(Number(item.expectedPrice))}
-                                                                                                                                    <span className="text-[9px] font-bold text-black/30 ml-1">VNĐ</span>
-                                                                                                                                </span>
-                                                                                                                                <span className="text-[10px] font-bold text-black/30">
-                                                                                                                                    SL: {item.quantity}
-                                                                                                                                </span>
+                                                                                                                            <div className="flex items-center gap-4">
+                                                                                                                                <div className="flex items-center gap-1.5">
+                                                                                                                                    <span className="text-[10px] font-bold text-black/30">Số tiền:</span>
+                                                                                                                                    <span className="text-xs font-black text-red-600">{new Intl.NumberFormat('vi-VN').format(Number(item.price || 0) * (item.quantity || 0))} đ</span>
+                                                                                                                                </div>
+                                                                                                                                <div className="w-1 h-1 rounded-full bg-black/10"></div>
+                                                                                                                                <div className="text-[10px] font-bold text-black/40">SL: {item.quantity}</div>
                                                                                                                             </div>
                                                                                                                         </div>
-                                                                                                                        <ChevronRight className={`w-5 h-5 text-black/20 transition-transform duration-300 ${isItemSelected ? 'rotate-90' : ''}`} />
+                                                                                                                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isItemSelected ? 'bg-red-50 text-red-600 rotate-180' : 'bg-slate-50 text-slate-400'}`}>
+                                                                                                                            <ChevronDown className="w-4 h-4" />
+                                                                                                                        </div>
                                                                                                                     </div>
                                                                                                                 </div>
-
-                                                                                                                {/* Item Details - Expanded */}
                                                                                                                 {isItemSelected && (
-                                                                                                                    <div className="border-t border-black/5">
-                                                                                                                        {/* Media Grid */}
-                                                                                                                        <div className="p-6 space-y-4">
-                                                                                                                            <div className="flex items-center justify-between">
-                                                                                                                                <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px]">
-                                                                                                                                    Hình ảnh minh chứng
-                                                                                                                                </label>
-                                                                                                                                <span className="text-[9px] font-bold text-black/20">
-                                                                                                                                    {media.length} / 10 ảnh
-                                                                                                                                </span>
-                                                                                                                            </div>
-
-                                                                                                                            {/* Existing Images */}
-                                                                                                                            {media.length > 0 && (
-                                                                                                                                <div className="grid grid-cols-3 gap-3">
-                                                                                                                                    {media.map((m) => (
-                                                                                                                                        <div key={m.id} className="relative aspect-square rounded-2xl overflow-hidden group/img border border-black/5 shadow-sm">
-                                                                                                                                            <img
-                                                                                                                                                src={m.url}
-                                                                                                                                                alt={`Minh chứng ${m.id}`}
-                                                                                                                                                className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
-                                                                                                                                                onError={(e) => { (e.target as HTMLImageElement).src = '/assets/img/placeholder.png'; }}
-                                                                                                                                            />
-                                                                                                                                            <button
-                                                                                                                                                onClick={() => handleDeleteItemMedia(item.id, m.id)}
-                                                                                                                                                className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-all hover:bg-red-500"
-                                                                                                                                            >
-                                                                                                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                                                                                                            </button>
+                                                                                                                    <div className="border-t border-black/5 p-6">
+                                                                                                                        <button
+                                                                                                                            onClick={(e) => { e.stopPropagation(); setGalleryModalItemId(item.id); }}
+                                                                                                                            className="w-full aspect-video rounded-[2rem] border-2 border-dashed border-black/5 bg-gray-50 hover:border-red-300 hover:bg-red-50/30 transition-all duration-300 flex flex-col items-center justify-center gap-3 group/gallery"
+                                                                                                                        >
+                                                                                                                            {media.length > 0 ? (
+                                                                                                                                <div className="flex -space-x-4 mb-2">
+                                                                                                                                    {media.slice(0, 3).map((m, idx) => (
+                                                                                                                                        <div key={idx} className="w-12 h-12 rounded-2xl border-4 border-white shadow-xl overflow-hidden transform group-hover/gallery:scale-110 transition-transform" style={{ zIndex: 10 - idx }}>
+                                                                                                                                            <img src={m.url} className="w-full h-full object-cover" />
                                                                                                                                         </div>
                                                                                                                                     ))}
-                                                                                                                                </div>
-                                                                                                                            )}
-
-                                                                                                                            {/* Upload Area */}
-                                                                                                                            {media.length < 10 && !isDisabled && (
-                                                                                                                                <div className="space-y-3">
-                                                                                                                                    {/* Preview */}
-                                                                                                                                    {uploadState.previews.length > 0 && (
-                                                                                                                                        <div className="grid grid-cols-3 gap-3">
-                                                                                                                                            {uploadState.previews.map((preview, idx) => (
-                                                                                                                                                <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-emerald-200 bg-emerald-50 shadow-sm">
-                                                                                                                                                    <img src={preview} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
-                                                                                                                                                </div>
-                                                                                                                                            ))}
+                                                                                                                                    {media.length > 3 && (
+                                                                                                                                        <div className="w-12 h-12 rounded-2xl border-4 border-white bg-black/60 flex items-center justify-center text-white text-[10px] font-black z-0 shadow-xl">
+                                                                                                                                            +{media.length - 3}
                                                                                                                                         </div>
                                                                                                                                     )}
-
-                                                                                                                                    {/* Upload Button */}
-                                                                                                                                    <div className="relative group/upload">
-                                                                                                                                        <input
-                                                                                                                                            type="file"
-                                                                                                                                            accept="image/*"
-                                                                                                                                            multiple
-                                                                                                                                            onChange={(e) => handleItemFileChange(item.id, e.target.files)}
-                                                                                                                                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                                                                                                            disabled={uploadState.uploading}
-                                                                                                                                        />
-                                                                                                                                        <div className="aspect-video rounded-[2rem] border-2 border-dashed border-black/5 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all duration-300 flex flex-col items-center justify-center gap-2 cursor-pointer">
-                                                                                                                                            {uploadState.uploading ? (
-                                                                                                                                                <div className="w-8 h-8 border-2 border-emerald-300 border-t-emerald-500 rounded-full animate-spin" />
-                                                                                                                                            ) : (
-                                                                                                                                                <>
-                                                                                                                                                    <Upload className="w-6 h-6 text-black/20" />
-                                                                                                                                                    <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">Tải lên ảnh minh chứng</p>
-                                                                                                                                                </>
-                                                                                                                                            )}
-                                                                                                                                        </div>
-                                                                                                                                    </div>
-
-                                                                                                                                    {/* Upload Button */}
-                                                                                                                                    {uploadState.files.length > 0 && (
-                                                                                                                                        <button
-                                                                                                                                            onClick={() => handleItemMediaUpload(item.id)}
-                                                                                                                                            disabled={uploadState.uploading}
-                                                                                                                                            className={`w-full py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all text-[10px] font-black uppercase tracking-[2px] shadow-lg ${uploadState.uploading ? 'bg-gray-100 text-black/20 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-[0.98]'}`}
-                                                                                                                                        >
-                                                                                                                                            <Upload className="w-4 h-4" />
-                                                                                                                                            Tải lên {uploadState.files.length} ảnh
-                                                                                                                                        </button>
-                                                                                                                                    )}
                                                                                                                                 </div>
+                                                                                                                            ) : (
+                                                                                                                                <ImageIcon className="w-8 h-8 text-black/10 group-hover/gallery:text-red-300" />
                                                                                                                             )}
-
-                                                                                                                            {isDisabled && (
-                                                                                                                                <div className="text-center py-6">
-                                                                                                                                    <p className="text-[10px] font-bold text-black/30 italic">Chiến dịch đã bị vô hiệu hóa, không thể tải ảnh lên.</p>
-                                                                                                                                </div>
-                                                                                                                            )}
-                                                                                                                        </div>
-
-                                                                                                                        {/* Item Meta */}
-                                                                                                                        <div className="px-6 pb-6 pt-0 space-y-3 border-t border-black/5 pt-4">
+                                                                                                                            <div className="flex flex-col items-center">
+                                                                                                                                <p className="text-[10px] font-black text-black/40 uppercase tracking-widest group-hover/gallery:text-red-900">Xem Gallery Minh chứng</p>
+                                                                                                                                <p className="text-[8px] font-bold text-black/20 uppercase tracking-tight mt-1">{media.length} ảnh đã tải lên</p>
+                                                                                                                            </div>
+                                                                                                                        </button>
+                                                                                                                        <div className="mt-6 space-y-3 border-t border-black/5 pt-6">
                                                                                                                             {item.note && (
                                                                                                                                 <div>
                                                                                                                                     <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px] block mb-1">Ghi chú</label>
                                                                                                                                     <p className="text-xs font-bold text-black/60 leading-relaxed">{item.note}</p>
                                                                                                                                 </div>
                                                                                                                             )}
-                                                                                                                            <div className="flex gap-6">
+                                                                                                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                                                                                                                 <div>
                                                                                                                                     <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px] block mb-1">Số lượng</label>
                                                                                                                                     <p className="text-xs font-bold text-black">{item.quantity}</p>
                                                                                                                                 </div>
-                                                                                                                                {item.actualQuantity !== undefined && item.actualQuantity !== null && (
-                                                                                                                                    <div>
-                                                                                                                                        <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px] block mb-1">SL thực tế</label>
-                                                                                                                                        <p className="text-xs font-bold text-black">{item.actualQuantity}</p>
-                                                                                                                                    </div>
-                                                                                                                                )}
                                                                                                                                 <div>
                                                                                                                                     <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px] block mb-1">Đơn giá</label>
                                                                                                                                     <p className="text-xs font-bold text-black">{new Intl.NumberFormat('vi-VN').format(Number(item.price || 0))} đ</p>
-                                                                                                                                </div>
-                                                                                                                                <div>
-                                                                                                                                    <label className="text-[9px] font-black uppercase text-black/30 tracking-[2px] block mb-1">Ngày tạo</label>
-                                                                                                                                    <p className="text-xs font-bold text-black/40">{item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '—'}</p>
                                                                                                                                 </div>
                                                                                                                             </div>
                                                                                                                         </div>
@@ -1342,37 +1358,24 @@ export default function CampaignExpendituresPage() {
                                                                                                     <div className="w-16 h-16 rounded-[1.5rem] bg-white flex items-center justify-center shadow-sm">
                                                                                                         <FileText className="w-8 h-8 text-black/10" />
                                                                                                     </div>
-                                                                                                    <div>
-                                                                                                        <p className="text-[10px] font-black text-black/30 uppercase tracking-widest">Chưa có vật phẩm nào</p>
-                                                                                                        <p className="text-[9px] font-bold text-black/20 mt-1">Chuyển đến trang quản lý để thêm vật phẩm.</p>
-                                                                                                    </div>
-                                                                                                    <button
-                                                                                                        onClick={() => router.push(`/account/campaigns/expenditures/${exp.id}?campaignId=${campaign.id}`)}
-                                                                                                        className="px-6 py-3 rounded-full bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-900 transition-colors"
-                                                                                                    >
-                                                                                                        Quản lý vật phẩm
-                                                                                                    </button>
+                                                                                                    <p className="text-[10px] font-black text-black/30 uppercase tracking-widest">Chưa có vật phẩm nào</p>
                                                                                                 </div>
                                                                                             )}
                                                                                         </div>
                                                                                     )}
                                                                                 </div>
-
                                                                                 <div className="mt-auto pt-10 border-t border-black/5 flex gap-4">
                                                                                     <button
                                                                                         onClick={(e) => { e.stopPropagation(); router.push(`/account/campaigns/expenditures/${exp.id}?campaignId=${campaign.id}`); }}
                                                                                         className="flex-1 p-6 rounded-[2rem] bg-black text-white hover:bg-red-900 transition-all duration-500 shadow-2xl shadow-black/10 flex items-center justify-between group"
                                                                                     >
                                                                                         <span className="text-[10px] font-black uppercase tracking-[2.5px]">Xem danh sách vật phẩm</span>
-                                                                                        <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-all">
-                                                                                            <ArrowUpRight className="w-5 h-5 transition-transform group-hover:scale-110" />
-                                                                                        </div>
+                                                                                        <ArrowUpRight className="w-5 h-5" />
                                                                                     </button>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
-
                                                                 )}
                                                             </div>
                                                         </div>
@@ -1388,66 +1391,18 @@ export default function CampaignExpendituresPage() {
                 </div>
 
                 {/* Withdrawal Modal */}
-                {
-                    showWithdrawalModal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-                            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full overflow-hidden transform transition-all animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
-                                <div className="p-10">
-                                    <h3 className="text-2xl font-black text-black tracking-tighter mb-2">Yêu cầu giải ngân</h3>
-                                    <p className="text-xs font-bold text-black/40 mb-8 bg-red-50/50 p-4 rounded-2xl border border-red-100/50 leading-relaxed italic">
-                                        <strong>Lưu ý quan trọng:</strong> Yêu cầu này sẽ chốt đợt quyên góp hiện tại để tiến hành giải ngân. Vui lòng xác định hạn nộp minh chứng chi tiêu.
-                                    </p>
-
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <label htmlFor="evidenceDate" className="text-[10px] font-black text-black/30 uppercase tracking-[2px] ml-2">
-                                                Hạn nộp minh chứng chi tiêu
-                                            </label>
-                                            <input
-                                                type="datetime-local"
-                                                id="evidenceDate"
-                                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl text-sm font-black focus:ring-2 focus:ring-[#dc2626]/10 focus:bg-white outline-none transition-all"
-                                                value={evidenceDate}
-                                                onChange={(e) => setEvidenceDate(e.target.value)}
-                                            />
-                                            <p className="mt-1 text-[9px] font-bold text-black/20 uppercase tracking-widest ml-2 italic">Ràng buộc: Không quá 1 tháng kể từ hôm nay.</p>
-                                        </div>
-
-                                        {modalError && (
-                                            <div className="p-4 bg-red-50 text-[#dc2626] text-[10px] font-black uppercase tracking-tight rounded-2xl flex items-center gap-3 animate-shake">
-                                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                                {modalError}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-10 flex gap-4">
-                                        <button
-                                            onClick={() => setShowWithdrawalModal(false)}
-                                            className="flex-1 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black/30 hover:text-black transition-colors"
-                                            disabled={submittingWithdrawal}
-                                        >
-                                            Hủy bỏ
-                                        </button>
-                                        <button
-                                            onClick={submitWithdrawal}
-                                            className="flex-[2] px-4 py-3 bg-[#dc2626] text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-red-200 hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                            disabled={submittingWithdrawal}
-                                        >
-                                            {submittingWithdrawal ? (
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            ) : (
-                                                <>Xác nhận yêu cầu</>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
+                {showWithdrawalModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-10">
+                            <h3 className="text-2xl font-black text-black mb-2">Yêu cầu giải ngân</h3>
+                            <div className="mt-10 flex gap-4">
+                                <button onClick={() => setShowWithdrawalModal(false)} className="flex-1 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-black/30">Hủy bỏ</button>
+                                <button onClick={submitWithdrawal} className="flex-[2] px-4 py-3 bg-[#dc2626] text-white text-[10px] font-black uppercase tracking-widest rounded-full">Xác nhận</button>
                             </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
 
-                {/* Update Modal - Step 4: Cập nhật thực tế + Ảnh vật phẩm */}
                 {isUpdateModalOpen && updateExpenditure && (
                     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                         <div className="flex items-center justify-center min-h-screen px-4">
@@ -1467,224 +1422,249 @@ export default function CampaignExpendituresPage() {
                                         </button>
                                     </div>
 
-                                    {/* Summary */}
-                                    <div className="mb-4 flex flex-wrap gap-4 text-sm">
-                                        <div className="bg-green-50 px-3 py-2 rounded border border-green-200">
-                                            <span className="text-green-800 font-medium">Ngân sách:</span>{' '}
-                                            <span className="font-bold text-green-700">
-                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0))}
-                                            </span>
-                                        </div>
-                                        <div className={`px-3 py-2 rounded border ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0)) ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                                            <span className={`${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0)) ? 'text-red-800' : 'text-gray-800'} font-medium`}>Tổng đã chi:</span>{' '}
-                                            <span className={`font-bold ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0)) ? 'text-red-700' : 'text-gray-700'}`}>
-                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0))}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Table */}
                                     <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-50 sticky top-0">
+                                            <thead className="bg-gray-50 sticky top-0 z-10">
                                                 <tr>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vật phẩm</th>
-                                                    <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Kế hoạch</th>
-                                                    {campaign?.type !== 'AUTHORIZED' && (
-                                                        <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
-                                                    )}
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Thực tế</th>
-                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter">Vật phẩm</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-black text-blue-600 uppercase tracking-tighter bg-blue-50">Kế hoạch</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-50">Thực tế (Nhập)</th>
+                                                    <th className="px-4 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-tighter">Minh chứng</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {updateItemsData.map((item, index) => {
                                                     const modalMedia = itemMedia[item.id] || [];
-                                                    const modalUploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
                                                     return (
                                                         <Fragment key={item.id}>
                                                             <tr className="hover:bg-gray-50">
                                                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                                                    <div className="font-medium">{item.category}</div>
-                                                                    {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
+                                                                    <div className="font-bold">{item.category}</div>
+                                                                    {item.note && <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">{item.note}</div>}
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right text-sm bg-blue-50/30">
-                                                                    <div className="font-medium text-blue-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
+                                                                <td className="px-4 py-3 text-right bg-blue-50/30 align-top">
+                                                                    <div className="flex flex-col min-h-[100px] justify-between">
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <div className="flex items-center justify-end gap-1.5 text-blue-400/70">
+                                                                                <span className="text-[9px] font-black uppercase tracking-tighter">SL:</span>
+                                                                                <span className="text-[11px] font-bold">{item.quantity}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center justify-end gap-1.5 text-blue-400/70">
+                                                                                <span className="text-[9px] font-black uppercase tracking-tighter">ĐG:</span>
+                                                                                <span className="text-[11px] font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-right pt-1.5 border-t border-blue-100 mt-2">
+                                                                            <div className="font-black text-blue-600 text-sm lg:text-base">
+                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-xs text-gray-400">{item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}</div>
                                                                 </td>
-                                                                {campaign?.type !== 'AUTHORIZED' && (
-                                                                    <td className="px-4 py-3 text-right text-sm bg-green-50/30">
-                                                                        <div className="font-medium text-green-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                                                <td className="px-4 py-3 bg-orange-50/20 align-top">
+                                                                    <div className="flex flex-col min-h-[100px] justify-between">
+                                                                        <div className="flex flex-col gap-1.5">
+                                                                            <div className="flex items-center justify-end gap-2">
+                                                                                <label className="text-[9px] font-black text-orange-400 uppercase tracking-tighter">SL:</label>
+                                                                                <input
+                                                                                    type="number" min="0"
+                                                                                    className="w-14 border-orange-200 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-[11px] font-bold text-right py-0.5 px-1.5"
+                                                                                    value={updateItems[index]?.actualQuantity}
+                                                                                    onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
+                                                                                />
+                                                                            </div>
+                                                                            <div className="flex items-center justify-end gap-2">
+                                                                                <label className="text-[9px] font-black text-orange-400 uppercase tracking-tighter whitespace-nowrap">ĐG:</label>
+                                                                                <input
+                                                                                    type="number" min="0"
+                                                                                    className="w-20 border-orange-200 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-[11px] font-bold text-right py-0.5 px-1.5"
+                                                                                    value={updateItems[index]?.price}
+                                                                                    onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
+                                                                                />
+                                                                            </div>
                                                                         </div>
-                                                                    </td>
-                                                                )}
-                                                                <td className="px-4 py-3 bg-orange-50/30">
-                                                                    <div className="flex flex-col gap-1.5">
-                                                                        <div className="flex items-center justify-end gap-2">
-                                                                            <label className="text-[10px] text-gray-500">SL:</label>
-                                                                            <input
-                                                                                type="number" min="0"
-                                                                                className="w-16 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-xs text-right"
-                                                                                value={updateItems[index]?.actualQuantity}
-                                                                                onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
-                                                                            />
-                                                                        </div>
-                                                                        <div className="flex items-center justify-end gap-2">
-                                                                            <label className="text-[10px] text-gray-500">ĐG:</label>
-                                                                            <input
-                                                                                type="number" min="0"
-                                                                                className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-xs text-right"
-                                                                                value={updateItems[index]?.price}
-                                                                                onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
-                                                                            />
-                                                                        </div>
-                                                                        <div className="text-right pt-1 border-t border-orange-200">
-                                                                            <div className="text-[9px] text-gray-500">Thành tiền:</div>
-                                                                            <div className="font-bold text-orange-700 text-xs">
+                                                                        <div className="text-right pt-1.5 border-t border-orange-100 mt-2">
+                                                                            <div className="font-black text-orange-600 text-sm lg:text-base">
                                                                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((updateItems[index]?.actualQuantity || 0) * (updateItems[index]?.price || 0))}
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-3 align-top">
-                                                                    {itemMediaLoading[item.id] ? (
-                                                                        <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto" />
-                                                                    ) : (
-                                                                        <div className="space-y-1.5">
-                                                                            {modalMedia.slice(0, 3).map((m) => (
-                                                                                <div key={m.id} className="relative group w-10 h-10 mx-auto cursor-pointer">
-                                                                                    <img
-                                                                                        src={m.url} alt="Minh chứng"
-                                                                                        className="w-full h-full object-cover rounded border border-gray-200"
-                                                                                        onClick={() => setLightboxImage(m.url)}
-                                                                                    />
-                                                                                    <button
-                                                                                        onClick={() => handleDeleteItemMedia(item.id, m.id)}
-                                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                                    >
-                                                                                        <Trash2 className="w-2 h-2" />
-                                                                                    </button>
+                                                                <td className="px-4 py-3 align-middle text-center">
+                                                                    <button
+                                                                        onClick={() => setGalleryModalItemId(item.id)}
+                                                                        className="flex flex-col items-center gap-1 group/btn mx-auto"
+                                                                    >
+                                                                        <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center group-hover/btn:bg-orange-50 group-hover/btn:border-orange-200 transition-all overflow-hidden shadow-sm">
+                                                                            {modalMedia.length > 0 ? (
+                                                                                <div className="relative w-full h-full">
+                                                                                    <img src={modalMedia[0].url} className="w-full h-full object-cover" />
+                                                                                    {modalMedia.length > 1 && (
+                                                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[9px] text-white font-bold">
+                                                                                            +{modalMedia.length}
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
-                                                                            ))}
-                                                                            {modalMedia.length > 3 && (
-                                                                                <div className="text-[9px] text-gray-400 text-center">+{modalMedia.length - 3}</div>
-                                                                            )}
-                                                                            {modalMedia.length < 10 && (
-                                                                                <div className="relative group/upload w-10 h-10 mx-auto">
-                                                                                    <input
-                                                                                        type="file" accept="image/*" multiple
-                                                                                        onChange={(e) => handleItemFileChange(item.id, e.target.files)}
-                                                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                                                        disabled={modalUploadState.uploading}
-                                                                                    />
-                                                                                    <div className="w-full h-full border-2 border-dashed border-gray-300 hover:border-orange-400 rounded flex items-center justify-center transition-all">
-                                                                                        {modalUploadState.uploading ? (
-                                                                                            <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-                                                                                        ) : (
-                                                                                            <Upload className="w-3.5 h-3.5 text-gray-400 group-hover:text-orange-500" />
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
-                                                                            {modalUploadState.files.length > 0 && (
-                                                                                <button
-                                                                                    onClick={() => handleItemMediaUpload(item.id)}
-                                                                                    disabled={modalUploadState.uploading}
-                                                                                    className={`w-full py-1 rounded text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all ${modalUploadState.uploading ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
-                                                                                >
-                                                                                    <Upload className="w-2.5 h-2.5" />{modalUploadState.files.length}
-                                                                                </button>
+                                                                            ) : (
+                                                                                <ImageIcon className="w-4 h-4 text-gray-400 group-hover/btn:text-orange-500" />
                                                                             )}
                                                                         </div>
-                                                                    )}
+                                                                        <span className="text-[10px] text-gray-400 group-hover/btn:text-orange-600 font-bold uppercase tracking-tighter">Gallery</span>
+                                                                    </button>
                                                                 </td>
                                                             </tr>
                                                         </Fragment>
                                                     );
                                                 })}
                                             </tbody>
+                                            <tfoot className="bg-gray-100 sticky bottom-0 z-10 border-t-2 border-gray-300">
+                                                {(() => {
+                                                    const totalPlan = updateItemsData.reduce((sum, item) => sum + item.quantity * (item.expectedPrice || 0), 0);
+                                                    const totalActual = updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0);
+                                                    const totalVariance = totalPlan - totalActual;
+                                                    const budgetLimit = campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0);
+                                                    const isOverBudget = totalActual > budgetLimit;
+
+                                                    return (
+                                                        <>
+                                                            <tr>
+                                                                <td className="px-4 py-4 font-black text-gray-900 text-sm">TỔNG CỘNG (INVOICE TOTAL)</td>
+                                                                <td className="px-4 py-4 text-right bg-blue-100/50">
+                                                                    <div className="text-[10px] uppercase font-black text-blue-500 mb-0.5">Tổng Kế hoạch</div>
+                                                                    <div className="text-3xl lg:text-4xl font-black text-blue-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-4 text-right bg-orange-100/50">
+                                                                    <div className="text-[10px] uppercase font-black text-orange-500 mb-0.5 whitespace-nowrap">Tổng Thực tế đã chi</div>
+                                                                    <div className={`text-2xl lg:text-3xl font-black ${isOverBudget ? 'text-red-600' : 'text-orange-700'}`}>
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}
+                                                                    </div>
+                                                                    <div className={`mt-2 p-2 rounded border-2 ${totalVariance < 0 ? 'bg-red-50 border-red-200 text-red-600' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                                                                        <div className="text-[10px] uppercase font-black opacity-70">
+                                                                            {totalVariance < 0 ? 'CHÚ Ý: Vượt hạn mức chi phí' : 'Số dư '}
+                                                                        </div>
+                                                                        <div className="text-lg font-black">
+                                                                            {totalVariance > 0 && '+'}
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-4 bg-gray-100"></td>
+                                                            </tr>
+                                                            {isOverBudget && (
+                                                                <tr className="bg-red-50">
+                                                                    <td colSpan={5} className="px-4 py-2 text-center text-[11px] font-black text-red-600 uppercase tracking-widest border-t border-red-200">
+                                                                        <AlertCircle className="w-4 h-4 inline-block mr-2 align-text-bottom" />
+                                                                        Tổng chi thực tế vượt quá ngân sách cho phép ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(budgetLimit)})
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </tfoot>
                                         </table>
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={handleUpdateSubmit}
-                                        disabled={updating}
-                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
-                                    >
-                                        {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsUpdateModalOpen(false)}
-                                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                    >
-                                        Hủy
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Lightbox */}
-                {lightboxImage && (
-                    <div
-                        className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-8"
-                        onClick={() => setLightboxImage(null)}
-                    >
-                        <button
-                            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
-                            onClick={() => setLightboxImage(null)}
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                        <img
-                            src={lightboxImage}
-                            alt="Preview"
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    </div>
-                )}
-
-                {/* Create Post Modal */}
-                {isPostModalOpen && postExpenditure && campaign && (
-                    <CreateOrEditPostModal
-                        isOpen={isPostModalOpen}
-                        onClose={() => { setIsPostModalOpen(false); setPostExpenditure(null); }}
-                        campaignsList={[{ id: campaign.id, title: campaign.title }]}
-                        campaignTitlesMap={{ [campaign.id]: campaign.title }}
-                        initialData={{
-                            id: undefined as unknown as string,
-                            author: { id: '', name: '', avatar: '' },
-                            liked: false,
-                            comments: [],
-                            likeCount: 0,
-                            flagged: false,
-                            title: `Cập nhật minh chứng chi tiêu: ${campaign.title}`,
-                            content: `Tôi vừa hoàn thành chi tiêu cho chiến dịch "${campaign.title}". Mời mọi người cùng theo dõi!`,
-                            type: 'DISCUSSION',
-                            visibility: 'PUBLIC',
-                            status: 'PUBLISHED',
-                            createdAt: new Date().toISOString(),
-                            updatedAt: new Date().toISOString(),
-                            targetId: postExpenditure.id,
-                            targetType: 'EXPENDITURE',
-                        } as any}
-                        onPostCreated={() => {
-                            setIsPostModalOpen(false);
-                            setPostExpenditure(null);
-                            fetchData();
-                        }}
-                    />
-                )}
-            </div>
         </div>
+                                </div >
+        <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 shrink-0">
+            <button
+                type="button"
+                onClick={handleUpdateSubmit}
+                disabled={updating}
+                className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
+            >
+                {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
+            </button>
+            <button
+                type="button"
+                onClick={() => setIsUpdateModalOpen(false)}
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            >
+                Hủy
+            </button>
+        </div>
+                            </div >
+                        </div >
+                    </div >
+                )
+}
+
+{/* Create Post Modal */ }
+{
+    isPostModalOpen && postExpenditure && campaign && (
+        <CreateOrEditPostModal
+            isOpen={isPostModalOpen}
+            onClose={() => { setIsPostModalOpen(false); setPostExpenditure(null); setCurrentDraftPost(null); }}
+            campaignsList={[{ id: campaign.id, title: campaign.title }]}
+            campaignTitlesMap={{ [campaign.id]: campaign.title }}
+            initialData={currentDraftPost ? {
+                ...currentDraftPost,
+                author: { id: String(currentDraftPost.authorId || ''), name: '', avatar: '' },
+                liked: false,
+                comments: [],
+                likeCount: currentDraftPost.likeCount || 0,
+                replyCount: currentDraftPost.replyCount || 0,
+                viewCount: currentDraftPost.viewCount || 0,
+                isPinned: currentDraftPost.isPinned || false,
+                isLocked: currentDraftPost.isLocked || false,
+                flagged: false,
+            } : {
+                id: undefined as unknown as string,
+                author: { id: '', name: '', avatar: '' },
+                liked: false,
+                comments: [],
+                likeCount: 0,
+                replyCount: 0,
+                viewCount: 0,
+                isPinned: false,
+                isLocked: false,
+                flagged: false,
+                title: `Cập nhật minh chứng chi tiêu: ${campaign.title}`,
+                content: `Tôi vừa hoàn thành chi tiêu cho chiến dịch "${campaign.title}". Mời mọi người cùng theo dõi!`,
+                type: 'DISCUSSION',
+                visibility: 'PUBLIC',
+                status: 'DRAFT',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                targetId: postExpenditure.id,
+                targetType: 'EXPENDITURE',
+            }}
+            draftMode={true}
+            onPostCreated={() => {
+                setIsPostModalOpen(false);
+                setPostExpenditure(null);
+                setCurrentDraftPost(null);
+                fetchData();
+            }}
+            onPostUpdated={() => {
+                setIsPostModalOpen(false);
+                setPostExpenditure(null);
+                setCurrentDraftPost(null);
+                fetchData();
+            }}
+        />
+    )
+}
+            </div >
+
+    {/* Gallery Modal */ }
+{
+    galleryModalItemId && (
+        <ExpenditureGalleryModal
+            isOpen={!!galleryModalItemId}
+            onClose={() => setGalleryModalItemId(null)}
+            itemName={expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.category || ''}
+            media={itemMedia[galleryModalItemId] || []}
+            loading={itemMediaLoading[galleryModalItemId]}
+            onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId, mediaId)}
+            uploadState={itemUploadState[galleryModalItemId] || { uploading: false, files: [], previews: [] }}
+            onFileChange={(files) => handleItemFileChange(galleryModalItemId, files)}
+            onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId)}
+        />
+    )
+}
+        </div >
     );
 }
 

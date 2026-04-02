@@ -104,19 +104,58 @@ export const mediaService = {
     },
 
     async deleteMedia(id: number): Promise<void> {
-        await api.delete(`/api/media/${id}`);
+        const token = typeof window !== "undefined" ? window.localStorage.getItem("token") : null;
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        // Strategy: Try hard DELETE first, then fallback to soft-delete via status if 403
+        try {
+            const res = await fetch(`/api-backend/api/media/${id}`, {
+                method: "DELETE",
+                headers,
+                credentials: "include"
+            });
+
+            if (res.status === 403) {
+                console.warn(`[mediaService] Hard DELETE forbidden (403) for id=${id}. Attempting soft-delete fallback via status update...`);
+                // Use PATCH /api/media/{id}/status?status=DELETED
+                await api.patch(`/api/media/${id}/status`, null, { params: { status: 'DELETED' } });
+                console.log(`[mediaService] Soft-delete successful for id=${id}`);
+                return;
+            }
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw Object.assign(new Error(errorData.message || `Media delete failed: ${res.status}`), {
+                    response: { status: res.status, data: errorData }
+                });
+            }
+        } catch (error: any) {
+            // If the error was already handled (fallback succeeded), don't rethrow
+            if (error?.message?.includes('Soft-delete successful')) return;
+            
+            // If the initial DELETE was 403 and the fallback also failed, or it was some other error
+            console.error(`[mediaService] Both hard and soft delete failed for id=${id}:`, error);
+            throw error;
+        }
     },
 
     async updateMedia(id: number, payload: { postId?: number; campaignId?: number; description?: string }): Promise<void> {
         const token = typeof window !== "undefined" ? window.localStorage.getItem("token") : null;
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const res = await fetch(`/api/media/${id}`, {
+
+        const res = await fetch(`/api-backend/api/media/${id}`, {
             method: "PATCH",
             headers,
+            credentials: "include",
             body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(`updateMedia failed: ${res.status}`);
+
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.message || `updateMedia failed: ${res.status}`);
+        }
     },
 
     async updateMediaStatus(id: number, status: string): Promise<void> {

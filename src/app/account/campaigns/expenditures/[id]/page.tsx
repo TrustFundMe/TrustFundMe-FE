@@ -8,16 +8,17 @@ import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { mediaService } from '@/services/mediaService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
-import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown, ShieldCheck } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
 import { toast } from 'react-hot-toast';
 import ImageZoomModal from '@/components/feed-post/ImageZoomModal';
 import ExpenditureItemGallery from '@/components/campaign/ExpenditureItemGallery';
+import ExpenditureGalleryModal from '@/components/campaign/ExpenditureGalleryModal';
 
 export default function ExpenditureDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const id = params.id as string;
+    const id = (params?.id as string);
     const { isAuthenticated, loading: authLoading } = useAuth();
 
     const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
@@ -30,12 +31,14 @@ export default function ExpenditureDetailPage() {
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number; }[]>([]);
     const [updating, setUpdating] = useState(false);
+    const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
 
     // Item media state
     const [itemMedia, setItemMedia] = useState<Record<number, MediaUploadResponse[]>>({});
     const [itemMediaLoading, setItemMediaLoading] = useState<Record<number, boolean>>({});
     const [itemUploadState, setItemUploadState] = useState<Record<number, { uploading: boolean; files: File[]; previews: string[] }>>({});
     const [expandedItemId, setExpandedItemId] = useState<number | null>(null);
+    const [galleryModalItemId, setGalleryModalItemId] = useState<number | null>(null);
 
     // Gallery modal state
     const [galleryOpen, setGalleryOpen] = useState(false);
@@ -63,10 +66,11 @@ export default function ExpenditureDetailPage() {
                 }
 
                 const itemsData = await expenditureService.getItems(id);
-                setItems(itemsData);
+                const safeItems = Array.isArray(itemsData) ? itemsData : [];
+                setItems(safeItems);
 
                 // Initialize update items
-                setUpdateItems(itemsData.map(item => ({
+                setUpdateItems(safeItems.map(item => ({
                     id: item.id,
                     actualQuantity: item.actualQuantity || 0,
                     price: item.price || 0
@@ -89,6 +93,8 @@ export default function ExpenditureDetailPage() {
                 actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
                 price: item.price !== undefined ? item.price : 0
             })));
+            // Clear any pending deletes from previous opens
+            setPendingDeleteMediaIds([]);
             // Load media for all items
             items.forEach(item => loadItemMedia(item.id));
         }
@@ -104,19 +110,31 @@ export default function ExpenditureDetailPage() {
     const handleUpdateSubmit = async () => {
         try {
             setUpdating(true);
+
+            // 1. Process pending deletions
+            if (pendingDeleteMediaIds.length > 0) {
+                try {
+                    await Promise.all(pendingDeleteMediaIds.map(id => mediaService.deleteMedia(id)));
+                    setPendingDeleteMediaIds([]);
+                } catch (delErr) {
+                    console.error('Some media deletions failed during update:', delErr);
+                }
+            }
+
+            // 2. Update actuals
             await expenditureService.updateActuals(id, updateItems);
 
             // Refresh data
             const expData = await expenditureService.getById(id);
             setExpenditure(expData);
             const itemsData = await expenditureService.getItems(id);
-            setItems(itemsData);
+            setItems(Array.isArray(itemsData) ? itemsData : []);
 
             setIsUpdateModalOpen(false);
-            alert('Cập nhật thành công!');
+            toast.success('Cập nhật thành công!');
         } catch (err) {
             console.error('Cập nhật thất bại:', err);
-            alert('Cập nhật thất bại. Vui lòng thử lại.');
+            toast.error('Cập nhật thất bại. Vui lòng thử lại.');
         } finally {
             setUpdating(false);
         }
@@ -210,19 +228,17 @@ export default function ExpenditureDetailPage() {
         }
     }, [itemUploadState, expenditure, id]);
 
-    // Delete media for a specific item
+    // Delete media for a specific item (Deferred to Save)
     const handleDeleteItemMedia = useCallback(async (itemId: number, mediaId: number) => {
-        try {
-            await mediaService.deleteMedia(mediaId);
-            setItemMedia(prev => ({
-                ...prev,
-                [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId),
-            }));
-            toast.success('Đã xóa ảnh minh chứng.');
-        } catch (err) {
-            console.error('Failed to delete media:', err);
-            toast.error('Không thể xóa ảnh. Vui lòng thử lại.');
-        }
+        // Remove from local UI state
+        setItemMedia(prev => ({
+            ...prev,
+            [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId),
+        }));
+
+        // Add to pending deletions for later processing on Save
+        setPendingDeleteMediaIds(prev => [...prev, mediaId]);
+        toast.success('Đã đánh dấu xóa ảnh minh chứng.');
     }, []);
 
     // Handle file selection
@@ -405,19 +421,14 @@ export default function ExpenditureDetailPage() {
                                                         <td className="px-6 py-4">
                                                             <button
                                                                 onClick={() => {
-                                                                    if (!isExpanded) {
-                                                                        setExpandedItemId(item.id);
-                                                                        loadItemMedia(item.id);
-                                                                    } else {
-                                                                        setExpandedItemId(null);
-                                                                    }
+                                                                    setGalleryModalItemId(item.id);
+                                                                    loadItemMedia(item.id);
                                                                 }}
                                                                 className="w-full text-left group"
                                                             >
                                                                 <div className="flex items-center gap-2">
-                                                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform group-hover:text-gray-600 ${isExpanded ? 'rotate-180' : ''}`} />
                                                                     <div>
-                                                                        <div className="text-sm font-medium text-gray-900">{item.category}</div>
+                                                                        <div className="text-sm font-medium text-gray-900 group-hover:text-orange-600 transition-colors">{item.category}</div>
                                                                         {item.note && <div className="text-xs text-gray-500 mt-1">{item.note}</div>}
                                                                     </div>
                                                                 </div>
@@ -461,12 +472,8 @@ export default function ExpenditureDetailPage() {
                                                         <td className="px-6 py-4 text-center">
                                                             <button
                                                                 onClick={() => {
-                                                                    if (!isExpanded) {
-                                                                        setExpandedItemId(item.id);
-                                                                        loadItemMedia(item.id);
-                                                                    } else {
-                                                                        setExpandedItemId(null);
-                                                                    }
+                                                                    setGalleryModalItemId(item.id);
+                                                                    loadItemMedia(item.id);
                                                                 }}
                                                                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border border-orange-200 text-orange-700 hover:bg-orange-50"
                                                             >
@@ -479,81 +486,6 @@ export default function ExpenditureDetailPage() {
                                                             </button>
                                                         </td>
                                                     </tr>
-                                                    {/* Expanded: Image Upload per Item */}
-                                                    {isExpanded && (
-                                                        <tr key={`${item.id}-expanded`}>
-                                                            <td colSpan={campaign?.type === 'AUTHORIZED' ? 3 : 5} className="px-6 py-6 bg-orange-50/20 border-t border-orange-100">
-                                                                <div className="space-y-4">
-                                                                    {/* Header */}
-                                                                    <div className="flex items-center justify-between">
-                                                                        <h4 className="text-xs font-black uppercase tracking-widest text-orange-800">
-                                                                            Ảnh minh chứng cho: <span className="font-bold">{item.category}</span>
-                                                                        </h4>
-                                                                        <span className="text-[10px] font-bold text-gray-400">{media.length} / 10 ảnh</span>
-                                                                    </div>
-
-                                                                    {/* Existing Images — 3x3 thumbnail grid gallery */}
-                                                                    <ExpenditureItemGallery
-                                                                        media={media}
-                                                                        onDelete={(mediaId) => handleDeleteItemMedia(item.id, mediaId)}
-                                                                    />
-
-                                                                    {/* Upload Area */}
-                                                                    {media.length < 10 && (
-                                                                        <div className="space-y-3">
-                                                                            {/* Preview New Files */}
-                                                                            {uploadState.previews.length > 0 && (
-                                                                                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                                                                                    {uploadState.previews.map((preview, idx) => (
-                                                                                        <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-dashed border-emerald-300 bg-emerald-50">
-                                                                                            <img src={preview} alt={`Preview ${idx}`} className="w-full h-full object-cover opacity-80" />
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* Upload Button */}
-                                                                            <div className="relative group/upload">
-                                                                                <input
-                                                                                    type="file"
-                                                                                    accept="image/*"
-                                                                                    multiple
-                                                                                    onChange={(e) => handleItemFileChange(item.id, e.target.files)}
-                                                                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                                                    disabled={uploadState.uploading}
-                                                                                />
-                                                                                <div className="border-2 border-dashed border-gray-300 hover:border-orange-400 hover:bg-orange-50/30 rounded-xl p-4 flex flex-col items-center gap-2 transition-all cursor-pointer">
-                                                                                    {uploadState.uploading ? (
-                                                                                        <div className="w-8 h-8 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-                                                                                    ) : (
-                                                                                        <>
-                                                                                            <Upload className="w-6 h-6 text-gray-400 group-hover/upload:text-orange-400" />
-                                                                                            <p className="text-xs font-bold text-gray-400 group-hover/upload:text-orange-600">Tải ảnh minh chứng</p>
-                                                                                        </>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {uploadState.files.length > 0 && (
-                                                                                <button
-                                                                                    onClick={() => handleItemMediaUpload(item.id)}
-                                                                                    disabled={uploadState.uploading}
-                                                                                    className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg transition-all ${uploadState.uploading ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600 active:scale-[0.98]'}`}
-                                                                                >
-                                                                                    <Upload className="w-4 h-4" />
-                                                                                    Tải lên {uploadState.files.length} ảnh
-                                                                                </button>
-                                                                            )}
-                                                                        </div>
-                                                                    )}
-
-                                                                    {media.length >= 10 && (
-                                                                        <p className="text-center text-xs font-bold text-gray-400 italic py-4">Đã đạt giới hạn 10 ảnh cho mỗi vật phẩm.</p>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    )}
                                                 </Fragment>
                                             );
                                         })}
@@ -571,242 +503,259 @@ export default function ExpenditureDetailPage() {
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Trạng thái minh chứng</p>
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                        {expenditure.evidenceStatus || 'Chưa cập nhật'}
-                                    </span>
+                                    {expenditure.evidenceStatus === 'SUBMITTED' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
+                                            Đã nộp – chờ xác nhận
+                                        </span>
+                                    )}
+                                    {expenditure.evidenceStatus === 'APPROVED' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                            Đã xác nhận
+                                        </span>
+                                    )}
+                                    {expenditure.evidenceStatus === 'ALLOWED_EDIT' && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 animate-pulse">
+                                            Cho chỉnh sửa lại
+                                        </span>
+                                    )}
+                                    {(!expenditure.evidenceStatus || expenditure.evidenceStatus === 'PENDING') && (
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                            Chờ nộp minh chứng
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
                                     <p className="text-sm font-medium text-gray-900 flex items-center">
                                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                        {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString() : 'Chưa đặt hạn'}
+                                        {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : 'Chưa đặt hạn'}
                                     </p>
                                 </div>
 
-                                {/* Evidence is now managed per item — see item rows above */}
-                                <div className="mt-6 pt-4 border-t border-gray-100">
-                                    <button disabled className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-400 cursor-not-allowed">
-                                        Cập nhật minh chứng (Sắp ra mắt)
-                                    </button>
-                                </div>
+                                {/* Đã nộp — hiện thời gian nộp */}
+                                {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED') ? (
+                                    <div className="mt-6 pt-4 border-t border-gray-100">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle className="w-5 h-5 text-emerald-600" />
+                                            <div>
+                                                <p className="text-sm font-black text-emerald-700">Đã nộp minh chứng</p>
+                                                {expenditure.evidenceSubmittedAt && (
+                                                    <p className="text-[10px] text-emerald-600">
+                                                        Lúc {new Date(expenditure.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mt-6 pt-4 border-t border-gray-100">
+                                        <button
+                                            onClick={() => setIsUpdateModalOpen(true)}
+                                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all"
+                                        >
+                                            Cập nhật số liệu & Ảnh
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
-                {/* Update Modal */}
-                {
-                    isUpdateModalOpen && (
-                        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsUpdateModalOpen(false)}></div>
-                                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-                                    <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                        <div className="sm:flex sm:items-start">
-                                            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                                <h3 className="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
-                                                    Cập nhật Đã chi Chi tiêu
-                                                </h3>
 
-                                                {/* Summary items for Modal */}
-                                                <div className="mb-4 flex flex-wrap gap-4 text-sm">
-                                                    <div className="bg-green-50 px-3 py-2 rounded border border-green-200">
-                                                        <span className="text-green-800 font-medium">
-                                                            {campaign?.type === 'AUTHORIZED' ? 'Hạn mức chi (Số dư quỹ):' : 'Tổng Đã nhận:'}
-                                                        </span>{' '}
-                                                        <span className="font-bold text-green-700">
-                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}
-                                                        </span>
-                                                    </div>
-                                                    <div className={`px-3 py-2 rounded border ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
-                                                        <span className={`${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'text-red-800' : 'text-gray-800'} font-medium`}>Tổng Đã chi đang nhập:</span>{' '}
-                                                        <span className={`font-bold ${updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) ? 'text-red-700' : 'text-gray-700'}`}>
-                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0))}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                {isUpdateModalOpen && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={() => setIsUpdateModalOpen(false)}></div>
+                            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                    <div className="sm:flex sm:items-start">
+                                        <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                            <h3 className="text-lg leading-6 font-bold text-gray-900 mb-4" id="modal-title">
+                                                Cập nhật Đã chi Chi tiêu
+                                            </h3>
 
-                                                {updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0)) && (
-                                                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm border border-red-200 flex items-center">
-                                                        <AlertCircle className="w-4 h-4 mr-2" />
-                                                        Tổng chi thực tế ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0))})
-                                                        vượt quá hạn mức cho phép ({new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}). Bạn không thể lưu.
-                                                    </div>
-                                                )}
-
-                                                <div className="mt-4">
-                                                    <div className="overflow-x-auto">
-                                                        <table className="min-w-full divide-y divide-gray-200">
-                                                            <thead className="bg-gray-50">
-                                                                <tr>
-                                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hàng hóa</th>
-                                                                    <th className="px-4 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Kế hoạch</th>
-                                                                    {campaign?.type !== 'AUTHORIZED' && (
-                                                                        <th className="px-4 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
-                                                                    )}
-                                                                    <th className="px-4 py-3 text-center text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi (Nhập liệu)</th>
-                                                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="bg-white divide-y divide-gray-200">
-                                                                {items.map((item, index) => {
-                                                                    const modalMedia = itemMedia[item.id] || [];
-                                                                    const modalUploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
-                                                                    return (
-                                                                        <Fragment key={item.id}>
-                                                                            <tr>
-                                                                                <td className="px-4 py-3 text-sm text-gray-900">
-                                                                                    <div className="font-medium">{item.category}</div>
-                                                                                    {item.note && <div className="text-xs text-gray-500">{item.note}</div>}
-                                                                                </td>
-
-                                                                                {/* Plan Info */}
-                                                                                <td className="px-4 py-3 text-right text-sm text-gray-500 bg-blue-50/30">
-                                                                                    <div className="font-medium text-blue-700">
-                                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
-                                                                                    </div>
-                                                                                    <div className="text-xs text-gray-400">
-                                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                                    </div>
-                                                                                </td>
-
-                                                                                {campaign?.type !== 'AUTHORIZED' && (
-                                                                                    <td className="px-4 py-3 text-right text-sm text-gray-500 bg-green-50/30">
-                                                                                        <div className="font-medium text-green-700">
-                                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                            <div className="mt-4">
+                                                <div className="flex-1 max-h-[500px] overflow-y-auto bg-gray-50/50 rounded-xl border border-gray-100 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                                                    <table className="min-w-full divide-y divide-gray-200">
+                                                        <thead className="bg-gray-50 sticky top-0 z-20">
+                                                            <tr>
+                                                                <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter">Hàng hóa</th>
+                                                                <th className="px-4 py-3 text-right text-xs font-black text-blue-600 uppercase tracking-tighter bg-blue-50">Kế hoạch</th>
+                                                                <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-50">Thực tế (Nhập)</th>
+                                                                <th className="px-4 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-tighter">Ảnh</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-200">
+                                                            {items.map((item, index) => {
+                                                                const modalMedia = itemMedia[item.id] || [];
+                                                                return (
+                                                                    <Fragment key={item.id}>
+                                                                        <tr className="hover:bg-gray-50">
+                                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                                <div className="font-bold">{item.category}</div>
+                                                                                {item.note && <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">{item.note}</div>}
+                                                                            </td>
+                                                                            <td className="px-4 py-3 text-right bg-blue-50/30 align-top">
+                                                                                <div className="flex flex-col min-h-[100px] justify-between">
+                                                                                    <div className="flex flex-col gap-0.5">
+                                                                                        <div className="flex items-center justify-end gap-1.5 text-blue-400/70">
+                                                                                            <span className="text-[9px] font-black uppercase tracking-tighter">SL:</span>
+                                                                                            <span className="text-[11px] font-bold">{item.quantity}</span>
                                                                                         </div>
-                                                                                    </td>
-                                                                                )}
-
-                                                                                {/* Actual Input */}
-                                                                                <td className="px-4 py-3 bg-orange-50/30">
-                                                                                    <div className="flex flex-col gap-2">
+                                                                                        <div className="flex items-center justify-end gap-1.5 text-blue-400/70">
+                                                                                            <span className="text-[9px] font-black uppercase tracking-tighter">ĐG:</span>
+                                                                                            <span className="text-[11px] font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="text-right pt-1.5 border-t border-blue-100 mt-2">
+                                                                                        <div className="font-black text-blue-600 text-sm lg:text-base">
+                                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.quantity * (item.expectedPrice || 0))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-4 py-3 bg-orange-50/20 align-top">
+                                                                                <div className="flex flex-col min-h-[100px] justify-between">
+                                                                                    <div className="flex flex-col gap-1.5">
                                                                                         <div className="flex items-center justify-end gap-2">
-                                                                                            <label className="text-xs text-gray-500">SL:</label>
+                                                                                            <label className="text-[9px] font-black text-orange-400 uppercase tracking-tighter">SL:</label>
                                                                                             <input
-                                                                                                type="number"
-                                                                                                min="0"
-                                                                                                className="w-20 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
-                                                                                                placeholder="SL"
+                                                                                                type="number" min="0"
+                                                                                                className="w-14 border-orange-200 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-[11px] font-bold text-right py-0.5 px-1.5"
                                                                                                 value={updateItems[index]?.actualQuantity}
                                                                                                 onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
                                                                                             />
                                                                                         </div>
                                                                                         <div className="flex items-center justify-end gap-2">
-                                                                                            <label className="text-xs text-gray-500">ĐG:</label>
+                                                                                            <label className="text-[9px] font-black text-orange-400 uppercase tracking-tighter whitespace-nowrap">ĐG:</label>
                                                                                             <input
-                                                                                                type="number"
-                                                                                                min="0"
-                                                                                                step="1"
-                                                                                                className="w-28 border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm text-right"
-                                                                                                placeholder="Đơn giá"
+                                                                                                type="number" min="0"
+                                                                                                className="w-20 border-orange-200 rounded-lg shadow-sm focus:ring-orange-500 focus:border-orange-500 text-[11px] font-bold text-right py-0.5 px-1.5"
                                                                                                 value={updateItems[index]?.price}
                                                                                                 onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
                                                                                             />
                                                                                         </div>
-                                                                                        <div className="text-right pt-1 border-t border-orange-200">
-                                                                                            <div className="text-xs text-gray-500">Thành tiền:</div>
-                                                                                            <div className="font-bold text-orange-700">
-                                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((updateItems[index]?.actualQuantity || 0) * (updateItems[index]?.price || 0))}
-                                                                                            </div>
+                                                                                    </div>
+                                                                                    <div className="text-right pt-1.5 border-t border-orange-100 mt-2">
+                                                                                        <div className="font-black text-orange-600 text-sm lg:text-base">
+                                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((updateItems[index]?.actualQuantity || 0) * (updateItems[index]?.price || 0))}
                                                                                         </div>
                                                                                     </div>
-                                                                                </td>
-
-                                                                                {/* Image Column */}
-                                                                                <td className="px-4 py-3 align-top">
-                                                                                    {itemMediaLoading[item.id] ? (
-                                                                                        <div className="w-5 h-5 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin mx-auto" />
-                                                                                    ) : (
-                                                                                        <div className="space-y-1.5">
-                                                                                            {/* 3x3 Thumbnail grid gallery */}
-                                                                                            {modalMedia.length > 0 && (
-                                                                                                <div className="flex justify-center">
-                                                                                                    <div style={{ width: compact ? 100 : 120 }}>
-                                                                                                        <ExpenditureItemGallery
-                                                                                                            media={modalMedia}
-                                                                                                            compact={true}
-                                                                                                            maxGrid={6}
-                                                                                                            onDelete={(mediaId) => handleDeleteItemMedia(item.id, mediaId)}
-                                                                                                        />
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-4 py-3 align-middle text-center">
+                                                                                <button
+                                                                                    onClick={() => setGalleryModalItemId(item.id)}
+                                                                                    className="flex flex-col items-center gap-1 group/btn mx-auto"
+                                                                                >
+                                                                                    <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center group-hover/btn:bg-orange-50 group-hover/btn:border-orange-200 transition-all overflow-hidden shadow-sm">
+                                                                                        {modalMedia.length > 0 ? (
+                                                                                            <div className="relative w-full h-full">
+                                                                                                <img src={modalMedia[0].url} className="w-full h-full object-cover" />
+                                                                                                {modalMedia.length > 1 && (
+                                                                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[9px] text-white font-bold">
+                                                                                                        +{modalMedia.length}
                                                                                                     </div>
-                                                                                                </div>
-                                                                                            )}
+                                                                                                )}
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <ImageIcon className="w-4 h-4 text-gray-400 group-hover/btn:text-orange-500" />
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <span className="text-[9px] text-gray-400 group-hover/btn:text-orange-600 font-bold uppercase tracking-tighter">Gallery</span>
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </Fragment>
+                                                                );
+                                                            })}
+                                                        </tbody>
+                                                        <tfoot className="bg-gray-100 sticky bottom-0 z-10 border-t-2 border-gray-300">
+                                                            {(() => {
+                                                                const totalPlan = items.reduce((sum, item) => sum + item.quantity * (item.expectedPrice || 0), 0);
+                                                                const totalActual = updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0);
+                                                                const totalVariance = totalPlan - totalActual;
+                                                                const budgetLimit = campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0);
+                                                                const isOverBudget = totalActual > budgetLimit;
 
-                                                                                            {/* Upload trigger */}
-                                                                                            {modalMedia.length < 10 && (
-                                                                                                <div className="relative group/upload w-10 h-10 mx-auto">
-                                                                                                    <input
-                                                                                                        type="file"
-                                                                                                        accept="image/*"
-                                                                                                        multiple
-                                                                                                        onChange={(e) => {
-                                                                                                            handleItemFileChange(item.id, e.target.files);
-                                                                                                        }}
-                                                                                                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                                                                                        disabled={modalUploadState.uploading}
-                                                                                                    />
-                                                                                                    <div className="w-full h-full border-2 border-dashed border-gray-300 hover:border-orange-400 rounded flex items-center justify-center transition-all">
-                                                                                                        {modalUploadState.uploading ? (
-                                                                                                            <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-                                                                                                        ) : (
-                                                                                                            <Upload className="w-3.5 h-3.5 text-gray-400 group-hover/upload:text-orange-500" />
-                                                                                                        )}
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            )}
-
-                                                                                            {/* Upload button */}
-                                                                                            {modalUploadState.files.length > 0 && (
-                                                                                                <button
-                                                                                                    onClick={() => handleItemMediaUpload(item.id)}
-                                                                                                    disabled={modalUploadState.uploading}
-                                                                                                    className={`w-full py-1 rounded text-[9px] font-bold flex items-center justify-center gap-0.5 transition-all ${modalUploadState.uploading ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
-                                                                                                >
-                                                                                                    <Upload className="w-2.5 h-2.5" />{modalUploadState.files.length}
-                                                                                                </button>
-                                                                                            )}
-                                                                                        </div>
-                                                                                    )}
-                                                                                </td>
-                                                                            </tr>
-                                                                        </Fragment>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
+                                                                return (
+                                                                    <tr>
+                                                                        <td className="px-4 py-4 font-black text-gray-900 text-sm uppercase">Tổng cộng hồ sơ</td>
+                                                                        <td className="px-4 py-4 text-right bg-blue-100/50">
+                                                                            <div className="text-[10px] uppercase font-black text-blue-500 mb-0.5">Tổng Kế hoạch</div>
+                                                                            <div className="text-2xl lg:text-3xl font-black text-blue-700">
+                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="px-4 py-4 text-right bg-orange-100/50">
+                                                                            <div className="text-[10px] uppercase font-black text-orange-500 mb-0.5 whitespace-nowrap">Tổng Thực tế đã chi</div>
+                                                                            <div className={`text-2xl lg:text-3xl font-black ${isOverBudget ? 'text-red-600' : 'text-orange-700'}`}>
+                                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}
+                                                                            </div>
+                                                                            <div className={`mt-2 p-2 rounded border-2 ${totalVariance < 0 ? 'bg-red-50 border-red-200 text-red-600' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                                                                                <div className="text-[10px] uppercase font-black opacity-70">
+                                                                                    {totalVariance < 0 ? 'CHÚ Ý: Vượt hạn mức chi phí' : 'Số dư'}
+                                                                                </div>
+                                                                                <div className="text-lg font-black">
+                                                                                    {totalVariance > 0 && '+'}
+                                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td className="px-4 py-4 bg-gray-100"></td>
+                                                                    </tr>
+                                                                );
+                                                            })()}
+                                                        </tfoot>
+                                                    </table>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200">
-                                        <button
-                                            type="button"
-                                            onClick={handleUpdateSubmit}
-                                            disabled={updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}
-                                            className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:ml-3 sm:w-auto sm:text-sm ${updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))
+                                </div>
+                                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200">
+                                    <button
+                                        type="button"
+                                        onClick={handleUpdateSubmit}
+                                        disabled={updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}
+                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:ml-3 sm:w-auto sm:text-sm ${
+                                            updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))
                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                 : 'bg-orange-600 hover:bg-orange-700'
-                                                }`}
-                                        >
-                                            {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsUpdateModalOpen(false)}
-                                            className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                                        >
-                                            Hủy
-                                        </button>
-                                    </div>
+                                        }`}
+                                    >
+                                        {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsUpdateModalOpen(false)}
+                                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                                    >
+                                        Hủy
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    )
-                }
+                    </div>
+                )}
             </div>
+
+            {/* Gallery Modal */}
+            {galleryModalItemId !== null && (
+                <ExpenditureGalleryModal
+                    isOpen={true}
+                    onClose={() => setGalleryModalItemId(null)}
+                    itemName={items.find(i => i.id === galleryModalItemId)?.category || ''}
+                    media={itemMedia[galleryModalItemId!] || []}
+                    loading={itemMediaLoading[galleryModalItemId!]}
+                    onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId!, mediaId)}
+                    uploadState={itemUploadState[galleryModalItemId!] || { uploading: false, files: [], previews: [] }}
+                    onFileChange={(files) => handleItemFileChange(galleryModalItemId!, files)}
+                    onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId!)}
+                />
+            )}
 
             {/* Image Gallery Modal */}
             <ImageZoomModal

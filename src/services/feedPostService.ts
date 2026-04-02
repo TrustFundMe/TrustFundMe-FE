@@ -89,6 +89,18 @@ export const feedPostService = {
     await api.delete(`/api/feed-posts/${id}`);
   },
 
+  async getByTarget(targetId: number, targetType: string): Promise<FeedPostDto[]> {
+    const res = await api.get<FeedPostDto[]>("/api/feed-posts/by-target", {
+      params: { targetId, targetType },
+    });
+    return res.data;
+  },
+
+  async updateStatus(id: number, status: string): Promise<FeedPostDto> {
+    const res = await api.patch<FeedPostDto>(`/api/feed-posts/${id}/status`, { status });
+    return res.data;
+  },
+
   async uploadImage(file: File, postId?: number): Promise<{ url: string; mediaId: number }> {
     const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, "PHOTO");
     return { url: result.url ?? "", mediaId: result.id };
