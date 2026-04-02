@@ -61,7 +61,7 @@ export const FundTypeSection = () => {
                 <FundTypeCard
                     title="Quỹ Ủy Quyền"
                     subtitle="Authorized Fund"
-                    description="Các chiến dịch được tổ chức bởi các tổ chức uy tín, có sự giám sát và minh bạch tuyệt đối về tài chính."
+                    description="Trao gửi niềm tin để chúng tôi tối ưu hóa sự đóng góp của bạn."
                     Icon={ShieldCheck}
                     bgColor="#CD6E57"
                     href="/campaigns/authorized"
@@ -70,7 +70,7 @@ export const FundTypeSection = () => {
                 <FundTypeCard
                     title="Quỹ Chung"
                     subtitle="General Fund"
-                    description="Đây là nơi tập hợp tất cả các nguồn lực cộng đồng để cùng nhau giải quyết những vấn đề cấp bách nhất."
+                    description="Nguồn dự phòng cộng đồng để cùng nhau giải quyết những vấn đề cấp bách nhất."
                     Icon={Globe}
                     bgColor="#AFBCAE"
                     isMiddle={true}
@@ -80,7 +80,7 @@ export const FundTypeSection = () => {
                 <FundTypeCard
                     title="Quỹ Vật Phẩm"
                     subtitle="Item-based Fund"
-                    description="Quyên góp trực tiếp nhu yếu phẩm, vật tư y tế hoặc các đồ dùng thiết yếu cho những hoàn cảnh khó khăn."
+                    description="Quyên góp theo danh sách đồ dùng thiết yếu cho những hoàn cảnh khó khăn được lựa chọn bởi bạn."
                     Icon={PackageOpen}
                     bgColor="#EBCA8F"
                     href="/campaigns/items"

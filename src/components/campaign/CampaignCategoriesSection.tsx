@@ -219,6 +219,18 @@ export function CampaignCategoriesSection() {
       }
     };
     fetchCategories();
+
+    // Handle anchor scroll on mount
+    const hash = window.location.hash;
+    if (hash) {
+      setTimeout(() => {
+        const id = hash.replace('#', '');
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 800); // Wait for components to render
+    }
   }, []);
 
   useEffect(() => {

@@ -54,10 +54,16 @@ export default function SuccessPage({ campaign, amount }: SuccessPageProps) {
                     </div>
 
                     <button
-                        onClick={() => router.push(campaign ? `/campaigns-details?id=${campaign.id}` : '/')}
+                        onClick={() => {
+                            if (campaign?.id === 1) {
+                                router.push('/campaigns#general-donation');
+                            } else {
+                                router.push(campaign ? `/campaigns-details?id=${campaign.id}` : '/');
+                            }
+                        }}
                         className="px-8 py-3 bg-[#fbbf24] hover:bg-[#f59e0b] text-black font-extrabold rounded-lg transition-all hover:scale-105 active:scale-95 shadow-lg text-xs uppercase tracking-wider"
                     >
-                        {campaign ? 'Quay về chiến dịch' : 'Quay về trang chủ'}
+                        {campaign?.id === 1 ? 'Quay về Quỹ Chung' : (campaign ? 'Quay về chiến dịch' : 'Quay về trang chủ')}
                     </button>
                 </div>
             </div>

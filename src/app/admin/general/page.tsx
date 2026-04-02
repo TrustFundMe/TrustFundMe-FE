@@ -340,8 +340,8 @@ export default function AdminGeneralFundPage() {
                                     </td>
                                     <td className="p-6">
                                         <span className={`inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border ${tx.type === 'SUPPORT' ? 'bg-red-50 border-red-100 text-red-500' :
-                                                tx.type === 'RECOVERY' ? 'bg-emerald-50 border-emerald-100 text-emerald-500' :
-                                                    'bg-gray-50 border-gray-100 text-gray-500'
+                                            tx.type === 'RECOVERY' ? 'bg-emerald-50 border-emerald-100 text-emerald-500' :
+                                                'bg-gray-50 border-gray-100 text-gray-500'
                                             }`}>
                                             {tx.type === 'SUPPORT' ? 'Cứu trợ' : tx.type === 'RECOVERY' ? 'Thu hồi' : 'Khởi tạo'}
                                         </span>

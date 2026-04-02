@@ -56,22 +56,24 @@ const TrendLineChart = () => (
 
 export function GeneralFundChart() {
     return (
-        <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">Xu hướng nguồn vốn</h3>
-                <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-100 rounded-xl text-[10px] font-black text-gray-900 shadow-sm hover:bg-gray-50 uppercase tracking-widest">
+        <div className="bg-white p-3 rounded-[20px] shadow-sm border border-gray-100 flex flex-col h-full">
+            <div className="flex justify-between items-center mb-2">
+                <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-wider">Xu hướng nguồn vốn</h3>
+                <button className="flex items-center gap-2 px-2 py-1 bg-white border border-gray-100 rounded-lg text-[8px] font-black text-gray-900 shadow-sm hover:bg-gray-50 uppercase tracking-widest">
                     Năm nay
                     <ChevronDown className="h-3 w-3" />
                 </button>
             </div>
-            <div className="flex-1 min-h-[150px] relative">
+
+            <div className="flex-1 min-h-[100px] relative">
                 <TrendLineChart />
                 {/* Mock Tooltip */}
-                <div className="absolute top-[60px] left-[260px] bg-white shadow-xl border border-gray-100 rounded-xl p-2 px-3 z-10 scale-75 origin-top-left">
-                    <div className="text-[8px] font-black text-gray-400 uppercase">Tháng 9</div>
-                    <div className="text-[11px] font-black text-gray-900">120.000.000đ</div>
+                <div className="absolute top-[40px] left-[260px] bg-white shadow-xl border border-gray-100 rounded-lg p-1.5 px-2 z-10 scale-75 origin-top-left">
+                    <div className="text-[7px] font-black text-gray-400 uppercase">Tháng 9</div>
+                    <div className="text-[9px] font-black text-gray-900">120.000.000đ</div>
                 </div>
             </div>
         </div>
     );
 }
+

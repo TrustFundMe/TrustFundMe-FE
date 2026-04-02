@@ -1,32 +1,126 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Mail, Send } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { MapPin, Phone, Mail, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { campaignService } from "@/services/campaignService";
+import { paymentService, CreatePaymentRequest } from "@/services/paymentService";
+import { useAuth } from "@/contexts/AuthContextProxy";
+import { CampaignDto } from "@/types/campaign";
+import toast from "react-hot-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogBody,
+    DialogFooter,
+} from "@/components/ui/dialog";
 
 export const GeneralDonationSection = () => {
-    const [selectedAmount, setSelectedAmount] = React.useState<number>(50000);
-    const [tipPercent, setTipPercent] = React.useState<number>(10);
-    const [paymentMethod, setPaymentMethod] = React.useState<string>("payos");
-    const [isAnonymous, setIsAnonymous] = React.useState<boolean>(false);
-    const [agreed, setAgreed] = React.useState<boolean>(false);
+    const [campaign, setCampaign] = useState<CampaignDto | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
+
+    const [selectedAmount, setSelectedAmount] = useState<number>(50000);
+    const [tipPercent, setTipPercent] = useState<number>(10);
+    const [paymentMethod, setPaymentMethod] = useState<string>("payos");
+    const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
+    const [agreed, setAgreed] = useState<boolean>(false);
+
+    const { user } = useAuth();
+
+    useEffect(() => {
+        const fetchCampaign = async () => {
+            setLoading(true);
+            try {
+                const data = await campaignService.getById(1);
+                setCampaign(data);
+            } catch (error) {
+                console.error("Error fetching general fund:", error);
+                toast.error("Không thể tải thông tin quỹ chung");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCampaign();
+    }, []);
 
     const tipAmount = (selectedAmount * tipPercent) / 100;
     const totalAmount = selectedAmount + tipAmount;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Payment submitted:", { selectedAmount, tipPercent, totalAmount, paymentMethod, isAnonymous });
-        alert("Chuyển hướng đến cổng thanh toán...");
+        if (!agreed) {
+            toast.error("Vui lòng đồng ý với điều khoản");
+            setShowTerms(true);
+            return;
+        }
+        if (selectedAmount < 2000) {
+            toast.error("Số tiền tối thiểu là 2.000 đ");
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const userIdStr = user?.id ? user.id.toString() : "GUEST";
+            const description = `USER${userIdStr}FUND1`;
+
+            const payload: CreatePaymentRequest = {
+                donorId: user?.id || null,
+                campaignId: 1, // General Fund ID
+                donationAmount: selectedAmount,
+                tipAmount: tipAmount,
+                description: description,
+                isAnonymous: isAnonymous,
+                items: []
+            };
+
+            const response = await paymentService.createPayment(payload);
+            if (response.paymentUrl) {
+                window.location.href = response.paymentUrl;
+            } else {
+                toast.error("Không nhận được link thanh toán");
+            }
+        } catch (error: any) {
+            console.error("Payment error:", error);
+            toast.error(error?.response?.data?.message || "Lỗi khi tạo giao dịch thanh toán");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleAgree = () => {
+        setAgreed(true);
+        setShowTerms(false);
     };
 
     const amountPresets = [20000, 50000, 100000, 200000];
 
+    const getFundTypeLabel = (type?: string | null) => {
+        switch (type) {
+            case "GENERAL_FUND": return "Quỹ Chung";
+            case "AUTHORIZED": return "Quỹ Ủy Quyền";
+            case "ITEMIZED": return "Quỹ Vật Phẩm";
+            default: return "Cứu Trợ";
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="w-full py-40 flex items-center justify-center bg-[#F9FBFC]">
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-10 w-10 animate-spin text-[#F84D43]" />
+                    <p className="text-slate-400 font-medium animate-pulse">Đang tải thông tin quỹ...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <section id="general-donation" className="w-full py-20 bg-[#F9FBFC] border-t border-slate-100">
+        <section id="general-donation" className="w-full py-20 bg-[#F9FBFC] border-t border-slate-100 scroll-mt-32">
             <div className="container mx-auto px-4">
                 <div className="flex flex-col lg:flex-row gap-12 items-center max-w-6xl mx-auto">
                     {/* Left Panel: Information */}
@@ -42,10 +136,10 @@ export const GeneralDonationSection = () => {
                                 Trao gửi yêu thương
                             </p>
                             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
-                                Chung tay vì một cộng đồng tốt đẹp hơn
+                                {campaign?.title || "Chung tay vì một cộng đồng tốt đẹp hơn"}
                             </h2>
                             <p className="text-slate-500 text-base mb-8 leading-relaxed">
-                                Mọi sự đóng góp của bạn, dù lớn hay nhỏ, đều là nguồn động viên to lớn giúp chúng tôi tiếp tục sứ mệnh lan tỏa yêu thương.
+                                {campaign?.description || "Mọi sự đóng góp của bạn, dù lớn hay nhỏ, đều là nguồn động viên to lớn giúp chúng tôi tiếp tục sứ mệnh lan tỏa yêu thương."}
                             </p>
 
                             <div className="space-y-6">
@@ -95,7 +189,9 @@ export const GeneralDonationSection = () => {
                             <div className="text-center mb-6">
                                 <div className="flex items-center justify-center gap-2 mb-2">
                                     <span className="w-5 h-[4px] rounded-full bg-[#F84D43]"></span>
-                                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Quỹ Ủy Quyền</span>
+                                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">
+                                        {getFundTypeLabel(campaign?.type)}
+                                    </span>
                                 </div>
                             </div>
 
@@ -230,37 +326,110 @@ export const GeneralDonationSection = () => {
                                         <span className="text-xs font-bold text-slate-600">Quyên góp ẩn danh</span>
                                     </label>
 
-                                    <label className="flex items-center gap-3 cursor-pointer group">
-                                        <div className="relative">
-                                            <input
-                                                type="checkbox"
-                                                checked={agreed}
-                                                onChange={() => setAgreed(!agreed)}
-                                                className="peer hidden"
-                                            />
-                                            <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#F84D43] peer-checked:border-[#F84D43] transition-all"></div>
-                                            <svg className="absolute top-0.5 left-0.5 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                        </div>
+                                    <div className="flex items-center gap-3">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={agreed}
+                                                    onChange={() => setAgreed(!agreed)}
+                                                    className="peer hidden"
+                                                />
+                                                <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#F84D43] peer-checked:border-[#F84D43] transition-all"></div>
+                                                <svg className="absolute top-0.5 left-0.5 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                            </div>
+                                        </label>
                                         <p className="text-xs font-bold text-slate-600">
-                                            Tôi đồng ý với <span className="text-[#F84D43] underline">điều khoản & cam kết</span>
+                                            Tôi đồng ý với <button type="button" onClick={() => setShowTerms(true)} className="text-[#F84D43] underline hover:text-red-600 transition-colors">điều khoản & cam kết</button>
                                         </p>
-                                    </label>
+                                    </div>
                                 </div>
 
                                 <Button
                                     type="submit"
-                                    disabled={!agreed}
-                                    className="w-full bg-[#8E9093] hover:bg-slate-700 text-white font-black py-2.5 text-xs rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest mt-1"
+                                    disabled={submitting || !agreed}
+                                    className={`w-full ${agreed ? "bg-slate-900 hover:bg-slate-800" : "bg-slate-300 cursor-not-allowed"} text-white font-black py-2.5 text-xs rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest mt-1 flex items-center justify-center gap-2`}
                                 >
-                                    Thanh toán ngay
+                                    {submitting ? (
+                                        <>
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Đang xử lý...
+                                        </>
+                                    ) : (
+                                        "Thanh toán ngay"
+                                    )}
                                 </Button>
                             </form>
                         </motion.div>
                     </div>
                 </div>
             </div>
+
+            {/* Terms and Conditions Modal */}
+            <Dialog open={showTerms} onOpenChange={setShowTerms}>
+                <DialogContent className="max-w-5xl">
+                    <DialogHeader className="pb-2">
+                        <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-3">
+                            <span className="w-1.5 h-6 bg-[#F84D43] rounded-full"></span>
+                            Cam Kết Đồng Hành Cùng Quỹ Chung
+                        </DialogTitle>
+                    </DialogHeader>
+                    <DialogBody className="text-slate-600 leading-relaxed space-y-3 max-h-[80vh] overflow-y-auto px-8 custom-scrollbar">
+                        <p className="font-medium text-slate-900 border-l-4 border-slate-100 pl-4 py-1 italic text-sm">
+                            "Khi bạn trao đi tấm lòng mình vào Quỹ Chung của TrustFundME, bạn không chỉ gửi gắm một khoản tài chính, mà còn là niềm tin và hy vọng dành cho những hoàn cảnh đang cần sự trợ giúp khẩn cấp nhất."
+                        </p>
+
+                        <p className="text-xs">Bằng việc xác nhận đóng góp, bạn thấu hiểu và đồng thuận rằng:</p>
+
+                        <div className="space-y-3 pt-0.5">
+                            <div className="flex gap-4">
+                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
+                                <div>
+                                    <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Sứ mệnh điều tiết</h5>
+                                    <p className="text-xs">Quỹ Chung là nguồn lực dự phòng chiến lược. Platform nắm toàn quyền quyết định điều tiết, hỗ trợ hoặc thu hồi nguồn vốn giữa các chiến dịch dựa trên mức độ ưu tiên và tính cấp thiết.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</div>
+                                <div>
+                                    <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Minh bạch và Trách nhiệm</h5>
+                                    <p className="text-xs">Chúng tôi cam kết sử dụng nguồn lực này tối ưu và công bằng nhất. Mọi sự chuyển dịch ngân sách đều hướng tới mục tiêu duy nhất: Tận dụng triệt để mọi đồng tiền của cộng đồng để không ai bị bỏ lại phía sau.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</div>
+                                <div>
+                                    <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Niềm tin trọn vẹn</h5>
+                                    <p className="text-xs">Bạn trao cho chúng tôi quyền đại diện để đưa ra những quyết định tài chính nhanh chóng và hiệu quả nhất trong những tình huống ngặt nghèo mà quy trình gây quỹ thông thường không thể đáp ứng kịp.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p className="pt-2 text-center font-bold text-[#F84D43] text-xs italic">
+                            Cảm ơn bạn đã tin tưởng và cùng chúng tôi viết tiếp những câu truyện về lòng nhân ái.
+                        </p>
+                    </DialogBody>
+                    <DialogFooter className="gap-3 pt-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowTerms(false)}
+                            className="flex-1 border-slate-200 font-bold uppercase tracking-widest text-[10px] h-9"
+                        >
+                            Đóng
+                        </Button>
+                        <Button
+                            onClick={handleAgree}
+                            className="flex-1 bg-[#F84D43] hover:bg-red-600 text-white font-bold uppercase tracking-widest text-[10px] h-9 shadow-md shadow-red-100"
+                        >
+                            Tôi đồng ý và tiếp tục
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </section>
     );
 };
