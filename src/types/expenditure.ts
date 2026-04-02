@@ -37,6 +37,7 @@ export interface Expenditure {
     campaignId: number;
     evidenceDueAt?: string;
     evidenceStatus?: string;
+    evidenceSubmittedAt?: string;
     totalAmount: number;
     totalExpectedAmount: number;
     variance: number;

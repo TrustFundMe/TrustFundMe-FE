@@ -23,6 +23,8 @@ export type CreateOrEditPostModalProps = {
   campaignTitlesMap: Record<string, string>;
   /** Khi có = chế độ chỉnh sửa: pre-fill form, submit gọi update */
   initialData?: (FeedPost & { expenditureId?: number | null; category?: string | null }) | null;
+  /** Khi true: submit luôn save DRAFT, không publish */
+  draftMode?: boolean;
   onPostCreated?: () => void;
   onPostUpdated?: () => void;
 };
@@ -33,6 +35,7 @@ export default function CreateOrEditPostModal({
   campaignsList,
   campaignTitlesMap,
   initialData,
+  draftMode,
   onPostCreated,
   onPostUpdated,
 }: CreateOrEditPostModalProps) {
@@ -188,7 +191,7 @@ export default function CreateOrEditPostModal({
         await feedPostService.update(postId, {
           title: postTitle,
           content,
-          status: "PUBLISHED",
+          status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
           targetType: linkType === "none" ? null : linkType,
         });
@@ -206,34 +209,36 @@ export default function CreateOrEditPostModal({
         if (!initialData?.title && title) localStorage.removeItem(DRAFT_KEY);
         onPostUpdated?.();
       } else {
-        // === CREATE MODE: DRAFT → upload images → PUBLIC ===
-        // Step 1: create post as DRAFT to get postId
+        // === CREATE MODE ===
+        // Nếu draftMode=true → chỉ tạo DRAFT. Ngược lại → tạo DRAFT → upload ảnh → PUBLIC
         const newPost = await feedPostService.create({
           type: "DISCUSSION",
           visibility: "PUBLIC",
           title: postTitle,
           content,
-          status: "DRAFT",
+          status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
           targetType: linkType === "none" ? null : linkType,
         });
         const postId = Number(newPost.id);
 
-        // Step 2: upload all images with postId, mark each as done
+        // Upload all images with postId, mark each as done
         for (const { file } of uploadingItems) {
           try { await feedPostService.uploadImage(file, postId); } catch (e) { console.error("Upload failed:", e); }
           setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
         }
 
-        // Step 3: publish the post
-        await feedPostService.update(postId, {
-          title: postTitle,
-          content,
-          status: "PUBLISHED",
-          visibility: "PUBLIC",
-          targetId: effectiveTargetId ?? null,
-          targetType: linkType === "none" ? null : linkType,
-        });
+        // Nếu không phải draftMode → publish luôn
+        if (!draftMode) {
+          await feedPostService.update(postId, {
+            title: postTitle,
+            content,
+            status: "PUBLISHED",
+            visibility: "PUBLIC",
+            targetId: effectiveTargetId ?? null,
+            targetType: linkType === "none" ? null : linkType,
+          });
+        }
 
         localStorage.removeItem(DRAFT_KEY);
         onPostCreated?.();
