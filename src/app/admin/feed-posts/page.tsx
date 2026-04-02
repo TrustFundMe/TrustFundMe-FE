@@ -6,6 +6,7 @@ import {
   MessageSquare, RefreshCw, Pin, Lock, LockOpen, PinOff,
 } from 'lucide-react';
 import Link from 'next/link';
+import { api } from '@/config/axios';
 import { feedPostService } from '@/services/feedPostService';
 import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
@@ -43,14 +44,10 @@ export default function AdminFeedPostsPage() {
     try {
       let dtos;
       try {
-        const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL + '?page=0&size=200', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          dtos = Array.isArray(data) ? data : (data.content ?? []);
-        } else {
-          throw new Error('fallback');
-        }
+        const res = await api.get(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL + '?page=0&size=200');
+        dtos = Array.isArray(res.data) ? res.data : (res.data.content ?? []);
       } catch {
+        // Fallback
         dtos = await feedPostService.getAll();
       }
       setPosts(dtos.map((d: Parameters<typeof dtoToFeedPost>[0]) => dtoToFeedPost(d)));
@@ -68,11 +65,15 @@ export default function AdminFeedPostsPage() {
     setProcessingId(post.id);
     setProcessingAction('delete');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_DELETE(post.id), { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) await feedPostService.delete(Number(post.id));
+      await api.delete(API_ENDPOINTS.FEED_POSTS.ADMIN_DELETE(post.id));
       setPosts((prev) => prev.filter((p) => p.id !== post.id));
     } catch {
-      alert('Xóa thất bại. Vui lòng thử lại.');
+      try {
+        await feedPostService.delete(Number(post.id));
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      } catch (err) {
+        alert('Xóa thất bại. Vui lòng thử lại.');
+      }
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
@@ -83,13 +84,11 @@ export default function AdminFeedPostsPage() {
     setProcessingId(post.id);
     setProcessingAction('pin');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id), { method: 'PATCH', credentials: 'include' });
-      if (res.ok) {
-        const updated = await res.json();
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
-      }
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
     } catch {
-      alert('Thao tác thất bại.');
+      alert('Thao tác ghim bài thất bại.');
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
@@ -100,13 +99,11 @@ export default function AdminFeedPostsPage() {
     setProcessingId(post.id);
     setProcessingAction('lock');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(post.id), { method: 'PATCH', credentials: 'include' });
-      if (res.ok) {
-        const updated = await res.json();
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isLocked: updated.isLocked } : p));
-      }
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isLocked: updated.isLocked } : p));
     } catch {
-      alert('Thao tác thất bại.');
+      alert('Thao tác khóa bài thất bại.');
     } finally {
       setProcessingId(null);
       setProcessingAction(null);

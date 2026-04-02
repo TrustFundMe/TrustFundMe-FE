@@ -512,6 +512,9 @@ div[class*="absolute"][class*="right-0"][class*="mt-2"] {
 }
 
 #header-sticky.sticky {
+  position: fixed !important;
+  left: 0 !important;
+  width: 100% !important;
   animation: none !important;
   top: 0 !important;
   z-index: 9999 !important;
