@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Flag, Search, CheckCircle, XCircle, Clock, MessageSquare, ExternalLink, Loader2, User, Lock } from 'lucide-react';
+import { Flag, Search, CheckCircle, XCircle, Clock, MessageSquare, ExternalLink, Loader2, User, Lock, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
 import { userService, UserInfo } from '@/services/userService';
@@ -19,9 +19,9 @@ interface FlagWithUser extends FlagDto {
 }
 
 const statusConfig = {
-  PENDING: { label: 'Chờ xử lý', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  RESOLVED: { label: 'Đã giải quyết', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-  DISMISSED: { label: 'Đã bác bỏ', color: 'bg-red-100 text-red-700', icon: XCircle },
+  PENDING: { label: 'Chờ xử lý', color: 'bg-yellow-50 text-yellow-700 border-yellow-100', icon: Clock },
+  RESOLVED: { label: 'Đã giải quyết', color: 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20', icon: CheckCircle },
+  DISMISSED: { label: 'Đã bác bỏ', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: XCircle },
 };
 
 export default function FlagsManagementPage() {
@@ -161,9 +161,9 @@ export default function FlagsManagementPage() {
   });
 
   return (
-    <div className="flex flex-col h-full bg-[#f1f5f9]">
+    <div className="flex flex-col h-full bg-white relative">
       {/* Header - EXACT REPLICA OF OTHER PAGES */}
-      <div className="flex items-end px-6 gap-2 h-14">
+      <div className="flex items-end justify-between px-4 h-14 relative z-20">
         <button className="relative px-6 py-2.5 text-sm font-bold transition-all duration-200 bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11">
           <div className="flex items-center gap-2">
             <Flag className="h-4 w-4 text-[#db5945]" />
@@ -174,14 +174,23 @@ export default function FlagsManagementPage() {
           </div>
           <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />
         </button>
+
+        <button 
+          onClick={fetchData}
+          disabled={loading}
+          className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#db5945] hover:border-[#db5945]/20 transition shadow-sm group active:scale-95"
+          title="Làm mới trang"
+        >
+          <RefreshCw className={`h-5 w-5 transition-transform group-hover:rotate-180 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Body - EXACT REPLICA */}
-      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative z-10 flex flex-col">
-        <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6">
+      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative z-10 flex flex-col">
+        <div className="flex-1 overflow-hidden p-4 flex flex-col gap-4 bg-white">
           
           {/* Filter & Search - ĐỒNG BỘ 100% VỚI STAFF REQUEST */}
-          <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
+          <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-white p-1 rounded-2xl border border-gray-100">
             <div className="flex items-center gap-2">
               {(['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'] as const).map((s) => (
                 <button
@@ -213,7 +222,7 @@ export default function FlagsManagementPage() {
             <table className="w-full text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-10 bg-[#446b5f] text-white border-b border-white/10 shadow-sm">
                 <tr className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
-                  <th className="px-4 py-2 text-left w-[50px] border-r border-white/5">STT</th>
+                  <th className="px-4 py-2 text-left w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
                   <th className="px-4 py-2 text-left w-[20%] border-r border-white/5">ĐỐI TƯỢNG</th>
                   <th className="px-4 py-2 text-left w-[15%] border-r border-white/5">NGƯỜI BÁO CÁO</th>
                   <th className="px-4 py-2 text-left border-r border-white/5">NỘI DUNG LÝ DO</th>

@@ -106,15 +106,15 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
 
       {/* Disable Campaign Section */}
       {onDisable && isApproved && (request as any).type === 'APPROVE_CAMPAIGN' && !hideActions && (
-        <div className="bg-red-50/50 p-3 rounded-2xl border border-red-100 space-y-2">
-           <div className="italic text-[10px] font-bold text-red-600 uppercase tracking-wider">
+        <div className="bg-gray-50/50 p-3 rounded-2xl border border-gray-100 space-y-2">
+           <div className="italic text-[10px] font-bold text-gray-500 uppercase tracking-wider">
               ⚠️ Ghi chú vô hiệu hóa:
            </div>
            <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Nhập lý do vô hiệu hóa chiến dịch này..."
-              className="w-full rounded-xl border-red-100 text-xs shadow-sm focus:border-red-500 focus:ring-red-500 p-2.5"
+              className="w-full rounded-xl border-gray-100 text-xs shadow-sm focus:border-gray-500 focus:ring-gray-500 p-2.5"
               rows={2}
             />
            <button
@@ -126,7 +126,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                 toast.error('Vui lòng nhập lý do vô hiệu hóa');
               }
             }}
-            className="w-full rounded-xl bg-red-600 py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-red-700 flex items-center justify-center gap-2 transition-all shadow-lg shadow-red-100 active:scale-95"
+            className="w-full rounded-xl bg-gray-500 py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-gray-600 flex items-center justify-center gap-2 transition-all shadow-lg shadow-gray-100 active:scale-95"
           >
             <XCircle className="h-4 w-4" />
             Vô hiệu hóa chiến dịch
@@ -250,7 +250,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                   }
                 }}
                 disabled={rejectDisabled}
-                className="flex-1 rounded-xl bg-red-50 py-2.5 text-[11px] font-black uppercase tracking-widest text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                className="flex-1 rounded-xl bg-gray-100 py-2.5 text-[11px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 border border-gray-200"
               >
                 TỪ CHỐI
               </button>

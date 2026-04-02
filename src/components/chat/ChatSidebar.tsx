@@ -1,3 +1,4 @@
+import { RefreshCw } from 'lucide-react';
 import type { Conversation } from './types';
 
 interface ChatSidebarProps {
@@ -9,6 +10,7 @@ interface ChatSidebarProps {
     onConversationClick: (id: string) => void;
     onShowNewClick: () => void;
     newCustomersCount: number;
+    onRefresh?: () => void;
 }
 
 export default function ChatSidebar({
@@ -20,6 +22,7 @@ export default function ChatSidebar({
     onConversationClick,
     onShowNewClick,
     newCustomersCount,
+    onRefresh,
 }: ChatSidebarProps) {
     return (
         <aside className="w-80 border-r border-gray-100 flex flex-col flex-shrink-0 h-full" style={{ backgroundColor: '#f8fafc' }}>
@@ -34,13 +37,25 @@ export default function ChatSidebar({
                         Tin nhắn mới ({newCustomersCount})
                     </button>
                 )}
-                <input
-                    placeholder="Tìm kiếm người dùng"
-                    className="w-full text-sm px-3 py-2 rounded-lg border focus:outline-none focus:ring-2"
-                    style={{ borderColor: '#e5e7eb', boxShadow: '0 0 0 2px rgba(9,145,243,0.0)' }}
-                    value={searchQuery}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                />
+                <div className="flex-1 relative">
+                    <input
+                        placeholder="Tìm kiếm người dùng"
+                        className="w-full text-sm px-3 py-2 rounded-lg border focus:outline-none focus:ring-2"
+                        style={{ borderColor: '#e5e7eb', boxShadow: '0 0 0 2px rgba(9,145,243,0.0)' }}
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                    />
+                </div>
+                {onRefresh && (
+                    <button 
+                        onClick={onRefresh}
+                        disabled={isLoading}
+                        className="h-9 w-9 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-100 transition shadow-sm group active:scale-95 disabled:opacity-50"
+                        title="Làm mới hội thoại"
+                    >
+                        <RefreshCw className={`h-4 w-4 transition-transform group-hover:rotate-180 ${isLoading ? 'animate-spin' : ''}`} />
+                    </button>
+                )}
             </div>
 
             {/* Content - Scrollable */}

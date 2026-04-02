@@ -13,7 +13,9 @@ import {
   ArrowUpDown,
   Calendar,
   Layers,
-  Monitor
+  Monitor,
+  RefreshCw,
+  LayoutGrid
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -257,6 +259,21 @@ const TaskTable = () => (
 export default function StaffDashboard() {
   return (
     <div className="h-full flex flex-col p-2 bg-[#f8fafc] overflow-hidden gap-4">
+
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between px-4 flex-shrink-0">
+          <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <LayoutGrid className="w-5 h-5 text-[#446b5f]" />
+            Tổng quan công việc
+          </h1>
+          <button 
+            onClick={() => window.location.reload()}
+            className="h-10 w-10 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95"
+            title="Tải lại bảng điều khiển"
+          >
+            <RefreshCw className="h-5 w-5 transition-transform group-hover:rotate-180" />
+          </button>
+      </div>
 
       {/* Top Section */}
       <div className="flex-1 min-h-0 flex gap-4">

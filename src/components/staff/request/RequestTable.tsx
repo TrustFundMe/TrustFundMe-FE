@@ -29,13 +29,13 @@ export default function RequestTable<T extends StaffRequestBase>({
       <table className="w-full text-sm border-separate border-spacing-0">
         <thead className="sticky top-0 z-10 bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
           <tr className="whitespace-nowrap">
-            <th className="px-4 py-2 text-left w-[50px] border-r border-white/5 whitespace-nowrap">STT</th>
+            <th className="px-4 py-2 text-left w-[50px] border-r border-white/5 whitespace-nowrap" title="Số Thứ Tự">STT</th>
             {columns.map((c) => (
-              <th key={c.key} className={`px-4 py-2 text-left border-r border-white/5 last:border-r-0 whitespace-nowrap ${c.className || ''}`}>
+              <th key={c.key} className={`px-4 py-2 text-left border-r border-white/5 last:border-r-0 whitespace-nowrap ${c.className || ''}`} title={c.title}>
                 {c.title}
               </th>
             ))}
-            <th className="px-4 py-2 text-left whitespace-nowrap">TRẠNG THÁI</th>
+            <th className="px-4 py-2 text-left whitespace-nowrap" title="Trạng thái yêu cầu">TRẠNG THÁI</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">

@@ -31,8 +31,8 @@ interface UserWithKyc extends UserInfo {
 
 const statusConfig = {
   PENDING: { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  APPROVED: { label: 'Đã duyệt', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-  REJECTED: { label: 'Từ chối', color: 'bg-red-100 text-red-700', icon: XCircle },
+  APPROVED: { label: 'Đã duyệt', color: 'bg-[#446b5f]/10 text-[#446b5f]', icon: CheckCircle },
+  REJECTED: { label: 'Từ chối', color: 'bg-gray-100 text-gray-500', icon: XCircle },
 };
 
 interface KYCTabProps {
@@ -173,10 +173,11 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
             <table className="w-full text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
-                  <th className="px-4 py-2 text-left first:rounded-tl-xl w-[50px] border-r border-white/5">STT</th>
+                  <th className="px-4 py-2 text-left first:rounded-tl-xl w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
                   <th className="px-4 py-2 text-left border-r border-white/5">NGƯỜI DÙNG</th>
                   <th className={`px-4 py-2 text-left border-r border-white/5 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>EMAIL</th>
-                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`}>SỐ CCCD</th>
+                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden' : ''}`} title="Căn Cước Công Dân">SỐ CCCD</th>
+                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`} title="Know Your Customer (Xác thực danh tính)">XÁC THỰC KYC</th>
                   <th className="px-4 py-2 border-r border-white/5 text-center">TRẠNG THÁI</th>
                   <th className="px-4 py-2 text-center last:rounded-tr-xl">THAO TÁC</th>
                 </tr>
@@ -184,7 +185,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase animate-pulse">
+                    <td colSpan={7} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase animate-pulse">
                       Đang tải dữ liệu...
                     </td>
                   </tr>
@@ -232,7 +233,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                         <td className={`px-4 py-2 text-[11px] font-bold text-gray-500 border-r border-gray-50/50 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
                           {user.email}
                         </td>
-                        <td className={`px-4 py-2 text-[11px] font-black text-gray-500 border-r border-gray-50/50 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
+                        <td className={`px-4 py-2 text-[11px] font-black text-gray-500 border-r border-gray-50/50 text-center ${showKycForm ? 'hidden' : ''}`}>
                           {user.kycData?.idNumber
                             ? user.kycData.idNumber
                             : <span className="text-gray-400 font-bold italic text-[9px]">Chưa cập nhật</span>}
@@ -240,18 +241,24 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
 
                         <td className="px-4 py-2 border-r border-gray-50/50 text-center">
                           {kycStatus && statusConfigEntry ? (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${statusConfigEntry.color} border border-white`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${statusConfigEntry.color} border border-white whitespace-nowrap`}>
                               <StatusIcon className="h-3 w-3" />
                               {statusConfigEntry.label}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 border border-white">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 border border-white whitespace-nowrap">
                               <XCircle className="h-3 w-3" />
                               Chưa KYC
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-4 py-2 border-r border-gray-50/50 text-center">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black text-emerald-600 bg-emerald-50/50 border border-emerald-100 uppercase tracking-tight whitespace-nowrap">
+                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Hoạt động
+                            </span>
+                        </td>
+                        <td className="px-4 py-2 text-center">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
