@@ -180,64 +180,46 @@ export default function FlagsManagementPage() {
       <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-sm border border-gray-100 overflow-hidden relative z-10 flex flex-col">
         <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6">
           
-          {/* Stats Cards - EXACT REPLICA WITH WAVES */}
-          <div className="grid grid-cols-4 gap-3 flex-shrink-0">
-            {[
-              { label: 'Tổng số báo cáo', value: stats.total, color: 'from-[#446b5f] to-[#6a8d83]' },
-              { label: 'Chờ xử lý', value: stats.pending, color: 'from-[#db5945] to-[#f19082]' },
-              { label: 'Đã giải quyết', value: stats.resolved, color: 'from-[#446b5f] to-[#5a8075]' },
-              { label: 'Đã bác bỏ', value: stats.dismissed, color: 'from-gray-500 to-gray-400' },
-            ].map(s => (
-              <div key={s.label} className={`relative bg-gradient-to-br ${s.color} rounded-2xl p-4 text-white overflow-hidden`}>
-                <span className="text-white/70 text-xs font-medium block mb-1">{s.label}</span>
-                <p className="text-2xl font-black relative z-10">{s.value}</p>
-                <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 200 40" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M0,20 C40,35 80,5 120,20 C160,35 180,10 200,20 L200,40 L0,40 Z" fill="white" fillOpacity="0.1" />
-                  <path d="M0,28 C50,15 100,38 150,25 C170,20 185,30 200,28 L200,40 L0,40 Z" fill="white" fillOpacity="0.05" />
-                </svg>
-              </div>
-            ))}
-          </div>
-
-          {/* Filter & Search - EXACT REPLICA */}
-          <div className="flex items-center justify-between gap-4 flex-shrink-0">
+          {/* Filter & Search - ĐỒNG BỘ 100% VỚI STAFF REQUEST */}
+          <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
             <div className="flex items-center gap-2">
               {(['ALL', 'PENDING', 'RESOLVED', 'DISMISSED'] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setFilter(s)}
-                  className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-semibold shadow-sm transition ${filter === s
-                      ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945]'
-                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${filter === s
+                      ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                      : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                     }`}
                 >
                   {s === 'ALL' ? 'Tất cả' : statusConfig[s as FlagStatus]?.label || s}
                 </button>
               ))}
             </div>
-            <div className="relative">
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Tìm lý do, người báo cáo..."
+                placeholder="Tìm nội dung lý do, người báo cáo..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 rounded-full border border-gray-200 text-sm focus:outline-none focus:border-[#db5945] w-64"
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 text-xs font-bold focus:outline-none focus:border-[#db5945] focus:ring-4 focus:ring-[#db5945]/5 transition-all shadow-sm bg-white"
               />
             </div>
           </div>
 
           {/* Table - EXACT REPLICA */}
           <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Đối tượng</th>
-                  <th className="px-4 py-3 text-left font-semibold">Người báo cáo</th>
-                  <th className="px-5 py-4 text-left font-semibold">Lý do</th>
-                  <th className="px-4 py-3 text-left font-semibold">Ngày gửi</th>
-                  <th className="px-4 py-3 text-left font-semibold">Trạng thái</th>
-                  <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+            <table className="w-full text-sm border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10 bg-[#446b5f] text-white border-b border-white/10 shadow-sm">
+                <tr className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 py-2 text-left w-[50px] border-r border-white/5">STT</th>
+                  <th className="px-4 py-2 text-left w-[20%] border-r border-white/5">ĐỐI TƯỢNG</th>
+                  <th className="px-4 py-2 text-left w-[15%] border-r border-white/5">NGƯỜI BÁO CÁO</th>
+                  <th className="px-4 py-2 text-left border-r border-white/5">NỘI DUNG LÝ DO</th>
+                  <th className="px-4 py-2 text-left w-[12%] border-r border-white/5">THỜI GIAN</th>
+                  <th className="px-4 py-2 text-left w-[12%] border-r border-white/5">TRẠNG THÁI</th>
+                  <th className="px-4 py-2 text-right w-[20%]">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -249,11 +231,11 @@ export default function FlagsManagementPage() {
                   </tr>
                 ) : filteredFlags.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-500">Không tìm thấy tố cáo nào</td>
+                    <td colSpan={7} className="px-4 py-10 text-center text-gray-500">Không tìm thấy tố cáo nào</td>
                   </tr>
                 ) : (
-                  filteredFlags.map((flag) => {
-                    const cfg = statusConfig[flag.status];
+                  filteredFlags.map((flag, i) => {
+                    const cfg = statusConfig[flag.status as FlagStatus];
                     const Icon = cfg.icon;
                     const isCampaign = !!flag.campaignId;
                     const targetId = flag.campaignId || flag.postId;
@@ -261,16 +243,19 @@ export default function FlagsManagementPage() {
 
                     return (
                       <tr key={flag.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-2 text-[11px] font-black text-gray-400 border-r border-gray-50/50">
+                          {String(i + 1).padStart(2, '0')}
+                        </td>
+                        <td className="px-4 py-2 border-r border-gray-50/50">
                           <div className="flex items-center gap-2">
-                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isCampaign ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'}`}>
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0 ${isCampaign ? 'bg-orange-50 text-orange-600 border border-orange-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                               {isCampaign ? <Flag className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
                             </div>
-                            <div>
-                              <div className="font-semibold text-gray-900 leading-tight">
+                            <div className="min-w-0">
+                              <div className="font-black text-gray-900 text-[11px] uppercase tracking-tight truncate">
                                 {isCampaign ? 'Chiến dịch' : 'Bài viết Feed'}
                               </div>
-                              <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                              <div className="text-[9px] font-bold text-gray-400 flex items-center gap-1">
                                 ID: {targetId}
                                 <Link href={viewUrl} target="_blank" className="hover:text-blue-500 transition-colors">
                                   <ExternalLink className="h-2.5 w-2.5" />
@@ -279,73 +264,71 @@ export default function FlagsManagementPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-gray-700">
+                        <td className="px-4 py-2 text-gray-700">
                           <div className="flex items-center gap-2">
-                             <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center">
-                               <User className="h-3.5 w-3.5 text-gray-400" />
+                             <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                               <User className="h-3 w-3 text-gray-400" />
                              </div>
-                             <span className="font-medium">{flag.userName}</span>
+                             <span className="font-bold text-xs truncate max-w-[120px]">{flag.userName}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-4 text-gray-600 italic text-[13px]">
+                        <td className="px-4 py-2 text-gray-600 italic text-[11px] max-w-[300px] truncate">
                            "{flag.reason}"
                         </td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-2 text-gray-500 text-[11px] font-bold whitespace-nowrap">
                           {new Date(flag.createdAt).toLocaleDateString('vi-VN')}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
+                        <td className="px-4 py-2 flex-shrink-0">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${cfg.color}`}>
                             <Icon className="h-3 w-3" />
                             {cfg.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-2 text-right">
                           {flag.status === 'PENDING' && (
                             <div className="flex items-center justify-end gap-1.5">
                               {isCampaign ? (
                                 <Link
                                   href={`/staff/request?campaignId=${flag.campaignId}`}
-                                  className="px-4 py-1.5 rounded-lg text-[11px] font-bold bg-[#db5945] text-white hover:bg-[#c44d3b] transition-all shadow-sm shadow-[#db5945]/20 flex items-center gap-1.5"
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-[#db5945] to-[#f19082] text-white hover:brightness-110 transition-all active:scale-95 flex items-center gap-1.5"
                                 >
-                                  Xử lý tố cáo
-                                  <ExternalLink className="h-3 w-3" />
+                                  XỬ LÝ
+                                  <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
                               ) : flag.postType === 'DISCUSSION' ? (
-                                /* Nếu là post tự đăng (DISCUSSION) thì hiện nút khóa tài khoản */
                                 <button
                                   onClick={() => flag.targetUser && handleLockAccount(flag.targetUser.id, flag.targetUser.fullName, flag.id)}
                                   disabled={flag.targetUser?.isActive === false}
-                                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95 ${
                                     flag.targetUser?.isActive === false
                                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : 'bg-red-600 text-white hover:bg-red-700 shadow-red-200'
+                                    : 'bg-red-600 text-white hover:bg-red-700'
                                   }`}
                                 >
-                                  <Lock className="h-3 w-3" />
-                                  {flag.targetUser?.isActive === false ? 'Đã khóa' : 'Khóa tài khoản'}
+                                  <Lock className="h-3.5 w-3.5" />
+                                  {flag.targetUser?.isActive === false ? 'ĐÃ KHÓA' : 'KHÓA'}
                                 </button>
                               ) : flag.expenditureId ? (
-                                /* Nếu là post minh chứng (POST + expenditureId) thì hiện nút dẫn qua expenditure */
                                 <Link
                                   href={`/staff/request?campaignId=${flag.expenditureId || '0'}&tab=EXPENDITURE`}
-                                  className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#446b5f] text-white hover:bg-[#5a8075] transition-all shadow-sm shadow-[#446b5f]/20 flex items-center gap-1.5"
+                                  className="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-[#446b5f] text-white hover:bg-[#355249] transition-all active:scale-95 flex items-center gap-1.5"
                                 >
-                                  Xem chi tiêu
-                                  <ExternalLink className="h-3 w-3" />
+                                  XEM
+                                  <ExternalLink className="h-3.5 w-3.5" />
                                 </Link>
                               ) : null}
 
                               <button
                                 onClick={() => handleReview(flag.id, 'RESOLVED')}
-                                className="px-2.5 py-1.5 rounded-md text-[11px] font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                                className="px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white border border-gray-200 text-gray-500 hover:text-green-600 hover:border-green-100 transition-all"
                               >
-                                Đã xử lý
+                                XONG
                               </button>
                               <button
                                 onClick={() => handleReview(flag.id, 'DISMISSED')}
-                                className="px-2.5 py-1.5 rounded-md text-[11px] font-bold bg-white border border-gray-200 text-red-600 hover:bg-red-50 transition-colors"
+                                className="px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-white border border-gray-200 text-red-400 hover:text-red-600 hover:border-red-100 transition-all"
                               >
-                                Bác bỏ
+                                BỎ
                               </button>
                             </div>
                           )}

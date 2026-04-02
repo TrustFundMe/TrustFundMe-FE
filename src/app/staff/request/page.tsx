@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -34,12 +34,17 @@ export default function StaffRequestPage() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
+  
   // Campaign States
-  const [campaignRows, setCampaignRows] = useState<CampaignRequest[]>([]);
+  const [campaignRows, setCampaignRows] = useState<any[]>([]);
   const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL' | 'DISABLED'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
   const targetCampaignId = searchParams.get('campaignId');
-  const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
+  
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
 
   // Fetch functions moved to component scope
   const fetchCampaigns = async () => {
@@ -51,8 +56,9 @@ export default function StaffRequestPage() {
         tasks.filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED').map(t => t.targetId)
       );
 
-      const allCampaignsResp = await campaignService.getAll(0, 1000);
+      const allCampaignsResp = await campaignService.getAll(currentPage, pageSize);
       const allCampaigns = allCampaignsResp.content || [];
+      setTotalPages(allCampaignsResp.totalPages || 0);
 
       // Fetch users for campaign owners
       const allUsersResult = await userService.getAllUsers(0, 1000);
@@ -81,7 +87,7 @@ export default function StaffRequestPage() {
             id: `CAMP_${c.id}`,
             createdAt: c.createdAt || new Date().toISOString(),
             status: status,
-            type: 'APPROVE_CAMPAIGN',
+            type: 'APPROVE_CAMPAIGN' as const,
             campaignId: c.id,
             campaignTitle: c.title,
             requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
@@ -92,7 +98,9 @@ export default function StaffRequestPage() {
             bankVerified: c.bankVerified,
             fundOwnerId: c.fundOwnerId,
           };
-        });
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
       setCampaignRows(mappedCampaigns);
 
       // Auto-select from URL or first item
@@ -146,7 +154,7 @@ export default function StaffRequestPage() {
   };
 
   // Handlers
-  const handleReviewCampaign = async (campaignId?: number, reason?: string, isApprove: boolean = true) => {
+  const handleReviewCampaign = async (isApprove: boolean, reason?: string, campaignId?: number) => {
     const targetCampaign = campaignId
       ? campaignRows.find(r => r.campaignId === campaignId)
       : selectedCampaign;
@@ -240,18 +248,18 @@ export default function StaffRequestPage() {
                       : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >
-                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Đang chờ' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Đã loại' : 'Vô hiệu hóa'}
+                    {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Đang chờ' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Từ chối' : 'Vô hiệu hóa'}
                   </button>
                 ))}
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 overflow-hidden">
-                <div className="lg:col-span-8 overflow-hidden flex flex-col gap-3">
-                  <div className="flex items-center justify-between flex-shrink-0">
-                    <h2 className="text-xs font-black text-gray-800 uppercase tracking-widest">Danh sách nhiệm vụ duyệt chiến dịch</h2>
-                    <span className="text-[10px] font-black text-gray-400 uppercase">{filteredCampaigns.length} kết quả</span>
+                <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedCampaignId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+                  <div className="flex items-center justify-between flex-shrink-0 px-1">
+                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách nhiệm vụ duyệt chiến dịch</h2>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{filteredCampaigns.length} kết quả</span>
                   </div>
-                  <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm">
+                  <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm transition-all duration-500">
                     <RequestTable
                       rows={filteredCampaigns}
                       selectedId={selectedCampaignId}
@@ -259,7 +267,7 @@ export default function StaffRequestPage() {
                       columns={[
                         {
                           key: 'campaign',
-                          title: 'Chiến dịch',
+                          title: 'CHIẾN DỊCH',
                           render: (r: CampaignRequest) => (
                             <div>
                               <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.campaignTitle}</div>
@@ -268,17 +276,18 @@ export default function StaffRequestPage() {
                         },
                         {
                           key: 'category',
-                          title: 'Lĩnh vực',
+                          title: 'LĨNH VỰC',
                           render: (r: CampaignRequest) => <span className="text-[10px] font-black text-gray-700 uppercase">{r.category || '-'}</span>,
                         },
                         {
                           key: 'requester',
-                          title: 'Người tạo',
+                          title: 'NGƯỜI TẠO',
                           render: (r: CampaignRequest) => <span className="text-xs font-bold text-gray-700">{r.requesterName}</span>,
                         },
                         {
                           key: 'kyc',
-                          title: 'Xác thực KYC',
+                          title: 'XÁC THỰC KYC',
+                          className: 'text-center',
                           render: (r: CampaignRequest) => (
                             r.kycVerified ? (
                               <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-[10px] font-black text-green-700 uppercase tracking-wider ring-1 ring-inset ring-green-600/20 shadow-sm border border-white">
@@ -292,41 +301,133 @@ export default function StaffRequestPage() {
                                 }}
                                 className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-[10px] font-black text-red-700 uppercase tracking-wider ring-1 ring-inset ring-red-600/10 hover:bg-red-600 hover:text-white transition-all shadow-sm border border-white"
                               >
-                                Thư xác minh
+                                <X className="h-4 w-4" />
+                                CHƯA XÁC THỰC
                               </button>
                             )
+                          ),
+                        },
+                        {
+                          key: 'actions',
+                          title: 'THAO TÁC',
+                          className: 'text-center',
+                          render: (r: CampaignRequest) => (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCampaignId(r.id);
+                                }}
+                                className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
+                                title="Xem chi tiết"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+
+                              {r.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReviewCampaign(true, undefined, r.campaignId);
+                                    }}
+                                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all border border-green-100"
+                                    title="Duyệt nhanh"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCampaignId(r.id);
+                                      toast('Vui lòng nhập lý do từ chối ở bảng bên phải', {
+                                        icon: 'ℹ️',
+                                        duration: 3000
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"
+                                    title="Từ chối (Yêu cầu nhập lý do)"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
+
+                              {r.status === 'APPROVED' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCampaignId(r.id);
+                                    toast('Cuộn xuống dưới cùng ở bảng bên phải để vô hiệu hóa', {
+                                      icon: '⚠️',
+                                      duration: 4000
+                                    });
+                                  }}
+                                  className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all border border-gray-100"
+                                  title="Vô hiệu hóa"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
                           ),
                         },
                       ]}
                     />
                   </div>
+
+                  {/* Pagination Controls */}
+                  <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-50 flex-shrink-0">
+                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Trang {currentPage + 1} / {Math.ceil(filteredCampaigns.length / 10) || 1}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        Trước
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredCampaigns.length / 10) - 1, p + 1))}
+                        disabled={currentPage >= Math.ceil(filteredCampaigns.length / 10) - 1}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar">
-                  <RequestDetailPanel
-                    request={selectedCampaign}
-                    title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
-                    fields={[
-                      { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : '-' },
-                      { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },
-                      { label: 'Chủ quản', value: selectedCampaign?.requesterName },
-                      { label: 'Lĩnh vực', value: selectedCampaign?.category || '-' },
-                      { label: 'Mô tả', value: selectedCampaign?.description || '-' },
-                    ]}
-                    approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
-                    rejectDisabled={false}
-                    approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
-                      ? "Cần xác minh KYC trước khi duyệt chiến dịch"
-                      : ""
-                    }
-                    rejectDisabledReason=""
-                    actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
-                    onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
-                    onApprove={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, true)}
-                    onReject={(reason) => handleReviewCampaign(selectedCampaign?.campaignId, reason, false)}
-                    onDisable={(reason) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
-                  />
-                </div>
+                {selectedCampaignId && (
+                  <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar animate-in slide-in-from-right-4 transition-all duration-500">
+                    <RequestDetailPanel
+                      request={selectedCampaign}
+                      title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
+                      onClose={() => setSelectedCampaignId(undefined)}
+                      fields={[
+                        { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật' },
+                        { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },
+                        { label: 'Chủ quản', value: selectedCampaign?.requesterName },
+                        { label: 'Lĩnh vực', value: selectedCampaign?.category || 'Chưa cập nhật' },
+                        { label: 'Mô tả', value: selectedCampaign?.description || 'Chưa cập nhật' },
+                      ]}
+                      approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
+                      rejectDisabled={false}
+                      approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
+                        ? "Cần xác minh KYC trước khi duyệt chiến dịch"
+                        : ""
+                      }
+                      rejectDisabledReason=""
+                      actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
+                      onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
+                      onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
+                      onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
+                      onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
+                    />
+                  </div>
+                )}
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (

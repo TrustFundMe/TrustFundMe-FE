@@ -14,7 +14,7 @@ function StatusPill({ status }: { status: string }) {
     case 'PENDING':
       return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Chờ duyệt</span>;
     case 'RESOLVED':
-      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B]" />Đã xử lý</span>;
+      return <span className={`${base} bg-[#446b5f]/10 text-[#446b5f]`}><span className="h-1.5 w-1.5 rounded-full bg-[#446b5f]" />Đã xử lý</span>;
     case 'DISMISSED':
       return <span className={`${base} bg-slate-100 text-slate-400`}><span className="h-1.5 w-1.5 rounded-full bg-slate-400" />Từ chối</span>;
     default:
@@ -181,7 +181,7 @@ export default function AdminFlagsPage() {
                       )}
                       {flag.campaignId && (
                         <Link href={`/campaigns-details?id=${flag.campaignId}`} target="_blank" onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-xs text-[#1A685B] hover:underline font-bold ml-1">
+                          className="inline-flex items-center gap-1 text-xs text-[#446b5f] hover:underline font-bold ml-1">
                           Campaign #{flag.campaignId} <ExternalLink className="w-3 h-3" />
                         </Link>
                       )}
@@ -191,26 +191,26 @@ export default function AdminFlagsPage() {
                     <td className="py-2 pr-4 text-xs text-slate-500 whitespace-nowrap font-medium">{formatDate(flag.createdAt)}</td>
                     <td className="py-2 pr-8 text-right" onClick={(e) => e.stopPropagation()}>
                       {flag.status === 'PENDING' ? (
-                        <div className="flex justify-end gap-1 transition-all">
+                        <div className="flex justify-end gap-1.5 transition-all">
                           <button
                             onClick={() => handleReview(flag.id, 'RESOLVED')}
                             disabled={processingId === flag.id}
-                            className="p-2 rounded-xl text-slate-400 hover:text-[#1A685B] hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
+                            className="p-2 rounded-xl text-gray-500 hover:text-[#446b5f] hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
                             title="Duyệt (Resolved)"
                           >
-                            {processingId === flag.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                            {processingId === flag.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
                           </button>
                           <button
                             onClick={() => handleReview(flag.id, 'DISMISSED')}
                             disabled={processingId === flag.id}
-                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
+                            className="p-2 rounded-xl text-gray-500 hover:text-red-600 hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
                             title="Từ chối (Dismissed)"
                           >
-                            <XCircle className="h-4 w-4" />
+                            <XCircle className="h-5 w-5" />
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400">—</span>
+                        <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>
                       )}
                     </td>
                   </tr>
@@ -304,21 +304,21 @@ export default function AdminFlagsPage() {
               </div>
             </div>
             {selectedFlag.status === 'PENDING' && (
-              <div className="flex flex-col gap-2 pt-4 border-t border-slate-100">
+              <div className="flex flex-col gap-2.5 pt-6 border-t border-slate-100">
                 <button
                   onClick={() => handleReview(selectedFlag.id, 'RESOLVED')}
                   disabled={processingId === selectedFlag.id}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#1A685B] text-white text-xs font-black uppercase tracking-widest hover:bg-[#155a4d] transition-all shadow-lg shadow-[#1A685B]/20 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#446b5f] text-white text-xs font-black uppercase tracking-widest hover:bg-[#355249] transition-all shadow-xl shadow-[#446b5f]/20 active:scale-95 disabled:opacity-50"
                 >
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-5 h-5" />
                   Duyệt báo cáo
                 </button>
                 <button
                   onClick={() => handleReview(selectedFlag.id, 'DISMISSED')}
                   disabled={processingId === selectedFlag.id}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-slate-100 text-slate-600 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-slate-100 bg-white text-gray-600 text-xs font-black uppercase tracking-widest hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50"
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-5 h-5" />
                   Từ chối
                 </button>
               </div>

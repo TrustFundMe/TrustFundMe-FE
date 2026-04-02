@@ -48,10 +48,13 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showKycForm, setShowKycForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 20; // Increased to compensate for filtered staff/admin users
 
   useEffect(() => {
     fetchData();
-  }, [refreshKey]);
+  }, [refreshKey, currentPage]);
 
   // Handle initial user selection only if intended
   useEffect(() => {
@@ -69,7 +72,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
       setLoading(true);
 
       const [usersResult, kycData] = await Promise.all([
-        userService.getAllUsers(0, 1000),
+        userService.getAllUsers(currentPage, pageSize),
         kycService.getAll().catch(() => ({ content: [] as KycResponse[] }))
       ]);
 
@@ -81,7 +84,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
 
       if (usersResult.success && usersResult.data && usersResult.data.content) {
         const regularUsers = usersResult.data.content.filter(user => user.role !== 'STAFF' && user.role !== 'ADMIN');
-
+        
         const allUsersWithKyc: UserWithKyc[] = regularUsers.map(user => {
           const kyc = kycMapNew.get(user.id);
           return {
@@ -90,11 +93,13 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
             kycId: kyc?.id,
             kycData: kyc,
           };
-        });
+        }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
         setUsers(allUsersWithKyc);
+        setTotalPages(usersResult.data.totalPages || 0);
       }
     } catch (error: any) {
-      console.error('Failed to fetch data:', error);
+      console.error('Failed to load users:', error);
       const errorMessage = error?.response?.data?.message || error?.message || 'Lỗi tải dữ liệu';
       toast.error(errorMessage);
     } finally {
@@ -161,34 +166,36 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
         {/* Table Area */}
         <div className={`flex flex-col gap-3 overflow-hidden transition-all duration-300 ${showKycForm ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
           <div className="flex items-center justify-between flex-shrink-0 px-1">
-            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách người dùng ({filteredUsers.length})</h2>
+            <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách người dùng</h2>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{filteredUsers.length} kết quả</span>
           </div>
           <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative">
             <table className="w-full text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
-                <tr className="bg-[#446b5f] text-white">
-                  <th className="px-6 py-4 text-left text-[11px] font-black uppercase tracking-widest first:rounded-tl-xl last:rounded-tr-xl">Người dùng</th>
-                  <th className={`px-6 py-4 text-left text-[11px] font-black uppercase tracking-widest ${showKycForm ? 'hidden xl:table-cell' : ''}`}>Email</th>
-                  <th className={`px-6 py-4 text-left text-[11px] font-black uppercase tracking-widest ${showKycForm ? 'hidden xl:table-cell' : ''}`}>Số CCCD</th>
-                  <th className="px-6 py-4 text-left text-[11px] font-black uppercase tracking-widest">Trạng thái</th>
-                  <th className="px-6 py-4 text-right text-[11px] font-black uppercase tracking-widest last:rounded-tr-xl">Thao tác</th>
+                <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                  <th className="px-4 py-2 text-left first:rounded-tl-xl w-[50px] border-r border-white/5">STT</th>
+                  <th className="px-4 py-2 text-left border-r border-white/5">NGƯỜI DÙNG</th>
+                  <th className={`px-4 py-2 text-left border-r border-white/5 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>EMAIL</th>
+                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`}>SỐ CCCD</th>
+                  <th className="px-4 py-2 border-r border-white/5 text-center">TRẠNG THÁI</th>
+                  <th className="px-4 py-2 text-center last:rounded-tr-xl">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase animate-pulse">
+                    <td colSpan={6} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase animate-pulse">
                       Đang tải dữ liệu...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase">
+                    <td colSpan={6} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase">
                       Không tìm thấy người dùng
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => {
+                  filteredUsers.map((user, i) => {
                     const kycStatus = user.kycStatus;
                     const statusConfigEntry = kycStatus ? statusConfig[kycStatus] : null;
                     const StatusIcon = statusConfigEntry?.icon || Clock;
@@ -207,53 +214,55 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                             : 'hover:bg-[#446b5f]/5'
                         }`}
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-9 w-9 rounded-full flex items-center justify-center border-2 border-white shadow-sm transition-colors ${
+                        <td className="px-4 py-2 text-[10px] font-black text-gray-400 border-r border-gray-50/50">
+                          {String(i + 1).padStart(2, '0')}
+                        </td>
+                        <td className="px-4 py-2 border-r border-gray-50/50">
+                          <div className="flex items-center gap-2">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center border border-white shadow-sm transition-colors ${
                               isSelected ? 'bg-[#446b5f]/20 text-[#446b5f]' : 'bg-gray-100 text-gray-400 group-hover:bg-[#446b5f]/10 group-hover:text-[#446b5f]'
                             }`}>
                               <User className="h-4 w-4" />
                             </div>
                             <div>
-                                <div className="font-black text-gray-900 text-xs uppercase tracking-tight">{user.fullName || 'N/A'}</div>
-                                <div className="text-[10px] font-bold text-gray-400">ID: #{user.id}</div>
+                                <div className="font-black text-gray-900 text-[11px] uppercase tracking-tight leading-tight">{user.fullName || 'N/A'}</div>
                             </div>
                           </div>
                         </td>
-                        <td className={`px-6 py-4 text-xs font-bold text-gray-500 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
+                        <td className={`px-4 py-2 text-[11px] font-bold text-gray-500 border-r border-gray-50/50 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
                           {user.email}
                         </td>
-                        <td className={`px-6 py-4 text-xs font-black text-gray-500 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
+                        <td className={`px-4 py-2 text-[11px] font-black text-gray-500 border-r border-gray-50/50 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`}>
                           {user.kycData?.idNumber
                             ? user.kycData.idNumber
-                            : <span className="text-gray-400 font-bold italic text-[10px]">Chưa cập nhật</span>}
+                            : <span className="text-gray-400 font-bold italic text-[9px]">Chưa cập nhật</span>}
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-2 border-r border-gray-50/50 text-center">
                           {kycStatus && statusConfigEntry ? (
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${statusConfigEntry.color} shadow-sm border border-white`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${statusConfigEntry.color} border border-white`}>
                               <StatusIcon className="h-3 w-3" />
                               {statusConfigEntry.label}
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 shadow-sm border border-white">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 border border-white">
                               <XCircle className="h-3 w-3" />
                               Chưa KYC
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-2 text-right">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenForm(user);
                             }}
-                            className={`p-2.5 rounded-xl transition-all shadow-sm ${
-                              isSelected ? 'bg-[#446b5f] text-white shadow-[#446b5f]/30' : 'bg-gray-100 text-gray-600 hover:bg-[#446b5f] hover:text-white'
+                            className={`p-1.5 rounded-lg transition-all shadow-sm ${
+                              isSelected ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-[#446b5f] hover:text-white'
                             }`}
                             title={kycStatus === 'APPROVED' ? 'Xem chi tiết' : 'Nhập KYC'}
                           >
-                            {kycStatus === 'APPROVED' ? <Eye className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                            {kycStatus === 'APPROVED' ? <Eye className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </button>
                         </td>
                       </tr>
@@ -262,6 +271,29 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-2 pt-2 border-t border-gray-50 flex-shrink-0">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Trang {currentPage + 1} / {totalPages || 1}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Trước
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Sau
+              </button>
+            </div>
           </div>
         </div>
 
