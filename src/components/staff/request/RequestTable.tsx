@@ -27,7 +27,7 @@ export default function RequestTable<T extends StaffRequestBase>({
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs text-gray-500">
+        <thead className="sticky top-0 z-10 bg-[#446b5f] text-white text-xs uppercase tracking-wider font-black border-b border-white/10 shadow-sm">
           <tr>
             {columns.map((c) => (
               <th key={c.key} className={`px-4 py-3 text-left font-semibold ${c.className || ''}`}>

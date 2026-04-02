@@ -107,7 +107,7 @@ export default function EvidenceTab() {
         <div className="flex-1 flex gap-4 h-full overflow-hidden">
             {/* Sidebar */}
             <div className="w-80 flex-shrink-0 flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#db5945,#f19082)' }}>
+                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
                     <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Xác minh Minh chứng</h3>
                 </div>
                 <div className="p-3 border-b border-gray-50 flex-shrink-0">
@@ -129,7 +129,7 @@ export default function EvidenceTab() {
                                     <p className="text-[11px] font-black text-gray-800 line-clamp-1 uppercase tracking-tighter">{r.plan}</p>
                                     <p className="text-[10px] font-bold text-gray-400 truncate">{r.campaignTitle}</p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-black text-[#db5945]">{fmt(r.totalAmount)}</span>
+                                        <span className="text-[10px] font-black text-[#446b5f]">{fmt(r.totalAmount)}</span>
                                         <span className="text-[10px] text-gray-300">•</span>
                                         <span className="text-[9px] font-bold text-blue-500 uppercase">{EVIDENCE_STATUS_MAP[r.evidenceStatus] || r.evidenceStatus}</span>
                                     </div>
@@ -153,7 +153,7 @@ export default function EvidenceTab() {
                         <div className="p-6 border-b border-gray-50 bg-gray-50/30 flex-shrink-0">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-[10px] font-black text-[#db5945] uppercase tracking-widest mb-1">CHIẾN DỊCH: {selected.campaignTitle}</p>
+                                    <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-1">CHIẾN DỊCH: {selected.campaignTitle}</p>
                                     <h2 className="text-xl font-black text-gray-900 uppercase leading-none">{selected.plan}</h2>
                                     <p className="text-xs font-bold text-gray-400 mt-2">Người nộp: {selected.requesterName}</p>
                                 </div>

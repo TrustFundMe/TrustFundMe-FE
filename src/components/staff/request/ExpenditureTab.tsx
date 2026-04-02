@@ -213,11 +213,11 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                             ) : (
                                 <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                     <table className="w-full text-xs bg-white">
-                                        <thead className="bg-gray-50">
-                                            <tr className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                                                <th className="py-2 px-3 text-left">Hàng hóa</th>
-                                                <th className="py-2 px-3 text-right text-blue-600 bg-blue-50/50">Kế hoạch</th>
-                                                <th className="py-2 px-3 text-right text-orange-600 bg-orange-50/50">Đã chi (Nhập liệu)</th>
+                                        <thead className="bg-[#446b5f] text-white">
+                                            <tr className="text-[9px] font-black uppercase tracking-widest">
+                                                <th className="py-2 px-3 text-left border-r border-white/10">Hàng hóa</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/10">Kế hoạch</th>
+                                                <th className="py-2 px-3 text-right">Đã chi (Nhập liệu)</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
@@ -317,9 +317,9 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
                         <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">THỰC TẾ CHI</p>
                         <p className="font-bold text-[#446b5f] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
                     </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#db5945]/20">
-                        <p className="text-[8px] font-black text-[#db5945]/60 uppercase tracking-widest mb-0.5">DƯ</p>
-                        <p className="font-black text-[#db5945] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
+                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">DƯ</p>
+                        <p className="font-black text-[#446b5f] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
                     </div>
                 </div>
             )}

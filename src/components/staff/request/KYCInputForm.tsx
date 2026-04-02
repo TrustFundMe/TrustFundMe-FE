@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { kycService } from '@/services/kycService';
 import { supabase } from '@/lib/supabaseClient';
+import { aiService } from '@/services/aiService';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { Sparkles, Upload, Info } from 'lucide-react';
 
 interface KYCInputFormProps {
     userId?: number | string;
@@ -78,19 +80,20 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     };
 
     const validateIdNumber = (value: string, idType: string): string | undefined => {
-        if (!value) return 'ID number is required';
+        if (!value) return 'Vui lòng nhập số định danh';
 
         if (idType === 'CCCD') {
             if (!/^\d{12}$/.test(value)) {
-                return 'CCCD must be exactly 12 digits';
+                return 'CCCD/CMND phải gồm đúng 12 chữ số';
             }
         } else if (idType === 'PASSPORT') {
-            if (!/^[A-Z0-9]{8,9}$/.test(value)) {
-                return 'Passport must be 8-9 alphanumeric characters';
+            // Hộ chiếu VN: 1-2 chữ cái + 6-8 chữ số (tổng 7-9 ký tự), không phân biệt hoa/thường
+            if (!/^[A-Za-z]{1,2}[0-9]{6,8}$/.test(value)) {
+                return 'Số hộ chiếu không hợp lệ (VD: B1234567 hoặc AB1234567)';
             }
         } else if (idType === 'DRIVER_LICENSE') {
             if (!/^\d{12}$/.test(value)) {
-                return 'Driver License must be 12 digits';
+                return 'Số bằng lái xe phải gồm đúng 12 chữ số';
             }
         }
         return undefined;
@@ -100,22 +103,21 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
         const errors: { issueDate?: string; expiryDate?: string } = {};
 
         if (!issueDate) {
-            errors.issueDate = 'Issue date is required';
+            errors.issueDate = 'Vui lòng chọn ngày cấp';
         }
         if (!expiryDate) {
-            errors.expiryDate = 'Expiry date is required';
+            errors.expiryDate = 'Vui lòng chọn ngày hết hạn';
         }
 
         if (issueDate && expiryDate) {
             if (issueDate >= expiryDate) {
-                errors.expiryDate = 'Expiry date must be after issue date';
+                errors.expiryDate = 'Ngày hết hạn phải sau ngày cấp';
             }
 
-            // Check if issue date is not in the future
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             if (issueDate > today) {
-                errors.issueDate = 'Issue date cannot be in the future';
+                errors.issueDate = 'Ngày cấp không được là ngày trong tương lai';
             }
         }
 
@@ -123,9 +125,9 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     };
 
     const validateIssuePlace = (value: string): string | undefined => {
-        if (!value) return 'Issue place is required';
-        if (value.length < 3) {
-            return 'Issue place must be at least 3 characters';
+        if (!value || !value.trim()) return 'Vui lòng nhập nơi cấp';
+        if (value.trim().length < 3) {
+            return 'Nơi cấp phải có ít nhất 3 ký tự';
         }
         return undefined;
     };
@@ -194,17 +196,18 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             issuePlace: validateIssuePlace(formData.issuePlace),
         };
 
-        // Check images
-        if (!formData.idImageFront || !formData.idImageBack || !formData.selfieImage) {
-            newErrors.images = 'All images are required';
-            toast.error('Please upload all required images.');
+        // Check images — mặt sau chỉ bắt buộc với CCCD và DRIVER_LICENSE
+        const needsBackImage = formData.idType !== 'PASSPORT';
+        if (!formData.idImageFront || (needsBackImage && !formData.idImageBack) || !formData.selfieImage) {
+            newErrors.images = needsBackImage
+                ? 'Vui lòng tải lên ảnh mặt trước, mặt sau và ảnh chân dung'
+                : 'Vui lòng tải lên ảnh hộ chiếu và ảnh chân dung';
         }
 
         setErrors(newErrors);
 
-        // Check if there are any errors
+        // Nếu có lỗi thì dừng lại — lỗi hiện inline ngay dưới từng ô
         if (Object.values(newErrors).some(error => error !== undefined)) {
-            toast.error('Please fix all validation errors');
             return;
         }
 
@@ -265,9 +268,43 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 .getPublicUrl(filePath);
 
             if (data?.publicUrl) {
-                setFormData(prev => ({ ...prev, [fieldName]: data.publicUrl }));
-                // Clear image error when image is uploaded
+                const imageUrl = data.publicUrl;
+                setFormData(prev => ({ ...prev, [fieldName]: imageUrl }));
                 setErrors(prev => ({ ...prev, images: undefined }));
+
+                // Trigger AI OCR for Front or Back ID images
+                if (fieldName === 'idImageFront' || fieldName === 'idImageBack') {
+                    toast.promise(
+                        aiService.ocrKYC(file),
+                        {
+                            loading: 'AI đang phân tích và trích xuất thông tin...',
+                            success: (ocrData: any) => {
+                                if (ocrData.error) {
+                                    throw new Error(ocrData.error);
+                                }
+                                setFormData(prev => ({
+                                    ...prev,
+                                    idType: ocrData.idType || prev.idType,
+                                    idNumber: ocrData.idNumber || prev.idNumber,
+                                    issueDate: ocrData.issueDate ? new Date(ocrData.issueDate) : prev.issueDate,
+                                    expiryDate: ocrData.expiryDate ? new Date(ocrData.expiryDate) : prev.expiryDate,
+                                    issuePlace: ocrData.issuePlace || prev.issuePlace
+                                }));
+                                const docLabel = ocrData.idType === 'PASSPORT' ? 'Hộ chiếu' : ocrData.idType === 'DRIVER_LICENSE' ? 'Bằng lái xe' : 'CCCD';
+                                return `AI đã nhận diện ${docLabel} và điền thông tin ${fieldName === 'idImageFront' ? 'mặt trước' : 'mặt sau'} thành công!`;
+                            },
+                            error: (err: any) => err.message || 'AI không thể đọc được nội dung ảnh này. Vui lòng kiểm tra lại.'
+                        },
+                        {
+                            style: {
+                                minWidth: '300px',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                            },
+                            success: { duration: 5000 }
+                        }
+                    );
+                }
             }
         } catch (error: any) {
             console.error('Error uploading image:', error);
@@ -282,7 +319,115 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+            {!readOnly && (
+                <div className="bg-[#446b5f]/10 p-3 rounded-lg border-l-4 border-[#446b5f]">
+                    <div className="flex gap-2 items-start">
+                        <svg className="w-4 h-4 text-[#446b5f] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-[11px] text-[#446b5f] font-bold uppercase tracking-tight leading-relaxed">
+                            Hướng dẫn:{' '}
+                            <span className="font-medium normal-case text-gray-700">
+                                {formData.idType === 'PASSPORT'
+                                    ? <>Chỉ cần tải <span className="font-bold text-[#446b5f]">trang ảnh Hộ chiếu</span> lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
+                                    : formData.idType === 'DRIVER_LICENSE'
+                                    ? <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của Bằng lái xe lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
+                                    : <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của CCCD lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
+                                }
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            )}
+
+
+            <div className="space-y-4 mb-8 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-300">
+                <label className="block text-sm font-bold text-[#446b5f] uppercase tracking-wider">
+                    Tài liệu định danh (Tự động trích xuất)
+                </label>
+
+                <div className={`grid grid-cols-1 gap-4 ${formData.idType === 'PASSPORT' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+                    {/* Front ID */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                            {formData.idType === 'PASSPORT' ? 'Trang ảnh Hộ chiếu' :
+                             formData.idType === 'DRIVER_LICENSE' ? 'Mặt trước Bằng lái xe' : 'Mặt trước CCCD'}
+                        </p>
+                        <div className="space-y-3">
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, 'idImageFront')}
+                                className="block w-full text-[10px] text-gray-500
+                                    file:mr-3 file:py-1 file:px-3
+                                    file:rounded-full file:border-0
+                                    file:text-[10px] file:font-bold
+                                    file:bg-[#446b5f]/10 file:text-[#446b5f]
+                                    hover:file:bg-[#446b5f]/20"
+                                disabled={uploading || readOnly}
+                            />
+                            {formData.idImageFront && (
+                                <img src={formData.idImageFront} alt="Front ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Back ID — ẩn với Passport */}
+                    {formData.idType !== 'PASSPORT' && (
+                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                                {formData.idType === 'DRIVER_LICENSE' ? 'Mặt sau Bằng lái xe' : 'Mặt sau CCCD'}
+                            </p>
+                            <div className="space-y-3">
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={(e) => handleFileUpload(e, 'idImageBack')}
+                                    className="block w-full text-[10px] text-gray-500
+                                        file:mr-3 file:py-1 file:px-3
+                                        file:rounded-full file:border-0
+                                        file:text-[10px] file:font-bold
+                                        file:bg-[#446b5f]/10 file:text-[#446b5f]
+                                        hover:file:bg-[#446b5f]/20"
+                                    disabled={uploading || readOnly}
+                                />
+                                {formData.idImageBack && (
+                                    <img src={formData.idImageBack} alt="Back ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Selfie */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Ảnh chân dung</p>
+                        <div className="space-y-3">
+                            <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(e) => handleFileUpload(e, 'selfieImage')}
+                                className="block w-full text-[10px] text-gray-500
+                                    file:mr-3 file:py-1 file:px-3
+                                    file:rounded-full file:border-0
+                                    file:text-[10px] file:font-bold
+                                    file:bg-[#446b5f]/10 file:text-[#446b5f]
+                                    hover:file:bg-[#446b5f]/20"
+                                disabled={uploading || readOnly}
+                            />
+                            {formData.selfieImage && (
+                                <img src={formData.selfieImage} alt="Selfie" className="h-20 w-20 object-cover rounded-full border border-gray-100 mx-auto" />
+                            )}
+                        </div>
+                    </div>
+                </div>
+                {uploading && <p className="text-[10px] text-[#446b5f] font-bold animate-pulse text-center">Đang tải và xử lý bằng AI...</p>}
+                {errors.images && (
+                    <p className="text-xs text-red-600 font-semibold text-center">{errors.images}</p>
+                )}
+            </div>
+
+            <div className="space-y-4">
             <div>
                 <label className="block text-sm font-medium text-gray-700">Người dùng</label>
                 <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
@@ -301,7 +446,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         name="idType"
                         value={formData.idType}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
                         disabled={readOnly}
                     >
                         <option value="CCCD">CCCD</option>
@@ -310,16 +455,23 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Số định danh/CCCD</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                        {formData.idType === 'PASSPORT' ? 'Số hộ chiếu'
+                         : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe'
+                         : 'Số CCCD/CMND'}
+                    </label>
                     <input
                         type="text"
                         name="idNumber"
                         required
                         value={formData.idNumber}
                         onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
-                            }`}
-                        placeholder={formData.idType === 'CCCD' ? '12 chữ số' : formData.idType === 'PASSPORT' ? '8-9 ký tự' : '12 chữ số'}
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'}`}
+                        placeholder={
+                            formData.idType === 'PASSPORT' ? 'VD: B1234567'
+                            : formData.idType === 'DRIVER_LICENSE' ? '12 chữ số'
+                            : '12 chữ số'
+                        }
                         maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
                         disabled={readOnly}
                     />
@@ -337,7 +489,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         onChange={(date: Date | null) => handleDateChange('issueDate', date)}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="DD/MM/YYYY"
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
                             }`}
                         showYearDropdown
                         showMonthDropdown
@@ -357,7 +509,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="DD/MM/YYYY"
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
                             }`}
                         showYearDropdown
                         showMonthDropdown
@@ -380,7 +532,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     required
                     value={formData.issuePlace}
                     onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md shadow-sm focus:ring-indigo-500 sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'
+                    className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
                         }`}
                     placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
                     disabled={readOnly}
@@ -390,86 +542,13 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 )}
             </div>
 
-            <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">Tài liệu đính kèm</label>
-
-                {/* Front ID */}
-                <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh mặt trước</p>
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, 'idImageFront')}
-                            className="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100"
-                            disabled={uploading || readOnly}
-                        />
-                        {formData.idImageFront && (
-                            <img src={formData.idImageFront} alt="Front ID" className="h-12 w-20 object-cover rounded border" />
-                        )}
-                    </div>
-                </div>
-
-                {/* Back ID */}
-                <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh mặt sau</p>
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, 'idImageBack')}
-                            className="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100"
-                            disabled={uploading || readOnly}
-                        />
-                        {formData.idImageBack && (
-                            <img src={formData.idImageBack} alt="Back ID" className="h-12 w-20 object-cover rounded border" />
-                        )}
-                    </div>
-                </div>
-
-                {/* Selfie */}
-                <div className="border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-gray-500 mb-2">Ảnh chân dung (Selfie)</p>
-                    <div className="flex items-center gap-4">
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, 'selfieImage')}
-                            className="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-indigo-50 file:text-indigo-700
-                                hover:file:bg-indigo-100"
-                            disabled={uploading || readOnly}
-                        />
-                        {formData.selfieImage && (
-                            <img src={formData.selfieImage} alt="Selfie" className="h-12 w-12 object-cover rounded-full border" />
-                        )}
-                    </div>
-                </div>
-                {uploading && <p className="text-xs text-blue-600 animate-pulse">Đang tải lên...</p>}
-                {errors.images && (
-                    <p className="text-xs text-red-600 font-semibold">{errors.images}</p>
-                )}
-            </div>
 
             <div className="flex justify-end gap-3 pt-4">
                 {onCancel && (
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f]"
                         disabled={uploading || loading || fetching}
                     >
                         Đóng
@@ -479,11 +558,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     <button
                         type="submit"
                         disabled={loading || uploading || fetching || Object.values(errors).some(error => error !== undefined)}
-                        className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#446b5f] text-base font-medium text-white hover:bg-[#35534a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? 'Đang gửi...' : uploading ? 'Đang tải lên...' : isUpdate ? 'Cập nhật KYC' : 'Gửi KYC'}
                     </button>
                 )}
+            </div>
             </div>
         </form>
     );
