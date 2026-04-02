@@ -1,16 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ChevronLeft,
   ChevronRight,
   HeartHandshake,
+  Dumbbell,
+  Baby,
+  Flame,
+  Users,
+  Gamepad2,
+  Waves,
+  Stethoscope,
+  School,
   Milk,
   Package,
-  School,
-  Stethoscope,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
+
+// Swiper imports
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 
 import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
 import { useToast } from "@/components/ui/Toast";
@@ -19,17 +32,47 @@ import { campaignCategoryService } from "@/services/campaignCategoryService";
 import { campaignService } from "@/services/campaignService";
 import type { CampaignCategory, CampaignDto } from "@/types/campaign";
 import { withFallbackImage } from "@/lib/image";
+import { FundTypeSection } from "./FundTypeSection";
+import { TopFundOwnersSection } from "./TopFundOwnersSection";
+import { GeneralDonationSection } from "./GeneralDonationSection";
 
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }> | string> = {
+  // English
   "Community Kitchens": Package,
-  "School Feeding Programs": School,
-  "Health & Wellness": Stethoscope,
+  "School Feeding Programs": "https://cdn-icons-png.flaticon.com/512/114/114806.png",
+  "Health & Wellness": "https://cdn-icons-png.flaticon.com/512/1988/1988521.png",
   "Emergency Food Relief": HeartHandshake,
   "Nutritional Support": Milk,
+  "Swimming & Aquatics": Waves,
+  "Health & Fitness": Dumbbell,
+  "Childcare": Baby,
+  "Overnight Camps": Flame,
+  "Community Programs": Users,
+  "Youth & Family Programs": Gamepad2,
+  // Vietnamese
+  "Môi trường": "https://cdn-icons-png.flaticon.com/512/794/794931.png",
+  "Động vật": "https://cdn-icons-png.flaticon.com/512/672/672716.png",
+  "Nông nghiệp": "http://cdn-icons-png.flaticon.com/512/10144/10144740.png",
+  "Giáo dục": "https://cdn-icons-png.flaticon.com/512/114/114806.png",
+  "Y tế": "https://cdn-icons-png.flaticon.com/512/1988/1988521.png",
+  "Bơi lội": Waves,
+  "Sức khỏe": "https://cdn-icons-png.flaticon.com/512/1988/1988521.png",
+  "Thể hình": Dumbbell,
+  "Trẻ em": Baby,
+  "Cắm trại": Flame,
+  "Cộng đồng": Users,
+  "Thực phẩm": Package,
+  "Cứu trợ": HeartHandshake,
 };
 
-function getIcon(title: string) {
-  return ICON_MAP[title] || HeartHandshake;
+function getIcon(title: string = "") {
+  const t = title.toLowerCase();
+  for (const [key, icon] of Object.entries(ICON_MAP)) {
+    if (t.includes(key.toLowerCase()) || key.toLowerCase().includes(t)) {
+      return icon;
+    }
+  }
+  return HeartHandshake;
 }
 
 function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignCardItem {
@@ -43,17 +86,6 @@ function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignC
     status: dto.status,
   };
 }
-
-
-
-const categoryCardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.06, duration: 0.35 },
-  }),
-};
 
 const featuredBlockContainer = {
   hidden: {},
@@ -109,7 +141,7 @@ function FeaturedBlock({
           href={`/campaigns/campaignsList?categoryId=${id}`}
           className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
         >
-          See more
+          Xem thêm
           <ChevronRight className="h-4 w-4" />
         </Link>
       </motion.div>
@@ -132,34 +164,33 @@ const CategoryCard = ({
   title,
   Icon,
   onClick,
-  index,
 }: {
   id: string;
   title: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon: React.ComponentType<{ className?: string }> | string;
   onClick: (categoryId: string) => void;
-  index: number;
 }) => {
   return (
-    <motion.button
+    <button
       type="button"
       onClick={() => onClick(id)}
-      variants={categoryCardVariants}
-      initial="hidden"
-      animate="visible"
-      custom={index}
-      whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
-      whileTap={{ scale: 0.98 }}
-      className="group flex w-full min-w-0 flex-col items-center justify-start gap-2 rounded-2xl bg-white px-3 py-4 text-center shadow-sm ring-1 ring-slate-200 hover:shadow-md"
-      style={{ minHeight: 140 }}
+      className="group flex flex-col items-center justify-center gap-3 py-6 px-6 hover:bg-slate-50 border-b-2 border-transparent hover:border-[#F84D43] transition-all duration-300 min-w-[120px] md:min-w-[140px]"
     >
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F84D43] text-white transition group-hover:bg-[#1A685B]">
-        <Icon className="h-6 w-6" />
-      </span>
-      <span className="w-full text-sm sm:text-base font-bold text-slate-900 leading-snug truncate" title={title}>
+      <div className="text-slate-400 group-hover:text-[#F84D43] transition-all duration-300 transform group-hover:scale-110">
+        {typeof Icon === "string" ? (
+          <img
+            src={Icon}
+            alt={title}
+            className="h-14 w-14 md:h-16 md:w-16 object-contain opacity-50 contrast-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:contrast-100 transition-all duration-300"
+          />
+        ) : (
+          <Icon className="h-14 w-14 md:h-16 md:w-16 stroke-[1.2]" />
+        )}
+      </div>
+      <span className="text-[12px] md:text-sm font-semibold text-slate-500 group-hover:text-slate-900 tracking-tight text-center leading-tight whitespace-nowrap">
         {title}
       </span>
-    </motion.button>
+    </button>
   );
 };
 
@@ -169,12 +200,11 @@ export function CampaignCategoriesSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const sectionRef = useRef<HTMLElement>(null);
-  const sectionInView = useInView(sectionRef, { once: true, amount: 0.08 });
+  const prevRef = useRef<HTMLButtonElement>(null);
+  const nextRef = useRef<HTMLButtonElement>(null);
 
   const { toast } = useToast();
 
-  // 1. Fetch Categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -183,7 +213,7 @@ export function CampaignCategoriesSection() {
         setCategories(data);
       } catch (e) {
         console.error("Failed to fetch categories:", e);
-        setError("Không thể tải danh sách danh mục (hệ thống có thể đang khởi động).");
+        setError("Không thể tải danh sách danh mục.");
       } finally {
         setLoading(false);
       }
@@ -191,7 +221,6 @@ export function CampaignCategoriesSection() {
     fetchCategories();
   }, []);
 
-  // 2. Fetch Campaigns for all categories
   useEffect(() => {
     if (categories.length === 0) return;
 
@@ -230,58 +259,26 @@ export function CampaignCategoriesSection() {
     fetchCampaigns();
   }, [categories]);
 
-  useEffect(() => {
-    const hash = typeof window !== "undefined" ? window.location.hash : "";
-    if (!hash || categories.length === 0) return;
-
-    const categoryId = decodeURIComponent(hash.replace("#", ""));
-    const idx = categories.findIndex((c) => c.id.toString() === categoryId);
-    if (idx < 0) return;
-
-    const t = setTimeout(() => {
-      const el = document.getElementById(categoryId);
-      if (el) {
-        const y = el.getBoundingClientRect().top + window.scrollY - 100;
-        window.scrollTo({ top: y, behavior: "smooth" });
-      }
-    }, 100);
-    return () => clearTimeout(t);
-  }, [categories]);
-
   const handleCategoryClick = (categoryId: string) => {
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${categoryId}`);
-
-      const tryScroll = (attempts = 0) => {
-        const el = document.getElementById(categoryId);
-        if (el) {
-          const y = el.getBoundingClientRect().top + window.scrollY - 100;
-          window.scrollTo({ top: y, behavior: "smooth" });
-        } else if (attempts < 10) {
-          setTimeout(() => tryScroll(attempts + 1), 50);
-        }
-      };
-      tryScroll();
+    const el = document.getElementById(categoryId);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 120;
+      window.scrollTo({ top: y, behavior: "smooth" });
     }
   };
 
-  // Calculate balanced grid: at least 5 per row
-  const totalCategories = categories.length;
-  const itemsPerRow = totalCategories > 5 ? Math.max(5, Math.ceil(totalCategories / 2)) : totalCategories;
-  // lg:w-[200px] + gap-4 (16px) = 216px
-  const balancedMaxWidth = totalCategories > 5 ? `${itemsPerRow * 216}px` : "100%";
-
   if (loading && categories.length === 0) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-slate-500">Đang tải danh mục...</p>
+      <div className="py-12 text-center bg-white border-b border-slate-100 shadow-sm">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#F84D43] border-r-transparent"></div>
+        <p className="mt-4 text-slate-500 font-medium tracking-wide">Đang tải danh mục...</p>
       </div>
     );
   }
 
   if (error && categories.length === 0) {
     return (
-      <div className="py-20 text-center flex flex-col items-center justify-center gap-4">
+      <div className="py-12 text-center bg-white border-b border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4">
         <p className="text-red-500 font-medium">{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -293,45 +290,117 @@ export function CampaignCategoriesSection() {
     );
   }
 
+  const showSlider = categories.length > 7;
+
   return (
-    <section ref={sectionRef} id="campaigns" className="py-12 md:py-20 bg-white">
-      <div className="container mx-auto px-4">
-        <motion.div
-          className="mx-auto flex flex-wrap justify-center w-full gap-4"
-          style={{ maxWidth: balancedMaxWidth }}
-          initial="hidden"
-          animate={sectionInView ? "visible" : "hidden"}
-          variants={{
-            visible: { transition: { staggerChildren: 0.06 } },
-            hidden: {},
-          }}
-        >
-          {categories.map(({ name, id }, i) => (
-            <div key={id} className="w-[calc(50%-1rem)] sm:w-[calc(33.333%-1rem)] md:w-[calc(25%-1rem)] lg:w-[200px]">
-              <CategoryCard
-                id={id.toString()}
-                title={name}
-                Icon={getIcon(name)}
-                onClick={handleCategoryClick}
-                index={i}
-              />
+    <section id="campaigns" className="pt-0 pb-8 bg-white overflow-hidden border-b border-slate-100 shadow-sm">
+      <div className="mx-auto w-full max-w-[1440px] px-0 relative">
+        {/* Navigation Arrows - Only show if slider is active and on desktop */}
+        {showSlider && (
+          <>
+            <div className="absolute top-1/2 -translate-y-1/2 left-2 z-20 pointer-events-none hidden md:block">
+              <button
+                ref={prevRef}
+                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#F84D43] transition-colors duration-300"
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </button>
             </div>
-          ))}
-        </motion.div>
+            <div className="absolute top-1/2 -translate-y-1/2 right-2 z-20 pointer-events-none hidden md:block">
+              <button
+                ref={nextRef}
+                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#F84D43] transition-colors duration-300"
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
+            </div>
+          </>
+        )}
 
-        <div className="mt-10 md:mt-14 space-y-10 md:space-y-14">
-          {categories.map(({ id, name, description }) => {
-            const all = categoryCampaigns[id] ?? [];
-            if (all.length === 0) return null;
-
-            const visible = all.slice(0, 5); // CAMPAIGNS_PER_SECTION was 5
-
-            return (
-              <FeaturedBlock key={id} id={id.toString()} title={name} description={description || ""} visible={visible} />
-            );
-          })}
+        {/* Categories Layout */}
+        <div className="flex justify-center w-full">
+          {!showSlider ? (
+            <div className="flex flex-wrap items-center justify-center">
+              {categories.map(({ name, id }) => (
+                <CategoryCard
+                  key={id}
+                  id={id.toString()}
+                  title={name}
+                  Icon={getIcon(name)}
+                  onClick={handleCategoryClick}
+                />
+              ))}
+            </div>
+          ) : (
+            <Swiper
+              modules={[Navigation, Autoplay]}
+              spaceBetween={0}
+              slidesPerView={2}
+              centeredSlides={false}
+              navigation={{
+                prevEl: prevRef.current,
+                nextEl: nextRef.current,
+              }}
+              onBeforeInit={(swiper) => {
+                // @ts-ignore
+                swiper.params.navigation.prevEl = prevRef.current;
+                // @ts-ignore
+                swiper.params.navigation.nextEl = nextRef.current;
+              }}
+              breakpoints={{
+                640: { slidesPerView: 3 },
+                768: { slidesPerView: 4 },
+                1024: { slidesPerView: 6 },
+                1280: { slidesPerView: 7 },
+              }}
+              className="category-swiper w-full px-12"
+            >
+              {categories.map(({ name, id }) => (
+                <SwiperSlide key={id}>
+                  <CategoryCard
+                    id={id.toString()}
+                    title={name}
+                    Icon={getIcon(name)}
+                    onClick={handleCategoryClick}
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          )}
         </div>
+      </div>
+
+      <div className="mt-8">
+        <FundTypeSection />
+      </div>
+
+      <TopFundOwnersSection />
+
+      {/* Category-based Campaign Blocks */}
+      <div className="container mx-auto px-4 mt-16 space-y-16">
+        {categories.map(({ id, name, description }) => {
+          const all = categoryCampaigns[id] ?? [];
+          if (all.length === 0) return null;
+
+          const visible = all.slice(0, 5);
+
+          return (
+            <FeaturedBlock
+              key={id}
+              id={id.toString()}
+              title={name}
+              description={description || ""}
+              visible={visible}
+            />
+          );
+        })}
+      </div>
+
+      <div className="mt-24">
+        <GeneralDonationSection />
       </div>
     </section>
   );
 }
+
+

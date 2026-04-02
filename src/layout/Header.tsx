@@ -2,7 +2,7 @@
 import { useStickyHeader } from "@/utility";
 import Image from "next/image";
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { UserDropdown } from "@/components/UserDropdown";
 import { UserMenuMobile } from "@/components/UserMenuMobile";
 import { useAuth } from "@/contexts/AuthContextProxy";
@@ -11,7 +11,7 @@ import NotificationBell from "@/components/NotificationBell";
 const Header = ({ header }: { header?: number }) => {
   if (header === 0) return null;
   useStickyHeader();
-  const headers = { 1: Header1, 3: Header3, 4: Header4 };
+  const headers = { 1: Header1, 3: Header3, 4: Header4, 5: Header5 };
   const HeaderComponent = headers[header as keyof typeof headers] || Header3;
   const [toggleMobileMenu, setToggleMobileMenu] = useState(false);
   return (
@@ -196,9 +196,65 @@ const Header4 = ({ open }: { open: () => void }) => {
                 </div>
                 <NotificationBell />
                 <AuthButton />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+    </Fragment>
+  );
+};
+
+const Header5 = ({ open }: { open: () => void }) => {
+  const [toggle, setToggle] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    handleScroll(); // Initial check
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <Fragment>
+      <SearchPopup open={toggle} close={() => setToggle(false)} />
+      {/* Transparent overlay header */}
+      <header
+        className={`header-5 fixed w-full z-50 left-0 top-0 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}
+        style={{ borderBottom: 'none' }}
+      >
+        <div className="container">
+          <div className="mega-menu-wrapper">
+            <div className="header-main style-2 flex items-center justify-between">
+              <div className="header-left d-flex align-items-center">
+                <Logo logo={isScrolled ? "black-logo.png" : "white-logo.png"} />
+              </div>
+              <div className="header-right d-flex justify-content-end align-items-center gap-3">
+                <div className="mean__menu-wrapper">
+                  <Nav whiteText={!isScrolled} />
+                </div>
+                <a
+                  href="#0"
+                  className="search-trigger search-icon"
+                  onClick={() => setToggle(true)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', transition: 'all 0.3s' }}
+                >
+                  <i className="fas fa-search" style={{ color: isScrolled ? '#333' : '#fff' }}></i>
+                </a>
+                <div className="header-button d-none d-sm-block">
+                  <Link href="/donation-details" className="theme-btn" style={{ padding: '10px 20px', fontSize: '13px', backgroundColor: '#F84D43', color: '#fff', border: 'none', borderRadius: '6px' }}>
+                    Ủng hộ ngay
+                    <i className="ps-2 far fa-heart" />
+                  </Link>
+                </div>
+                <NotificationBell />
+                <AuthButton whiteText={!isScrolled} />
                 <div className="header__hamburger d-xl-none my-auto">
                   <div className="sidebar__toggle" onClick={open}>
-                    <i className="fas fa-bars" />
+                    <i className="fas fa-bars" style={{ color: isScrolled ? '#333' : '#fff' }} />
                   </div>
                 </div>
               </div>
@@ -234,21 +290,21 @@ const HomeMenuItem = ({ n }: { n: number }) => (
   </div>
 );
 
-const Nav = () => (
+const Nav = ({ whiteText = false }: { whiteText?: boolean }) => (
   <div className="main-menu d-none d-lg-block">
     <nav id="mobile-menu">
       <ul className="d-flex align-items-center mb-0" style={{ gap: '2rem' }}>
         <li className="m-0">
-          <Link href="/" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Trang chủ</Link>
+          <Link href="/" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Trang chủ</Link>
         </li>
         <li className="m-0">
-          <Link href="/about" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Giới thiệu</Link>
+          <Link href="/about" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Giới thiệu</Link>
         </li>
         <li className="m-0">
-          <Link href="/campaigns" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Chiến dịch</Link>
+          <Link href="/campaigns" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Chiến dịch</Link>
         </li>
         <li className="m-0">
-          <Link href="/post" className="font-semibold text-gray-700 hover:text-orange-600" style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}>Cộng đồng</Link>
+          <Link href="/post" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Cộng đồng</Link>
         </li>
       </ul>
     </nav>
@@ -358,7 +414,7 @@ const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
   );
 };
 
-const AuthButton = () => {
+const AuthButton = ({ whiteText = false }: { whiteText?: boolean }) => {
   const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
@@ -371,7 +427,7 @@ const AuthButton = () => {
 
   return (
     <div className="header-button d-none d-xl-block">
-      <Link href="/sign-in" className="theme-btn transparent-btn">
+      <Link href="/sign-in" className="theme-btn transparent-btn" style={whiteText ? { color: '#fff', border: '1px solid #fff' } : {}}>
         Đăng nhập
       </Link>
     </div>
