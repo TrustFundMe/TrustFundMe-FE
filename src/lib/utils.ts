@@ -17,3 +17,10 @@ export function isJwtExpired(token: string | undefined): boolean {
     return false
   }
 }
+
+export function formatCurrency(value: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(value);
+}

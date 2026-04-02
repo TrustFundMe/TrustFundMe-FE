@@ -30,6 +30,7 @@ import {
     Rss,
     Bell,
     History,
+    Database,
 } from "lucide-react"
 
 export const iconMap: Record<IconKey, LucideIcon> = {
@@ -62,4 +63,5 @@ export const iconMap: Record<IconKey, LucideIcon> = {
     rss: Rss,
     bell: Bell,
     history: History,
+    database: Database,
 }

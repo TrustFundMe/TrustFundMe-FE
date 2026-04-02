@@ -28,7 +28,7 @@ export type IconKey =
     | "rss"
     | "bell"
     | "history"
-    | "credit-card";
+    | "database";
 
 
 export interface ModuleGroup {
