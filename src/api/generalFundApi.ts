@@ -66,4 +66,11 @@ export const generalFundApi = {
         );
         return response.data;
     },
+
+    // PUT /api/campaigns/{id}/update-balance (Dedicated Balance Update)
+    updateCampaignBalance: async (id: number, amount: number): Promise<void> => {
+        await axiosInstance.put(`/api/campaigns/${id}/update-balance`, null, {
+            params: { amount }
+        });
+    },
 };

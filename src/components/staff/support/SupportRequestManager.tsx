@@ -42,7 +42,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
         try {
             const data = await generalFundApi.getHistory();
             const mappedHistory: SupportRequest[] = data
-                .filter(tx => tx.createdByStaffId === currentUser?.id || tx.type === 'SUPPORT')
+                .filter(tx => tx.createdByStaffId === currentUser?.id && tx.type === 'SUPPORT')
                 .map(tx => ({
                     ...tx,
                     id: String(tx.id),
@@ -156,18 +156,6 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
                                         <span className="text-xs font-medium text-gray-600 line-clamp-1 max-w-md italic">
                                             "{tx.reason || '---'}"
                                         </span>
-                                    )
-                                },
-                                {
-                                    key: 'actions',
-                                    title: 'XEM',
-                                    className: 'text-center',
-                                    render: () => (
-                                        <div className="flex justify-center">
-                                            <div className="p-1.5 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-white group-hover:text-gray-600 transition-all">
-                                                <Eye className="h-4 w-4" />
-                                            </div>
-                                        </div>
                                     )
                                 }
                             ]}

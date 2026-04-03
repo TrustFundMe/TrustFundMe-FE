@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     TrendingUp,
-    ArrowUpRight
+    ArrowUpRight,
+    Plus
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast, Toaster } from 'react-hot-toast';
@@ -11,22 +12,33 @@ import { generalFundApi } from '@/api/generalFundApi';
 import { GeneralFundStats, InternalTransaction } from '@/types/internalTransaction';
 import { formatCurrency } from '@/lib/utils';
 import { api as axiosInstance } from '@/config/axios';
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Area,
+    AreaChart
+} from 'recharts';
 import { InternalTransactionHistory } from '@/components/admin/general/InternalTransactionHistory';
 
 // --- Shared Components (Matching Screenshot exactly) ---
 
 const StatCard = ({ title, value, isCurrency, bgColor, titleColor, valueColor }: any) => (
-    <div className={`${bgColor} p-6 rounded-[24px] transition-all hover:scale-[1.01] shadow-sm flex flex-col justify-between h-[160px]`}>
+    <div className={`${bgColor} p-4 rounded-[28px] shadow-sm flex flex-col justify-between border border-white/40 h-full`}>
         <div className="flex justify-between items-start">
-            <div className={`text-[10px] font-black uppercase tracking-wider ${titleColor}`}>{title}</div>
-            <button className="h-6 w-6 rounded-md bg-white flex items-center justify-center shadow-sm cursor-pointer hover:bg-gray-50 transition-colors border border-gray-100">
-                <ArrowUpRight className="h-3 w-3 text-gray-400" />
+            <span className={`text-[8px] font-black uppercase tracking-widest ${titleColor} opacity-80`}>{title}</span>
+            <button className="h-6 w-6 rounded-lg bg-white/60 flex items-center justify-center shadow-sm border border-white/40">
+                <Plus className="h-3 w-3 text-gray-400 rotate-45" />
             </button>
         </div>
-        <div className={`text-[22px] font-black ${valueColor} tracking-tight font-sans`}>
+        <div className={`text-[18px] font-black ${valueColor} tracking-tight font-sans truncate`}>
             {isCurrency ? (
                 <>
-                    {typeof value === 'number' ? new Intl.NumberFormat('vi-VN').format(value) : value} <span className="underline ml-0.5">đ</span>
+                    {typeof value === 'number' ? new Intl.NumberFormat('vi-VN').format(value) : value} <span className="underline ml-0.5 text-[12px]">đ</span>
                 </>
             ) : value}
         </div>
@@ -34,20 +46,20 @@ const StatCard = ({ title, value, isCurrency, bgColor, titleColor, valueColor }:
 );
 
 const ChartContainer = ({ title, filter, setFilter, children }: any) => (
-    <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full relative">
-        <div className="flex justify-between items-center mb-6">
-            <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">{title}</h3>
+    <div className="bg-white p-5 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full relative">
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest">{title}</h3>
             <select
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="text-[10px] font-black uppercase text-gray-900 border-2 border-gray-900 rounded-xl px-4 py-1 outline-none cursor-pointer tracking-widest hover:bg-gray-50 transition-colors"
+                className="text-[9px] font-black uppercase text-gray-900 border-2 border-gray-900 rounded-xl px-3 py-1 outline-none cursor-pointer tracking-widest hover:bg-gray-50 transition-colors"
             >
                 <option value="NĂM NAY">Năm nay</option>
                 <option value="THÁNG NAY">Tháng này</option>
                 <option value="TUẦN NAY">Tuần này</option>
             </select>
         </div>
-        <div className="flex-1 relative min-h-[220px] w-full">
+        <div className="flex-1 min-h-0">
             {children}
         </div>
     </div>
@@ -55,90 +67,58 @@ const ChartContainer = ({ title, filter, setFilter, children }: any) => (
 
 // --- Dynamic Trend Line Chart ---
 const TrendLineChart = ({ dataPoints, labels, isPositive, filter }: any) => {
-    const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+    // Transform data for Recharts
+    const chartData = dataPoints.map((val: number, i: number) => ({
+        name: labels[i] || '',
+        balance: val
+    }));
 
-    // Calculate SVG paths
-    const maxVal = Math.max(...dataPoints, 1);
-    const minVal = Math.min(...dataPoints, 0);
-    const range = maxVal - minVal || 1;
-    const paddingY = 30; // More padding for bottom labels
-    const height = 220;
-    const width = 500;
-
-    const points = dataPoints.map((val: number, i: number) => {
-        const x = dataPoints.length === 1 ? width / 2 : (i / (dataPoints.length - 1)) * width;
-        const y = height - paddingY - ((val - minVal) / range) * (height - paddingY * 2);
-        return { x, y, val };
-    });
-
-    const d = `M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`;
-    const areaD = `${d} L ${points[points.length - 1]?.x || width},${height} L ${points[0]?.x || 0},${height} Z`;
-
-    const color = isPositive ? '#1a1a1a' : '#1a1a1a'; // As seen in screenshot, black line
-    const colorArea = isPositive ? '#16a34a' : '#ef4444'; // Subtle green/red area under it? Wait, screenshot is plain black. Let's make the line black, no gradient for now, or match exactly what user asked ("xanh rêu đậm, giảm màu đỏ"). 
-    const finalColor = isPositive ? '#16a34a' : '#ef4444';
+    const finalColor = isPositive ? '#0F5D51' : '#ef4444'; // Xanh rêu đậm hoặc Đỏ
 
     return (
-        <div className="w-full h-full relative">
-            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
-                {/* Horizontal Grid Lines */}
-                {[0, 0.33, 0.66, 1].map((scale, i) => (
-                    <line key={i} x1="0" y1={paddingY + scale * (height - paddingY * 2)} x2={width} y2={paddingY + scale * (height - paddingY * 2)} stroke="#f8fafc" strokeWidth="1.5" />
-                ))}
-
-                {/* Line Path */}
-                {points.length > 1 && (
-                    <motion.path
-                        initial={{ pathLength: 0 }}
-                        animate={{ pathLength: 1 }}
-                        transition={{ duration: 1.5, ease: "easeInOut" }}
-                        d={d}
-                        fill="none"
-                        stroke={finalColor} // Matches user instruction
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                )}
-
-                {/* Interaction Overlay */}
-                {points.map((p: any, i: number) => (
-                    <g key={i} className="group cursor-pointer">
-                        {/* Hover visual circle */}
-                        <circle cx={p.x} cy={p.y} r="6" fill={finalColor} stroke="white" strokeWidth="2.5"
-                            className={`transition-all ${hoverIndex === i ? 'opacity-100 scale-125' : 'opacity-0 scale-100 group-hover:opacity-100 group-hover:scale-125'}`}
-                        />
-                        {/* Invisible capture area */}
-                        <rect x={p.x - (width / dataPoints.length) / 2} y="0" width={width / dataPoints.length} height={height} fill="transparent"
-                            onMouseEnter={() => setHoverIndex(i)}
-                            onMouseLeave={() => setHoverIndex(null)}
-                        />
-                    </g>
-                ))}
-            </svg>
-
-            {/* X Axis Labels */}
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between">
-                {labels.filter((_: any, i: number) => {
-                    if (labels.length > 12) {
-                        return i % (Math.ceil(labels.length / 12)) === 0;
-                    }
-                    return true;
-                }).map((l: string, i: number) => (
-                    <span key={i} className="text-[10px] font-black uppercase text-gray-400 tracking-widest">{l}</span>
-                ))}
-            </div>
-
-            {/* Tooltip */}
-            {hoverIndex !== null && (
-                <div
-                    className="absolute z-10 bg-white border border-gray-100 shadow-xl rounded-[16px] p-4 pointer-events-none transform -translate-x-1/2 -translate-y-[130%]"
-                    style={{ left: `${(hoverIndex / (points.length - 1 || 1)) * 100}%`, top: `${(points[hoverIndex].y / height) * 100}%` }}
+        <div className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                    data={chartData}
+                    margin={{ top: 10, right: 10, left: 10, bottom: 20 }}
                 >
-                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">{filter === 'NĂM NAY' ? 'Tháng ' : ''}{labels[hoverIndex]}</div>
-                    <div className="text-[11px] font-black text-gray-900">{formatCurrency(points[hoverIndex].val)}<span className="underline ml-0.5">đ</span></div>
-                </div>
-            )}
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
+                        dy={10}
+                        interval={Math.ceil(labels.length / 8)}
+                    />
+                    <YAxis
+                        hide={true}
+                        padding={{ top: 20, bottom: 20 }}
+                    />
+                    <Tooltip
+                        contentStyle={{
+                            borderRadius: '16px',
+                            border: 'none',
+                            boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '12px'
+                        }}
+                        labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                        formatter={(value: any) => [new Intl.NumberFormat('vi-VN').format(value) + ' đ', 'Số dư']}
+                        labelFormatter={(label) => `Thời gian: ${label}`}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="balance"
+                        stroke={finalColor}
+                        strokeWidth={3.5}
+                        dot={{ r: 4, fill: finalColor, strokeWidth: 0 }}
+                        activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
+                        animationDuration={1500}
+                    />
+                </LineChart>
+            </ResponsiveContainer>
         </div>
     );
 };
@@ -154,24 +134,39 @@ export default function AdminGeneralFundPage() {
 
     useEffect(() => {
         fetchData();
-        fetchCampaigns();
-        fetchStaff();
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const [statsRes, historyRes] = await Promise.all([
                 generalFundApi.getStats(),
-                generalFundApi.getHistory() // History contains support requests and standard txes
+                generalFundApi.getHistory()
             ]);
             setStats(statsRes);
             setHistory(historyRes);
+
+            // Fetch campaigns and staff using existing local functions
+            await Promise.all([fetchCampaigns(), fetchStaff()]);
+
+            // DIAGNOSTIC LOG: Hiển thị bảng ID và Tên chiến dịch để kiểm tra mã ID gốc
+            axiosInstance.get('/api/campaigns/status/APPROVED').then(res => {
+                console.group('%c [HỆ THỐNG] KIỂM TRA ID CHIẾN DỊCH (ADMIN)', 'color: #ff9800; font-weight: bold;');
+                console.table((res.data as any).map((c: any) => ({
+                    ID: c.id,
+                    TITLE: c.title,
+                    BALANCE: new Intl.NumberFormat('vi-VN').format(c.balance) + ' đ'
+                })));
+                console.groupEnd();
+            });
+
+            return { stats: statsRes, history: historyRes };
         } catch (error) {
-            toast.error('Lỗi khi tải dữ liệu quỹ chung');
+            console.error('Failed to fetch data', error);
+            return null;
         } finally {
             setLoading(false);
         }
-    };
+    }, [chartFilter]);
 
     const fetchCampaigns = async () => {
         try {
@@ -192,10 +187,42 @@ export default function AdminGeneralFundPage() {
     };
 
     const handleUpdateStatus = async (id: number, status: string) => {
+        const tx = history.find(t => t.id === id);
+        const oldBalance = stats.balance;
         try {
+            console.log(`%c >>> BẮT ĐẦU CẬP NHẬT TRẠNG THÁI: ${status} <<< `, 'background: #222; color: #bada55; font-weight: bold;');
+            if (tx) {
+                console.log('ID Giao dịch:', id);
+                console.log('Số tiền:', new Intl.NumberFormat('vi-VN').format(tx.amount), 'đ');
+                if (status === 'APPROVED' || status === 'COMPLETED') {
+                    console.log('Hành động: TRỪ Quỹ Chung (ID: 1)');
+                    console.log(`Hành động: CỘNG Chiến dịch đích (ID: ${tx.toCampaignId})`);
+                }
+            }
+
             await generalFundApi.updateStatus(id, status as any);
-            toast.success('Đã duyệt yêu cầu thành công');
-            fetchData();
+
+            if (status === 'REJECTED') {
+                console.log('%c ✓ Đã từ chối yêu cầu thành công', 'color: #ef4444; font-weight: bold;');
+                toast.success('Đã từ chối yêu cầu thành công');
+            } else {
+                console.log('%c ✓ Đã duyệt thành công', 'color: #10b981; font-weight: bold;');
+                toast.success('Đã duyệt yêu cầu thành công');
+            }
+
+            // Đợi fetch lại dữ liệu mới từ SERVER
+            const newData = await fetchData();
+
+            if (tx && (status === 'APPROVED' || status === 'COMPLETED')) {
+                console.log('%c [XÁC NHẬN SỐ DƯ TỪ SERVER]', 'color: #10b981; font-weight: bold;');
+                console.log(' - Trước:', new Intl.NumberFormat('vi-VN').format(oldBalance), 'đ');
+                if (newData) {
+                    console.log(' - Sau (Thực tế từ DB):', new Intl.NumberFormat('vi-VN').format(newData.stats.balance), 'đ');
+                    if (newData.stats.balance === oldBalance) {
+                        console.warn('!!! CẢNH BÁO: Số dư DB không đổi sau khi duyệt !!!');
+                    }
+                }
+            }
         } catch (error: any) {
             console.error('Lỗi khi cập nhật trạng thái', error);
             // Error handling toast happens inside InternalTransactionHistory logic if preferred, or here
@@ -214,7 +241,8 @@ export default function AdminGeneralFundPage() {
         }
 
         const now = new Date();
-        const completedHistory = history.filter(tx => tx.status === 'COMPLETED');
+        const validStatuses = ['COMPLETED', 'APPROVED'];
+        const completedHistory = history.filter(tx => validStatuses.includes(tx.status));
         const sortedAsc = [...completedHistory].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
         let currentB = Number(stats.balance);
@@ -229,156 +257,65 @@ export default function AdminGeneralFundPage() {
         }
         const initialBalance = currentB;
 
-        if (chartFilter === 'NĂM NAY') {
-            labels = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-            points = new Array(12).fill(initialBalance);
-
-            let runningB = initialBalance;
-            for (let month = 0; month < 12; month++) {
-                const txsInMonth = sortedAsc.filter(tx => {
-                    const d = new Date(tx.createdAt);
-                    return d.getFullYear() === now.getFullYear() && d.getMonth() === month;
-                });
-
-                for (const tx of txsInMonth) {
-                    if (tx.toCampaignId === 1) runningB += Number(tx.amount);
-                    if (tx.fromCampaignId === 1) runningB -= Number(tx.amount);
-                }
-                points[month] = runningB;
-            }
-        } else if (chartFilter === 'THÁNG NAY') {
-            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            labels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
-            points = new Array(daysInMonth).fill(initialBalance);
-
-            let runningB = initialBalance;
-
-            const pastTxs = sortedAsc.filter(tx => new Date(tx.createdAt).getMonth() < now.getMonth());
-            for (const tx of pastTxs) {
-                if (tx.toCampaignId === 1) runningB += Number(tx.amount);
-                if (tx.fromCampaignId === 1) runningB -= Number(tx.amount);
-            }
-
-            for (let day = 0; day < daysInMonth; day++) {
-                const txsInDate = sortedAsc.filter(tx => {
-                    const d = new Date(tx.createdAt);
-                    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === day + 1;
-                });
-
-                for (const tx of txsInDate) {
-                    if (tx.toCampaignId === 1) runningB += Number(tx.amount);
-                    if (tx.fromCampaignId === 1) runningB -= Number(tx.amount);
-                }
-                points[day] = runningB;
-            }
-        } else {
-            labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-            points = new Array(7).fill(initialBalance);
-
-            let startOfWeek = new Date(now);
-            const dayOfWeek = startOfWeek.getDay() === 0 ? 7 : startOfWeek.getDay();
-            startOfWeek.setDate(now.getDate() - dayOfWeek + 1);
-            startOfWeek.setHours(0, 0, 0, 0);
-
-            let runningB = initialBalance;
-            const pastTxs = sortedAsc.filter(tx => new Date(tx.createdAt).getTime() < startOfWeek.getTime());
-            for (const tx of pastTxs) {
-                if (tx.toCampaignId === 1) runningB += Number(tx.amount);
-                if (tx.fromCampaignId === 1) runningB -= Number(tx.amount);
-            }
-
-            for (let d = 0; d < 7; d++) {
-                const targetDay = new Date(startOfWeek);
-                targetDay.setDate(targetDay.getDate() + d);
-
-                const txsInDate = sortedAsc.filter(tx => {
-                    const dt = new Date(tx.createdAt);
-                    return dt.getDate() === targetDay.getDate() && dt.getMonth() === targetDay.getMonth() && dt.getFullYear() === targetDay.getFullYear();
-                });
-
-                for (const tx of txsInDate) {
-                    if (tx.toCampaignId === 1) runningB += Number(tx.amount);
-                    if (tx.fromCampaignId === 1) runningB -= Number(tx.amount);
-                }
-                points[d] = runningB;
-            }
-        }
-
-        isPositive = points[points.length - 1] >= points[0];
-
-        return { labels, points, isPositive };
-    }, [history, stats, chartFilter]);
+        // Instead of fixed buckets, use actual transaction times for more granularity
+        // But still respect the filter range
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfWeek = new Date(now);
+        const dayOfWeekOffset = startOfWeek.getDay() === 0 ? 6 : startOfWeek.getDay() - 1;
+        return { labels: [], points: [] };
+    }, [history, stats]);
 
     return (
-        <div className="p-8 space-y-6 bg-gray-50 min-h-screen font-sans">
-            <Toaster position="top-right" />
-
-            {/* Header Section */}
-            {/* Omitted from the user's screenshot, but we keep it minimal if they want it.
-                Since screenshot cuts off top, we'll keep a subtle header or remove it. 
-                Let's keep it. */}
-
-            {/* Top Section: 2x2 Cards (Left) + Chart (Right) */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-                {/* 4 Stat Cards in 2x2 grid */}
-                <div className="grid grid-cols-2 gap-6">
-                    <StatCard
-                        title="BALANCE"
-                        value={stats.balance}
-                        isCurrency={true}
-                        bgColor="bg-[#fff7ed]" // light orange
-                        titleColor="text-[#df9e6e]"
-                        valueColor="text-[#b25528]"
-                    />
-                    <StatCard
-                        title="SPENDING"
-                        value={stats.outcome}
-                        isCurrency={true}
-                        bgColor="bg-[#f0fdf4]" // light green
-                        titleColor="text-[#7ea68d]"
-                        valueColor="text-[#1d6b38]"
-                    />
-                    <StatCard
-                        title="PORTFOLIO"
-                        value={stats.income}
-                        isCurrency={true}
-                        bgColor="bg-[#f0f9ff]" // light blue
-                        titleColor="text-[#88adc6]"
-                        valueColor="text-[#1a3f65]"
-                    />
-                    <StatCard
-                        title="INVESTMENT"
-                        value={history.length}
-                        isCurrency={false}
-                        bgColor="bg-[#f8fafc]" // light slate
-                        titleColor="text-[#8b9dba]"
-                        valueColor="text-[#132034]"
-                    />
-                </div>
-
-                {/* Trend Chart */}
-                <div className="h-full">
-                    <ChartContainer title="XU HƯỚNG NGUỒN VỐN" filter={chartFilter} setFilter={setChartFilter}>
-                        <TrendLineChart
-                            dataPoints={chartData.points}
-                            labels={chartData.labels}
-                            isPositive={chartData.isPositive} // Dynamically colors the chart
-                            filter={chartFilter}
-                        />
-                    </ChartContainer>
-                </div>
+        <div className="flex flex-col h-screen overflow-hidden bg-gray-50/30 p-4 font-sans">
+            {/* Top Section: 4 Stat Cards in a single row */}
+            <div className="grid grid-cols-4 gap-4 mb-4 shrink-0">
+                <StatCard
+                    title="SỐ DƯ"
+                    value={stats.balance}
+                    isCurrency={true}
+                    bgColor="bg-[#fff7ed]" // light orange
+                    titleColor="text-[#c29d84]"
+                    valueColor="text-[#7c5d41]"
+                />
+                <StatCard
+                    title="CHI TIÊU"
+                    value={stats.outcome}
+                    isCurrency={true}
+                    bgColor="bg-[#f0fdf4]" // light green
+                    titleColor="text-[#86b595]"
+                    valueColor="text-[#2d6a4f]"
+                />
+                <StatCard
+                    title="TỔNG THU"
+                    value={stats.income}
+                    isCurrency={true}
+                    bgColor="bg-[#f0f9ff]" // light blue
+                    titleColor="text-[#88adc6]"
+                    valueColor="text-[#1a3f65]"
+                />
+                <StatCard
+                    title="GIAO DỊCH"
+                    value={history.length}
+                    isCurrency={false}
+                    bgColor="bg-[#f8fafc]" // gray-50
+                    titleColor="text-gray-400"
+                    valueColor="text-gray-900"
+                />
             </div>
 
             {/* Bottom Section: Support Requests Table */}
-            <div className="mt-6">
+            <div className="flex-1 min-h-0 px-1 pb-1">
                 <InternalTransactionHistory
                     history={history}
                     campaigns={campaigns}
                     users={users}
                     onUpdateStatus={handleUpdateStatus}
+                    onRefresh={async () => { await fetchData(); }}
                 />
             </div>
+
+            <Toaster position="top-right" />
         </div>
     );
 }

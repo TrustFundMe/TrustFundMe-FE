@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Eye, Check, X, Plus } from 'lucide-react';
+import { Search, Filter, Eye, Check, X, Plus, ChevronLeft, ChevronRight, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import { InternalTransaction } from '@/types/internalTransaction';
@@ -18,15 +18,44 @@ interface InternalTransactionHistoryProps {
     onUpdateStatus?: (id: number, status: string) => Promise<void>;
 }
 
-export function InternalTransactionHistory({ history: initialHistory, campaigns, users = [], onUpdateStatus }: InternalTransactionHistoryProps) {
+export function InternalTransactionHistory({ history: initialHistory, campaigns, users = [], onUpdateStatus, onRefresh }: {
+    history: InternalTransaction[];
+    campaigns: any[];
+    users?: any[];
+    onUpdateStatus?: (id: number, status: string) => Promise<void>;
+    onRefresh?: () => Promise<void>;
+}) {
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
+    const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Dùng API data thật, lọc lấy type SUPPORT
-    const displayHistory = initialHistory.filter(tx => tx.type === 'SUPPORT');
+    // Dùng API data thật, lọc lấy type SUPPORT + status filter
+    const displayHistory = initialHistory.filter(tx => {
+        const isSupport = tx.type === 'SUPPORT';
+        if (!isSupport) return false;
+
+        if (statusFilter === 'ALL') return true;
+        if (statusFilter === 'PENDING') return tx.status === 'PENDING';
+        if (statusFilter === 'APPROVED') return tx.status === 'APPROVED' || tx.status === 'COMPLETED';
+        if (statusFilter === 'REJECTED') return tx.status === 'REJECTED';
+        return true;
+    });
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+    const totalPages = Math.max(1, Math.ceil(displayHistory.length / itemsPerPage));
+    const paginatedHistory = displayHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    const handleRefresh = async () => {
+        if (!onRefresh) return;
+        setIsRefreshing(true);
+        await onRefresh();
+        setIsRefreshing(false);
+    };
 
     return (
         <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full relative font-sans">
-            <div className="p-4 border-b border-gray-50 flex flex-wrap justify-between items-center gap-4">
+            <div className="py-2 px-4 border-b border-gray-50 flex flex-wrap justify-between items-center gap-4">
                 <div className="flex items-center gap-3">
                     <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">Yêu cầu hỗ trợ từ Staff</h3>
                     <span className="bg-orange-50 text-orange-600 text-[9px] font-black px-2 py-0.5 rounded-full border border-orange-100">
@@ -34,7 +63,7 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                     </span>
                 </div>
 
-                <div className="flex items-center gap-3 flex-1 max-w-md">
+                <div className="flex items-center gap-3 flex-1 max-w-lg">
                     <div className="relative flex-1 group">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300 group-focus-within:text-gray-900 transition-colors" />
                         <input
@@ -43,16 +72,33 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                             className="w-full bg-gray-50 border border-gray-100 py-1.5 pl-10 pr-4 rounded-xl text-[10px] font-bold text-gray-900 outline-none focus:ring-1 focus:ring-gray-300 transition-all"
                         />
                     </div>
-                    <button className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-100 rounded-xl text-[9px] font-black text-gray-400 hover:text-gray-900 transition-all uppercase tracking-widest">
-                        <Filter className="h-3 w-3" />
-                        Lọc
-                    </button>
+                    <div className="flex items-center gap-1.5 bg-gray-50 p-0.5 rounded-xl border border-gray-100">
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className={`p-1.5 rounded-lg border border-gray-100 text-gray-400 hover:text-gray-900 transition-all ${isRefreshing ? 'animate-spin' : ''}`}
+                            title="Tải lại dữ liệu"
+                        >
+                            <RefreshCcw className="h-3 w-3" />
+                        </button>
+                        <div className="h-4 w-[1px] bg-gray-200"></div>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-transparent text-[9px] font-black text-gray-400 px-2 py-1 outline-none uppercase cursor-pointer hover:text-gray-900 transition-colors"
+                        >
+                            <option value="ALL">Tất cả</option>
+                            <option value="PENDING">Đang chờ</option>
+                            <option value="APPROVED">Đã duyệt</option>
+                            <option value="REJECTED">Từ chối</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div className="overflow-auto flex-1 custom-scrollbar">
-                <table className="w-full text-left border-collapse">
-                    <thead className="bg-gray-50/50 sticky top-0 z-10 border-b border-gray-100 uppercase">
+            <div className="overflow-auto flex-1 min-h-0 custom-scrollbar">
+                <table className="w-full text-left border-collapse relative">
+                    <thead className="bg-white sticky top-0 z-20 border-b border-gray-100 uppercase shadow-sm">
                         <tr>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Nhân viên</th>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Số điện thoại</th>
@@ -64,7 +110,7 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                        {displayHistory.map((tx, idx) => {
+                        {paginatedHistory.map((tx, idx) => {
                             const c = campaigns.find(c => c.id === tx.toCampaignId);
                             const staffUser = users.find(u => u.id === tx.createdByStaffId);
                             return (
@@ -107,7 +153,7 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                                         <div className="flex items-center justify-end gap-2">
                                             <button
                                                 onClick={() => setSelectedRequest({ ...tx, staffUser })}
-                                                className="p-2 rounded-xl bg-blue-50 text-blue-600 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
+                                                className="p-2 rounded-xl bg-slate-50 text-slate-900 hover:text-white hover:bg-slate-900 hover:shadow-lg transition-all"
                                                 title="Chi tiết"
                                             >
                                                 <Eye className="h-4 w-4" />
@@ -120,6 +166,32 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                     </tbody>
                 </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 0 && (
+                <div className="p-3 border-t border-gray-50 flex flex-wrap items-center justify-between text-[10px] font-black text-gray-400">
+                    <div>
+                        Hiển thị {displayHistory.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(displayHistory.length, currentPage * itemsPerPage)} / {displayHistory.length}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-100 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="px-2">Trang {currentPage} / {totalPages}</span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-100 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <AnimatePresence>
                 {selectedRequest && (
@@ -247,7 +319,7 @@ function RequestDetailsModal({ request, campaign, onClose, onUpdateStatus }: { r
                                     </div>
                                     <div className={`mt-2 inline-flex items-center text-[9px] font-black px-2 py-0.5 rounded-lg border ${request.status === 'APPROVED' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'
                                         }`}>
-                                        {request.status === 'APPROVED' ? 'Duyệt sơ bộ' : 'Chờ phê duyệt'}
+                                        {request.status === 'APPROVED' ? 'Đã hỗ trợ' : 'Chờ phê duyệt'}
                                     </div>
                                 </div>
                             </section>
@@ -318,9 +390,11 @@ function RequestDetailsModal({ request, campaign, onClose, onUpdateStatus }: { r
                             </button>
                             <button
                                 onClick={handleApprove}
-                                disabled={uploading}
-                                className="px-10 py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gray-200/50 hover:bg-gray-800 transition-all hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                                {uploading ? 'Đang xử lý...' : 'Duyệt sơ bộ'}
+                                disabled={uploading || (!request.evidenceImageId && !selectedFile)}
+                                className="px-10 py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gray-200/50 hover:bg-gray-800 transition-all hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                title={(!request.evidenceImageId && !selectedFile) ? "Vui lòng tải lên minh chứng trước khi duyệt" : ""}
+                            >
+                                {uploading ? 'Đang xử lý...' : 'Đã hỗ trợ'}
                             </button>
                         </div>
                     )}
