@@ -110,6 +110,51 @@ export default function AdminFeedPostsPage() {
     }
   };
 
+  const handleApprove = async (post: PostWithFlags) => {
+    setProcessingId(post.id);
+    setProcessingAction('approve');
+    try {
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_APPROVE(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: updated.status, isLocked: updated.isLocked } : p));
+    } catch {
+      alert('Duyet bai that bai.');
+    } finally {
+      setProcessingId(null);
+      setProcessingAction(null);
+    }
+  };
+
+  const handleReject = async (post: PostWithFlags) => {
+    setProcessingId(post.id);
+    setProcessingAction('reject');
+    try {
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_REJECT(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: updated.status } : p));
+    } catch {
+      alert('Tu choi bai that bai.');
+    } finally {
+      setProcessingId(null);
+      setProcessingAction(null);
+    }
+  };
+
+  const handleHide = async (post: PostWithFlags) => {
+    setProcessingId(post.id);
+    setProcessingAction('hide');
+    try {
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_HIDE(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: updated.status, isLocked: updated.isLocked } : p));
+    } catch {
+      alert('An bai that bai.');
+    } finally {
+      setProcessingId(null);
+      setProcessingAction(null);
+    }
+  };
+
   const normalizeType = (type: string) => type?.toUpperCase().includes('CAMPAIGN') ? 'CAMPAIGN' : 'GENERAL';
 
   const filtered = useMemo(() => {
@@ -254,6 +299,18 @@ export default function AdminFeedPostsPage() {
                       <button onClick={() => handleToggleLock(post)} disabled={processingId === post.id}
                         className={`p-1.5 rounded-lg transition-all disabled:opacity-50 ${post.isLocked ? 'bg-red-100 text-red-600' : 'text-slate-400 hover:text-red-600'}`}>
                         {isProcessing(post.id, 'lock') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : post.isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                      </button>
+                      <button onClick={() => handleApprove(post)} disabled={processingId === post.id}
+                        className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 text-[10px] font-bold">
+                        {isProcessing(post.id, 'approve') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'DUYET'}
+                      </button>
+                      <button onClick={() => handleReject(post)} disabled={processingId === post.id}
+                        className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 disabled:opacity-50 text-[10px] font-bold">
+                        {isProcessing(post.id, 'reject') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'TU CHOI'}
+                      </button>
+                      <button onClick={() => handleHide(post)} disabled={processingId === post.id}
+                        className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 disabled:opacity-50 text-[10px] font-bold">
+                        {isProcessing(post.id, 'hide') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'AN'}
                       </button>
                       <button onClick={() => handleDelete(post)} disabled={processingId === post.id}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 transition-all disabled:opacity-50">

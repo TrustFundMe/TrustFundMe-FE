@@ -604,6 +604,19 @@ export default function ForumPage() {
                 />
               </div>
               {user && (
+                <>
+                  <Link
+                    href="/post/my"
+                    className="px-3 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-semibold text-zinc-700 dark:text-zinc-200"
+                  >
+                    Bai cua toi
+                  </Link>
+                  <Link
+                    href="/post/drafts"
+                    className="px-3 py-2.5 rounded-xl border border-amber-200 dark:border-amber-800 text-sm font-semibold text-amber-700 dark:text-amber-300"
+                  >
+                    Draft
+                  </Link>
                 <button
                   onClick={() => setModal(true)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-[#ff5e14] hover:bg-[#e8550f]
@@ -612,6 +625,7 @@ export default function ForumPage() {
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Đăng bài</span>
                 </button>
+                </>
               )}
             </div>
 
