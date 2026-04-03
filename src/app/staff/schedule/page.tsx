@@ -316,85 +316,76 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
     const nextStatuses: AppointmentStatus[] = appointment.status === 'PENDING' ? ['CONFIRMED', 'CANCELLED'] : appointment.status === 'CONFIRMED' ? ['COMPLETED', 'CANCELLED'] : [];
 
     return (
-        <div className="rounded-[24px] border border-gray-100 bg-white shadow-sm overflow-hidden h-full flex flex-col transition-all duration-300">
-            {/* Header - Compact */}
-            <div className="px-5 py-4 border-b border-gray-100 bg-white">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                    <p className="text-gray-400 text-[9px] font-black uppercase tracking-[0.2em]">Lịch hẹn #{appointment.id}</p>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.05em] border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')}`}>
-                         {cfg.label}
-                    </span>
-                </div>
-                <h3 className="text-gray-900 font-black text-sm uppercase tracking-tight line-clamp-2 leading-snug">{appointment.purpose || 'Không có mô tả'}</h3>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col transition-all duration-300">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-3">
+                <div className="text-sm font-black text-gray-900 uppercase tracking-tight">Chi tiết lịch hẹn</div>
+                <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ring-1 ${cfg.bg} ${cfg.color}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+                </span>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 space-y-4 custom-scrollbar">
-                {/* Simplified Time Display */}
-                <div className="flex items-center gap-2 pb-3 border-b border-gray-50">
-                    <div className="flex-1">
-                        <p className="text-[8px] text-gray-400 font-black uppercase tracking-widest mb-1">Thời gian gặp</p>
+            <div className="flex-1 overflow-auto p-3.5 space-y-3 custom-scrollbar">
+                {/* Time Card */}
+                <div className="rounded-xl bg-gray-50/80 p-3 border border-gray-100/50">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Thời gian gặp</p>
+                    <div className="flex items-end justify-between">
                         <div className="flex items-center gap-2">
-                             <span className="text-lg font-black text-gray-800 tracking-tighter leading-none">{start.time}</span>
-                             <span className="text-gray-300 font-light">—</span>
-                             <span className="text-lg font-black text-gray-800 tracking-tighter leading-none">{end.time}</span>
+                            <span className="text-xl font-black text-gray-800 tracking-tighter leading-none">{start.time}</span>
+                            <span className="text-gray-300 font-light text-lg">—</span>
+                            <span className="text-xl font-black text-gray-800 tracking-tighter leading-none">{end.time}</span>
                         </div>
-                        <p className="text-[10px] font-bold text-red-500/80 italic mt-1">{start.date}</p>
+                        <span className="text-[10px] font-black text-[#db5945] uppercase tracking-wider">{duration}</span>
                     </div>
-                    <div className="text-right">
-                         <div className="text-[10px] font-black text-[#db5945] uppercase tracking-wider">{duration}</div>
-                    </div>
+                    <p className="text-[10px] font-bold text-[#db5945]/70 italic mt-1.5">{start.date}</p>
                 </div>
 
-                {/* Simplified Info List - NO BOXES */}
-                <div className="space-y-3 px-1 pt-1">
-                    {[
-                        { label: 'Người tham gia', value: appointment.donorName || `User #${appointment.donorId}` },
-                        { label: 'Staff phụ trách', value: appointment.staffName || `Staff #${appointment.staffId}` },
-                        { label: 'Địa điểm gặp', value: appointment.location || 'Chưa xác định' },
-                    ].map((item, id) => (
-                        <div key={id} className="min-w-0">
-                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest leading-none mb-1">{item.label}</p>
-                            <p className="text-[11px] font-black text-gray-800 tracking-tight uppercase leading-relaxed">{item.value}</p>
-                        </div>
-                    ))}
-                </div>
+                {/* Info Fields */}
+                {[
+                    { label: 'Mục đích / Lý do', value: appointment.purpose || 'Không có mô tả' },
+                    { label: 'Người tham gia', value: appointment.donorName || `User #${appointment.donorId}` },
+                    { label: 'Staff phụ trách', value: appointment.staffName || `Staff #${appointment.staffId}` },
+                    { label: 'Địa điểm gặp', value: appointment.location || 'Chưa xác định' },
+                ].map((item) => (
+                    <div key={item.label} className="rounded-xl bg-gray-50/80 p-2 border border-gray-100/50">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{item.label}</p>
+                        <div className="text-xs font-bold text-gray-700 leading-tight">{item.value}</div>
+                    </div>
+                ))}
 
                 {/* Actions */}
                 {nextStatuses.length > 0 && (
-                    <div className="pt-3 border-t border-gray-50 space-y-2">
+                    <div className="pt-1 space-y-2">
                         {appointment.status === 'PENDING' && confirmDeadlinePassed && (
-                            <div className="p-2 rounded-lg bg-red-50/50 border border-red-100 text-[8px] text-red-700 font-bold uppercase tracking-tight italic text-center">
+                            <div className="p-2.5 rounded-xl bg-red-50 border border-red-100 text-[9px] text-red-600 font-bold uppercase tracking-tight text-center">
                                 Quá hạn xác nhận (phải confirm trước 24h)
                             </div>
                         )}
-
                         {appointment.status === 'CONFIRMED' && !appointmentEnded && (
-                            <div className="p-2 rounded-lg bg-amber-50/50 border border-amber-100 text-[8px] text-amber-700 font-bold uppercase tracking-tight italic text-center">
+                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-[9px] text-amber-700 font-bold uppercase tracking-tight text-center">
                                 Có thể hoàn thành sau khi kết thúc lịch
                             </div>
                         )}
-
                         <div className="flex flex-col gap-1.5">
                             {nextStatuses.map(s => {
                                 const isAction = s === 'CONFIRMED' || s === 'COMPLETED';
                                 const isDisabledByConfirmRule = s === 'CONFIRMED' && confirmDeadlinePassed;
                                 const isDisabledByEndRule = s === 'COMPLETED' && !appointmentEnded;
                                 const isDisabled = isDisabledByConfirmRule || isDisabledByEndRule;
-                                
                                 return (
-                                    <button 
-                                        key={s} 
-                                        onClick={() => !isDisabled && handleStatus(s)} 
+                                    <button
+                                        key={s}
+                                        onClick={() => !isDisabled && handleStatus(s)}
                                         disabled={updating !== null || isDisabled}
-                                        className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                                            isDisabled 
-                                            ? 'bg-gray-50 text-gray-300 cursor-not-allowed' 
-                                            : isAction 
-                                              ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10' 
+                                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                                            isDisabled
+                                            ? 'bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed'
+                                            : isAction
+                                              ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10'
                                               : 'text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200'
                                         } disabled:opacity-60`}
                                     >
-                                        {updating === s ? <Loader2 className="h-3 w-3 animate-spin" /> : s === 'CONFIRMED' ? 'Duyệt lịch' : s === 'CANCELLED' ? 'Hủy lịch' : 'Hoàn thành'}
+                                        {updating === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : s === 'CONFIRMED' ? 'Duyệt lịch' : s === 'CANCELLED' ? 'Hủy lịch' : 'Hoàn thành'}
                                     </button>
                                 );
                             })}
