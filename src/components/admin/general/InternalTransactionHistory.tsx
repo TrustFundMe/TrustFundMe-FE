@@ -5,39 +5,24 @@ import { Search, Filter, Eye, Check, X, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency } from '@/lib/utils';
 import { InternalTransaction } from '@/types/internalTransaction';
+import { mediaService } from '@/services/mediaService';
+import { generalFundApi } from '@/api/generalFundApi';
+import { toast } from 'react-hot-toast';
 
 
 
 interface InternalTransactionHistoryProps {
     history: InternalTransaction[];
+    campaigns: any[];
+    users?: any[];
+    onUpdateStatus?: (id: number, status: string) => Promise<void>;
 }
 
-export function InternalTransactionHistory({ history: initialHistory }: InternalTransactionHistoryProps) {
+export function InternalTransactionHistory({ history: initialHistory, campaigns, users = [], onUpdateStatus }: InternalTransactionHistoryProps) {
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-    // Mock Data for demonstration as requested
-    const mockData: any[] = [
-        {
-            id: 'REQ-001',
-            createdAt: new Date().toISOString(),
-            staff: { name: 'Nguyễn Văn A', avatar: 'https://i.pravatar.cc/150?u=a' },
-            campaign: { title: 'Cứu trợ lũ lụt miền Trung', type: 'Ủy quyền', owner: 'Lê Văn C' },
-            amount: 50000000,
-            reason: 'Cần trích quỹ khẩn cấp để mua nhu yếu phẩm cho vùng cô lập',
-            status: 'PENDING'
-        },
-        {
-            id: 'REQ-002',
-            createdAt: new Date(Date.now() - 86400000).toISOString(),
-            staff: { name: 'Trần Thị B', avatar: 'https://i.pravatar.cc/150?u=b' },
-            campaign: { title: 'Xây trường cho em', type: 'Vật phẩm', owner: 'Phạm Thị D' },
-            amount: 25000000,
-            reason: 'Bổ dung kinh phí vận chuyển vật liệu xây dựng',
-            status: 'APPROVED'
-        }
-    ];
-
-    const displayHistory = [...mockData, ...initialHistory];
+    // Dùng API data thật, lọc lấy type SUPPORT
+    const displayHistory = initialHistory.filter(tx => tx.type === 'SUPPORT');
 
     return (
         <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full relative font-sans">
@@ -45,7 +30,7 @@ export function InternalTransactionHistory({ history: initialHistory }: Internal
                 <div className="flex items-center gap-3">
                     <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">Yêu cầu hỗ trợ từ Staff</h3>
                     <span className="bg-orange-50 text-orange-600 text-[9px] font-black px-2 py-0.5 rounded-full border border-orange-100">
-                        {mockData.length} MỚI
+                        {displayHistory.length}
                     </span>
                 </div>
 
@@ -70,6 +55,7 @@ export function InternalTransactionHistory({ history: initialHistory }: Internal
                     <thead className="bg-gray-50/50 sticky top-0 z-10 border-b border-gray-100 uppercase">
                         <tr>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Nhân viên</th>
+                            <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Số điện thoại</th>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Chiến dịch</th>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em] text-right">Số tiền</th>
                             <th className="p-3 px-6 text-[9px] font-black text-gray-400 tracking-[0.2em]">Lý do</th>
@@ -78,61 +64,59 @@ export function InternalTransactionHistory({ history: initialHistory }: Internal
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                        {displayHistory.map((tx, idx) => (
-                            <tr key={tx.id || idx} className="hover:bg-gray-50/50 transition-colors group">
-                                <td className="p-3 px-6">
-                                    <div className="flex items-center gap-3">
-                                        {tx.staff ? (
-                                            <img src={tx.staff.avatar} className="h-8 w-8 rounded-full border-2 border-white shadow-sm" alt="" />
-                                        ) : (
-                                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400">S</div>
-                                        )}
-                                        <div>
-                                            <div className="text-[11px] font-black text-gray-900">{tx.staff?.name || 'Hệ thống'}</div>
-                                            <div className="text-[9px] text-gray-400 font-bold uppercase">{new Date(tx.createdAt).toLocaleDateString('vi-VN')}</div>
+                        {displayHistory.map((tx, idx) => {
+                            const c = campaigns.find(c => c.id === tx.toCampaignId);
+                            const staffUser = users.find(u => u.id === tx.createdByStaffId);
+                            return (
+                                <tr key={tx.id || idx} className="hover:bg-gray-50/50 transition-colors group">
+                                    <td className="p-3 px-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400 shadow-inner">
+                                                {staffUser?.fullName ? staffUser.fullName.charAt(0).toUpperCase() : 'S'}
+                                            </div>
+                                            <div>
+                                                <div className="text-[11px] font-black text-gray-900">{staffUser?.fullName || `Staff #${tx.createdByStaffId || 'N/A'}`}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td className="p-3 px-6">
-                                    <div className="text-[11px] font-black text-gray-800 line-clamp-1">{tx.campaign?.title || 'Quỹ Chung'}</div>
-                                    <div className="text-[9px] text-gray-400 font-bold">{tx.campaign?.type || 'Điều chuyển'}</div>
-                                </td>
-                                <td className="p-3 px-6 text-right">
-                                    <div className={`text-[11px] font-black ${tx.status === 'REJECTED' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                                        {formatCurrency(tx.amount)}
-                                    </div>
-                                </td>
-                                <td className="p-3 px-6">
-                                    <div className="text-[10px] font-bold text-gray-600 line-clamp-1 max-w-xs">{tx.reason || 'Yêu cầu trích quỹ nội bộ'}</div>
-                                </td>
-                                <td className="p-3 px-6 text-center">
-                                    <span className={`inline-flex items-center text-[9px] font-black px-2 py-0.5 rounded-lg border ${tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                        tx.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border-orange-100' :
-                                            'bg-red-50 text-red-600 border-red-100'
-                                        }`}>
-                                        {tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'Đã duyệt' :
-                                            tx.status === 'PENDING' ? 'Đang chờ' : 'Từ chối'}
-                                    </span>
-                                </td>
-                                <td className="p-3 px-6 text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={() => setSelectedRequest(tx)}
-                                            className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                                            title="Xem chi tiết"
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </button>
-                                        <button className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all">
-                                            <Check className="h-4 w-4" />
-                                        </button>
-                                        <button className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all">
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td className="p-3 px-6">
+                                        <div className="text-[11px] font-black text-gray-800">{staffUser?.phoneNumber || '---'}</div>
+                                    </td>
+                                    <td className="p-3 px-6">
+                                        <div className="text-[11px] font-black text-gray-800 line-clamp-1">{c?.title || `Chiến dịch #${tx.toCampaignId}`}</div>
+                                        <div className="text-[9px] text-gray-400 font-bold">{c?.category?.name || c?.categoryName || 'Quỹ chung'}</div>
+                                    </td>
+                                    <td className="p-3 px-6 text-right">
+                                        <div className={`text-[11px] font-black ${tx.status === 'REJECTED' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                            {formatCurrency(tx.amount)}
+                                        </div>
+                                    </td>
+                                    <td className="p-3 px-6">
+                                        <div className="text-[10px] font-bold text-gray-600 line-clamp-1 max-w-xs">{tx.reason || 'Yêu cầu trích quỹ nội bộ'}</div>
+                                    </td>
+                                    <td className="p-3 px-6 text-center">
+                                        <span className={`inline-flex items-center text-[9px] font-black px-2 py-0.5 rounded-lg border ${tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                            tx.status === 'PENDING' ? 'bg-orange-50 text-orange-600 border-orange-100' :
+                                                'bg-red-50 text-red-600 border-red-100'
+                                            }`}>
+                                            {tx.status === 'COMPLETED' || tx.status === 'APPROVED' ? 'Đã duyệt' :
+                                                tx.status === 'PENDING' ? 'Đang chờ' : 'Từ chối'}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 px-6 text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => setSelectedRequest({ ...tx, staffUser })}
+                                                className="p-2 rounded-xl bg-blue-50 text-blue-600 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
+                                                title="Chi tiết"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -141,7 +125,9 @@ export function InternalTransactionHistory({ history: initialHistory }: Internal
                 {selectedRequest && (
                     <RequestDetailsModal
                         request={selectedRequest}
+                        campaign={campaigns.find(c => c.id === selectedRequest.toCampaignId)}
                         onClose={() => setSelectedRequest(null)}
+                        onUpdateStatus={onUpdateStatus}
                     />
                 )}
             </AnimatePresence>
@@ -149,7 +135,54 @@ export function InternalTransactionHistory({ history: initialHistory }: Internal
     );
 }
 
-function RequestDetailsModal({ request, onClose }: { request: any, onClose: () => void }) {
+function RequestDetailsModal({ request, campaign, onClose, onUpdateStatus }: { request: any, campaign: any, onClose: () => void, onUpdateStatus?: (id: number, status: string) => Promise<void> }) {
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = React.useState(false);
+    const [evidenceUrl, setEvidenceUrl] = React.useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+    const [localPreview, setLocalPreview] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (request.evidenceImageId) {
+            mediaService.getMediaById(request.evidenceImageId)
+                .then(res => setEvidenceUrl(res.url))
+                .catch(err => console.error("Failed to load evidence image", err));
+        }
+    }, [request.evidenceImageId]);
+
+    const handleUploadClick = () => {
+        if (!request.evidenceImageId && !evidenceUrl) {
+            fileInputRef.current?.click();
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSelectedFile(file);
+        setLocalPreview(URL.createObjectURL(file));
+    };
+
+    const handleApprove = async () => {
+        if (!onUpdateStatus) return;
+
+        setUploading(true);
+        try {
+            if (selectedFile) {
+                const mediaRes = await mediaService.uploadMedia(selectedFile, undefined, undefined, request.id as number, 'Evidence', 'PHOTO');
+                await generalFundApi.updateEvidence(request.id as number, mediaRes.id);
+            }
+            await onUpdateStatus(request.id, 'APPROVED');
+            toast.success('Đã duyệt và lưu minh chứng');
+            onClose();
+        } catch (error) {
+            toast.error('Có lỗi xảy ra khi duyệt');
+        } finally {
+            setUploading(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div
@@ -186,25 +219,19 @@ function RequestDetailsModal({ request, onClose }: { request: any, onClose: () =
                             <section>
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Chiến dịch & Chủ sở hữu</label>
                                 <div className="bg-gray-50/80 p-4 rounded-2xl border border-gray-100">
-                                    <div className="text-[12px] font-black text-gray-900 leading-snug">{request.campaign?.title}</div>
-                                    <div className="mt-3 flex items-center gap-2">
-                                        <div className="text-[10px] font-bold text-gray-500">Chủ quỹ:</div>
-                                        <div className="text-[10px] font-black text-gray-900">{request.campaign?.owner || '---'}</div>
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-2 text-[10px]">
-                                        <span className="font-bold text-gray-500">Loại quỹ:</span>
-                                        <span className="font-black text-blue-600 bg-blue-50 px-1.5 rounded">{request.campaign?.type}</span>
-                                    </div>
+                                    <div className="text-[12px] font-black text-gray-900 leading-snug">{campaign?.title || `Chiến dịch #${request.toCampaignId}`}</div>
                                 </div>
                             </section>
 
                             <section>
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Nhân viên đề xuất (Staff)</label>
                                 <div className="flex items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-50">
-                                    <img src={request.staff?.avatar} className="h-10 w-10 rounded-full border-2 border-white shadow-sm" alt="" />
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center font-bold text-gray-500 shadow-inner">
+                                        {request.staffUser?.fullName ? request.staffUser.fullName.charAt(0).toUpperCase() : 'S'}
+                                    </div>
                                     <div>
-                                        <div className="text-[11px] font-black text-gray-900">{request.staff?.name}</div>
-                                        <div className="text-[9px] font-bold text-gray-400">STAFF ID: 1241</div>
+                                        <div className="text-[11px] font-black text-gray-900">{request.staffUser?.fullName || `Staff #${request.createdByStaffId}`}</div>
+                                        <div className="text-[10px] font-medium text-gray-500 mt-0.5">{request.staffUser?.phoneNumber || 'SĐT: ---'}</div>
                                     </div>
                                 </div>
                             </section>
@@ -238,20 +265,33 @@ function RequestDetailsModal({ request, onClose }: { request: any, onClose: () =
                         <div className="flex flex-col">
                             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Minh chứng giải ngân (Admin)</label>
                             <div className="flex-1 min-h-[180px] bg-gray-900 rounded-3xl p-5 text-white flex flex-col relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 p-3">
-                                    <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-all">
-                                        <Plus className="h-4 w-4 text-emerald-400" />
+                                {(!request.evidenceImageId && !evidenceUrl) && (
+                                    <div className="absolute top-0 right-0 p-3 z-20">
+                                        <button onClick={handleUploadClick} disabled={uploading} className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center hover:bg-emerald-500/80 transition-all cursor-pointer">
+                                            <Plus className="h-4 w-4 text-emerald-400 group-hover:text-white" />
+                                        </button>
                                     </div>
-                                </div>
-                                <div className="flex-1 border-2 border-dashed border-white/20 rounded-[20px] flex flex-col items-center justify-center hover:border-white/40 transition-all cursor-pointer bg-white/5 space-y-2">
-                                    <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center shadow-inner">
-                                        <div className="text-[16px]">🖼️</div>
-                                    </div>
-                                    <div className="text-center px-4">
-                                        <div className="text-[9px] font-black uppercase tracking-widest text-gray-200">Kéo thả hoặc Click</div>
-                                        <div className="text-[8px] text-gray-500 font-bold mt-1 uppercase">JPG, PNG • Tối đa 5MB</div>
-                                    </div>
-                                    <input type="file" className="hidden" />
+                                )}
+                                <div
+                                    onClick={(!request.evidenceImageId && !evidenceUrl) ? handleUploadClick : undefined}
+                                    className={`flex-1 border-2 border-dashed border-white/20 rounded-[20px] flex flex-col items-center justify-center bg-white/5 space-y-2 relative overflow-hidden ${(!request.evidenceImageId && !evidenceUrl) ? 'hover:border-white/40 cursor-pointer transition-all' : ''}`}
+                                >
+                                    {uploading ? (
+                                        <div className="h-8 w-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                                    ) : evidenceUrl || localPreview ? (
+                                        <img src={evidenceUrl || localPreview || ""} className="absolute inset-0 w-full h-full object-cover" alt="Evidence" />
+                                    ) : (
+                                        <>
+                                            <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center shadow-inner">
+                                                <div className="text-[16px]">🖼️</div>
+                                            </div>
+                                            <div className="text-center px-4 relative z-10 bg-gray-900/40 p-2 rounded-xl backdrop-blur-sm">
+                                                <div className="text-[9px] font-black uppercase tracking-widest text-gray-200">Kéo thả hoặc Click</div>
+                                                <div className="text-[8px] text-gray-500 font-bold mt-1 uppercase">JPG, PNG • Tối đa 5MB</div>
+                                            </div>
+                                        </>
+                                    )}
+                                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
                                 </div>
                             </div>
                         </div>
@@ -266,14 +306,24 @@ function RequestDetailsModal({ request, onClose }: { request: any, onClose: () =
                     >
                         Để sau
                     </button>
-                    <div className="flex items-center gap-4">
-                        <button className="px-6 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">
-                            Từ chối
-                        </button>
-                        <button className="px-10 py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gray-200/50 hover:bg-gray-800 transition-all hover:translate-y-[-1px] active:translate-y-[1px]">
-                            Duyệt & Giải ngân
-                        </button>
-                    </div>
+                    {request.status === 'PENDING' && onUpdateStatus && (
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={async () => {
+                                    await onUpdateStatus(request.id, 'REJECTED');
+                                    onClose();
+                                }}
+                                className="px-6 py-2.5 bg-white text-red-600 border border-red-100/50 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:border-red-100 transition-all">
+                                Từ chối
+                            </button>
+                            <button
+                                onClick={handleApprove}
+                                disabled={uploading}
+                                className="px-10 py-2.5 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-gray-200/50 hover:bg-gray-800 transition-all hover:translate-y-[-1px] active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                                {uploading ? 'Đang xử lý...' : 'Duyệt sơ bộ'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </motion.div>
         </div>

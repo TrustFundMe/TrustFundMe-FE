@@ -1,0 +1,364 @@
+'use client';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    Plus,
+    Eye,
+    HandCoins,
+    FileText,
+    DollarSign,
+    X,
+    CheckCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import { formatCurrency } from '@/lib/utils';
+import { generalFundApi } from '@/api/generalFundApi';
+import { InternalTransactionStatus } from '@/types/internalTransaction';
+import { useAuth } from '@/contexts/AuthContextProxy';
+import { api as axiosInstance } from '@/config/axios';
+import RequestTable from '@/components/staff/request/RequestTable';
+import { SupportRequest } from '@/components/staff/request/RequestTypes';
+
+export default function SupportRequestManager({ onModalToggle }: { onModalToggle?: (open: boolean) => void } = {}) {
+    const { user: currentUser } = useAuth();
+    const [history, setHistory] = useState<SupportRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState<InternalTransactionStatus | 'ALL'>('ALL');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [selectedRequest, setSelectedRequest] = useState<SupportRequest | null>(null);
+
+    const openModal = () => { setIsCreateModalOpen(true); onModalToggle?.(true); };
+    const closeModal = () => { setIsCreateModalOpen(false); onModalToggle?.(false); };
+
+    useEffect(() => {
+        fetchHistory();
+        fetchCampaigns();
+    }, []);
+
+    const fetchHistory = async () => {
+        setLoading(true);
+        try {
+            const data = await generalFundApi.getHistory();
+            const mappedHistory: SupportRequest[] = data
+                .filter(tx => tx.createdByStaffId === currentUser?.id || tx.type === 'SUPPORT')
+                .map(tx => ({
+                    ...tx,
+                    id: String(tx.id),
+                    type: 'SUPPORT' as const,
+                    status: tx.status as any
+                }));
+            setHistory(mappedHistory);
+        } catch (error) {
+            toast.error('Không thể tải lịch sử yêu cầu');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCampaigns = async () => {
+        try {
+            const response = await axiosInstance.get('/api/campaigns/status/APPROVED');
+            setCampaigns((response.data as any).filter((c: any) => c.status === 'APPROVED' || c.status === 'ACTIVE'));
+        } catch (error) {
+            console.error('Failed to fetch campaigns', error);
+        }
+    };
+
+    const filteredHistory = useMemo(() => {
+        if (statusFilter === 'ALL') return history;
+        return history.filter(tx => tx.status === statusFilter);
+    }, [history, statusFilter]);
+
+    return (
+        <div className="flex flex-col h-full gap-6">
+            {/* Header / Filter Bar */}
+            <div className="flex items-center justify-between gap-4 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    {(['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'] as const).map((s) => (
+                        <button
+                            key={s}
+                            onClick={() => setStatusFilter(s)}
+                            className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                                : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                }`}
+                        >
+                            {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chờ duyệt' : s === 'APPROVED' ? 'Đã duyệt' : s === 'REJECTED' ? 'Từ chối' : 'Hoàn tất'}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    onClick={openModal}
+                    className="flex items-center gap-2 bg-[#db5945] text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#c44d3a] transition-all shadow-md shadow-[#db5945]/20 active:scale-95 whitespace-nowrap mr-1"
+                >
+                    <Plus className="h-4 w-4" />
+                    Tạo yêu cầu hỗ trợ
+                </button>
+            </div>
+
+            {/* Content Table */}
+            <div className="flex-1 overflow-hidden flex flex-col gap-3">
+                <div className="flex items-center justify-between flex-shrink-0 px-1">
+                    <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách yêu cầu hỗ trợ quỹ</h2>
+                </div>
+
+                <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm min-h-0 bg-white">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center h-full gap-3 py-20">
+                            <div className="h-10 w-10 border-4 border-[#db5945]/20 border-t-[#db5945] rounded-full animate-spin" />
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Đang tải dữ liệu...</div>
+                        </div>
+                    ) : history.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full py-20 bg-gray-50/30">
+                            <div className="h-16 w-16 bg-white rounded-3xl flex items-center justify-center shadow-sm border border-gray-100 mb-4">
+                                <HandCoins className="h-8 w-8 text-gray-200" />
+                            </div>
+                            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest">Không có yêu cầu nào</h3>
+                            <p className="text-[10px] text-gray-400 font-bold mt-1">Bắt đầu bằng việc tạo một yêu cầu mới</p>
+                        </div>
+                    ) : (
+                        <RequestTable
+                            rows={filteredHistory}
+                            selectedId={selectedRequest?.id}
+                            onSelect={(r) => setSelectedRequest(r)}
+                            columns={[
+                                {
+                                    key: 'campaign',
+                                    title: 'CHIẾN DỊCH NHẬN',
+                                    render: (tx: SupportRequest) => (
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-gray-900 line-clamp-1">
+                                                {campaigns.find(c => c.id === tx.toCampaignId)?.title || `Chiến dịch #${tx.toCampaignId}`}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase">
+                                                {new Date(tx.createdAt).toLocaleDateString('vi-VN')}
+                                            </span>
+                                        </div>
+                                    )
+                                },
+                                {
+                                    key: 'amount',
+                                    title: 'SỐ TIỀN',
+                                    className: 'text-right',
+                                    render: (tx: SupportRequest) => (
+                                        <span className="text-xs font-black text-emerald-600">
+                                            {formatCurrency(tx.amount)}
+                                        </span>
+                                    )
+                                },
+                                {
+                                    key: 'reason',
+                                    title: 'LÝ DO',
+                                    render: (tx: SupportRequest) => (
+                                        <span className="text-xs font-medium text-gray-600 line-clamp-1 max-w-md italic">
+                                            "{tx.reason || '---'}"
+                                        </span>
+                                    )
+                                },
+                                {
+                                    key: 'actions',
+                                    title: 'XEM',
+                                    className: 'text-center',
+                                    render: () => (
+                                        <div className="flex justify-center">
+                                            <div className="p-1.5 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-white group-hover:text-gray-600 transition-all">
+                                                <Eye className="h-4 w-4" />
+                                            </div>
+                                        </div>
+                                    )
+                                }
+                            ]}
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* Create Modal */}
+            <AnimatePresence>
+                {isCreateModalOpen && (
+                    <CreateSupportRequestModal
+                        campaigns={campaigns}
+                        onClose={closeModal}
+                        onSuccess={() => {
+                            closeModal();
+                            fetchHistory();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaigns: any[], onClose: () => void, onSuccess: () => void }) {
+    const { user: currentUser } = useAuth();
+    const [submitting, setSubmitting] = useState(false);
+    const [formData, setFormData] = useState({
+        toCampaignId: '',
+        amount: '',
+        reason: ''
+    });
+    const [amountDisplay, setAmountDisplay] = useState('');
+    const MAX_REASON = 300;
+
+    const formatWithDots = (val: string) => {
+        const num = val.replace(/\D/g, '');
+        return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value.replace(/\./g, '');
+        if (!/^\d*$/.test(raw)) return;
+        setFormData({ ...formData, amount: raw });
+        setAmountDisplay(formatWithDots(raw));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!formData.toCampaignId || !formData.amount || !formData.reason) {
+            toast.error('Vui lòng điền đầy đủ thông tin');
+            return;
+        }
+        if (Number(formData.amount) < 1000) {
+            toast.error('Số tiền tối thiểu là 1.000 VNĐ');
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            await generalFundApi.createTransaction({
+                fromCampaignId: 1,
+                toCampaignId: Number(formData.toCampaignId),
+                amount: Number(formData.amount),
+                type: 'SUPPORT',
+                reason: formData.reason,
+                createdByStaffId: currentUser?.id,
+                status: 'PENDING'
+            } as any);
+            toast.success('Gửi yêu cầu thành công!');
+            onSuccess();
+        } catch (error) {
+            toast.error('Gửi yêu cầu thất bại');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop phủ toàn màn hình, đè lên tab */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col"
+            >
+                {/* Header — giảm padding dưới */}
+                <div className="px-6 pt-5 pb-3 border-b border-gray-50 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
+                            <HandCoins className="h-4 w-4 text-[#db5945]" />
+                            Tạo yêu cầu hỗ trợ quỹ
+                        </h2>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Gửi đề xuất trích tiền từ Quỹ chung cho chiến dịch</p>
+                    </div>
+                    <button onClick={onClose} className="h-10 w-10 rounded-2xl bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-all">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="px-6 pt-3 pb-5 space-y-4">
+                    {/* Chiến dịch */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                            <HandCoins className="h-3 w-3" />
+                            Chiến dịch nhận tiền
+                        </label>
+                        <select
+                            value={formData.toCampaignId}
+                            onChange={(e) => setFormData({ ...formData, toCampaignId: e.target.value })}
+                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
+                        >
+                            <option value="">-- Chọn chiến dịch --</option>
+                            {campaigns.map(c => (
+                                <option key={c.id} value={c.id}>{c.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Số tiền với định dạng dấu chấm */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 ml-1">
+                            <DollarSign className="h-3 w-3" />
+                            Số tiền yêu cầu (VNĐ) — tối thiểu 1.000
+                        </label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={amountDisplay}
+                            onChange={handleAmountChange}
+                            placeholder="Nhập số tiền..."
+                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
+                        />
+                    </div>
+
+                    {/* Lý do + giới hạn ký tự */}
+                    <div className="space-y-1">
+                        <div className="flex items-center justify-between ml-1">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                <FileText className="h-3 w-3" />
+                                Lý do đề xuất
+                            </label>
+                            <span className={`text-[10px] font-bold ${formData.reason.length > MAX_REASON * 0.9 ? 'text-red-400' : 'text-gray-300'}`}>
+                                {formData.reason.length}/{MAX_REASON}
+                            </span>
+                        </div>
+                        <textarea
+                            value={formData.reason}
+                            onChange={(e) => {
+                                if (e.target.value.length <= MAX_REASON)
+                                    setFormData({ ...formData, reason: e.target.value });
+                            }}
+                            placeholder="Nhập nội dung/lý do cần hỗ trợ..."
+                            rows={3}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all resize-none"
+                        />
+                    </div>
+
+                    {/* Warning + Submit — padding giảm mạnh */}
+                    <div className="flex flex-col gap-2.5">
+                        <div className="bg-[#FFF5EB] px-3 py-2 rounded-xl border border-orange-100 flex items-center gap-2.5">
+                            <div className="h-4 w-4 shrink-0 bg-orange-200 text-orange-700 rounded-full flex items-center justify-center text-[10px] font-bold">!</div>
+                            <p className="text-[9px] font-bold text-orange-800 leading-relaxed uppercase tracking-tight">
+                                Yêu cầu sẽ gửi Admin phê duyệt. Hệ thống tự trừ tiền Quỹ chung khi hoàn tất.
+                            </p>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="w-full h-12 bg-gray-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-gray-200/50 hover:bg-gray-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            {submitting ? 'Đang gửi...' : (
+                                <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    Xác nhận gửi yêu cầu
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
+        </div>
+    );
+}
