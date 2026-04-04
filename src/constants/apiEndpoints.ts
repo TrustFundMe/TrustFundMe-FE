@@ -10,6 +10,8 @@ export const API_ENDPOINTS = {
     BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
     UPDATE_BALANCE: (id: number | string) => `/api/campaigns/${id}/update-balance`,
+    PAUSE: (id: number | string) => `/api/campaigns/${id}/pause`,
+    CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",

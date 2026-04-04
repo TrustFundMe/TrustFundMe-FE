@@ -175,4 +175,14 @@ export const campaignService = {
       params: { amount }
     });
   },
+
+  async pauseCampaign(id: number): Promise<CampaignDto> {
+    const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.PAUSE(id));
+    return res.data;
+  },
+
+  async closeCampaign(id: number): Promise<CampaignDto> {
+    const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.CLOSE(id));
+    return res.data;
+  },
 };
