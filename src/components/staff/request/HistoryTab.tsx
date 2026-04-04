@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, History, CheckCircle, XCircle, Clock, FileText, Eye } from 'lucide-react';
+import { Search, History, CheckCircle, XCircle, Clock, FileText, Eye, Flag, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
@@ -17,12 +17,14 @@ const TASK_TYPE_MAP: Record<string, string> = {
   CAMPAIGN: 'CHIẾN DỊCH',
   EXPENDITURE: 'CHI TIÊU',
   EVIDENCE: 'MINH CHỨNG',
+  FLAG: 'FLAG',
 };
 
 const TASK_TYPE_ICON: Record<string, any> = {
   CAMPAIGN: FileText,
   EXPENDITURE: Clock,
   EVIDENCE: CheckCircle,
+  FLAG: Flag,
 };
 
 export default function HistoryTab() {
@@ -118,7 +120,7 @@ export default function HistoryTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 h-full overflow-hidden">
-      <div className="lg:col-span-8 overflow-hidden flex flex-col gap-3">
+      <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedTaskId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
         <div className="flex items-center justify-between flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
           <div className="flex items-center gap-2 px-3">
             <History className="h-4 w-4 text-gray-400" />
@@ -141,6 +143,7 @@ export default function HistoryTab() {
             rows={filteredTasks}
             selectedId={selectedTaskId}
             onSelect={(r) => setSelectedTaskId(r.id)}
+            statusClassName={selectedTaskId ? 'hidden xl:table-cell' : ''}
             columns={[
               {
                 key: 'type',
@@ -168,43 +171,92 @@ export default function HistoryTab() {
               {
                 key: 'requester',
                 title: 'Người yêu cầu',
+                className: selectedTaskId ? 'hidden 2xl:table-cell' : '',
                 render: (r) => <span className="text-xs font-bold text-gray-700">{r.requester}</span>,
               },
               {
                 key: 'date',
                 title: 'Hoàn thành lúc',
+                className: selectedTaskId ? 'hidden xl:table-cell' : '',
                 render: (r) => <span className="text-[10px] font-black text-gray-400 uppercase">{new Date(r.processedAt).toLocaleString('vi-VN')}</span>,
               },
-// Removed duplicate status column as RequestTable adds it automatically
             ]}
+            actionColumn={{
+              key: 'actions',
+              title: 'THAO TÁC',
+              className: 'text-center w-[80px]',
+              render: (r) => (
+                <div className="flex items-center justify-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTaskId(r.id);
+                    }}
+                    className={`p-1.5 rounded-lg transition-all border shadow-sm ${
+                      selectedTaskId === r.id 
+                        ? 'bg-[#446b5f] text-white border-transparent' 
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-[#446b5f]/30 hover:bg-[#446b5f]/5 hover:text-[#446b5f]'
+                    }`}
+                    title="Xem chi tiết"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                </div>
+              ),
+            }}
           />
         </div>
       </div>
 
-      <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar">
-          <RequestDetailPanel
-            request={selectedTask}
-            title={selectedTask ? `Nhiệm vụ #${selectedTask.realId}` : 'Chi tiết'}
-            fields={[
-              { label: 'Loại nhiệm vụ', value: selectedTask ? TASK_TYPE_MAP[selectedTask.type] : '-' },
-              { label: 'Nội dung', value: selectedTask?.targetTitle },
-              { label: 'Người gửi', value: selectedTask?.requester },
-              { label: 'Số tiền (nếu có)', value: selectedTask?.amount ? fmt(selectedTask.amount) : '-' },
-              { label: 'Hoàn thành ngày', value: selectedTask?.processedAt ? new Date(selectedTask.processedAt).toLocaleString('vi-VN') : '-' },
-            ]}
-            readOnly={true}
-            hideActions={true}
-          />
-          <div className="mt-4 p-4 rounded-2xl bg-blue-50 border border-blue-100">
-             <div className="flex items-center gap-2 mb-2">
+      {selectedTaskId && (
+        <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar animate-in slide-in-from-right-4 transition-all duration-500">
+          <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm space-y-3">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-gray-50 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-black text-gray-900 uppercase tracking-tight">Chi tiết nhiệm vụ</div>
+                <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-black text-green-700 uppercase tracking-wider ring-1 ring-inset ring-green-600/20">COMPLETED</span>
+              </div>
+              <button
+                onClick={() => setSelectedTaskId(undefined)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                title="Đóng"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Fields */}
+            <div className="grid grid-cols-1 gap-3">
+              {[
+                { label: 'Loại nhiệm vụ', value: selectedTask ? (TASK_TYPE_MAP[selectedTask.type] || selectedTask.type) : '-' },
+                { label: 'Nội dung', value: selectedTask?.targetTitle },
+                { label: 'Người gửi', value: selectedTask?.requester },
+                { label: 'Số tiền (nếu có)', value: selectedTask?.amount ? fmt(selectedTask.amount) : '-' },
+                { label: 'Hoàn thành ngày', value: selectedTask?.processedAt ? new Date(selectedTask.processedAt).toLocaleString('vi-VN') : '-' },
+              ].map((f) => (
+                <div key={f.label} className="rounded-xl bg-gray-50/80 p-2 border border-gray-100/50">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{f.label}</p>
+                  <div className="text-xs font-bold text-gray-700 leading-tight">
+                    {f.value || <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Info block */}
+            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
+              <div className="flex items-center gap-2 mb-2">
                 <History className="h-4 w-4 text-blue-500" />
                 <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-widest">Thông tin xử lý</h4>
-             </div>
-             <p className="text-xs text-blue-600 leading-relaxed font-medium">
+              </div>
+              <p className="text-xs text-blue-600 leading-relaxed font-medium">
                 Nhiệm vụ này đã được bạn xử lý thành công. Để xem chi tiết kỹ thuật hoặc thay đổi trạng thái (nếu cần), vui lòng liên hệ Admin.
-             </p>
+              </p>
+            </div>
           </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

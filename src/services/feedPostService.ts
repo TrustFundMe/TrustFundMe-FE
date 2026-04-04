@@ -67,6 +67,27 @@ export const feedPostService = {
     return res.data;
   },
 
+  async getMyPage(params?: { status?: string; page?: number; size?: number }): Promise<{
+    content: FeedPostDto[];
+    totalElements: number;
+    totalPages: number;
+  }> {
+    const res = await api.get<{ content: FeedPostDto[]; totalElements: number; totalPages: number }>(
+      API_ENDPOINTS.FEED_POSTS.MY,
+      {
+        params: {
+          status: params?.status ?? "ALL",
+          page: params?.page ?? 0,
+          size: params?.size ?? 10,
+        },
+      }
+    );
+    if (Array.isArray(res.data)) {
+      return { content: res.data, totalElements: res.data.length, totalPages: 1 };
+    }
+    return res.data;
+  },
+
   /**
    * Creates a new feed post using the authenticated axios instance.
    * Status defaults to 'PUBLISHED' so the post is immediately visible on the feed.

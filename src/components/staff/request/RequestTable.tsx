@@ -16,11 +16,15 @@ export default function RequestTable<T extends StaffRequestBase>({
   columns,
   selectedId,
   onSelect,
+  statusClassName,
+  actionColumn,
 }: {
   rows: T[];
   columns: RequestTableColumn<T>[];
   selectedId?: string;
   onSelect: (row: T) => void;
+  statusClassName?: string;
+  actionColumn?: RequestTableColumn<T>;
 }) {
   const hasRows = rows.length > 0;
 
@@ -35,7 +39,12 @@ export default function RequestTable<T extends StaffRequestBase>({
                 {c.title}
               </th>
             ))}
-            <th className="px-4 py-2 text-left whitespace-nowrap" title="Trạng thái yêu cầu">TRẠNG THÁI</th>
+            <th className={`px-4 py-2 text-left whitespace-nowrap ${statusClassName || ''}`} title="Trạng thái yêu cầu">TRẠNG THÁI</th>
+            {actionColumn && (
+              <th className={`px-4 py-2 text-center whitespace-nowrap border-l border-white/5 ${actionColumn.className || ''}`} title={actionColumn.title}>
+                {actionColumn.title}
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
@@ -56,9 +65,14 @@ export default function RequestTable<T extends StaffRequestBase>({
                       {c.render(r) || <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>}
                     </td>
                   ))}
-                  <td className="px-4 py-2 whitespace-nowrap">
+                  <td className={`px-4 py-2 whitespace-nowrap ${statusClassName || ''}`}>
                     <RequestStatusPill status={r.status as RequestStatus} />
                   </td>
+                  {actionColumn && (
+                    <td className={`px-4 py-2 whitespace-nowrap border-l border-gray-50/50 ${actionColumn.className || ''}`}>
+                      {actionColumn.render(r)}
+                    </td>
+                  )}
                 </tr>
               );
             })
