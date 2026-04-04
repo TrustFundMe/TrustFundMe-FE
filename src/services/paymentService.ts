@@ -139,8 +139,25 @@ export const paymentService = {
             console.error("❌ [Payment] Analytics Error:", err);
             throw err;
         }
+    },
+    async getDonationSummary(expenditureItemIds: number[]): Promise<DonationItemSummary[]> {
+        console.log(`📋 [Payment] Fetching donation summary for items:`, expenditureItemIds);
+        try {
+            const res = await api.get<DonationItemSummary[]>(API_ENDPOINTS.PAYMENTS.DONATION_SUMMARY, {
+                params: { expenditureItemIds: expenditureItemIds.join(',') }
+            });
+            return res.data;
+        } catch (err: any) {
+            console.error("❌ [Payment] Donation Summary Error:", err);
+            return [];
+        }
     }
 };
+
+export interface DonationItemSummary {
+    expenditureItemId: number;
+    donatedQuantity: number;
+}
 
 export interface ChartPoint {
     date: string;

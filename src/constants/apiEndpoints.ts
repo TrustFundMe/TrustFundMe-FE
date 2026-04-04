@@ -105,6 +105,7 @@ export const API_ENDPOINTS = {
     CAMPAIGN_PROGRESS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/progress`,
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
     CAMPAIGN_ANALYTICS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/analytics`,
+    DONATION_SUMMARY: "/api/payments/donations/summary",
   },
   TASKS: {
     BASE: "/api/admin/tasks",

@@ -60,5 +60,15 @@ export const expenditureService = {
             params: { status }
         });
         return response.data;
+    },
+
+    createRefund: async (expenditureId: string | number, amount: number, proofUrl: string, userId?: number): Promise<any> => {
+        const response = await axiosInstance.post(`/api/expenditures/${expenditureId}/refund`, {
+            amount,
+            proofUrl
+        }, {
+            headers: userId ? { 'X-User-Id': userId } : {}
+        });
+        return response.data;
     }
 };
