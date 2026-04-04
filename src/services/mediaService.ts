@@ -133,7 +133,7 @@ export const mediaService = {
         } catch (error: any) {
             // If the error was already handled (fallback succeeded), don't rethrow
             if (error?.message?.includes('Soft-delete successful')) return;
-            
+
             // If the initial DELETE was 403 and the fallback also failed, or it was some other error
             console.error(`[mediaService] Both hard and soft delete failed for id=${id}:`, error);
             throw error;
@@ -160,6 +160,11 @@ export const mediaService = {
 
     async updateMediaStatus(id: number, status: string): Promise<void> {
         await api.patch(`/api/media/${id}/status`, null, { params: { status } });
+    },
+
+    async getMediaById(id: number): Promise<MediaUploadResponse> {
+        const res = await api.get<MediaUploadResponse>(`/api/media/${id}`);
+        return res.data;
     },
 
     async getCampaignFirstImage(campaignId: number): Promise<MediaUploadResponse | null> {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle, Check } from "lucide-react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle, Check, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -616,7 +616,7 @@ export default function FeedPostDetail({
                     comment={comment}
                     currentUserId={user ? String(user.id) : undefined}
                     onToggleLike={handleToggleCommentLike}
-                    onReply={handleReply}
+                    onReply={!post.isLocked ? handleReply : undefined}
                     onEdit={isAuthenticated ? handleEditComment : undefined}
                     onDelete={isAuthenticated ? handleDeleteComment : undefined}
                     isAuthenticated={isAuthenticated}
@@ -647,41 +647,48 @@ export default function FeedPostDetail({
         )}
 
         {/* Comment Input Bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-          <input
-            id="comment-input"
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmitComment(); } }}
-            placeholder={
-              post.isLocked
-                ? "Bài viết đang khóa bình luận..."
-                : !isAuthenticated
+        {post.isLocked ? (
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)", display: "flex", justifyContent: "center" }}>
+            <span style={{ fontSize: 13, color: "#F84D43", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: 0.8 }}>
+              <Lock className="w-4 h-4" />
+              Tính năng bình luận đã bị vô hiệu hóa
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+            <input
+              id="comment-input"
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmitComment(); } }}
+              placeholder={
+                !isAuthenticated
                   ? "Đăng nhập để bình luận..."
                   : replyingTo
                     ? `Phản hồi ${replyingTo.name}...`
                     : "Thêm bình luận..."
-            }
-            disabled={!isAuthenticated || isSubmittingComment || post.isLocked}
-            style={{ flex: 1, border: "none", outline: "none", fontSize: 14, background: "transparent", color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}
-          />
-          <button
-            type="button"
-            disabled={!commentText.trim() || isSubmittingComment || !isAuthenticated || post.isLocked}
-            onClick={handleSubmitComment}
-            style={{
-              border: "none",
-              background: "transparent",
-              cursor: (!post.isLocked && commentText.trim() && !isSubmittingComment && isAuthenticated) ? "pointer" : "not-allowed",
-              padding: 0, fontSize: 14, color: "#1A685B", fontWeight: 600,
-              opacity: (!post.isLocked && commentText.trim() && !isSubmittingComment && isAuthenticated) ? 1 : 0.5,
-              transition: "opacity 0.2s", fontFamily: "var(--font-dm-sans)",
-            }}
-          >
-            {isSubmittingComment ? "..." : "Đăng"}
-          </button>
-        </div>
+              }
+              disabled={!isAuthenticated || isSubmittingComment}
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 14, background: "transparent", color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}
+            />
+            <button
+              type="button"
+              disabled={!commentText.trim() || isSubmittingComment || !isAuthenticated}
+              onClick={handleSubmitComment}
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: (commentText.trim() && !isSubmittingComment && isAuthenticated) ? "pointer" : "not-allowed",
+                padding: 0, fontSize: 14, color: "#1A685B", fontWeight: 600,
+                opacity: (commentText.trim() && !isSubmittingComment && isAuthenticated) ? 1 : 0.5,
+                transition: "opacity 0.2s", fontFamily: "var(--font-dm-sans)",
+              }}
+            >
+              {isSubmittingComment ? "..." : "Đăng"}
+            </button>
+          </div>
+        )}
       </fieldset>
       <ImageZoomModal
         open={zoomOpen}

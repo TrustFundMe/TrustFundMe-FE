@@ -8,7 +8,7 @@ import ScrollTop from "./ScrollTop";
 
 const DanboxLayout = ({
   children,
-  header = 3,
+  header = 5,
   footer = 3,
 }: {
   children?: ReactNode;

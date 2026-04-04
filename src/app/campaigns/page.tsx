@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { CampaignCategoriesSection } from "@/components/campaign/CampaignCategoriesSection";
 import CampaignBanner from "@/components/campaign/CampaignBanner";
-import { VolunteerDoubleCta } from "@/components/campaign/VolunteerDoubleCta";
+import { CampaignCategoriesSection } from "@/components/campaign/CampaignCategoriesSection";
 import DanboxLayout from "@/layout/DanboxLayout";
 
 export const metadata: Metadata = {
@@ -12,15 +11,14 @@ export const metadata: Metadata = {
 
 const CampaignsPage = () => {
   return (
-    <DanboxLayout header={4}>
+    <DanboxLayout>
       <div className="font-dm-sans">
         <CampaignBanner
-          heading="Sưởi ấm lòng người"
-          subheading="Giúp đỡ hôm nay để cộng đồng phát triển mạnh mẽ hơn vào ngày mai"
+          heading="Nơi trao gửi yêu thương"
+          subheading="Gửi gắm yêu thương và lan tỏa những điều tốt đẹp"
           ctaLabel="Tạo chiến dịch"
           ctaHref="/campaign-creation"
         />
-        <VolunteerDoubleCta />
         <CampaignCategoriesSection />
       </div>
     </DanboxLayout>

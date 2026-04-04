@@ -5,6 +5,7 @@ import type {
     CreateModuleGroupRequest,
     CreateModuleRequest,
 } from '../types/module';
+import type { FeedPostDto } from '@/types/feedPost';
 
 export const moduleGroupApi = {
     getAllModuleGroups: async (params?: {
@@ -98,5 +99,22 @@ export const moduleApi = {
 
     deleteModule: async (id: string | number): Promise<void> => {
         await axiosInstance.delete(`/api/modules/${id}`);
+    },
+};
+
+export const feedPostApi = {
+    getMyFeedPosts: async (params?: {
+        status?: 'ALL' | 'DRAFT' | 'PUBLISHED' | 'REJECTED' | 'HIDDEN';
+        page?: number;
+        size?: number;
+    }): Promise<{ content: FeedPostDto[]; totalElements: number; totalPages: number }> => {
+        const response = await axiosInstance.get('/api/feed-posts/my', {
+            params: {
+                status: params?.status ?? 'ALL',
+                page: params?.page ?? 0,
+                size: params?.size ?? 10,
+            },
+        });
+        return response.data;
     },
 };

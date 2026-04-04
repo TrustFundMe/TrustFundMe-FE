@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -10,6 +10,7 @@ import ExpenditureTab from '@/components/staff/request/ExpenditureTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import KYCTab from '@/components/staff/request/KYCTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
+import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -23,8 +24,8 @@ export default function StaffRequestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'KYC' | 'HISTORY'>(
-    targetTab === 'KYC' ? 'KYC' : targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : 'CAMPAIGN'
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'KYC' | 'HISTORY' | 'SUPPORT'>(
+    targetTab === 'KYC' ? 'KYC' : targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : targetTab === 'SUPPORT' ? 'SUPPORT' : 'CAMPAIGN'
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -35,13 +36,13 @@ export default function StaffRequestPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
-  
+
   // Campaign States
   const [campaignRows, setCampaignRows] = useState<any[]>([]);
   const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL' | 'DISABLED'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
   const targetCampaignId = searchParams.get('campaignId');
-  
+
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const pageSize = 10;
@@ -101,7 +102,7 @@ export default function StaffRequestPage() {
           };
         })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
+
       setCampaignRows(mappedCampaigns);
 
       // Auto-select from URL or first item
@@ -210,6 +211,7 @@ export default function StaffRequestPage() {
               { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
               { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
               { id: 'KYC', label: 'Xác thực người dùng (KYC)', icon: ShieldCheck },
+              { id: 'SUPPORT', label: 'Yêu cầu hỗ trợ', icon: HandCoins },
               { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
             ].map((tab) => {
               const Icon = (tab as any).icon || Shield;
@@ -238,7 +240,7 @@ export default function StaffRequestPage() {
             })}
           </div>
 
-          <button 
+          <button
             onClick={handleRefresh}
             disabled={isLoading}
             className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#db5945] hover:border-[#db5945]/20 transition shadow-sm group active:scale-95"
@@ -373,20 +375,20 @@ export default function StaffRequestPage() {
                               )}
 
                               {r.status === 'APPROVED' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedCampaignId(r.id);
-                                      toast('Cuộn xuống dưới cùng ở bảng bên phải để vô hiệu hóa', {
-                                        icon: '⚠️',
-                                        duration: 4000
-                                      });
-                                    }}
-                                    className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
-                                    title="Vô hiệu hóa"
-                                  >
-                                    <Ban className="h-4 w-4" />
-                                  </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCampaignId(r.id);
+                                    toast('Cuộn xuống dưới cùng ở bảng bên phải để vô hiệu hóa', {
+                                      icon: '⚠️',
+                                      duration: 4000
+                                    });
+                                  }}
+                                  className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
+                                  title="Vô hiệu hóa"
+                                >
+                                  <Ban className="h-4 w-4" />
+                                </button>
                               )}
                             </div>
                           ),
@@ -455,6 +457,8 @@ export default function StaffRequestPage() {
             <EvidenceTab />
           ) : activeTab === 'KYC' ? (
             <KYCTab initialUserId={selectedUserIdForKyc} onModalToggle={setIsModalOpen} />
+          ) : activeTab === 'SUPPORT' ? (
+            <SupportRequestManager onModalToggle={setIsModalOpen} />
           ) : (
             <HistoryTab />
           )}

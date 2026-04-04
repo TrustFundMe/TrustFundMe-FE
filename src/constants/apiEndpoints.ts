@@ -10,6 +10,8 @@ export const API_ENDPOINTS = {
     BY_CATEGORY: (categoryId: number | string) => `/api/campaigns/category/${categoryId}`,
     REVIEW: (id: number | string) => `/api/campaigns/${id}/review`,
     UPDATE_BALANCE: (id: number | string) => `/api/campaigns/${id}/update-balance`,
+    PAUSE: (id: number | string) => `/api/campaigns/${id}/pause`,
+    CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",
@@ -26,6 +28,7 @@ export const API_ENDPOINTS = {
   },
   FEED_POSTS: {
     BASE: "/api/feed-posts",
+    MY: "/api/feed-posts/my",
     BY_ID: (id: number | string) => `/api/feed-posts/${id}`,
     BY_AUTHOR: (authorId: number | string) => `/api/feed-posts/author/${authorId}`,
     LIKE: (id: number | string) => `/api/feed-posts/${id}/like`,
@@ -36,6 +39,9 @@ export const API_ENDPOINTS = {
     ADMIN_DELETE: (id: number | string) => `/api/feed-posts/admin/${id}`,
     ADMIN_PIN: (id: number | string) => `/api/feed-posts/admin/${id}/pin`,
     ADMIN_LOCK: (id: number | string) => `/api/feed-posts/admin/${id}/lock`,
+    ADMIN_APPROVE: (id: number | string) => `/api/feed-posts/admin/${id}/approve`,
+    ADMIN_REJECT: (id: number | string) => `/api/feed-posts/admin/${id}/reject`,
+    ADMIN_HIDE: (id: number | string) => `/api/feed-posts/admin/${id}/hide`,
     ADMIN_STATUS: (id: number | string) => `/api/feed-posts/admin/${id}/status`,
     STATUS: (id: number | string) => `/api/feed-posts/${id}/status`,
   },
