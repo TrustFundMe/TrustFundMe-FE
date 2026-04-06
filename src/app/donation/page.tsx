@@ -205,19 +205,32 @@ function DonationContent() {
         items: itemsPayload
       };
 
-      // 4. PRE-CHECK: Check Expenditure Item Limits
+      // 4. PRE-CHECK: Check Expenditure Item Limits (graceful - don't block if check fails)
       if (itemsPayload.length > 0) {
         console.log("🛡️ [Donation] Pre-checking item limits...");
         for (const item of itemsPayload) {
-          const checkResult = await paymentService.checkExpenditureItemLimit(item.expenditureItemId, item.quantity);
-          if (!checkResult.canDonateMore) {
-            console.warn(`🛑 [Donation] Limit exceeded for item ${item.expenditureItemId}:`, checkResult.message);
-            alert(checkResult.message || "Số lượng vật phẩm đã đạt giới hạn.");
-            setSubmitting(false);
-            return;
+          try {
+            const checkResult = await paymentService.checkExpenditureItemLimit(item.expenditureItemId, item.quantity);
+            if (!checkResult.canDonateMore) {
+              console.warn(`🛑 [Donation] Limit exceeded for item ${item.expenditureItemId}:`, checkResult.message);
+              alert(checkResult.message || "Số lượng vật phẩm đã đạt giới hạn.");
+              setSubmitting(false);
+              return;
+            }
+            // Update quantityLeft on UI if check returned fresh data
+            if (checkResult.checkSuccessful && checkResult.quantityLeft !== undefined) {
+              setExpenditureItems(prev => prev.map(i =>
+                i.id === item.expenditureItemId.toString()
+                  ? { ...i, quantityLeft: checkResult.quantityLeft }
+                  : i
+              ));
+            }
+          } catch (err: any) {
+            console.warn("⚠️ [Donation] Could not verify item limit, proceeding anyway:", err?.message);
+            // Don't block - let the server validate
           }
         }
-        console.log("✅ [Donation] All item limits okay");
+        console.log("✅ [Donation] All item limits okay (or check skipped)");
       }
 
       // 5. Call Payment API
@@ -227,8 +240,50 @@ function DonationContent() {
         // Open PayOS checkout in iframe using SDK
         if ((window as any).payOS) {
           const config = {
-            onSuccess: (data: any) => {
+            onSuccess: async (data: any) => {
               console.log("✅ [PayOS] Payment success:", data);
+              // Verify payment status first - only sync quantity if actually PAID
+              if (response.donationId) {
+                try {
+                  await paymentService.verifyPayment(response.donationId);
+                } catch {}
+
+                // Sync quantity in background (non-blocking)
+                paymentService.syncQuantity(response.donationId).catch(() => {});
+              }
+
+              // Refresh quantityLeft from backend after successful payment
+              if (campaignId) {
+                try {
+                  const itemsData = await expenditureService.getItemsByCampaignId(campaignId);
+                  const mappedItems: ExpenditureItem[] = itemsData
+                    .map(item => ({
+                      id: item.id.toString(),
+                      name: item.category,
+                      description: item.note || '',
+                      price: item.expectedPrice,
+                      quantityLeft: item.quantityLeft ?? 0
+                    }))
+                    .filter(item => item.quantityLeft > 0);
+
+                  setExpenditureItems(mappedItems);
+
+                  // Adjust selected item quantities if they exceed new quantityLeft
+                  setItems(prevItems => {
+                    const newItems: Record<string, number> = {};
+                    Object.entries(prevItems).forEach(([id, qty]) => {
+                      const updated = mappedItems.find(i => i.id === id);
+                      if (updated) {
+                        newItems[id] = Math.min(qty, updated.quantityLeft);
+                      }
+                    });
+                    return newItems;
+                  });
+                } catch (e) {
+                  console.warn("⚠️ [Donation] Could not refresh item quantities:", e);
+                }
+              }
+
               setFinalData(data);
               setIsSuccess(true);
             },

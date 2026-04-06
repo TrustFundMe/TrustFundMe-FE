@@ -103,7 +103,15 @@ export default function CreateOrEditPostModal({
         setSelectedExpenditureId(null);
         setExpendituresOfCampaign([]);
       }
-      setExistingImages([]);
+      const initialImages = (initialData.attachments && initialData.attachments.length > 0)
+        ? initialData.attachments
+        : (initialData.medias && initialData.medias.length > 0)
+          ? initialData.medias
+          : [];
+      setExistingImages(initialImages.map((img: any) => ({
+        url: img.url || img.mediaUrl,
+        mediaId: img.id || img.mediaId || img.id
+      })));
       setUploadingItems([]);
     } else {
       const savedDraft = localStorage.getItem(DRAFT_KEY);

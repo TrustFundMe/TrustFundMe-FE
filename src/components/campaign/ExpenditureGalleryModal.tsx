@@ -20,6 +20,7 @@ interface ExpenditureGalleryModalProps {
   media: MediaItem[];
   loading?: boolean;
   onDelete?: (mediaId: number) => void;
+  isReadOnly?: boolean;
   
   // Upload props
   uploadState?: { uploading: boolean; files: File[]; previews: string[] };
@@ -33,7 +34,7 @@ export default function ExpenditureGalleryModal({
   itemName,
   media,
   loading = false,
-  onDelete,
+  isReadOnly = false,
   uploadState,
   onFileChange,
   onUploadSubmit,
@@ -144,8 +145,8 @@ export default function ExpenditureGalleryModal({
                                   {/* Overlay */}
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-black/0 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 pointer-events-none" />
                                   
-                                  {/* Delete button */}
-                                  {onDelete && (
+                                  {/* Delete button - Hidden if readOnly */}
+                                  {!isReadOnly && onDelete && (
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -164,8 +165,8 @@ export default function ExpenditureGalleryModal({
                           )}
                         </div>
 
-                        {/* Right: Upload Area */}
-                        {(onFileChange && uploadState && media.length < 10) && (
+                        {/* Right: Upload Area - Hidden if readOnly */}
+                        {!isReadOnly && onFileChange && uploadState && media.length < 10 && (
                           <div className="w-full md:w-1/3 flex flex-col gap-4 md:sticky md:top-6 self-start">
                             <div className="bg-orange-50/50 rounded-2xl p-5 border border-orange-100">
                               <h4 className="font-bold text-gray-800 text-sm mb-4 uppercase tracking-wider">Tải ảnh lên</h4>
@@ -230,8 +231,8 @@ export default function ExpenditureGalleryModal({
                           </div>
                         )}
                         
-                        {/* Limit Reached message */}
-                        {(safeMedia.length >= 10) && (
+                        {/* Limit Reached message - Hidden if readOnly */}
+                        {!isReadOnly && (safeMedia.length >= 10) && (
                           <div className="w-full md:w-1/3 md:sticky md:top-6 self-start">
                             <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 text-center flex flex-col items-center">
                               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm border border-gray-100 mb-3">

@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { mediaService } from '@/services/mediaService';
+import { paymentService } from '@/services/paymentService';
+import { feedPostService } from '@/services/feedPostService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown, ShieldCheck } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
@@ -26,6 +28,7 @@ export default function ExpenditureDetailPage() {
     const [items, setItems] = useState<ExpenditureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [posts, setPosts] = useState<any[]>([]);
 
     // Modal State
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -44,6 +47,9 @@ export default function ExpenditureDetailPage() {
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
     const [galleryIndex, setGalleryIndex] = useState(0);
+
+    const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
+    const [loadingDonationSummary, setLoadingDonationSummary] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -75,6 +81,33 @@ export default function ExpenditureDetailPage() {
                     actualQuantity: item.actualQuantity || 0,
                     price: item.price || 0
                 })));
+
+                // Fetch donation summary for ITEMIZED
+                if (expData.campaignId) {
+                    const campaignDataVal = campaign || await campaignService.getById(expData.campaignId);
+                    if (campaignDataVal?.type === 'ITEMIZED' && safeItems.length > 0) {
+                        const itemIds = safeItems.map(i => i.id);
+                        setLoadingDonationSummary(true);
+                        try {
+                            const summary = await paymentService.getDonationSummary(itemIds);
+                            const map: Record<number, number> = {};
+                            summary.forEach(s => { map[s.expenditureItemId] = s.donatedQuantity; });
+                            setDonationSummary(map);
+                        } catch (err) {
+                            console.error('Failed to load donation summary:', err);
+                        } finally {
+                            setLoadingDonationSummary(false);
+                        }
+                    }
+                }
+
+                // Fetch posts
+                try {
+                    const postData = await feedPostService.getByTarget(Number(id), 'EXPENDITURE');
+                    setPosts(postData || []);
+                } catch (postErr) {
+                    console.error('Failed to load posts:', postErr);
+                }
             } catch (err) {
                 console.error('Không thể tải chi tiết khoản chi:', err);
                 setError('Không thể tải chi tiết khoản chi.');
@@ -264,6 +297,12 @@ export default function ExpenditureDetailPage() {
         );
     }
 
+    const totalPlan = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.expectedPrice || 0), 0);
+    const totalReceivedTotal = items.reduce((sum, item) => sum + (donationSummary[item.id] || 0) * (item.expectedPrice || 0), 0);
+    const totalActual = items.reduce((sum, item) => sum + ((item.actualQuantity || 0) * (item.price || 0)), 0);
+    const compareValue = campaign?.type === 'ITEMIZED' ? totalReceivedTotal : totalPlan;
+    const totalVariance = compareValue - totalActual;
+
     if (error || !expenditure) {
         return (
             <div className="max-w-4xl mx-auto px-4 py-12 text-center text-red-600">
@@ -302,12 +341,7 @@ export default function ExpenditureDetailPage() {
                                 Ngày tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString() : 'Không có dữ liệu'}
                             </p>
                             <div className="flex flex-wrap gap-2 mt-3">
-                                <button
-                                    onClick={handleOpenUpdateModal}
-                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200 transition-colors"
-                                >
-                                    <FileText className="w-4 h-4 mr-1.5" /> Cập nhật Đã chi
-                                </button>
+                                {/* Nút cập nhật đã ẩn cho chế độ Overview */}
 
                                 {campaign?.type === 'ITEMIZED' && (expenditure.status === 'APPROVED' || expenditure.status === 'CLOSED') && !expenditure.isWithdrawalRequested && (
                                     <button
@@ -363,11 +397,11 @@ export default function ExpenditureDetailPage() {
                                 </p>
                             </div>
 
-                            {/* Frame 4: Số dư quỹ */}
+                            {/* Frame 4: Số dư đợt chi tiêu */}
                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư quỹ</p>
+                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư đợt chi tiêu</p>
                                 <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign?.balance || 0)}
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
                                 </p>
                             </div>
                         </div>
@@ -455,9 +489,11 @@ export default function ExpenditureDetailPage() {
                                                                 </td>
                                                                 <td className="px-6 py-4 text-right bg-green-50/30">
                                                                     <div className="text-sm font-bold text-green-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
                                                                     </div>
-                                                                    <div className="text-xs text-gray-400 mt-1 italic">(Chưa có dữ liệu)</div>
+                                                                    <div className="text-xs text-green-600/70 mt-1">
+                                                                        Đã nhận: <span className="font-bold">{donationSummary[item.id] || 0}</span>
+                                                                    </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-right bg-orange-50/30">
                                                                     <div className="text-sm font-bold text-orange-700">
@@ -490,65 +526,67 @@ export default function ExpenditureDetailPage() {
                                             );
                                         })}
                                     </tbody>
+                                    <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                                        <tr className="font-black text-gray-900">
+                                            <td className="px-6 py-4 text-sm uppercase">Tổng cộng đợt chi</td>
+                                            {campaign?.type === 'ITEMIZED' ? (
+                                                <>
+                                                    <td className="px-6 py-4 text-right bg-blue-100/50">
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right bg-green-100/50">
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right bg-orange-100/50">
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
+                                                        <div className={`text-[10px] uppercase mt-1 ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="px-6 py-4 text-right bg-blue-100/50">
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right bg-green-100/50">
+                                                        {/* Empty for non-itemized */}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right bg-orange-100/50">
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
+                                                        <div className={`text-[10px] uppercase mt-1 ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                            <td className="px-6 py-4"></td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
                     </div>
 
                     <div className="col-span-1 space-y-6">
-                        {/* Evidence Info */}
-                        <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
-                            <h2 className="text-lg font-medium text-gray-900 mb-4">Thông tin minh chứng</h2>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Trạng thái minh chứng</p>
-                                    {expenditure.evidenceStatus === 'SUBMITTED' && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
-                                            Đã nộp – chờ xác nhận
-                                        </span>
-                                    )}
-                                    {expenditure.evidenceStatus === 'APPROVED' && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                            Đã xác nhận
-                                        </span>
-                                    )}
-                                    {expenditure.evidenceStatus === 'ALLOWED_EDIT' && (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 animate-pulse">
-                                            Cho chỉnh sửa lại
-                                        </span>
-                                    )}
-                                    {(!expenditure.evidenceStatus || expenditure.evidenceStatus === 'PENDING') && (
+                        {/* Evidence Info Header - Conditionally rendered */}
+                        {!(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
+                            <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mb-6">
+                                <h2 className="text-lg font-medium text-gray-900 mb-4">Thông tin minh chứng</h2>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">Trạng thái minh chứng</p>
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
                                             Chờ nộp minh chứng
                                         </span>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
-                                    <p className="text-sm font-medium text-gray-900 flex items-center">
-                                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                        {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : 'Chưa đặt hạn'}
-                                    </p>
-                                </div>
-
-                                {/* Đã nộp — hiện thời gian nộp */}
-                                {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED') ? (
-                                    <div className="mt-6 pt-4 border-t border-gray-100">
-                                        <div className="flex items-center gap-3">
-                                            <CheckCircle className="w-5 h-5 text-emerald-600" />
-                                            <div>
-                                                <p className="text-sm font-black text-emerald-700">Đã nộp minh chứng</p>
-                                                {expenditure.evidenceSubmittedAt && (
-                                                    <p className="text-[10px] text-emerald-600">
-                                                        Lúc {new Date(expenditure.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
                                     </div>
-                                ) : (
+                                    <div>
+                                        <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
+                                        <p className="text-sm font-medium text-gray-900 flex items-center">
+                                            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                            {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : 'Chưa đặt hạn'}
+                                        </p>
+                                    </div>
                                     <div className="mt-6 pt-4 border-t border-gray-100">
                                         <button
                                             onClick={() => setIsUpdateModalOpen(true)}
@@ -557,9 +595,70 @@ export default function ExpenditureDetailPage() {
                                             Cập nhật số liệu & Ảnh
                                         </button>
                                     </div>
-                                )}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* New Evidence Submission Status - VISUAL FOCUS */}
+                        {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
+                            <div className="bg-emerald-50 shadow-sm rounded-2xl border-2 border-emerald-100 p-6 relative overflow-hidden mb-6">
+                                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-emerald-100 rounded-full opacity-30 animate-pulse"></div>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600">
+                                            <CheckCircle className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-base font-black text-emerald-900 uppercase tracking-wide">Đã nộp minh chứng</h3>
+                                            {expenditure.evidenceSubmittedAt && (
+                                                <p className="text-[11px] font-bold text-emerald-600/70">
+                                                    Lúc {new Date(expenditure.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 mb-6">
+                                        {expenditure.evidenceSubmittedAt && expenditure.evidenceDueAt && new Date(expenditure.evidenceSubmittedAt) <= new Date(expenditure.evidenceDueAt) && (
+                                            <span className="px-2.5 py-1 bg-white text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
+                                                Nộp đúng hạn
+                                            </span>
+                                        )}
+                                        {expenditure.transactions?.some(t => t.type === 'REFUND' && t.status === 'COMPLETED') ? (
+                                            <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-md flex items-center gap-1.5">
+                                                <ShieldCheck className="w-3 h-3" /> Đã hoàn tiền dư
+                                            </span>
+                                        ) : (
+                                            (totalVariance > 0) && (
+                                                <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-amber-200">
+                                                    Chờ hoàn tiền dư
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* Link to Post */}
+                                    {posts.length > 0 && (
+                                        <div className="pt-4 border-t border-emerald-200">
+                                            <p className="text-[10px] font-black text-emerald-800/40 uppercase tracking-[2px] mb-3">Bài viết minh chứng</p>
+                                            <div className="flex flex-col gap-2">
+                                                {posts.map(p => (
+                                                    <Link 
+                                                        key={p.id}
+                                                        href={`/post/${p.id}`}
+                                                        target="_blank"
+                                                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:translate-x-1 transition-all group shadow-sm text-sm font-bold text-emerald-700"
+                                                    >
+                                                        <span className="truncate flex-1 pr-4">{p.title || 'Xem chi tiết bài viết'}</span>
+                                                        <ArrowLeft className="w-4 h-4 rotate-180 opacity-40 group-hover:opacity-100 group-hover:text-emerald-500 transition-all" />
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -750,6 +849,7 @@ export default function ExpenditureDetailPage() {
                     itemName={items.find(i => i.id === galleryModalItemId)?.category || ''}
                     media={itemMedia[galleryModalItemId!] || []}
                     loading={itemMediaLoading[galleryModalItemId!]}
+                    isReadOnly={true}
                     onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId!, mediaId)}
                     uploadState={itemUploadState[galleryModalItemId!] || { uploading: false, files: [], previews: [] }}
                     onFileChange={(files) => handleItemFileChange(galleryModalItemId!, files)}
