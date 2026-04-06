@@ -2,6 +2,22 @@ import type { FeedPost, FeedPostDto } from "@/types/feedPost";
 
 export type FeedPostDtoFromApi = FeedPostDto;
 
+/** Jackson có thể serialize Boolean isPinned thành JSON key "pinned" — gom cả hai. */
+function coalesceBool(
+  dto: object,
+  primary: keyof FeedPostDtoFromApi,
+  ...aliases: string[]
+): boolean {
+  const o = dto as Record<string, unknown>;
+  const a = o[primary as string];
+  if (typeof a === "boolean") return a;
+  for (const key of aliases) {
+    const v = o[key];
+    if (typeof v === "boolean") return v;
+  }
+  return false;
+}
+
 /** Map API response (authorId, no author) to FeedPost for display */
 export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
   return {
@@ -18,7 +34,7 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     status: dto.status,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt ?? null,
-    liked: dto.isLiked ?? false,
+    liked: coalesceBool(dto, "isLiked", "liked"),
     likeCount: dto.likeCount ?? 0,
     flagged: false,
     flagCount: dto.flagCount ?? 0,
@@ -33,8 +49,8 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     categoryId: dto.categoryId ?? null,
     replyCount: Math.max(dto.commentCount ?? 0, dto.replyCount ?? 0),
     viewCount: dto.viewCount ?? 0,
-    isPinned: dto.isPinned ?? false,
-    isLocked: dto.isLocked ?? false,
+    isPinned: coalesceBool(dto, "isPinned", "pinned"),
+    isLocked: coalesceBool(dto, "isLocked", "locked"),
     attachments: dto.attachments?.map((att) => ({
       type: (att.type?.toLowerCase() === "image" ? "image" : "file") as "image" | "file",
       url: att.url,

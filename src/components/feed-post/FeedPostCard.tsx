@@ -89,7 +89,7 @@ export default function FeedPostCard({
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isLiking) return;
+    if (isLiking || post.isLocked) return;
 
     // Optimistic update
     const prevLiked = liked;
@@ -424,19 +424,21 @@ export default function FeedPostCard({
           <motion.button
             type="button"
             onClick={handleLike}
-            disabled={isLiking}
-            whileTap={{ scale: 0.85 }}
+            disabled={isLiking || post.isLocked}
+            whileTap={{ scale: post.isLocked ? 1 : 0.85 }}
             animate={liked ? { scale: [1, 1.2, 1] } : { scale: 1 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
+            title={post.isLocked ? "Bài đang khóa tương tác" : undefined}
             style={{
               border: "none",
               background: "transparent",
-              cursor: isLiking ? "default" : "pointer",
+              cursor: isLiking || post.isLocked ? "not-allowed" : "pointer",
               padding: 0,
               color: liked ? "#F84D43" : "rgba(0,0,0,0.6)",
               display: "flex",
               alignItems: "center",
               gap: 5,
+              opacity: post.isLocked ? 0.45 : 1,
             }}
           >
             <Heart

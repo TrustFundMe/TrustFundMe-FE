@@ -10,7 +10,13 @@ function getAccessToken(request: NextRequest): string {
     : (cookieHeader.match(/access_token=([^;]+)/)?.[1] ?? "").trim();
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * PATCH /api/feed-posts/admin/[id]/content - Update title/content (admin)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
     const accessToken = getAccessToken(request);
@@ -18,20 +24,26 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const response = await fetch(`${BE_API_URL}/api/feed-posts/admin/${id}/approve`, {
+    const body = await request.json();
+
+    const response = await fetch(`${BE_API_URL}/api/feed-posts/admin/${id}/content`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: "Failed to approve post" }));
+      const error = await response.json().catch(() => ({ message: "Failed to update content" }));
       return NextResponse.json({ error: error.message }, { status: response.status });
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Admin PATCH approve error:", error);
+    console.error("Admin PATCH content error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

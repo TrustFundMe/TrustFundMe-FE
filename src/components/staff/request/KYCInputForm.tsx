@@ -5,7 +5,7 @@ import { aiService } from '@/services/aiService';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Sparkles, Upload, Info } from 'lucide-react';
+import { ZoomIn } from 'lucide-react';
 
 interface KYCInputFormProps {
     userId?: number | string;
@@ -13,9 +13,10 @@ interface KYCInputFormProps {
     onSuccess: () => void;
     onCancel?: () => void;
     readOnly?: boolean;
+    onImageClick?: (url: string) => void;
 }
 
-export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly }: KYCInputFormProps) {
+export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly, onImageClick }: KYCInputFormProps) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -368,7 +369,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                 disabled={uploading || readOnly}
                             />
                             {formData.idImageFront && (
-                                <img src={formData.idImageFront} alt="Front ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                                <div className="relative group cursor-pointer" onClick={() => onImageClick?.(formData.idImageFront)}>
+                                    <img src={formData.idImageFront} alt="Front ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded flex items-center justify-center transition-all">
+                                        <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -393,7 +399,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                     disabled={uploading || readOnly}
                                 />
                                 {formData.idImageBack && (
-                                    <img src={formData.idImageBack} alt="Back ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                                    <div className="relative group cursor-pointer" onClick={() => onImageClick?.(formData.idImageBack)}>
+                                        <img src={formData.idImageBack} alt="Back ID" className="h-20 w-full object-cover rounded border border-gray-100" />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded flex items-center justify-center transition-all">
+                                            <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -416,7 +427,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                 disabled={uploading || readOnly}
                             />
                             {formData.selfieImage && (
-                                <img src={formData.selfieImage} alt="Selfie" className="h-20 w-20 object-cover rounded-full border border-gray-100 mx-auto" />
+                                <div className="relative group cursor-pointer mx-auto w-fit" onClick={() => onImageClick?.(formData.selfieImage)}>
+                                    <img src={formData.selfieImage} alt="Selfie" className="h-20 w-20 object-cover rounded-full border border-gray-100" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-full flex items-center justify-center transition-all">
+                                        <ZoomIn className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

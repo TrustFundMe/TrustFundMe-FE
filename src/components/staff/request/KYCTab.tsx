@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info } from 'lucide-react';
+import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info, ZoomIn } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { kycService } from '@/services/kycService';
 import { KycResponse } from '@/types/kyc';
@@ -50,6 +50,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const pageSize = 20; // Increased to compensate for filtered staff/admin users
 
   useEffect(() => {
@@ -332,6 +333,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                     onSuccess={handleKycSuccess}
                     onCancel={() => setShowKycForm(false)}
                     readOnly={selectedUser.kycStatus === 'APPROVED'}
+                    onImageClick={setLightboxImage}
                   />
                   {selectedUser.kycStatus === 'REJECTED' && (
                     <div className="mt-4 p-4 rounded-xl bg-orange-50 border border-orange-100">
@@ -352,6 +354,26 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
            </div>
         </div>
       </div>
+
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            onClick={() => setLightboxImage(null)}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

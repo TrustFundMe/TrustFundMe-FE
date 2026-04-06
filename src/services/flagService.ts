@@ -9,10 +9,37 @@ export interface FlagDto {
   campaignId: number | null;
   userId: number;
   reason: string;
-  /** PENDING | RESOLVED | DISMISSED */
-  status: "PENDING" | "RESOLVED" | "DISMISSED";
+  status: "PENDING" | "RESOLVED";
   reviewedBy: number | null;
   createdAt: string;
+  updatedAt?: string;
+  reporterName?: string;
+  reporterAvatarUrl?: string;
+  campaign?: {
+    id: number;
+    title: string;
+    description?: string;
+    imageUrl?: string;
+    status?: string;
+    raisedAmount?: number;
+    authorId?: number;
+    authorName?: string;
+    createdAt?: string;
+  };
+  post?: {
+    id: number;
+    title?: string;
+    content?: string;
+    status?: string;
+    authorId?: number;
+    authorName?: string;
+    authorAvatarUrl?: string;
+    likeCount?: number;
+    commentCount?: number;
+    viewCount?: number;
+    isLocked?: boolean;
+    createdAt?: string;
+  };
 }
 
 export interface SubmitFlagRequest {
@@ -130,7 +157,7 @@ export const flagService = {
    */
   async reviewFlag(
     flagId: number | string,
-    status: "RESOLVED" | "DISMISSED"
+    status: "RESOLVED" | "PENDING"
   ): Promise<FlagDto> {
     const res = await api.patch<FlagDto>(API_ENDPOINTS.FLAGS.REVIEW(flagId), null, {
       params: { status },

@@ -221,15 +221,15 @@ export default function StaffRequestPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
-                    ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                    ? 'bg-white text-[#446b5f] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
                     : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
                     }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={`h-4 w-4 ${isActive ? 'text-[#db5945]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-[#446b5f]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                     <span className="whitespace-nowrap">{tab.label}</span>
                     {tab.count !== undefined && (
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#db5945]/10 text-[#db5945]' : 'bg-gray-300 text-gray-600'}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#446b5f]/10 text-[#446b5f]' : 'bg-gray-300 text-gray-600'}`}>
                         {tab.count}
                       </span>
                     )}
@@ -243,7 +243,7 @@ export default function StaffRequestPage() {
           <button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#db5945] hover:border-[#db5945]/20 transition shadow-sm group active:scale-95"
+            className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95"
             title="Làm mới trang"
           >
             <RefreshCw className={`h-5 w-5 transition-transform group-hover:rotate-180 ${isLoading ? 'animate-spin' : ''}`} />
@@ -266,7 +266,7 @@ export default function StaffRequestPage() {
                     type="button"
                     onClick={() => setCampaignStatus(s)}
                     className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${campaignStatus === s
-                      ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                      ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
                       : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >

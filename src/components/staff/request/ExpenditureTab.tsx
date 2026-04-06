@@ -509,14 +509,14 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                     </div>
                     <div className="flex gap-1 overflow-x-auto no-scrollbar">
                         <button onClick={() => setTypeFilter('ALL')}
-                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${typeFilter === 'ALL' ? 'bg-[#db5945] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${typeFilter === 'ALL' ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                 }`}>
                             TẤT CẢ
                         </button>
                         {types.map(t => (
                             <button key={t} onClick={() => setTypeFilter(t)}
                                 className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${typeFilter === t
-                                    ? (t === 'TARGET' ? 'bg-[#446b5f] text-white' : 'bg-[#db5945] text-white')
+                                    ? (t === 'TARGET' ? 'bg-[#446b5f] text-white' : 'bg-[#446b5f] text-white')
                                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                     }`}>
                                 {CAM_TYPE[t] ?? t}
@@ -534,18 +534,18 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                         const isActive = selected?.id === c.id;
                         const isTarget = c.type === 'TARGET';
                         const themeColor = isTarget ? '#446b5f' : '#db5945';
-                        const themeBg = isTarget ? 'bg-[#446b5f]' : 'bg-[#db5945]';
+                        const themeBg = isTarget ? 'bg-[#446b5f]' : 'bg-[#446b5f]';
 
                         return (
                             <button key={c.id} onClick={() => setSelected(c)}
-                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${isActive ? (isTarget ? 'bg-[#446b5f]/10' : 'bg-[#db5945]/10') : 'hover:bg-gray-50/30'}`}>
+                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${isActive ? (isTarget ? 'bg-[#446b5f]/10' : 'bg-[#446b5f]/10') : 'hover:bg-gray-50/30'}`}>
                                 <div className="flex items-start gap-2.5">
                                     <div className={`h-8 w-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black ${isActive ? `${themeBg} text-white shadow-sm` : 'bg-gray-100 text-gray-400'}`}>
                                         {c.title[0]?.toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#446b5f]' : 'text-[#db5945]') : 'text-gray-700'}`}>{c.title}</p>
+                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#446b5f]' : 'text-[#446b5f]') : 'text-gray-700'}`}>{c.title}</p>
                                             {(c as any).needsAttention && (
                                                 <span className="flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" />
                                             )}

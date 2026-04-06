@@ -22,7 +22,7 @@ export default function DraftFeedPage() {
         setPosts(safeContent.map(dtoToFeedPost));
       } catch {
         setPosts([]);
-        setError("Khong tai duoc danh sach draft. Vui long thu lai.");
+        setError("Không tải được danh sách bản nháp. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
@@ -35,13 +35,13 @@ export default function DraftFeedPage() {
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 px-4 py-24">
         <div className="mx-auto w-full max-w-3xl space-y-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Feed draft cua toi</h1>
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Bản nháp của tôi</h1>
             <Link href="/post/my" className="text-sm font-semibold text-[#ff5e14] hover:underline">
-              Tat ca bai cua toi
+              Tất cả bài đã đăng
             </Link>
           </div>
           {loading ? (
-            <p className="text-sm text-zinc-500">Dang tai...</p>
+            <p className="text-sm text-zinc-500">Đang tải…</p>
           ) : error ? (
             <div className="space-y-2">
               <p className="text-sm text-red-500">{error}</p>
@@ -49,11 +49,11 @@ export default function DraftFeedPage() {
                 onClick={() => window.location.reload()}
                 className="rounded-lg border border-zinc-300 px-3 py-1 text-sm text-zinc-700"
               >
-                Tai lai
+                Tải lại
               </button>
             </div>
           ) : posts.length === 0 ? (
-            <p className="text-sm text-zinc-500">Khong co bai draft.</p>
+            <p className="text-sm text-zinc-500">Chưa có bản nháp nào.</p>
           ) : (
             <div className="space-y-3">
               {posts.map((post) => (
@@ -62,8 +62,8 @@ export default function DraftFeedPage() {
                   href={`/post/${post.id}/edit`}
                   className="block rounded-xl border border-amber-200 bg-amber-50 p-4 hover:border-amber-300 dark:border-amber-900 dark:bg-amber-950/20"
                 >
-                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">DRAFT</p>
-                  <h2 className="mt-1 text-base font-semibold text-zinc-900 dark:text-white">{post.title || "(Khong tieu de)"}</h2>
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Bản nháp</p>
+                  <h2 className="mt-1 text-base font-semibold text-zinc-900 dark:text-white">{post.title || "(Không có tiêu đề)"}</h2>
                 </Link>
               ))}
             </div>
