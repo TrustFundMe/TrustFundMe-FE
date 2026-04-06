@@ -60,6 +60,13 @@ function formatVnd(value: number) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 }
 
+function getMediaUrl(url: string | null | undefined): string {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/api/')) return `/api-backend${url}`;
+    return url;
+}
+
 export default function AdminPayoutsPage() {
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
@@ -419,7 +426,7 @@ export default function AdminPayoutsPage() {
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-2 ring-white">
                                                             {exp.campaignCoverImage ? (
-                                                                <img src={exp.campaignCoverImage} alt={exp.campaignTitle} className="h-full w-full object-cover" />
+                                                                <img src={getMediaUrl(exp.campaignCoverImage)} alt={exp.campaignTitle} className="h-full w-full object-cover" />
                                                             ) : (
                                                                 <div className="h-full w-full flex items-center justify-center text-slate-300">
                                                                     <Tag className="h-4 w-4" />
@@ -466,7 +473,7 @@ export default function AdminPayoutsPage() {
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-2 ring-white">
                                                             {refund.campaignCoverImage ? (
-                                                                <img src={refund.campaignCoverImage} alt={refund.campaignTitle} className="h-full w-full object-cover" />
+                                                                <img src={getMediaUrl(refund.campaignCoverImage)} alt={refund.campaignTitle} className="h-full w-full object-cover" />
                                                             ) : (
                                                                 <div className="h-full w-full flex items-center justify-center text-slate-300">
                                                                     <RefreshCcw className="h-4 w-4" />
@@ -809,20 +816,22 @@ export default function AdminPayoutsPage() {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
 
-                                        {/* Proof Image */}
-                                        {selectedRefund.proofUrl && (
-                                            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
+                                    {/* Right: Proof Image or placeholder */}
+                                    <div className="flex flex-col h-full">
+                                        {selectedRefund.proofUrl ? (
+                                            <div className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm flex-1 flex flex-col">
                                                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Minh chứng hoàn tiền</h3>
-                                                <div className="relative aspect-video rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 group shadow-sm">
+                                                <div className="relative flex-1 rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 group shadow-sm min-h-[300px]">
                                                     <img
-                                                        src={selectedRefund.proofUrl}
+                                                        src={getMediaUrl(selectedRefund.proofUrl)}
                                                         alt="Refund Proof"
-                                                        className="h-full w-full object-contain"
+                                                        className="absolute inset-0 h-full w-full object-contain"
                                                     />
                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                                         <a
-                                                            href={selectedRefund.proofUrl}
+                                                            href={getMediaUrl(selectedRefund.proofUrl)}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="px-4 py-2 bg-white rounded-xl text-slate-900 flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-xl"
@@ -833,18 +842,17 @@ export default function AdminPayoutsPage() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    {/* Right: placeholder */}
-                                    <div className="flex items-center justify-center">
-                                        <div className="text-center text-slate-400">
-                                            <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <RefreshCcw className="h-8 w-8 text-slate-300" />
+                                        ) : (
+                                            <div className="flex items-center justify-center h-full">
+                                                <div className="text-center text-slate-400">
+                                                    <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <RefreshCcw className="h-8 w-8 text-slate-300" />
+                                                    </div>
+                                                    <p className="text-sm font-bold text-slate-500">Thông tin hoàn tiền dư</p>
+                                                    <p className="text-xs font-medium text-slate-400 mt-1">Yêu cầu hoàn tiền được fund owner gửi về quỹ chung</p>
+                                                </div>
                                             </div>
-                                            <p className="text-sm font-bold text-slate-500">Thông tin hoàn tiền dư</p>
-                                            <p className="text-xs font-medium text-slate-400 mt-1">Yêu cầu hoàn tiền được fund owner gửi về quỹ chung</p>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             )}

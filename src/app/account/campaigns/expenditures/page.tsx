@@ -2022,10 +2022,10 @@ export default function CampaignExpendituresPage() {
                                 Hủy
                             </button>
                             <button
-                                disabled={refundSubmitting || !refundFilePreview || !refundAmount}
+                                disabled={refundSubmitting || refundUploading || !refundFilePreview || !refundAmount || refundFilePreview.startsWith('blob:')}
                                 onClick={async () => {
                                     if (!refundAmount || Number(refundAmount) <= 0) { toast.error('Số tiền không hợp lệ'); return; }
-                                    if (!refundFilePreview) { toast.error('Vui lòng tải ảnh minh chứng chuyển khoản'); return; }
+                                    if (!refundFilePreview || refundFilePreview.startsWith('blob:')) { toast.error('Vui lòng đợi ảnh minh chứng tải lên hoàn tất'); return; }
                                     setRefundSubmitting(true);
                                     try {
                                         await expenditureService.createRefund(
