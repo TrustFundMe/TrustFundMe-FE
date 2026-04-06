@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Search, Trash2, Eye, Loader2, AlertCircle,
+  Search, Trash2, Eye, EyeOff, Loader2, AlertCircle,
   MessageSquare, Pin, Lock, LockOpen, Flag, X, PinOff, Pencil
 } from 'lucide-react';
 import Link from 'next/link';
@@ -15,6 +15,7 @@ import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
+import { api } from '@/config/axios';
 
 function formatDate(str: string) {
   return new Date(str).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -51,13 +52,9 @@ export default function StaffFeedPostPage() {
     try {
       let dtos: Parameters<typeof dtoToFeedPost>[0][];
       try {
-        const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL + '?page=0&size=200', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          dtos = Array.isArray(data) ? data : (data.content ?? []);
-        } else {
-          throw new Error('fallback');
-        }
+        const res = await api.get(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL + '?page=0&size=200');
+        const data = res.data;
+        dtos = Array.isArray(data) ? data : (data.content ?? []);
       } catch {
         dtos = await feedPostService.getAll();
       }
@@ -119,20 +116,22 @@ export default function StaffFeedPostPage() {
     setShowDetail(true);
   };
 
-  const handleDelete = async (post: PostWithFlags) => {
-    if (!confirm(`Bạn có chắc muốn xóa bài viết này?`)) return;
-    setProcessingAction('delete');
+  const handleToggleHide = async (post: PostWithFlags) => {
+    const isHidden = post.status === 'HIDDEN';
+    const newStatus = isHidden ? 'PUBLISHED' : 'HIDDEN';
+    
+    setProcessingAction('hide');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_DELETE(post.id), { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) await feedPostService.delete(Number(post.id));
-      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      const res = await api.patch(`/api/feed-posts/admin/${post.id}/status`, { status: newStatus });
+      const updated = res.data;
+      
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, status: updated.status } : p));
       if (selectedPost?.id === post.id) {
-        setShowDetail(false);
-        setSelectedPost(null);
+        setSelectedPost(prev => prev ? { ...prev, status: updated.status } : prev);
       }
-      toast.success('Đã xóa bài viết');
+      toast.success(isHidden ? 'Đã hiển thị lại bài viết' : 'Đã đưa bài viết vào trạng thái Ẩn');
     } catch {
-      toast.error('Xóa thất bại');
+      toast.error('Thao tác thất bại');
     } finally {
       setProcessingAction(null);
     }
@@ -146,9 +145,8 @@ export default function StaffFeedPostPage() {
     }
     setProcessingAction('pin');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id), { method: 'PATCH', credentials: 'include' });
-      if (!res.ok) throw new Error('Không thể ghim/bỏ ghim bài viết.');
-      const updated = await res.json();
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_PIN(post.id));
+      const updated = res.data;
       setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isPinned: updated.isPinned } : p));
       if (selectedPost?.id === post.id) {
         setSelectedPost(prev => prev ? { ...prev, isPinned: updated.isPinned } : prev);
@@ -164,17 +162,14 @@ export default function StaffFeedPostPage() {
   const handleToggleLock = async (post: PostWithFlags) => {
     setProcessingAction('lock');
     try {
-      const res = await fetch(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(post.id), { method: 'PATCH', credentials: 'include' });
-      if (res.ok) {
-        const updated = await res.json();
-        setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isLocked: updated.isLocked } : p));
-        if (selectedPost?.id === post.id) {
-          setSelectedPost(prev => prev ? { ...prev, isLocked: updated.isLocked } : prev);
-        }
-        toast.success(updated.isLocked ? 'Đã khóa bài viết' : 'Đã mở khóa bài viết');
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(post.id));
+      const updated = res.data;
+      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, isLocked: updated.isLocked } : p));
+      if (selectedPost?.id === post.id) {
+        setSelectedPost(prev => prev ? { ...prev, isLocked: updated.isLocked } : prev);
       }
+      toast.success(updated.isLocked ? 'Đã khóa bài viết' : 'Đã mở khóa bài viết');
     } catch {
-      toast.error('Thao tác thất bại');
     } finally {
       setProcessingAction(null);
     }
@@ -307,6 +302,10 @@ export default function StaffFeedPostPage() {
                           ) : post.status === 'ALLOWED_EDIT' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">
                               Cho sửa
+                            </span>
+                          ) : post.status === 'HIDDEN' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-50 text-purple-600 border border-purple-200 whitespace-nowrap">
+                              Đã ẩn
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200 whitespace-nowrap">
@@ -482,11 +481,7 @@ export default function StaffFeedPostPage() {
                     <button
                         onClick={() => handleTogglePin(selectedPost)}
                         disabled={processingAction !== null}
-                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm ${
-                          selectedPost.isPinned 
-                          ? 'bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100'
-                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-orange-600'
-                        }`}
+                        className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     >
                         {processingAction === 'pin' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pin className="w-3.5 h-3.5" />}
                         {selectedPost.isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}
@@ -495,11 +490,7 @@ export default function StaffFeedPostPage() {
                     <button
                         onClick={() => handleToggleLock(selectedPost)}
                         disabled={processingAction !== null}
-                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm ${
-                          selectedPost.isLocked 
-                          ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
-                          : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-red-600'
-                        }`}
+                        className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     >
                         {processingAction === 'lock' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : selectedPost.isLocked ? <LockOpen className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                         {selectedPost.isLocked ? 'Mở khóa bình luận' : 'Khóa bình luận'}
@@ -509,11 +500,7 @@ export default function StaffFeedPostPage() {
                         <button
                             onClick={() => handleUpdateExpStatus(selectedPost, targetDetails?.expenditureEvidenceStatus === 'ALLOWED_EDIT')}
                             disabled={processingAction !== null || !targetDetails}
-                            className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm mt-3 ${
-                              targetDetails?.expenditureEvidenceStatus === 'ALLOWED_EDIT' 
-                              ? 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
-                              : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-blue-600'
-                            }`}
+                            className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                         >
                             {processingAction === 'status' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Pencil className="w-3.5 h-3.5" />}
                             {targetDetails?.expenditureEvidenceStatus === 'ALLOWED_EDIT' ? 'Thu hồi quyền sửa bài' : 'Cấp quyền sửa bài'}
@@ -521,12 +508,12 @@ export default function StaffFeedPostPage() {
                     )}
 
                     <button
-                        onClick={() => handleDelete(selectedPost)}
+                        onClick={() => handleToggleHide(selectedPost)}
                         disabled={processingAction !== null}
-                        className="w-full py-2.5 rounded-xl text-[10px] font-black text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm mt-3"
+                        className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
                     >
-                        {processingAction === 'delete' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        Xóa bài viết
+                        {processingAction === 'hide' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : selectedPost.status === 'HIDDEN' ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        {selectedPost.status === 'HIDDEN' ? 'Hiện lại bài viết' : 'Ẩn bài viết'}
                     </button>
                     
                     <div className="pt-3 text-center">

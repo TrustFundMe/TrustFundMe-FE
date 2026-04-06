@@ -176,7 +176,7 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
                     <div className="relative">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Người dùng <span className="text-[#db5945]">*</span></label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Người dùng <span className="text-[#446b5f]">*</span></label>
                         <div className="relative">
                             <button
                                 type="button"
@@ -234,7 +234,7 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#db5945]">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#446b5f]">*</span></label>
                             <DatePicker
                                 selected={form.startTime ? new Date(form.startTime) : null}
                                 onChange={(date: Date | null) => setForm(f => ({ ...f, startTime: date ? date.toISOString() : '' }))}
@@ -248,7 +248,7 @@ function CreateAppointmentModal({ staffId, onClose, onCreated }: CreateModalProp
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#db5945]">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#446b5f]">*</span></label>
                             <DatePicker
                                 selected={form.endTime ? new Date(form.endTime) : null}
                                 onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? date.toISOString() : '' }))}
@@ -335,9 +335,9 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                             <span className="text-gray-300 font-light text-lg">—</span>
                             <span className="text-xl font-black text-gray-800 tracking-tighter leading-none">{end.time}</span>
                         </div>
-                        <span className="text-[10px] font-black text-[#db5945] uppercase tracking-wider">{duration}</span>
+                        <span className="text-[10px] font-black text-[#446b5f] uppercase tracking-wider">{duration}</span>
                     </div>
-                    <p className="text-[10px] font-bold text-[#db5945]/70 italic mt-1.5">{start.date}</p>
+                    <p className="text-[10px] font-bold text-[#446b5f]/70 italic mt-1.5">{start.date}</p>
                 </div>
 
                 {/* Info Fields */}
@@ -705,7 +705,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                                 </td>
                                                 <td className="px-4 py-1">
                                                     <div className="flex justify-center">
-                                                         <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#db5945] translate-x-1' : 'text-gray-300'}`} />
+                                                         <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#446b5f] translate-x-1' : 'text-gray-300'}`} />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -789,14 +789,14 @@ export default function StaffSchedulePage() {
                 {TABS.map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`relative px-6 py-2.5 text-[10px] font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2.5 ${activeTab === tab.id
-                            ? 'bg-white text-[#db5945] rounded-t-2xl shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.1)] z-20 h-11 border-t-2 border-[#db5945]'
+                            ? 'bg-white text-[#446b5f] rounded-t-2xl shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.1)] z-20 h-11 border-t-2 border-[#446b5f]'
                             : 'bg-gray-100/50 text-gray-400 rounded-t-xl hover:bg-gray-200/50 z-10 h-9 mb-0.5'}`}>
                         {tab.icon}
                         <span className="whitespace-nowrap">{tab.label}</span>
                         {tab.id === 'list' && (
                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all ${
-                                 activeTab === 'list' 
-                                 ? 'bg-[#db5945]/10 text-[#db5945] border-[#db5945]/20' 
+                                 activeTab === 'list'
+                                 ? 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20'
                                  : 'bg-gray-200 text-gray-400 border-gray-300'
                              }`}>
                                  {displayedAppointments.length}
