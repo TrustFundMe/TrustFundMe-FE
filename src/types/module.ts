@@ -28,7 +28,8 @@ export type IconKey =
     | "rss"
     | "bell"
     | "history"
-    | "database";
+    | "database"
+    | "chart-bar";
 
 
 export interface ModuleGroup {

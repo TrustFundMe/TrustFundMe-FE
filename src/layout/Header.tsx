@@ -427,7 +427,11 @@ const AuthButton = ({ whiteText = false }: { whiteText?: boolean }) => {
 
   return (
     <div className="header-button d-none d-xl-block">
-      <Link href="/sign-in" className="theme-btn transparent-btn" style={whiteText ? { color: '#fff', border: '1px solid #fff' } : {}}>
+      <Link
+        href="/sign-in"
+        className="theme-btn"
+        style={whiteText ? { color: '#fff', border: '1px solid #fff' } : { backgroundColor: '#F84D43', color: '#fff' }}
+      >
         Đăng nhập
       </Link>
     </div>

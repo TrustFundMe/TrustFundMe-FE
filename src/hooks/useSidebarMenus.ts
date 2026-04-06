@@ -5,6 +5,7 @@ import type { ModuleGroup } from "@/types/module"
 import { moduleGroupApi } from "@/api/moduleApi"
 import { iconMap } from "@/constants/iconMap"
 import { useQuery } from "@tanstack/react-query"
+import type { LucideIcon } from "lucide-react"
 
 
 /* ================= QUERY (LOCAL) ================= */
@@ -124,12 +125,51 @@ const fallbackMenus: ModuleGroup[] = [
                 createdAt: "",
                 updatedAt: "",
             },
+            {
+                id: 109,
+                title: "Tổng quan quỹ",
+                url: "/admin/funds-overview",
+                icon: "chart-bar",
+                moduleGroupId: 1,
+                displayOrder: 10,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
         ],
         createdAt: "",
         updatedAt: "",
     },
 ];
 
+
+
+/* ================= TYPES ================= */
+interface SidebarItem {
+    title: string;
+    url: string;
+    icon?: LucideIcon;
+    isActive: boolean;
+    items?: {
+        title: string;
+        url: string;
+        isActive: boolean;
+    }[];
+}
+
+interface SidebarNavGroup {
+    id: string;
+    name: string;
+    items: SidebarItem[];
+}
+
+/* -------- ENSURE /admin PREFIX ---------- */
+const ensureAdminPrefix = (url?: string) => {
+    if (!url || url === '#') return url || '#';
+    if (url.startsWith('/admin')) return url;
+    return '/admin' + (url.startsWith('/') ? '' : '/') + url;
+};
+/* --------------------------------------- */
 
 export function useSidebarMenus() {
 
@@ -165,19 +205,11 @@ export function useSidebarMenus() {
     }, [])
     /* --------------------------------------- */
 
-    /* -------- ENSURE /admin PREFIX ---------- */
-    const ensureAdminPrefix = (url?: string) => {
-        if (!url || url === '#') return url || '#';
-        if (url.startsWith('/admin')) return url;
-        return '/admin' + (url.startsWith('/') ? '' : '/') + url;
-    };
-    /* --------------------------------------- */
-
     /* -------- MAP MODULE ➜ Sidebar Nav ------ */
-    const navGroups = useMemo(() => {
+    const navGroups = useMemo<SidebarNavGroup[]>(() => {
         return moduleGroups
             .map((group) => {
-                const items = (group.modules || [])
+                const items: SidebarItem[] = (group.modules || [])
                     .filter((module) => !module.parentId)
                     .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
                     .map((module) => {
@@ -201,7 +233,7 @@ export function useSidebarMenus() {
                         const moduleUrl = ensureAdminPrefix(module.url);
                         const isActive =
                             isActiveRoute(moduleUrl) ||
-                            children?.some((c) => c.isActive);
+                            (children?.some((c) => c.isActive) ?? false);
 
                         return {
                             title: module.title,
@@ -223,7 +255,7 @@ export function useSidebarMenus() {
                     items,
                 }
             })
-            .filter(Boolean) as any[]
+            .filter((group): group is SidebarNavGroup => group !== null)
     }, [moduleGroups, isActiveRoute])
     /* --------------------------------------- */
 

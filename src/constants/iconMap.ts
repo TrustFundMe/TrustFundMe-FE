@@ -31,6 +31,7 @@ import {
     Bell,
     History,
     Database,
+    BarChart,
 } from "lucide-react"
 
 export const iconMap: Record<IconKey, LucideIcon> = {
@@ -64,4 +65,5 @@ export const iconMap: Record<IconKey, LucideIcon> = {
     bell: Bell,
     history: History,
     database: Database,
+    "chart-bar": BarChart,
 }
