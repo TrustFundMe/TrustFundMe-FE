@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Search, Trash2, Eye, ChevronLeft, ChevronRight, Loader2, AlertCircle,
-  MessageSquare, RefreshCw, Pin, Lock, LockOpen, PinOff,
+  MessageSquare, RefreshCw, Pin, Lock, LockOpen, PinOff, Pencil,
 } from 'lucide-react';
 import Link from 'next/link';
 import { api } from '@/config/axios';
@@ -35,8 +35,10 @@ export default function AdminFeedPostsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
-  const [createdAtOpen, setCreatedAtOpen] = useState(false);
-  const [createdAtDetails, setCreatedAtDetails] = useState<{ postTitle?: string; createdAt: string } | null>(null);
+  const [editPost, setEditPost] = useState<PostWithFlags | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -107,6 +109,42 @@ export default function AdminFeedPostsPage() {
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
+    }
+  };
+
+  const openEdit = (post: PostWithFlags) => {
+    setEditPost(post);
+    setEditTitle(post.title ?? '');
+    setEditContent(post.content ?? '');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editPost) return;
+    const t = editTitle.trim();
+    const c = editContent.trim();
+    if (!t && !c) {
+      alert('Cần có ít nhất tiêu đề hoặc nội dung.');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const res = await api.patch(API_ENDPOINTS.FEED_POSTS.ADMIN_CONTENT(editPost.id), {
+        title: t || '',
+        content: c || '',
+      });
+      const u = dtoToFeedPost(res.data);
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === editPost.id
+            ? { ...p, title: u.title, content: u.content, updatedAt: u.updatedAt ?? p.updatedAt, status: u.status }
+            : p
+        )
+      );
+      setEditPost(null);
+    } catch {
+      alert('Lưu chỉnh sửa thất bại. Vui lòng thử lại.');
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -247,6 +285,14 @@ export default function AdminFeedPostsPage() {
                         className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-white transition-all" title="Xem">
                         <Eye className="h-3.5 w-3.5" />
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(post)}
+                        disabled={processingId === post.id}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-[#1A685B] hover:bg-[#1A685B]/10 transition-all disabled:opacity-50"
+                        title="Sửa bài">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
                       <button onClick={() => handleTogglePin(post)} disabled={processingId === post.id}
                         className={`p-1.5 rounded-lg transition-all disabled:opacity-50 ${post.isPinned ? 'bg-orange-100 text-orange-600' : 'text-slate-400 hover:text-orange-600'}`}>
                         {isProcessing(post.id, 'pin') ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : post.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
@@ -309,18 +355,44 @@ export default function AdminFeedPostsPage() {
         </div>
       </div>
 
-      <Dialog open={createdAtOpen} onOpenChange={setCreatedAtOpen}>
-        <DialogContent className="max-w-[480px]">
+      <Dialog open={editPost !== null} onOpenChange={(open) => { if (!open) setEditPost(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chi tiết ngày tạo</DialogTitle>
+            <DialogTitle>Sửa bài viết</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <div className="text-sm text-slate-600">
-              {createdAtDetails?.postTitle ? <span className="font-bold text-slate-900">Bài viết: </span> : null}
-              {createdAtDetails?.postTitle ?? '—'}
-            </div>
-            <div className="text-sm font-bold text-slate-900">
-              {createdAtDetails?.createdAt ? new Date(createdAtDetails.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+          <div className="flex flex-col gap-3 pt-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tiêu đề</label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-xl border border-slate-100 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#F84D43]/10 focus:border-[#F84D43]"
+              placeholder="Tiêu đề (tuỳ chọn)"
+            />
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nội dung</label>
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={8}
+              className="w-full rounded-xl border border-slate-100 px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-[#F84D43]/10 focus:border-[#F84D43] resize-y min-h-[120px]"
+              placeholder="Nội dung bài viết"
+            />
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditPost(null)}
+                disabled={editSaving}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveEdit()}
+                disabled={editSaving || (!editTitle.trim() && !editContent.trim())}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#1A685B] hover:bg-[#155a4f] disabled:opacity-50 flex items-center gap-2">
+                {editSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                Lưu
+              </button>
             </div>
           </div>
         </DialogContent>

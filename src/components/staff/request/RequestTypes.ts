@@ -99,6 +99,16 @@ export type EvidenceRequest = StaffRequestBase & {
   phoneNumber?: string; // Để staff gọi điện xác nhận
 };
 
+export type SupportRequest = StaffRequestBase & {
+  type: 'SUPPORT';
+  fromCampaignId?: number;
+  toCampaignId?: number;
+  amount: number;
+  reason?: string;
+  createdByStaffId?: number;
+  evidenceImageId?: number;
+};
+
 export type TabType = 'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'USER_VERIFICATION';
 
 

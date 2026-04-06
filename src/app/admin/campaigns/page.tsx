@@ -130,7 +130,13 @@ export default function AdminCampaignsPage() {
 
   const updateStatus = async (id: number, status: string) => {
     try {
-      await campaignService.update(id, { status });
+      if (status === 'PAUSED') {
+        await campaignService.pauseCampaign(id);
+      } else if (status === 'CLOSED') {
+        await campaignService.closeCampaign(id);
+      } else {
+        await campaignService.update(id, { status });
+      }
       toast.success('Cập nhật trạng thái thành công');
       refetch();
     } catch (err) {
@@ -359,12 +365,10 @@ export default function AdminCampaignsPage() {
                 <div className="space-y-6 relative before:absolute before:inset-0 before:left-[11px] before:border-l-2 before:border-slate-100">
                   {historyGoals.map((goal) => (
                     <div key={goal.id} className="relative pl-10">
-                      <div className={`absolute left-0 top-1 h-6 w-6 rounded-full border-4 border-white shadow-sm z-10 ${
-                        goal.isActive ? 'bg-emerald-500' : 'bg-slate-300'
-                      }`} />
-                      <div className={`p-5 rounded-2xl border ${
-                        goal.isActive ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white border-slate-100'
-                      }`}>
+                      <div className={`absolute left-0 top-1 h-6 w-6 rounded-full border-4 border-white shadow-sm z-10 ${goal.isActive ? 'bg-emerald-500' : 'bg-slate-300'
+                        }`} />
+                      <div className={`p-5 rounded-2xl border ${goal.isActive ? 'bg-emerald-50/50 border-emerald-100' : 'bg-white border-slate-100'
+                        }`}>
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <div className="text-lg font-black text-slate-900">{formatVnd(goal.targetAmount)}</div>

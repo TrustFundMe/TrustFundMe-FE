@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { Building2, Pin } from "lucide-react";
 import type { FeedPost } from "@/types/feedPost";
 import type { Expenditure } from "@/types/expenditure";
 import type { CampaignInfo } from "@/components/feed-post/CampaignCard";
@@ -138,6 +138,28 @@ export default function FeedPostHeader({
             }}
           >
             Nháp
+          </span>
+        )}
+        {post.isPinned && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 20,
+              border: "1px solid rgba(234, 88, 12, 0.35)",
+              background: "rgba(255, 237, 213, 0.65)",
+              fontWeight: 600,
+              letterSpacing: 0.2,
+              fontSize: 11,
+              textTransform: "uppercase",
+              color: "#c2410c",
+            }}
+            title="Bài được ghim nổi bật trên bảng tin"
+          >
+            <Pin size={12} strokeWidth={2.5} />
+            Đã ghim
           </span>
         )}
       </div>

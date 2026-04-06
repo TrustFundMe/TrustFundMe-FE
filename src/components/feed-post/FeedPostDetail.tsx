@@ -120,7 +120,7 @@ export default function FeedPostDetail({
   }, [loadComments]);
 
   const handleLike = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || post.isLocked) return;
     const prevLiked = liked;
     const prevCount = likeCount;
     setLiked(!liked);
@@ -139,7 +139,7 @@ export default function FeedPostDetail({
   };
 
   const handleToggleCommentLike = async (commentId: string) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || post.isLocked) return;
 
     // Optimistic update helper — works for root comments and nested replies
     const updateLike = (list: FeedPostComment[]): FeedPostComment[] =>
@@ -497,13 +497,21 @@ export default function FeedPostDetail({
           <button
             type="button"
             onClick={handleLike}
-            disabled={!isAuthenticated}
+            disabled={!isAuthenticated || post.isLocked}
             style={{
-              border: "none", background: "transparent", padding: "8px 0", cursor: isAuthenticated ? "pointer" : "default",
+              border: "none", background: "transparent", padding: "8px 0",
+              cursor: isAuthenticated && !post.isLocked ? "pointer" : "not-allowed",
               color: liked ? "#F84D43" : "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", gap: 6,
               fontSize: 14, fontWeight: 600, position: "relative",
+              opacity: post.isLocked ? 0.45 : 1,
             }}
-            title={isAuthenticated ? undefined : "Đăng nhập để thích bài viết"}
+            title={
+              post.isLocked
+                ? "Bài đang khóa tương tác — không thể thích"
+                : !isAuthenticated
+                  ? "Đăng nhập để thích bài viết"
+                  : undefined
+            }
           >
             <motion.span
               animate={likeAnimating ? { scale: [1, 1.5, 0.9, 1.1, 1] } : { scale: 1 }}
@@ -615,10 +623,10 @@ export default function FeedPostDetail({
                   <CommentItem
                     comment={comment}
                     currentUserId={user ? String(user.id) : undefined}
-                    onToggleLike={handleToggleCommentLike}
+                    onToggleLike={!post.isLocked ? handleToggleCommentLike : undefined}
                     onReply={!post.isLocked ? handleReply : undefined}
-                    onEdit={isAuthenticated ? handleEditComment : undefined}
-                    onDelete={isAuthenticated ? handleDeleteComment : undefined}
+                    onEdit={isAuthenticated && !post.isLocked ? handleEditComment : undefined}
+                    onDelete={isAuthenticated && !post.isLocked ? handleDeleteComment : undefined}
                     isAuthenticated={isAuthenticated}
                   />
                   )}
@@ -649,9 +657,9 @@ export default function FeedPostDetail({
         {/* Comment Input Bar */}
         {post.isLocked ? (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.08)", display: "flex", justifyContent: "center" }}>
-            <span style={{ fontSize: 13, color: "#F84D43", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: 0.8 }}>
-              <Lock className="w-4 h-4" />
-              Tính năng bình luận đã bị vô hiệu hóa
+            <span style={{ fontSize: 13, color: "#F84D43", fontWeight: 600, display: "flex", alignItems: "center", gap: 6, opacity: 0.9, textAlign: "center", flexWrap: "wrap", justifyContent: "center", maxWidth: 420 }}>
+              <Lock className="w-4 h-4 shrink-0" />
+              Bài đang khóa tương tác — không thể thích, bình luận, trả lời hoặc thích bình luận
             </span>
           </div>
         ) : (
