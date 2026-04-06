@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Flag, Search, CheckCircle, XCircle, Clock, ExternalLink, Loader2, User, Lock, LockOpen, Megaphone, FileText, X, ChevronDown } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
@@ -28,7 +28,8 @@ interface GroupedTarget {
   totalCount: number;
 }
 
-const statusConfig: Record<FlagStatus, { label: string; color: string; icon: React.ElementType } = {
+type StatusConfigValue = { label: string; color: string; icon: React.ElementType };
+const statusConfig: Record<FlagStatus, StatusConfigValue> = {
   PENDING:    { label: 'Chờ xử lý',  color: 'bg-yellow-50 text-yellow-700 border-yellow-100', icon: Clock },
   RESOLVED:   { label: 'Đã giải quyết', color: 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20', icon: CheckCircle },
   DISMISSED:  { label: 'Đã bác bỏ', color: 'bg-gray-100 text-gray-500 border-gray-200', icon: XCircle },
