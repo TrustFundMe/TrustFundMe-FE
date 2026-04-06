@@ -9,6 +9,17 @@ const aiApi = axios.create({
     },
 });
 
+export interface FlagAnalysisResult {
+    summary: string;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    riskScore: number;
+    keyFindings: string[];
+    concerns: string[];
+    recommendation: string;
+    actionTypes: ('HIDE_POST' | 'DELETE_POST' | 'LOCK_ACCOUNT' | 'REQUIRE_DOCUMENT' | 'APPROVE' | 'WARN_USER')[];
+    confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
 export const aiService = {
     async generateDescription(prompt: string, rules?: string) {
         const response = await aiApi.post('/api/generate-description', {
@@ -41,7 +52,7 @@ export const aiService = {
         const response = await axios.post(`${AI_BASE_URL}/api/ocr-kyc`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
-        
+
         return response.data as {
             idNumber: string | null;
             fullName: string | null;
@@ -54,5 +65,13 @@ export const aiService = {
             issueDate: string | null;
             issuePlace: string | null;
         };
+    },
+
+    async analyzeFlag(targetData: Record<string, any>, flags: Record<string, any>[]) {
+        const response = await aiApi.post<FlagAnalysisResult>('/api/analyze-flag', {
+            targetData,
+            flags,
+        });
+        return response.data;
     },
 };
