@@ -34,6 +34,7 @@ export default function ExpenditureGalleryModal({
   itemName,
   media,
   loading = false,
+  onDelete,
   isReadOnly = false,
   uploadState,
   onFileChange,

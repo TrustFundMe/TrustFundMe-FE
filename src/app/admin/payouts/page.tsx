@@ -329,22 +329,20 @@ export default function AdminPayoutsPage() {
             <div className="flex items-center gap-1 bg-white rounded-2xl p-1 shadow-lg shadow-slate-200/50 w-fit">
                 <button
                     onClick={() => { setActiveTab('PAYOUT'); setCurrentPage(1); }}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
-                        activeTab === 'PAYOUT'
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'PAYOUT'
                             ? 'bg-slate-900 text-white shadow-lg'
                             : 'text-slate-500 hover:bg-slate-50'
-                    }`}
+                        }`}
                 >
                     <DollarSign className="h-4 w-4" />
                     Giải ngân ({filteredExpenditures.length})
                 </button>
                 <button
                     onClick={() => { setActiveTab('REFUND'); setCurrentPage(1); }}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${
-                        activeTab === 'REFUND'
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'REFUND'
                             ? 'bg-slate-900 text-white shadow-lg'
                             : 'text-slate-500 hover:bg-slate-50'
-                    }`}
+                        }`}
                 >
                     <RefreshCcw className="h-4 w-4" />
                     Hoàn tiền dư ({filteredRefunds.length})
@@ -447,8 +445,8 @@ export default function AdminPayoutsPage() {
                                                 </td>
                                                 <td className="py-2 pr-4">
                                                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${exp.status === 'WITHDRAWAL_REQUESTED' ? 'bg-blue-100 text-blue-700' :
-                                                            exp.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
-                                                                'bg-gray-100 text-gray-700'
+                                                        exp.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
+                                                            'bg-gray-100 text-gray-700'
                                                         }`}>
                                                         {exp.status === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' :
                                                             exp.status === 'DISBURSED' ? 'Đã giải ngân' : exp.status}
@@ -494,7 +492,7 @@ export default function AdminPayoutsPage() {
                                                 </td>
                                                 <td className="py-2 pr-4">
                                                     <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${refund.status === 'COMPLETED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
-                                                            'bg-amber-100 text-amber-700'
+                                                        'bg-amber-100 text-amber-700'
                                                         }`}>
                                                         {refund.status === 'COMPLETED' ? 'Hoàn thành' : refund.status}
                                                     </span>
@@ -615,7 +613,7 @@ export default function AdminPayoutsPage() {
                                             <h3 className="text-[10px] font-black text-[#F84D43] uppercase tracking-[0.2em] mb-4">Thông tin chung</h3>
                                             <div className="space-y-4">
                                                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền muốn rút</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Số tiền đã rút</span>
                                                     <span className="text-2xl font-black text-slate-900 mt-1">{formatVnd(selectedExp.totalAmount || selectedExp.totalExpectedAmount)}</span>
                                                 </div>
                                                 <div>

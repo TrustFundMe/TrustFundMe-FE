@@ -205,7 +205,7 @@ export default function CampaignExpendituresPage() {
         const latestExp = expenditures[0];
         const isDisbursed = latestExp.status === 'DISBURSED';
         const isRejected = latestExp.status === 'REJECTED';
-        const hasEvidence = latestExp.evidenceStatus === 'SUBMITTED' || latestExp.evidenceStatus === 'APPROVED';
+        const hasEvidenceSubmitted = latestExp.evidenceStatus === 'SUBMITTED' || latestExp.evidenceStatus === 'APPROVED';
 
         if (!isDisbursed && !isRejected) {
             return {
@@ -215,7 +215,7 @@ export default function CampaignExpendituresPage() {
             };
         }
 
-        if (isDisbursed && !hasEvidence) {
+        if (isDisbursed && !hasEvidenceSubmitted) {
             return {
                 canCreate: false,
                 isDisabled: false,
@@ -940,11 +940,11 @@ export default function CampaignExpendituresPage() {
                                                                                     >
                                                                                         <div className={`absolute -left-[32px] top-6 w-2.5 h-2.5 rounded-full z-10 ${exp.status === 'REJECTED' ? 'bg-rose-500 ring-4 ring-rose-50' : (exp.isWithdrawalRequested ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50')}`}></div>
                                                                                         <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 2 ? 'text-emerald-900' : (exp.status === 'REJECTED' ? 'text-rose-600' : (exp.isWithdrawalRequested ? 'text-emerald-700' : 'text-orange-400'))}`}>
-                                                                                                2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'Đã duyệt' : 'Yêu cầu rút tiền')}
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 2 ? 'text-emerald-900' : (exp.status === 'REJECTED' ? 'text-rose-600' : (exp.status === 'PENDING_REVIEW' && campaign.type === 'AUTHORIZED' ? 'text-amber-500' : (exp.isWithdrawalRequested || (campaign.type === 'AUTHORIZED' && exp.status !== 'PENDING_REVIEW') ? 'text-emerald-700' : 'text-orange-400')))}`}>
+                                                                                                2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (campaign.type === 'AUTHORIZED' ? (exp.status === 'PENDING_REVIEW' ? 'Đang xét duyệt' : 'Đã duyệt') : 'Yêu cầu rút tiền')}
                                                                                             </span>
                                                                                             <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                {exp.status === 'REJECTED' ? 'Đã phản hồi' : (exp.isWithdrawalRequested ? 'Đã thực hiện' : 'Chưa thực hiện')}
+                                                                                                {exp.status === 'REJECTED' ? 'Đã phản hồi' : (campaign.type === 'AUTHORIZED' ? (exp.status === 'PENDING_REVIEW' ? 'Đang xử lý' : 'Đã thực hiện') : (exp.isWithdrawalRequested ? 'Đã thực hiện' : 'Chưa thực hiện'))}
                                                                                             </span>
                                                                                         </div>
                                                                                     </button>
@@ -1021,8 +1021,10 @@ export default function CampaignExpendituresPage() {
                                                                                                 <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">{exp.status === 'REJECTED' ? 'KẾT QUẢ PHẢN HỒI' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'XÉT DUYỆT CHI TIÊU' : 'YÊU CẦU RÚT TIỀN')}</h4>
                                                                                                 {exp.status === 'REJECTED' ? (
                                                                                                     <span className="px-3 py-1 bg-rose-50 text-rose-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-rose-100">Từ chối</span>
-                                                                                                ) : (campaign.type === 'AUTHORIZED' && exp.staffReviewId) ? (
+                                                                                                ) : (campaign.type === 'AUTHORIZED' && exp.status !== 'PENDING_REVIEW') ? (
                                                                                                     <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã duyệt</span>
+                                                                                                ) : (campaign.type === 'AUTHORIZED' && exp.status === 'PENDING_REVIEW') ? (
+                                                                                                    <span className="px-3 py-1 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-amber-100">Chờ duyệt</span>
                                                                                                 ) : exp.isWithdrawalRequested ? (
                                                                                                     <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã gửi</span>
                                                                                                 ) : (
@@ -1048,29 +1050,29 @@ export default function CampaignExpendituresPage() {
                                                                                                             </div>
                                                                                                             <div className="flex items-center gap-2 text-[10px] font-bold text-black/40 uppercase tracking-tight">
                                                                                                                 <User className="w-3.5 h-3.5" />
-                                                                                                                <span>Người xét duyệt: Staff #{exp.staffReviewId || 'Hệ thống'}</span>
+                                                                                                                <span>Người xét duyệt: {staffNameMap[exp.id] || (exp.staffReviewId ? `Staff #${exp.staffReviewId}` : 'Hệ thống')}</span>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                     </div>
-                                                                                                ) : exp.isWithdrawalRequested ? (
+                                                                                                ) : (exp.isWithdrawalRequested || (campaign.type === 'AUTHORIZED' && exp.staffReviewId)) ? (
                                                                                                     <div className="space-y-6">
-                                                                                                        <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-2xl border border-emerald-100">
-                                                                                                            <div className="w-10 h-10 rounded-xl bg-orange-400 flex items-center justify-center text-white">
-                                                                                                                <CheckCircle className="w-6 h-6" />
+                                                                                                        <div className={`flex items-center gap-4 p-4 rounded-2xl border ${exp.status === 'PENDING_REVIEW' ? 'bg-amber-50 border-amber-100' : 'bg-orange-50 border-emerald-100'}`}>
+                                                                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${exp.status === 'PENDING_REVIEW' ? 'bg-amber-400' : 'bg-orange-400'}`}>
+                                                                                                                {exp.status === 'PENDING_REVIEW' ? <Clock className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
                                                                                                             </div>
                                                                                                             <div>
-                                                                                                                <p className="text-sm font-black text-emerald-900">{campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'Khoản chi đã được xét duyệt' : 'Yêu cầu đã được ghi nhận'}</p>
+                                                                                                                <p className={`text-sm font-black ${exp.status === 'PENDING_REVIEW' ? 'text-amber-900' : 'text-emerald-900'}`}>{campaign.type === 'AUTHORIZED' ? (exp.status === 'PENDING_REVIEW' ? 'Đang được xét duyệt' : 'Khoản chi đã được xét duyệt') : 'Yêu cầu đã được ghi nhận'}</p>
                                                                                                             </div>
                                                                                                         </div>
                                                                                                         {campaign.type === 'AUTHORIZED' && exp.staffReviewId && (
                                                                                                             <div className="flex items-center gap-2 text-[10px] font-bold text-black/40 uppercase tracking-tight ml-2">
                                                                                                                 <User className="w-3.5 h-3.5" />
-                                                                                                                <span>Nhân viên duyệt: Staff #{exp.staffReviewId}</span>
+                                                                                                                <span>Nhân viên duyệt: {staffNameMap[exp.id] || `Staff #${exp.staffReviewId}`}</span>
                                                                                                             </div>
                                                                                                         )}
                                                                                                         <p className="text-sm font-bold text-black/60 leading-relaxed italic">
-                                                                                                            {campaign.type === 'AUTHORIZED' && exp.staffReviewId
-                                                                                                                ? 'Kế hoạch chi tiêu của bạn đã được phê duyệt. Hệ thống đang tiến hành các bước giải ngân.'
+                                                                                                            {campaign.type === 'AUTHORIZED'
+                                                                                                                ? (exp.status === 'PENDING_REVIEW' ? 'Kế hoạch chi tiêu của bạn đang được xét duyệt. Vui lòng đợi kết quả nhé.' : 'Kế hoạch chi tiêu của bạn đã được phê duyệt. Hệ thống đang tiến hành các bước giải ngân.')
                                                                                                                 : 'Hệ thống đang chờ Quản trị viên kiểm tra danh sách vật phẩm và thực hiện chuyển khoản vào tài khoản cá nhân của bạn.'}
                                                                                                         </p>
                                                                                                     </div>

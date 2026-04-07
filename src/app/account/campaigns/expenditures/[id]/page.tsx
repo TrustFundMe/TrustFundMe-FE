@@ -330,11 +330,6 @@ export default function ExpenditureDetailPage() {
                             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                                 Chi tiết khoản chi
                                 {getStatusBadge(expenditure.status)}
-                                {expenditure.isWithdrawalRequested && (
-                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                        <CheckCircle className="w-4 h-4 mr-1.5" /> Đã yêu cầu rút tiền
-                                    </span>
-                                )}
                             </h1>
                             <p className="mt-2 text-gray-500 flex items-center gap-2">
                                 <Calendar className="w-4 h-4" />
@@ -359,53 +354,77 @@ export default function ExpenditureDetailPage() {
 
                     {/* 3-Frame Summary Layout */}
                     {campaign?.type === 'AUTHORIZED' ? (
-                        <div className="flex justify-center mb-8">
-                            {/* Frame: Amount to Withdraw - Single Focus for AUTHORIZED */}
-                            <div className="bg-white p-6 rounded-xl border-2 border-orange-200 shadow-md relative overflow-hidden max-w-md w-full text-center">
-                                <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-orange-100 rounded-full opacity-50"></div>
-                                <p className="text-sm font-bold text-orange-600 mb-2 uppercase tracking-widest">Số tiền muốn rút</p>
-                                <p className="text-3xl font-extrabold text-gray-900 mb-1">
+                        <div className="grid grid-cols-3 gap-4 mb-8">
+                            {/* Đã giải ngân */}
+                            <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-blue-600 mb-1 uppercase tracking-wide">Đã giải ngân</p>
+                                <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalExpectedAmount || 0)}
                                 </p>
-                                <p className="text-xs text-orange-500 font-semibold italic">Tổng ngân sách dự kiến giải ngân cho đợt này</p>
+                            </div>
+
+                            {/* Thực tế đã chi */}
+                            <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-orange-600 mb-1 uppercase tracking-wide">Thực tế đã chi</p>
+                                <p className="text-xl font-bold text-gray-900">
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalAmount || 0)}
+                                </p>
+                            </div>
+
+                            {/* Số dư */}
+                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
+                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư</p>
+                                <p className="text-[10px] text-gray-400 mb-1">(chênh lệch do giá thị trường)</p>
+                                <p className={`text-xl font-bold ${(expenditure.totalExpectedAmount - (expenditure.totalAmount || 0)) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((expenditure.totalExpectedAmount || 0) - (expenditure.totalAmount || 0))}
+                                </p>
                             </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            {/* Frame 1: Dự kiến */}
+                            {/* Dự kiến */}
                             <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm text-center">
                                 <p className="text-xs font-medium text-blue-600 mb-1 uppercase tracking-wide">Dự kiến</p>
+                                <p className="text-[10px] text-blue-300 mb-1">(chủ quỹ đăng kế hoạch)</p>
                                 <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalExpectedAmount || 0)}
                                 </p>
                             </div>
 
-                            {/* Frame 2: Đã nhận */}
+                            {/* Đã nhận */}
                             <div className="bg-white p-4 rounded-xl border border-green-200 shadow-sm text-center relative overflow-hidden">
                                 <div className="absolute top-0 right-0 -mt-1 -mr-1 w-8 h-8 bg-green-100 rounded-full opacity-50"></div>
                                 <p className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">Đã nhận</p>
+                                <p className="text-[10px] text-green-300 mb-1">(thực tế đã nhận từ donation, đã giải ngân)</p>
                                 <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(0)}
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}
                                 </p>
                             </div>
 
-                            {/* Frame 3: Đã chi */}
+                            {/* Đã chi */}
                             <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm text-center">
                                 <p className="text-xs font-medium text-orange-600 mb-1 uppercase tracking-wide">Đã chi</p>
+                                <p className="text-[10px] text-orange-300 mb-1">(thực tế chủ quỹ đã sử dụng tiền)</p>
                                 <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalAmount)}
                                 </p>
                             </div>
 
-                            {/* Frame 4: Số dư đợt chi tiêu */}
+                            {/* Số dư */}
                             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư đợt chi tiêu</p>
+                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư</p>
+                                <p className="text-[10px] text-gray-400 mb-1">(chênh lệch do giá thị trường)</p>
                                 <p className="text-xl font-bold text-gray-900">
                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
                                 </p>
                             </div>
                         </div>
                     )}
+
+                    {/* Giải thích */}
+                    <div className="text-xs text-gray-400 text-center mb-6 -mt-2">
+                        đã nhận = đã chi + số dư. Số dư sẽ được chủ quỹ hoàn về campaign
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -429,22 +448,25 @@ export default function ExpenditureDetailPage() {
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
+                                    <thead className="bg-gray-50" style={{ display: 'table-header-group' }}>
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên hàng hóa</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tên hàng hóa</th>
                                             {campaign?.type === 'AUTHORIZED' ? (
-                                                <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Thành tiền dự kiến rút</th>
+                                                <>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50 whitespace-nowrap">Kế hoạch</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase tracking-wider bg-red-50 whitespace-nowrap">Thực tế đã chi</th>
+                                                </>
                                             ) : (
                                                 <>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50">Kế hoạch</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50">Đã nhận</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50">Đã chi</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50 whitespace-nowrap">Kế hoạch</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50 whitespace-nowrap">Đã nhận</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50 whitespace-nowrap">Đã chi</th>
                                                 </>
                                             )}
-                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ảnh</th>
+                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ảnh</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
+                                    <tbody className="bg-white divide-y divide-gray-200 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ display: 'table-row-group', maxHeight: '400px' }}>
                                         {items.map((item) => {
                                             const isExpanded = expandedItemId === item.id;
                                             const media = itemMedia[item.id] || [];
@@ -469,14 +491,24 @@ export default function ExpenditureDetailPage() {
                                                             </button>
                                                         </td>
                                                         {campaign?.type === 'AUTHORIZED' ? (
-                                                            <td className="px-6 py-4 text-right bg-orange-50/30">
-                                                                <div className="text-sm font-bold text-orange-700">
-                                                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
-                                                                </div>
-                                                                <div className="text-xs text-gray-500 mt-1">
-                                                                    {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                </div>
-                                                            </td>
+                                                            <>
+                                                                <td className="px-6 py-4 text-right bg-blue-50/30">
+                                                                    <div className="text-sm font-bold text-blue-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right bg-red-50/30">
+                                                                    <div className="text-sm font-bold text-red-700">
+                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * (item.price || 0))}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                        {item.actualQuantity || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price || 0)}
+                                                                    </div>
+                                                                </td>
+                                                            </>
                                                         ) : (
                                                             <>
                                                                 <td className="px-6 py-4 text-right bg-blue-50/30">
@@ -491,8 +523,8 @@ export default function ExpenditureDetailPage() {
                                                                     <div className="text-sm font-bold text-green-700">
                                                                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
                                                                     </div>
-                                                                    <div className="text-xs text-green-600/70 mt-1">
-                                                                        Đã nhận: <span className="font-bold">{donationSummary[item.id] || 0}</span>
+                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                        {donationSummary[item.id] || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-6 py-4 text-right bg-orange-50/30">
@@ -511,13 +543,20 @@ export default function ExpenditureDetailPage() {
                                                                     setGalleryModalItemId(item.id);
                                                                     loadItemMedia(item.id);
                                                                 }}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors border border-orange-200 text-orange-700 hover:bg-orange-50"
+                                                                className="w-12 h-12 rounded-lg overflow-hidden border border-orange-200 hover:border-orange-400 hover:shadow transition-all"
+                                                                title="Nhấn để xem ảnh minh chứng"
                                                             >
-                                                                <ImageIcon className="w-3.5 h-3.5" />
                                                                 {itemMediaLoading[item.id] ? (
-                                                                    <div className="w-3 h-3 border border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                                                        <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                    </div>
+                                                                ) : media.length > 0 ? (
+                                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                                    <img src={media[0].url} alt="" className="w-full h-full object-cover" />
                                                                 ) : (
-                                                                    media.length
+                                                                    <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                                        <ImageIcon className="w-4 h-4 text-gray-300" />
+                                                                    </div>
                                                                 )}
                                                             </button>
                                                         </td>
@@ -529,18 +568,15 @@ export default function ExpenditureDetailPage() {
                                     <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                                         <tr className="font-black text-gray-900">
                                             <td className="px-6 py-4 text-sm uppercase">Tổng cộng đợt chi</td>
-                                            {campaign?.type === 'ITEMIZED' ? (
+                                            {campaign?.type === 'AUTHORIZED' ? (
                                                 <>
                                                     <td className="px-6 py-4 text-right bg-blue-100/50">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right bg-green-100/50">
-                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right bg-orange-100/50">
+                                                    <td className="px-6 py-4 text-right bg-red-100/50">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
-                                                        <div className={`text-[10px] uppercase mt-1 ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                        <div className={`text-[10px] uppercase mt-1 ${(expenditure.totalExpectedAmount - totalActual) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((expenditure.totalExpectedAmount || 0) - totalActual)}
                                                         </div>
                                                     </td>
                                                 </>
@@ -550,7 +586,7 @@ export default function ExpenditureDetailPage() {
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right bg-green-100/50">
-                                                        {/* Empty for non-itemized */}
+                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right bg-orange-100/50">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
@@ -569,35 +605,6 @@ export default function ExpenditureDetailPage() {
                     </div>
 
                     <div className="col-span-1 space-y-6">
-                        {/* Evidence Info Header - Conditionally rendered */}
-                        {!(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
-                            <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6 mb-6">
-                                <h2 className="text-lg font-medium text-gray-900 mb-4">Thông tin minh chứng</h2>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Trạng thái minh chứng</p>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                                            Chờ nộp minh chứng
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Hạn nộp dự kiến</p>
-                                        <p className="text-sm font-medium text-gray-900 flex items-center">
-                                            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                            {expenditure.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : 'Chưa đặt hạn'}
-                                        </p>
-                                    </div>
-                                    <div className="mt-6 pt-4 border-t border-gray-100">
-                                        <button
-                                            onClick={() => setIsUpdateModalOpen(true)}
-                                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 active:scale-95 transition-all"
-                                        >
-                                            Cập nhật số liệu & Ảnh
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {/* New Evidence Submission Status - VISUAL FOCUS */}
                         {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
@@ -643,7 +650,7 @@ export default function ExpenditureDetailPage() {
                                             <p className="text-[10px] font-black text-emerald-800/40 uppercase tracking-[2px] mb-3">Bài viết minh chứng</p>
                                             <div className="flex flex-col gap-2">
                                                 {posts.map(p => (
-                                                    <Link 
+                                                    <Link
                                                         key={p.id}
                                                         href={`/post/${p.id}`}
                                                         target="_blank"
@@ -656,6 +663,7 @@ export default function ExpenditureDetailPage() {
                                             </div>
                                         </div>
                                     )}
+
                                 </div>
                             </div>
                         )}
@@ -680,10 +688,10 @@ export default function ExpenditureDetailPage() {
                                                     <table className="min-w-full divide-y divide-gray-200">
                                                         <thead className="bg-gray-50 sticky top-0 z-20">
                                                             <tr>
-                                                                <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter">Hàng hóa</th>
-                                                                <th className="px-4 py-3 text-right text-xs font-black text-blue-600 uppercase tracking-tighter bg-blue-50">Kế hoạch</th>
-                                                                <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-50">Thực tế (Nhập)</th>
-                                                                <th className="px-4 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-tighter">Ảnh</th>
+                                                                <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter whitespace-nowrap">Hàng hóa</th>
+                                                                <th className="px-4 py-3 text-right text-xs font-black text-blue-600 uppercase tracking-tighter bg-blue-50 whitespace-nowrap">Kế hoạch</th>
+                                                                <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-50 whitespace-nowrap">Thực tế đã chi</th>
+                                                                <th className="px-4 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-tighter whitespace-nowrap">Ảnh</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -696,7 +704,7 @@ export default function ExpenditureDetailPage() {
                                                                                 <div className="font-bold">{item.category}</div>
                                                                                 {item.note && <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">{item.note}</div>}
                                                                             </td>
-                                                                            <td className="px-4 py-3 text-right bg-blue-50/30 align-top">
+                                                                            <td className="px-4 py-3 text-right bg-blue-50/30 align-top whitespace-nowrap">
                                                                                 <div className="flex flex-col min-h-[100px] justify-between">
                                                                                     <div className="flex flex-col gap-0.5">
                                                                                         <div className="flex items-center justify-end gap-1.5 text-blue-400/70">
@@ -783,7 +791,7 @@ export default function ExpenditureDetailPage() {
                                                                     <tr>
                                                                         <td className="px-4 py-4 font-black text-gray-900 text-sm uppercase">Tổng cộng hồ sơ</td>
                                                                         <td className="px-4 py-4 text-right bg-blue-100/50">
-                                                                            <div className="text-[10px] uppercase font-black text-blue-500 mb-0.5">Tổng Kế hoạch</div>
+                                                                            <div className="text-[10px] uppercase font-black text-blue-500 mb-0.5 whitespace-nowrap">Tổng Kế hoạch</div>
                                                                             <div className="text-2xl lg:text-3xl font-black text-blue-700">
                                                                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}
                                                                             </div>
@@ -819,11 +827,10 @@ export default function ExpenditureDetailPage() {
                                         type="button"
                                         onClick={handleUpdateSubmit}
                                         disabled={updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}
-                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:ml-3 sm:w-auto sm:text-sm ${
-                                            updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))
+                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:ml-3 sm:w-auto sm:text-sm ${updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))
                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                 : 'bg-orange-600 hover:bg-orange-700'
-                                        }`}
+                                            }`}
                                     >
                                         {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
                                     </button>

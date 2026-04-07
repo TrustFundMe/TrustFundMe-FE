@@ -11,6 +11,7 @@ import { CampaignDto } from '@/types/campaign';
 import { BankAccountDto } from '@/types/bankAccount';
 import { CreateExpenditureRequest, CreateExpenditureItemRequest } from '@/types/expenditure';
 import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { vi } from 'date-fns/locale';
@@ -102,25 +103,32 @@ export default function CreateExpenditurePage() {
         if (!campaignId) return;
 
         if (campaign?.status === 'DISABLED') {
-            alert('Chiến dịch đã bị vô hiệu hóa. Không thể thực hiện thao tác này.');
+            toast.error('Chiến dịch đã bị vô hiệu hóa. Không thể thực hiện thao tác này.');
             return;
         }
 
         if (!plan.trim()) {
-            alert('Vui lòng nhập mô tả/kế hoạch chi tiêu.');
+            toast.error('Vui lòng nhập mô tả/kế hoạch chi tiêu.');
             return;
         }
 
         if (items.some(item => !item.category || item.quantity <= 0 || item.price < 0)) {
-            alert('Vui lòng kiểm tra lại thông tin các hạng mục (Tên, Số lượng > 0, Đơn giá >= 0).');
+            toast.error('Vui lòng kiểm tra lại thông tin các hạng mục (Tên, Số lượng > 0, Đơn giá >= 0).');
             return;
         }
 
         const isAuthorized = campaign?.type === 'AUTHORIZED';
+        const totalAmount = calculateTotal();
 
-        if (isAuthorized && !evidenceDueAt) {
-            alert('Vui lòng chọn hạn nộp minh chứng cho loại chiến dịch này.');
-            return;
+        if (isAuthorized) {
+            if (!evidenceDueAt) {
+                toast.error('Vui lòng chọn hạn nộp minh chứng cho loại chiến dịch này.');
+                return;
+            }
+            if (totalAmount > (campaign?.balance || 0)) {
+                toast.error('Tổng số tiền chi tiêu dự kiến không được vượt quá số dư quỹ hiện tại.');
+                return;
+            }
         }
 
         if (evidenceDueAt) {
@@ -128,7 +136,7 @@ export default function CreateExpenditurePage() {
             today.setHours(0, 0, 0, 0);
             const selectedDate = new Date(evidenceDueAt);
             if (selectedDate < today) {
-                alert('Hạn nộp minh chứng không được là ngày trong quá khứ.');
+                toast.error('Hạn nộp minh chứng không được là ngày trong quá khứ.');
                 return;
             }
         }
@@ -154,7 +162,7 @@ export default function CreateExpenditurePage() {
             console.error('Không thể tạo khoản chi:', err);
             // Try to extract error message from response
             const msg = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi tạo khoản chi.';
-            alert(`Lỗi: ${msg}`);
+            toast.error(`Lỗi: ${msg}`);
         } finally {
             setSubmitting(false);
         }
