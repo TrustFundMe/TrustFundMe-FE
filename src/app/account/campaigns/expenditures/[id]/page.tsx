@@ -10,7 +10,7 @@ import { mediaService } from '@/services/mediaService';
 import { paymentService } from '@/services/paymentService';
 import { feedPostService } from '@/services/feedPostService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
-import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Calendar, FileText, CheckCircle, AlertCircle, Clock, Receipt, Image as ImageIcon, Upload, ChevronDown, ShieldCheck, Download } from 'lucide-react';
 import type { MediaUploadResponse } from '@/services/mediaService';
 import { toast } from 'react-hot-toast';
 import ImageZoomModal from '@/components/feed-post/ImageZoomModal';
@@ -132,6 +132,38 @@ export default function ExpenditureDetailPage() {
             items.forEach(item => loadItemMedia(item.id));
         }
         setIsUpdateModalOpen(true);
+    };
+
+    const handleExportItems = async () => {
+        import('xlsx').then((XLSX) => {
+            const isAuthorized = campaign?.type === 'AUTHORIZED';
+            const rows = items.map((item, idx) => {
+                const planAmt = (item.quantity || 0) * (item.expectedPrice || 0);
+                const receivedAmt = (donationSummary[item.id] || 0) * (item.expectedPrice || 0);
+                const actualAmt = (item.actualQuantity || 0) * (item.price || 0);
+                return [
+                    idx + 1,
+                    item.category || '',
+                    isAuthorized
+                        ? planAmt
+                        : receivedAmt,
+                    isAuthorized
+                        ? actualAmt
+                        : actualAmt,
+                ];
+            });
+
+            const headers = isAuthorized
+                ? ['STT', 'Tên hàng hóa', 'Kế hoạch (VNĐ)', 'Thực tế đã chi (VNĐ)']
+                : ['STT', 'Tên hàng hóa', 'Đã nhận (VNĐ)', 'Đã chi (VNĐ)'];
+
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+            ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 20 }, { wch: 20 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Chi tiêu');
+            const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '');
+            XLSX.writeFile(wb, `HangMucChi_${today}.xlsx`);
+        });
     };
 
     const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price', value: string) => {
@@ -316,287 +348,298 @@ export default function ExpenditureDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 py-8">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-6">
+        <div className="min-h-screen bg-gray-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {/* Header */}
+                <div className="mb-3">
                     <Link
                         href={`/account/campaigns/expenditures?campaignId=${expenditure.campaignId}`}
-                        className="inline-flex items-center text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+                        className="inline-flex items-center text-gray-500 hover:text-gray-900 mb-3 transition-colors text-sm"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại danh sách chi tiêu
                     </Link>
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                            <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 Chi tiết khoản chi
                                 {getStatusBadge(expenditure.status)}
                             </h1>
-                            <p className="mt-2 text-gray-500 flex items-center gap-2">
-                                <Calendar className="w-4 h-4" />
+                            {campaign && (
+                                <p className="mt-0.5 text-xs font-medium text-orange-600 flex items-center gap-2">
+                                    Chiến dịch: {campaign.title || campaign.name || 'Không có tên'}
+                                </p>
+                            )}
+                            <p className="mt-0.5 text-xs text-gray-500 flex items-center gap-2">
+                                <Calendar className="w-3 h-3" />
                                 Ngày tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString() : 'Không có dữ liệu'}
                             </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {/* Nút cập nhật đã ẩn cho chế độ Overview */}
-
-                                {campaign?.type === 'ITEMIZED' && (expenditure.status === 'APPROVED' || expenditure.status === 'CLOSED') && !expenditure.isWithdrawalRequested && (
-                                    <button
-                                        onClick={handleRequestWithdrawal}
-                                        disabled={loading}
-                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
-                                    >
-                                        <Clock className="w-5 h-5" />
-                                        {loading ? 'Đang xử lý...' : 'Rút tiền'}
-                                    </button>
-                                )}
-                            </div>
                         </div>
-                    </div>
-
-                    {/* 3-Frame Summary Layout */}
-                    {campaign?.type === 'AUTHORIZED' ? (
-                        <div className="grid grid-cols-3 gap-4 mb-8">
-                            {/* Đã giải ngân */}
-                            <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-blue-600 mb-1 uppercase tracking-wide">Đã giải ngân</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalExpectedAmount || 0)}
-                                </p>
-                            </div>
-
-                            {/* Thực tế đã chi */}
-                            <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-orange-600 mb-1 uppercase tracking-wide">Thực tế đã chi</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalAmount || 0)}
-                                </p>
-                            </div>
-
-                            {/* Số dư */}
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư</p>
-                                <p className="text-[10px] text-gray-400 mb-1">(chênh lệch do giá thị trường)</p>
-                                <p className={`text-xl font-bold ${(expenditure.totalExpectedAmount - (expenditure.totalAmount || 0)) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((expenditure.totalExpectedAmount || 0) - (expenditure.totalAmount || 0))}
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                            {/* Dự kiến */}
-                            <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-blue-600 mb-1 uppercase tracking-wide">Dự kiến</p>
-                                <p className="text-[10px] text-blue-300 mb-1">(chủ quỹ đăng kế hoạch)</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalExpectedAmount || 0)}
-                                </p>
-                            </div>
-
-                            {/* Đã nhận */}
-                            <div className="bg-white p-4 rounded-xl border border-green-200 shadow-sm text-center relative overflow-hidden">
-                                <div className="absolute top-0 right-0 -mt-1 -mr-1 w-8 h-8 bg-green-100 rounded-full opacity-50"></div>
-                                <p className="text-xs font-medium text-green-600 mb-1 uppercase tracking-wide">Đã nhận</p>
-                                <p className="text-[10px] text-green-300 mb-1">(thực tế đã nhận từ donation, đã giải ngân)</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}
-                                </p>
-                            </div>
-
-                            {/* Đã chi */}
-                            <div className="bg-white p-4 rounded-xl border border-orange-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-orange-600 mb-1 uppercase tracking-wide">Đã chi</p>
-                                <p className="text-[10px] text-orange-300 mb-1">(thực tế chủ quỹ đã sử dụng tiền)</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(expenditure.totalAmount)}
-                                </p>
-                            </div>
-
-                            {/* Số dư */}
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-center">
-                                <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">Số dư</p>
-                                <p className="text-[10px] text-gray-400 mb-1">(chênh lệch do giá thị trường)</p>
-                                <p className="text-xl font-bold text-gray-900">
-                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Giải thích */}
-                    <div className="text-xs text-gray-400 text-center mb-6 -mt-2">
-                        đã nhận = đã chi + số dư. Số dư sẽ được chủ quỹ hoàn về campaign
+                        {campaign?.type === 'ITEMIZED' && (expenditure.status === 'APPROVED' || expenditure.status === 'CLOSED') && !expenditure.isWithdrawalRequested && (
+                            <button
+                                onClick={handleRequestWithdrawal}
+                                disabled={loading}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow disabled:opacity-50 text-sm"
+                            >
+                                <Clock className="w-4 h-4" />
+                                {loading ? 'Đang xử lý...' : 'Rút tiền'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="col-span-1 md:col-span-2 space-y-6">
-                        {/* Plan/Description */}
-                        <div className="bg-white shadow-sm rounded-xl border border-gray-200 p-6">
-                            <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                                <FileText className="w-5 h-5 mr-2 text-gray-400" />
-                                Mô tả / Kế hoạch
-                            </h2>
-                            <p className="text-gray-700 whitespace-pre-wrap">{expenditure.plan || 'Không có mô tả'}</p>
-                        </div>
+                {/* 2-column layout */}
+                <div className="flex gap-6 items-start">
+                    {/* LEFT COLUMN */}
+                    <div className="flex-1 min-w-0 flex flex-col gap-4">
+
+                        {/* Summary cards (compact) */}
+                        {campaign?.type === 'AUTHORIZED' ? (
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-blue-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-blue-600 uppercase">Kế hoạch giải ngân</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-blue-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(expenditure.totalExpectedAmount || 0)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Số tiền đã giải ngân theo kế hoạch</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-orange-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-orange-600 uppercase">Thực tế đã chi</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-orange-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(expenditure.totalAmount || 0)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Có thể chênh lệch do giá thị trường</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-gray-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-gray-500 uppercase">Số dư</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className={`text-2xl font-extrabold leading-tight ${(expenditure.totalExpectedAmount - (expenditure.totalAmount || 0)) < 0 ? 'text-red-600' : 'text-gray-700'}`}>
+                                            {new Intl.NumberFormat('vi-VN').format((expenditure.totalExpectedAmount || 0) - (expenditure.totalAmount || 0))}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Phần tiền dư còn lại sau mua hàng</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-4 gap-2">
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-blue-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-blue-600 uppercase">Dự kiến</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-blue-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(expenditure.totalExpectedAmount || 0)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Danh sách vật phẩm cần huy động</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-green-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-green-600 uppercase">Đã nhận</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-green-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(totalReceivedTotal)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Tiền thực tế donor đã donate</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-orange-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-orange-600 uppercase">Đã chi</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-orange-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(expenditure.totalAmount)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Chủ quỹ mua vật phẩm theo kế hoạch</p>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
+                                    <div className="bg-gray-50 px-3 py-2 flex items-center gap-1.5">
+                                        <p className="text-[10px] font-semibold text-gray-500 uppercase">Số dư</p>
+                                    </div>
+                                    <div className="px-3 py-2">
+                                        <p className="text-2xl font-extrabold text-gray-700 leading-tight">
+                                            {new Intl.NumberFormat('vi-VN').format(totalVariance)}
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Tiền dư sau khi hoàn tất mua hàng</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Items Table */}
-                        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                                <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                                    <Receipt className="w-5 h-5 mr-2 text-gray-400" />
-                                    Danh sách hạng mục ({items.length})
-                                </h2>
+                        <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 340px)' }}>
+                            <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50 shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-sm font-medium text-gray-900 flex items-center">
+                                        <Receipt className="w-4 h-4 mr-1.5 text-gray-400" />
+                                        Danh sách hạng mục ({items.length})
+                                    </h2>
+                                    <button
+                                        onClick={handleExportItems}
+                                        className="inline-flex items-center px-2 py-1 border border-gray-300 text-[10px] font-medium rounded text-gray-600 bg-white hover:bg-gray-50 transition-all"
+                                        title="Xuất Excel hạng mục"
+                                    >
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Xuất Excel
+                                    </button>
+                                </div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50" style={{ display: 'table-header-group' }}>
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tên hàng hóa</th>
+                            <div className="overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 420px)' }}>
+                                {/* Scrollable body */}
+                                <div className="overflow-y-auto flex-1">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 shrink-0">
+                                            <tr>
+                                                <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700">Tên hàng hóa / Dịch vụ</th>
+                                                {campaign?.type === 'AUTHORIZED' ? (
+                                                    <>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-blue-600">
+                                                            <div>Kế hoạch</div>
+                                                            <div className="text-[9px] font-normal text-blue-400">SL x ĐG</div>
+                                                        </th>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-red-600">
+                                                            <div>Thực tế đã chi</div>
+                                                            <div className="text-[9px] font-normal text-red-400">SL x ĐG</div>
+                                                        </th>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-blue-600">
+                                                            <div>Kế hoạch</div>
+                                                            <div className="text-[9px] font-normal text-blue-400">SL x ĐG</div>
+                                                        </th>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-green-600">
+                                                            <div>Đã nhận</div>
+                                                            <div className="text-[9px] font-normal text-green-400">SL x ĐG</div>
+                                                        </th>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-orange-600">
+                                                            <div>Đã chi</div>
+                                                            <div className="text-[9px] font-normal text-orange-400">SL x ĐG</div>
+                                                        </th>
+                                                    </>
+                                                )}
+                                                <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 w-16">Ảnh</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {items.map((item) => {
+                                                const media = itemMedia[item.id] || [];
+                                                return (
+                                                    <Fragment key={item.id}>
+                                                        <tr className="border-b border-gray-100 hover:bg-gray-50">
+                                                            <td className="px-2 py-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setGalleryModalItemId(item.id);
+                                                                        loadItemMedia(item.id);
+                                                                    }}
+                                                                    className="w-full text-left group"
+                                                                >
+                                                                    <div className="font-medium text-gray-900 group-hover:text-orange-600 transition-colors">{item.category}</div>
+                                                                    {item.note && <div className="text-xs text-gray-400 mt-0.5">{item.note}</div>}
+                                                                </button>
+                                                            </td>
+                                                            {campaign?.type === 'AUTHORIZED' ? (
+                                                                <>
+                                                                    <td className="px-2 py-2 text-right">
+                                                                        <div className="font-semibold text-blue-700">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right">
+                                                                        <div className="font-semibold text-red-700">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * (item.price || 0))}
+                                                                        </div>
+                                                                    </td>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <td className="px-2 py-2 text-right">
+                                                                        <div className="font-semibold text-blue-700">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right">
+                                                                        <div className="font-semibold text-green-700">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-2 py-2 text-right">
+                                                                        <div className="font-semibold text-orange-700">
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}
+                                                                        </div>
+                                                                    </td>
+                                                                </>
+                                                            )}
+                                                            <td className="px-2 py-2 text-center">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setGalleryModalItemId(item.id);
+                                                                        loadItemMedia(item.id);
+                                                                    }}
+                                                                    className="w-9 h-9 rounded overflow-hidden border border-orange-200 hover:border-orange-400 transition-all"
+                                                                    title="Nhấn để xem ảnh minh chứng"
+                                                                >
+                                                                    {itemMediaLoading[item.id] ? (
+                                                                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                                                            <div className="w-3 h-3 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
+                                                                        </div>
+                                                                    ) : media.length > 0 ? (
+                                                                        <img src={media[0].url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                                                            <ImageIcon className="w-3.5 h-3.5 text-gray-300" />
+                                                                        </div>
+                                                                    )}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {/* Sticky Footer */}
+                                <table className="w-full text-sm shrink-0 table-fixed">
+                                    <tfoot>
+                                        <tr className="bg-gray-100 font-bold text-gray-900 border-t-2 border-gray-300">
+                                            <td className="px-2 py-2 text-sm uppercase">Tổng cộng đợt chi</td>
                                             {campaign?.type === 'AUTHORIZED' ? (
                                                 <>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50 whitespace-nowrap">Kế hoạch</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-red-600 uppercase tracking-wider bg-red-50 whitespace-nowrap">Thực tế đã chi</th>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-blue-600 uppercase tracking-wider bg-blue-50 whitespace-nowrap">Kế hoạch</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-green-600 uppercase tracking-wider bg-green-50 whitespace-nowrap">Đã nhận</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-orange-600 uppercase tracking-wider bg-orange-50 whitespace-nowrap">Đã chi</th>
-                                                </>
-                                            )}
-                                            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ảnh</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent" style={{ display: 'table-row-group', maxHeight: '400px' }}>
-                                        {items.map((item) => {
-                                            const isExpanded = expandedItemId === item.id;
-                                            const media = itemMedia[item.id] || [];
-                                            const uploadState = itemUploadState[item.id] || { uploading: false, files: [], previews: [] };
-                                            return (
-                                                <Fragment key={item.id}>
-                                                    <tr key={item.id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setGalleryModalItemId(item.id);
-                                                                    loadItemMedia(item.id);
-                                                                }}
-                                                                className="w-full text-left group"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <div>
-                                                                        <div className="text-sm font-medium text-gray-900 group-hover:text-orange-600 transition-colors">{item.category}</div>
-                                                                        {item.note && <div className="text-xs text-gray-500 mt-1">{item.note}</div>}
-                                                                    </div>
-                                                                </div>
-                                                            </button>
-                                                        </td>
-                                                        {campaign?.type === 'AUTHORIZED' ? (
-                                                            <>
-                                                                <td className="px-6 py-4 text-right bg-blue-50/30">
-                                                                    <div className="text-sm font-bold text-blue-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-right bg-red-50/30">
-                                                                    <div className="text-sm font-bold text-red-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * (item.price || 0))}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        {item.actualQuantity || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price || 0)}
-                                                                    </div>
-                                                                </td>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <td className="px-6 py-4 text-right bg-blue-50/30">
-                                                                    <div className="text-sm font-bold text-blue-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        {item.quantity} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-right bg-green-50/30">
-                                                                    <div className="text-sm font-bold text-green-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        {donationSummary[item.id] || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-right bg-orange-50/30">
-                                                                    <div className="text-sm font-bold text-orange-700">
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        {item.actualQuantity || 0} x {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.price)}
-                                                                    </div>
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                        <td className="px-6 py-4 text-center">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setGalleryModalItemId(item.id);
-                                                                    loadItemMedia(item.id);
-                                                                }}
-                                                                className="w-12 h-12 rounded-lg overflow-hidden border border-orange-200 hover:border-orange-400 hover:shadow transition-all"
-                                                                title="Nhấn để xem ảnh minh chứng"
-                                                            >
-                                                                {itemMediaLoading[item.id] ? (
-                                                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                                                        <div className="w-4 h-4 border-2 border-orange-300 border-t-orange-500 rounded-full animate-spin" />
-                                                                    </div>
-                                                                ) : media.length > 0 ? (
-                                                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                                                    <img src={media[0].url} alt="" className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                                                                        <ImageIcon className="w-4 h-4 text-gray-300" />
-                                                                    </div>
-                                                                )}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                    <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                                        <tr className="font-black text-gray-900">
-                                            <td className="px-6 py-4 text-sm uppercase">Tổng cộng đợt chi</td>
-                                            {campaign?.type === 'AUTHORIZED' ? (
-                                                <>
-                                                    <td className="px-6 py-4 text-right bg-blue-100/50">
-                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right bg-red-100/50">
+                                                    <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</td>
+                                                    <td className="px-2 py-2 text-right">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
-                                                        <div className={`text-[10px] uppercase mt-1 ${(expenditure.totalExpectedAmount - totalActual) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        <div className={`text-xs uppercase ${(expenditure.totalExpectedAmount - totalActual) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                                                             Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((expenditure.totalExpectedAmount || 0) - totalActual)}
                                                         </div>
                                                     </td>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td className="px-6 py-4 text-right bg-blue-100/50">
-                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right bg-green-100/50">
-                                                        <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right bg-orange-100/50">
+                                                    <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</td>
+                                                    <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</td>
+                                                    <td className="px-2 py-2 text-right">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
-                                                        <div className={`text-[10px] uppercase mt-1 ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        <div className={`text-xs uppercase ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                                                             Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
                                                         </div>
                                                     </td>
                                                 </>
                                             )}
-                                            <td className="px-6 py-4"></td>
+                                            <td className="px-2 py-2"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -604,11 +647,12 @@ export default function ExpenditureDetailPage() {
                         </div>
                     </div>
 
-                    <div className="col-span-1 space-y-6">
+                    {/* RIGHT COLUMN */}
+                    <div className="w-80 shrink-0 flex flex-col gap-4">
 
                         {/* New Evidence Submission Status - VISUAL FOCUS */}
                         {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
-                            <div className="bg-emerald-50 shadow-sm rounded-2xl border-2 border-emerald-100 p-6 relative overflow-hidden mb-6">
+                            <div className="bg-emerald-50 shadow-sm rounded-2xl border-2 border-emerald-100 p-4 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-emerald-100 rounded-full opacity-30 animate-pulse"></div>
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-3 mb-4">
@@ -667,6 +711,15 @@ export default function ExpenditureDetailPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Plan/Description */}
+                        <div className="bg-white rounded p-4 border border-gray-200">
+                            <h2 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                <FileText className="w-4 h-4 mr-2 text-gray-400" />
+                                Mô tả / Kế hoạch
+                            </h2>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{expenditure.plan || 'Không có mô tả'}</p>
+                        </div>
                     </div>
                 </div>
 

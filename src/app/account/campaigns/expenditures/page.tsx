@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ArrowRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt, ChevronDown, DollarSign, CreditCard, Loader2, Download } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ArrowRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt, ChevronDown, DollarSign, CreditCard, Loader2 } from 'lucide-react';
 import CreateOrEditPostModal from '@/components/feed-post/CreateOrEditPostModal';
 import Image from 'next/image';
 
@@ -94,25 +94,6 @@ export default function CampaignExpendituresPage() {
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const [galleryImages, setGalleryImages] = useState<{ url: string; alt?: string }[]>([]);
 
-    // ── Excel Export ───────────────────────────────────────────────────────────
-    const handleExportItems = async () => {
-        if (!campaignId) return;
-        try {
-            const blob = await expenditureService.exportItemsToExcel(campaignId);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '');
-            a.download = `KhoanChi_${today}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            toast.success('Đã xuất Excel thành công!');
-        } catch {
-            toast.error('Không thể xuất file Excel');
-        }
-    };
     const [galleryIndex, setGalleryIndex] = useState(0);
 
     // Create post modal state
@@ -601,15 +582,6 @@ export default function CampaignExpendituresPage() {
                                 </span>
                             </p>
                         </div>
-                        {/* Nút Xuất Excel */}
-                        <button
-                            onClick={handleExportItems}
-                            className="inline-flex items-center px-4 py-2 rounded-full border border-gray-300 shadow-sm text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            title="Xuất Excel hạng mục chi tiêu"
-                        >
-                            <Download className="w-4 h-4 mr-2" />
-                            Xuất Excel
-                        </button>
 
                         {/* Nút Tạo khoản chi mới */}
                         {canCreate ? (
