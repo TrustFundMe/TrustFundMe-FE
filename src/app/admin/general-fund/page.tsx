@@ -129,21 +129,27 @@ export default function AdminGeneralFundPage() {
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(5);
+    const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const [chartFilter, setChartFilter] = useState('NĂM NAY');
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page]);
 
     const fetchData = useCallback(async () => {
         try {
-            const [statsRes, historyRes] = await Promise.all([
+            const [statsRes, historyPaginated] = await Promise.all([
                 generalFundApi.getStats(),
-                generalFundApi.getHistory()
+                generalFundApi.getHistoryPaginated(page, pageSize)
             ]);
             setStats(statsRes);
-            setHistory(historyRes);
+            setHistory(historyPaginated.content);
+            setTotalElements(historyPaginated.totalElements);
+            setTotalPages(historyPaginated.totalPages);
 
             // Fetch campaigns and staff using existing local functions
             await Promise.all([fetchCampaigns(), fetchStaff()]);
@@ -159,7 +165,7 @@ export default function AdminGeneralFundPage() {
                 console.groupEnd();
             });
 
-            return { stats: statsRes, history: historyRes };
+            return { stats: statsRes, history: historyPaginated.content };
         } catch (error) {
             console.error('Failed to fetch data', error);
             return null;
@@ -312,6 +318,10 @@ export default function AdminGeneralFundPage() {
                     users={users}
                     onUpdateStatus={handleUpdateStatus}
                     onRefresh={async () => { await fetchData(); }}
+                    currentPage={page}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    onPageChange={setPage}
                 />
             </div>
 

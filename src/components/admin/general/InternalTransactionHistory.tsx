@@ -16,35 +16,33 @@ interface InternalTransactionHistoryProps {
     campaigns: any[];
     users?: any[];
     onUpdateStatus?: (id: number, status: string) => Promise<void>;
+    currentPage: number;
+    totalPages: number;
+    totalElements: number;
+    onPageChange: (page: number) => void;
+    onRefresh?: () => Promise<void>;
 }
 
-export function InternalTransactionHistory({ history: initialHistory, campaigns, users = [], onUpdateStatus, onRefresh }: {
-    history: InternalTransaction[];
-    campaigns: any[];
-    users?: any[];
-    onUpdateStatus?: (id: number, status: string) => Promise<void>;
-    onRefresh?: () => Promise<void>;
-}) {
+export function InternalTransactionHistory({
+    history,
+    campaigns,
+    users = [],
+    onUpdateStatus,
+    onRefresh,
+    currentPage,
+    totalPages,
+    totalElements,
+    onPageChange
+}: InternalTransactionHistoryProps) {
     const [selectedRequest, setSelectedRequest] = useState<any>(null);
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Dùng API data thật, lọc lấy type SUPPORT + status filter
-    const displayHistory = initialHistory.filter(tx => {
-        const isSupport = tx.type === 'SUPPORT';
-        if (!isSupport) return false;
+    // Filter type SUPPORT (server-side pagination for General Fund history already implies this, 
+    // but we keep the logical check for safety)
+    const displayHistory = history.filter(tx => tx.type === 'SUPPORT');
 
-        if (statusFilter === 'ALL') return true;
-        if (statusFilter === 'PENDING') return tx.status === 'PENDING';
-        if (statusFilter === 'APPROVED') return tx.status === 'APPROVED' || tx.status === 'COMPLETED';
-        if (statusFilter === 'REJECTED') return tx.status === 'REJECTED';
-        return true;
-    });
-
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
-    const totalPages = Math.max(1, Math.ceil(displayHistory.length / itemsPerPage));
-    const paginatedHistory = displayHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    // Local pagination removed - using props from parent instead
 
     const handleRefresh = async () => {
         if (!onRefresh) return;
@@ -59,7 +57,7 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                 <div className="flex items-center gap-3">
                     <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">Yêu cầu hỗ trợ từ Staff</h3>
                     <span className="bg-orange-50 text-orange-600 text-[9px] font-black px-2 py-0.5 rounded-full border border-orange-100">
-                        {displayHistory.length}
+                        {totalElements}
                     </span>
                 </div>
 
@@ -110,7 +108,7 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                        {paginatedHistory.map((tx, idx) => {
+                        {displayHistory.map((tx, idx) => {
                             const c = campaigns.find(c => c.id === tx.toCampaignId);
                             const staffUser = users.find(u => u.id === tx.createdByStaffId);
                             return (
@@ -171,20 +169,20 @@ export function InternalTransactionHistory({ history: initialHistory, campaigns,
             {totalPages > 0 && (
                 <div className="p-3 border-t border-gray-50 flex flex-wrap items-center justify-between text-[10px] font-black text-gray-400">
                     <div>
-                        Hiển thị {displayHistory.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(displayHistory.length, currentPage * itemsPerPage)} / {displayHistory.length}
+                        Hiển thị {displayHistory.length} / {totalElements} kết quả
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
+                            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+                            disabled={currentPage === 0}
                             className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-100 disabled:opacity-50 hover:bg-gray-50 transition-colors"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="px-2">Trang {currentPage} / {totalPages}</span>
+                        <span className="px-2">Trang {currentPage + 1} / {totalPages}</span>
                         <button
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
+                            onClick={() => onPageChange(Math.min(totalPages - 1, currentPage + 1))}
+                            disabled={currentPage >= totalPages - 1}
                             className="h-7 w-7 flex items-center justify-center rounded-lg border border-gray-100 disabled:opacity-50 hover:bg-gray-50 transition-colors"
                         >
                             <ChevronRight className="h-4 w-4" />

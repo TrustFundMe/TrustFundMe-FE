@@ -5,7 +5,6 @@ import { StatCard } from '@/components/admin/cash-flow/StatCard';
 import { CashFlowFilters } from '@/components/admin/cash-flow/CashFlowFilters';
 import { CashFlowTable, TransactionDetailModal, Transaction } from '@/components/admin/cash-flow/CashFlowTable';
 import { api as axiosInstance } from '@/config/axios';
-import { ExpenditureDetailPanel } from '@/components/admin/cash-flow/ExpenditureDetailPanel';
 import { toast } from 'react-hot-toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -33,28 +32,7 @@ interface FilterLabels {
     status: { ALL: string; PAID: string; DISBURSED: string };
 }
 
-interface ExpenditureItem {
-    id: string;
-    name: string;
-    unit: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-}
-
-export interface ExpenditureDetail {
-    id: string;
-    campaignId: string;
-    campaignName: string;
-    description: string;
-    requester: string;
-    requestedAt: string;
-    approvedBy: string;
-    items: ExpenditureItem[];
-    images: string[];
-    totalAmount: number;
-    status: string;
-}
+// removed ExpenditureDetail
 
 interface Stats {
     totalFund: number;
@@ -67,6 +45,11 @@ export default function CashFlowPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<Stats>({ totalFund: 0, pending: 0, disbursed: 0, refunded: 0 });
+    const [page, setPage] = useState(0);
+    const [pageSize] = useState(7);
+    const [totalElements, setTotalElements] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+
     const [filters, setFilters] = useState({
         search: '',
         type: 'ALL',
@@ -74,19 +57,21 @@ export default function CashFlowPage() {
         status: 'ALL',
         startDate: '',
         endDate: '',
+        minPrice: '',
+        maxPrice: '',
     });
 
     const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-    const [selectedExp, setSelectedExp] = useState<ExpenditureDetail | null>(null);
 
     // Fetch transactions from APIs
     const fetchTransactions = React.useCallback(async () => {
         setIsLoading(true);
         try {
+            const params = { page, size: pageSize, sort: 'createdAt,desc' };
             const [donationsResult, payoutsResult, refundsResult] = await Promise.allSettled([
-                axiosInstance.get(`${API_URL}/api/payments/status/PAID`),
-                axiosInstance.get(`${API_URL}/api/expenditures/transactions/type/PAYOUT/status/COMPLETED`),
-                axiosInstance.get(`${API_URL}/api/expenditures/transactions/type/REFUND/status/COMPLETED`),
+                axiosInstance.get('/api/payments/status/PAID/paginated', { params }),
+                axiosInstance.get('/api/expenditures/transactions/type/PAYOUT/status/COMPLETED/paginated', { params }),
+                axiosInstance.get('/api/expenditures/transactions/type/REFUND/status/COMPLETED/paginated', { params }),
             ]);
 
             if (donationsResult.status === 'rejected') {
@@ -102,9 +87,16 @@ export default function CashFlowPage() {
                 toast.error('Không thể tải dữ liệu hoàn tiền');
             }
 
-            const donationsData: any[] = donationsResult.status === 'fulfilled' ? (donationsResult.value.data ?? []) : [];
-            const payoutsData: any[] = payoutsResult.status === 'fulfilled' ? (payoutsResult.value.data ?? []) : [];
-            const refundsData: any[] = refundsResult.status === 'fulfilled' ? (refundsResult.value.data ?? []) : [];
+            const donationsData: any[] = donationsResult.status === 'fulfilled' ? (donationsResult.value.data?.content ?? []) : [];
+            const payoutsData: any[] = payoutsResult.status === 'fulfilled' ? (payoutsResult.value.data?.content ?? []) : [];
+            const refundsData: any[] = refundsResult.status === 'fulfilled' ? (refundsResult.value.data?.content ?? []) : [];
+
+            const totalDonations = donationsResult.status === 'fulfilled' ? (donationsResult.value.data?.totalElements ?? 0) : 0;
+            const totalPayouts = payoutsResult.status === 'fulfilled' ? (payoutsResult.value.data?.totalElements ?? 0) : 0;
+            const totalRefunds = refundsResult.status === 'fulfilled' ? (refundsResult.value.data?.totalElements ?? 0) : 0;
+            const total = totalDonations + totalPayouts + totalRefunds;
+            setTotalElements(total);
+            setTotalPages(Math.ceil(total / pageSize) || 1);
 
             // --- Batch fetch expenditures to get campaignId for payouts and refunds ---
             const allExpenditureIds = Array.from(new Set([
@@ -179,6 +171,8 @@ export default function CashFlowPage() {
                     content: description,
                     evidence: 'NONE',
                     status: 'PAID',
+                    campaignId: d.campaignId ? String(d.campaignId) : undefined,
+                    actorId: d.donorId ? String(d.donorId) : undefined,
                 };
             });
 
@@ -203,6 +197,8 @@ export default function CashFlowPage() {
                     expenditureId: p.expenditureId?.toString() ?? '',
                     evidence: 'COMPLETED',
                     status: 'DISBURSED',
+                    campaignId: campIdStr,
+                    actorId: p.toUserId ? String(p.toUserId) : undefined,
                 };
             });
 
@@ -227,6 +223,8 @@ export default function CashFlowPage() {
                     expenditureId: r.expenditureId?.toString() ?? '',
                     evidence: 'COMPLETED',
                     status: 'REFUNDED',
+                    campaignId: campIdStr,
+                    actorId: r.fromUserId ? String(r.fromUserId) : undefined,
                 };
             });
 
@@ -234,7 +232,8 @@ export default function CashFlowPage() {
                 new Date(b.rawTime as string).getTime() - new Date(a.rawTime as string).getTime()
             );
 
-            setTransactions(allTx);
+            // Limited to pageSize for the final view
+            setTransactions(allTx.slice(0, pageSize));
 
             // Stats tính từ dữ liệu thực
             const totalIn = formattedDonations.reduce((sum, t) => sum + t.amount, 0);
@@ -256,7 +255,7 @@ export default function CashFlowPage() {
 
     React.useEffect(() => {
         fetchTransactions();
-    }, [fetchTransactions]);
+    }, [fetchTransactions, page]);
 
     // Filter logic
     const filteredTransactions = useMemo(() => {
@@ -290,6 +289,9 @@ export default function CashFlowPage() {
                 if (txDate > endDate) return false;
             }
 
+            if (filters.minPrice && tx.amount < Number(filters.minPrice)) return false;
+            if (filters.maxPrice && tx.amount > Number(filters.maxPrice)) return false;
+
             return true;
         });
     }, [filters, transactions]);
@@ -316,10 +318,12 @@ export default function CashFlowPage() {
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
+        setPage(0); // Reset to first page
     };
 
     const handleClearFilters = () => {
-        setFilters({ search: '', type: 'ALL', fundType: 'ALL', status: 'ALL', startDate: '', endDate: '' });
+        setFilters({ search: '', type: 'ALL', fundType: 'ALL', status: 'ALL', startDate: '', endDate: '', minPrice: '', maxPrice: '' });
+        setPage(0);
     };
 
     const handleRefresh = () => {
@@ -328,47 +332,6 @@ export default function CashFlowPage() {
 
     const handleViewDetails = (tx: Transaction) => {
         setSelectedTx(tx);
-    };
-
-    const handleViewExpenditure = async (expId: string) => {
-        try {
-            const res = await axiosInstance.get(`${API_URL}/api/expenditures/${expId}`);
-            const exp = res.data;
-
-            // Lấy campaign name
-            let campaignName = `Chiến dịch #${exp.campaignId}`;
-            try {
-                const campRes = await axiosInstance.get(`${API_URL}/api/campaigns/${exp.campaignId}`);
-                campaignName = campRes.data?.title || campaignName;
-            } catch { /* fallback */ }
-
-            const detail: ExpenditureDetail = {
-                id: exp.id?.toString() ?? expId,
-                campaignId: exp.campaignId?.toString() ?? '',
-                campaignName,
-                description: exp.plan || '',
-                requester: exp.staffReviewId ? `Staff #${exp.staffReviewId}` : '—',
-                requestedAt: exp.createdAt
-                    ? new Date(exp.createdAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
-                    : '—',
-                approvedBy: exp.staffReviewId ? 'Đã duyệt' : '—',
-                items: (exp.transactions || []).map((t: any, i: number) => ({
-                    id: t.id?.toString() ?? `EI-${i}`,
-                    name: t.toAccountHolderName || 'Hạng mục',
-                    unit: 'lần',
-                    quantity: 1,
-                    unitPrice: Number(t.amount) || 0,
-                    total: Number(t.amount) || 0,
-                })),
-                images: exp.disbursementProofUrl ? [exp.disbursementProofUrl] : [],
-                totalAmount: Number(exp.totalAmount) || 0,
-                status: exp.status || 'DISBURSED',
-            };
-
-            setSelectedExp(detail);
-        } catch {
-            toast.error(`Không tìm thấy chi tiết cho ${expId}`);
-        }
     };
 
     const handleApprove = (tx: Transaction) => {
@@ -426,9 +389,10 @@ export default function CashFlowPage() {
                         transactions={filteredTransactions}
                         isLoading={isLoading}
                         onViewDetails={handleViewDetails}
-                        onApprove={handleApprove}
-                        onFlag={handleFlag}
-                        onViewExpenditure={handleViewExpenditure}
+                        currentPage={page}
+                        totalPages={totalPages}
+                        onPageChange={setPage}
+                        totalElements={totalElements}
                     />
                 </div>
             </div>
@@ -437,24 +401,6 @@ export default function CashFlowPage() {
             <TransactionDetailModal
                 transaction={selectedTx}
                 onClose={() => setSelectedTx(null)}
-                onApprove={handleApprove}
-                onFlag={handleFlag}
-            />
-
-            {/* EXP Detail Sidebar */}
-            <ExpenditureDetailPanel
-                expenditure={selectedExp}
-                onClose={() => setSelectedExp(null)}
-                onApprove={(exp) => {
-                    const tx = transactions.find(t => t.expenditureId === exp.id);
-                    if (tx) handleApprove(tx);
-                    setSelectedExp(null);
-                }}
-                onFlag={(exp) => {
-                    const tx = transactions.find(t => t.expenditureId === exp.id);
-                    if (tx) handleFlag(tx);
-                    setSelectedExp(null);
-                }}
             />
         </div>
     );

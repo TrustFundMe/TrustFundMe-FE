@@ -33,6 +33,8 @@ interface CashFlowFiltersProps {
         status: string;
         startDate: string;
         endDate: string;
+        minPrice: string;
+        maxPrice: string;
     };
     onFilterChange: (key: string, value: string) => void;
     onClearFilters: () => void;
@@ -43,9 +45,9 @@ interface CashFlowFiltersProps {
 
 export const CashFlowFilters = ({ filters, onFilterChange, onClearFilters, onRefresh, filterCounts, filterLabels }: CashFlowFiltersProps) => {
     return (
-        <div className="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100">
+        <div className="bg-white p-2 rounded-[16px] shadow-sm border border-gray-100">
             {/* Row 1: Title */}
-            <div className="flex justify-between items-center mb-3">
+            <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-3">
                     <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">Dòng tiền hệ thống</h3>
                     <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-100">
@@ -69,7 +71,7 @@ export const CashFlowFilters = ({ filters, onFilterChange, onClearFilters, onRef
             </div>
 
             {/* Row 2: Filters */}
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-8 gap-2">
                 {/* Search */}
                 <div className="relative">
                     <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
@@ -142,6 +144,26 @@ export const CashFlowFilters = ({ filters, onFilterChange, onClearFilters, onRef
                         onChange={(e) => onFilterChange('endDate', e.target.value)}
                         className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer text-gray-600"
                         title="Đến ngày"
+                    />
+                </div>
+
+                {/* Price Filters */}
+                <div className="relative">
+                    <input
+                        type="number"
+                        placeholder="Giá từ..."
+                        value={filters.minPrice}
+                        onChange={(e) => onFilterChange('minPrice', e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 text-[10px] font-bold outline-none"
+                    />
+                </div>
+                <div className="relative">
+                    <input
+                        type="number"
+                        placeholder="Giá đến..."
+                        value={filters.maxPrice}
+                        onChange={(e) => onFilterChange('maxPrice', e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5 text-[10px] font-bold outline-none"
                     />
                 </div>
             </div>
