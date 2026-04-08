@@ -126,4 +126,9 @@ export const feedPostService = {
     const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, "PHOTO");
     return { url: result.url ?? "", mediaId: result.id };
   },
+
+  async lockPost(id: number): Promise<FeedPostDto> {
+    const res = await api.put<FeedPostDto>(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(id));
+    return res.data;
+  },
 };

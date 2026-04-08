@@ -26,15 +26,18 @@ function SuccessContent() {
                         .then(async donationData => {
                             setAmount(donationData.totalAmount || 0);
 
-                            // 2. Call campaign-service to update balance (Explicit Axios call as requested)
-                            if (donationData.campaignId && donationData.donationAmount) {
+                            // 2. Call payment-service to sync balance safely (idempotent)
+                            console.log('🔍 [DEBUG] Donation data received:', donationData);
+                            if (donationData.campaignId) {
                                 try {
-                                    console.info('🚀 Triggering campaign balance update via FE axios...');
-                                    await campaignService.updateBalance(donationData.campaignId, donationData.donationAmount);
-                                    console.info('✅ Campaign balance updated successfully.');
+                                    console.info(`🚀 [DEBUG] Triggering syncBalance for donation ${id} on campaign ${donationData.campaignId}`);
+                                    await paymentService.syncBalance(id);
+                                    console.info('✅ [DEBUG] syncBalance call finished.');
                                 } catch (err) {
-                                    console.error('❌ Failed to update campaign balance:', err);
+                                    console.error('❌ [DEBUG] syncBalance error:', err);
                                 }
+                            } else {
+                                console.warn('⚠️ [DEBUG] No campaignId in donationData', donationData);
                             }
 
                             // 3. Fetch campaign details for background image and thankMessage

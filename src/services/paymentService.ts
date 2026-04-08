@@ -33,6 +33,7 @@ export interface CheckItemLimitResponse {
     currentTotal: number;
     quantityLeft: number;
     message: string;
+    checkSuccessful: boolean;
 }
 
 export interface CampaignProgress {
@@ -102,6 +103,24 @@ export const paymentService = {
         } catch (err: any) {
             console.error("❌ [Payment] Check Limit Error:", err);
             throw err;
+        }
+    },
+    async syncQuantity(donationId: number): Promise<void> {
+        console.log(`🔄 [Payment] Syncing quantity for donation: ${donationId}`);
+        try {
+            await api.post(API_ENDPOINTS.PAYMENTS.SYNC_QUANTITY(donationId));
+            console.log(`✅ [Payment] Quantity synced for donation ${donationId}`);
+        } catch (err: any) {
+            console.error(`❌ [Payment] Sync Quantity Error for donation ${donationId}:`, err);
+        }
+    },
+    async syncBalance(donationId: number): Promise<void> {
+        console.log(`🔄 [Payment] Syncing balance for donation: ${donationId}`);
+        try {
+            await api.post(API_ENDPOINTS.PAYMENTS.SYNC_BALANCE(donationId));
+            console.log(`✅ [Payment] Balance synced for donation ${donationId}`);
+        } catch (err: any) {
+            console.error(`❌ [Payment] Sync Balance Error for donation ${donationId}:`, err);
         }
     },
     async getCampaignProgress(campaignId: number): Promise<CampaignProgress> {

@@ -1,5 +1,6 @@
 import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
+import axios from 'axios';
 
 export const expenditureService = {
     getByCampaignId: async (campaignId: string | number): Promise<Expenditure[]> => {
@@ -70,5 +71,57 @@ export const expenditureService = {
             headers: userId ? { 'X-User-Id': userId } : {}
         });
         return response.data;
-    }
+    },
+
+    /** Xuất Excel hạng mục chi tiêu theo campaignId */
+    exportItemsToExcel: async (campaignId: string | number): Promise<Blob> => {
+        const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+        const response = await axios.get(`${feOrigin}/api/expenditures/campaign/${campaignId}/export`, {
+            responseType: 'blob',
+        });
+        return response.data;
+    },
+
+    /** Nhập hạng mục chi tiêu từ Excel – trả về danh sách items */
+    importItemsFromExcel: async (file: File): Promise<{
+        success: boolean;
+        message?: string;
+        data?: CreateExpenditureItemRequest[];
+        error?: string;
+    }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        try {
+            const response = await axios.post(`http://localhost:8080/api/expenditures/import`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            });
+            return {
+                success: true,
+                message: response.data?.message,
+                data: response.data?.data,
+            };
+        } catch (error: any) {
+            const status = error?.response?.status;
+            const data = error?.response?.data;
+            let msg = 'Lỗi khi nhập dữ liệu từ Excel';
+            if (status === 400) msg = data?.error || 'File không hợp lệ, vui lòng dùng đúng file mẫu';
+            else if (status === 500) msg = 'Lỗi máy chủ khi xử lý file';
+            else msg = data?.error || error?.message || msg;
+            return { success: false, error: msg };
+        }
+    },
+
+    /** Tải file mẫu Excel */
+    downloadTemplate: async (): Promise<Blob> => {
+        const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+        const response = await axios.get(`${feOrigin}/api/expenditures/import/template`, {
+            responseType: 'blob',
+        });
+        return response.data;
+    },
 };
