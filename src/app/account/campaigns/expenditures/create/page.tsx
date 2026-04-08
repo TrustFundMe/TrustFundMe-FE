@@ -10,7 +10,8 @@ import { bankAccountService } from '@/services/bankAccountService';
 import { CampaignDto } from '@/types/campaign';
 import { BankAccountDto } from '@/types/bankAccount';
 import { CreateExpenditureRequest, CreateExpenditureItemRequest } from '@/types/expenditure';
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -33,6 +34,9 @@ export default function CreateExpenditurePage() {
     const [items, setItems] = useState<CreateExpenditureItemRequest[]>([
         { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }
     ]);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [importPreview, setImportPreview] = useState<CreateExpenditureItemRequest[] | null>(null);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -76,6 +80,145 @@ export default function CreateExpenditurePage() {
 
         fetchData();
     }, [campaignId, isAuthenticated, authLoading, router]);
+
+    // ── Excel Import / Export ──────────────────────────────────────────────────
+
+    const handleDownloadTemplate = () => {
+        try {
+            const sampleData = [
+                { 'STT': 1, 'Tên hàng hóa / Dịch vụ': 'Thùng mì tôm', 'Số lượng dự kiến': 100, 'Đơn giá dự kiến (VNĐ)': 7000, 'Thành tiền dự kiến (VNĐ)': 700000, 'Ghi chú': 'Mua tại siêu thị Co.opmart' },
+                { 'STT': 2, 'Tên hàng hóa / Dịch vụ': 'Nước đóng chai (lốc 6 chai)', 'Số lượng dự kiến': 50, 'Đơn giá dự kiến (VNĐ)': 18000, 'Thành tiền dự kiến (VNĐ)': 900000, 'Ghi chú': 'Nước suối bidrico 1500ml' },
+                { 'STT': 3, 'Tên hàng hóa / Dịch vụ': 'Gạo (kg)', 'Số lượng dự kiến': 200, 'Đơn giá dự kiến (VNĐ)': 25000, 'Thành tiền dự kiến (VNĐ)': 5000000, 'Ghi chú': 'Gạo ST25 Việt Nam' },
+            ];
+            const ws = XLSX.utils.json_to_sheet(sampleData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'KhoanChi');
+            const colWidths = [
+                { wch: 5 },
+                { wch: 30 },
+                { wch: 15 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 25 },
+            ];
+            ws['!cols'] = colWidths;
+            const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '');
+            XLSX.writeFile(wb, `KhoanChi_Mau_${today}.xlsx`);
+            toast.success('Đã tải file mẫu thành công!');
+        } catch {
+            toast.error('Không thể tải file mẫu');
+        }
+    };
+
+    const handleExportItems = () => {
+        if (items.length === 0) {
+            toast.error('Không có hạng mục nào để xuất');
+            return;
+        }
+        try {
+            const data = items.map((item, idx) => ({
+                'STT': idx + 1,
+                'Tên hàng hóa / Dịch vụ': item.category || '',
+                'Số lượng dự kiến': Number(item.quantity) || 0,
+                'Đơn giá dự kiến (VNĐ)': Number(item.expectedPrice) || 0,
+                'Thành tiền dự kiến (VNĐ)': (Number(item.quantity) || 0) * (Number(item.expectedPrice) || 0),
+                'Ghi chú': item.note || '',
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'KhoanChi');
+            // Auto-size columns
+            const colWidths = [
+                { wch: 5 },  // STT
+                { wch: 30 }, // Tên
+                { wch: 15 }, // SL
+                { wch: 20 }, // Đơn giá
+                { wch: 20 }, // Thành tiền
+                { wch: 25 }, // Ghi chú
+            ];
+            ws['!cols'] = colWidths;
+            const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '');
+            XLSX.writeFile(wb, `KhoanChi_${today}.xlsx`);
+            toast.success('Đã xuất Excel thành công!');
+        } catch {
+            toast.error('Không thể xuất file Excel');
+        }
+    };
+
+    const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImporting(true);
+        try {
+            const result = await expenditureService.importItemsFromExcel(file);
+            if (!result.success || !result.data) {
+                toast.error(result.error || 'Không thể đọc file Excel');
+                return;
+            }
+
+            // ── Validate items ────────────────────────────────────────────────
+            const errors: string[] = [];
+            result.data.forEach((item, idx) => {
+                const row = idx + 1;
+                const errs: string[] = [];
+
+                // Tên hàng hóa
+                if (!item.category || item.category.trim() === '') {
+                    errs.push(`Dòng ${row}: Thiếu tên hàng hóa / dịch vụ`);
+                }
+
+                // Số lượng
+                const qty = Number(item.quantity);
+                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
+                    errs.push(`Dòng ${row}: Thiếu số lượng`);
+                } else if (qty <= 0) {
+                    errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
+                } else if (!Number.isInteger(qty)) {
+                    errs.push(`Dòng ${row}: Số lượng phải là số nguyên`);
+                }
+
+                // Đơn giá
+                const price = Number(item.expectedPrice);
+                if (item.expectedPrice === undefined || item.expectedPrice === null || isNaN(price)) {
+                    errs.push(`Dòng ${row}: Thiếu đơn giá dự kiến`);
+                } else if (price < 0) {
+                    errs.push(`Dòng ${row}: Đơn giá không được nhỏ hơn 0`);
+                }
+
+                errors.push(...errs);
+            });
+
+            if (errors.length > 0) {
+                toast.error('File Excel có lỗi:\n' + errors.slice(0, 10).join('\n') + (errors.length > 10 ? `\n...và ${errors.length - 10} lỗi khác` : ''), { duration: 8000 });
+                return;
+            }
+
+            // Tất cả hợp lệ → hiển thị preview
+            setImportPreview(result.data);
+            setShowImportModal(true);
+        } catch {
+            toast.error('Lỗi khi nhập file Excel');
+        } finally {
+            setImporting(false);
+            e.target.value = '';
+        }
+    };
+
+    const handleApplyImport = () => {
+        if (!importPreview || importPreview.length === 0) return;
+        // Merge: thay thế items hiện tại bằng dữ liệu từ file
+        const normalized = importPreview.map(item => ({
+            ...item,
+            price: 0,
+            expectedPrice: item.expectedPrice,
+            quantity: item.quantity,
+        }));
+        setItems(normalized);
+        setShowImportModal(false);
+        setImportPreview(null);
+        toast.success(`Đã áp dụng ${normalized.length} hạng mục từ file Excel`);
+    };
 
     const handleItemChange = (index: number, field: keyof CreateExpenditureItemRequest, value: string | number) => {
         const newItems = [...items];
@@ -341,13 +484,51 @@ export default function CreateExpenditurePage() {
 
                     <div className="p-6 border-t border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                         <h2 className="text-lg font-medium text-gray-900">Chi tiết hạng mục</h2>
-                        <button
-                            type="button"
-                            onClick={addItem}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                        >
-                            <Plus className="w-4 h-4 mr-1" /> Thêm hạng mục
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* Nút Tải mẫu */}
+                            <button
+                                type="button"
+                                onClick={handleDownloadTemplate}
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                                title="Tải file mẫu Excel"
+                            >
+                                <FileSpreadsheet className="w-4 h-4 mr-1" /> Tải mẫu
+                            </button>
+
+                            {/* Nút Xuất Excel */}
+                            <button
+                                type="button"
+                                onClick={handleExportItems}
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                                title="Xuất Excel hạng mục"
+                            >
+                                <Download className="w-4 h-4 mr-1" /> Xuất Excel
+                            </button>
+
+                            {/* Nút Nhập Excel */}
+                            <label className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 cursor-pointer">
+                                {importing ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                ) : (
+                                    <Upload className="w-4 h-4 mr-1" />
+                                )} Nhập Excel
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    className="hidden"
+                                    onChange={handleImportFile}
+                                />
+                            </label>
+
+                            {/* Nút Thêm hạng mục thủ công */}
+                            <button
+                                type="button"
+                                onClick={addItem}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                            >
+                                <Plus className="w-4 h-4 mr-1" /> Thêm hạng mục
+                            </button>
+                        </div>
                     </div>
 
                     <div className="p-6">
@@ -448,6 +629,86 @@ export default function CreateExpenditurePage() {
                         </button>
                     </div>
                 </form>
+
+                {/* Modal xem trước khi nhập Excel */}
+                {showImportModal && importPreview && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col mx-4">
+                            <div className="flex items-center justify-between p-4 border-b">
+                                <h3 className="text-lg font-bold text-gray-900">Xem trước dữ liệu nhập từ Excel</h3>
+                                <button
+                                    onClick={() => { setShowImportModal(false); setImportPreview(null); }}
+                                    className="p-1 hover:bg-gray-100 rounded-full text-gray-500"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-auto p-4">
+                                {importPreview.length === 0 ? (
+                                    <p className="text-center text-gray-500 py-8">Không tìm thấy hạng mục nào trong file.</p>
+                                ) : (
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-orange-50">
+                                                <th className="px-3 py-2 text-left font-semibold">STT</th>
+                                                <th className="px-3 py-2 text-left font-semibold">Tên hàng hóa / Dịch vụ</th>
+                                                <th className="px-3 py-2 text-right font-semibold">Số lượng</th>
+                                                <th className="px-3 py-2 text-right font-semibold">Đơn giá (VNĐ)</th>
+                                                <th className="px-3 py-2 text-right font-semibold">Thành tiền (VNĐ)</th>
+                                                <th className="px-3 py-2 text-left font-semibold">Ghi chú</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {importPreview.map((item, idx) => (
+                                                <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                                                    <td className="px-3 py-2">{idx + 1}</td>
+                                                    <td className="px-3 py-2 font-medium">{item.category || '(trống)'}</td>
+                                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {new Intl.NumberFormat('vi-VN').format(Number(item.expectedPrice))}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-semibold text-orange-600">
+                                                        {new Intl.NumberFormat('vi-VN').format(
+                                                            Number(item.quantity) * Number(item.expectedPrice)
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-500">{item.note || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="bg-gray-50 font-bold">
+                                                <td colSpan={4} className="px-3 py-2 text-right">Tổng cộng:</td>
+                                                <td className="px-3 py-2 text-right text-orange-600">
+                                                    {new Intl.NumberFormat('vi-VN').format(
+                                                        importPreview.reduce((sum, item) =>
+                                                            sum + Number(item.quantity) * Number(item.expectedPrice), 0)
+                                                    )}
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                )}
+                            </div>
+                            <div className="p-4 border-t flex justify-end gap-3">
+                                <button
+                                    onClick={() => { setShowImportModal(false); setImportPreview(null); }}
+                                    className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleApplyImport}
+                                    disabled={importPreview.length === 0}
+                                    className="px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                                >
+                                    Áp dụng {importPreview.length} hạng mục
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
