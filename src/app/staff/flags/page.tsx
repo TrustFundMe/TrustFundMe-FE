@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Flag, Search, CheckCircle, Clock, Loader2, Lock, X, MessageCircle, Eye, Ban, Info, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
+import { appointmentService } from '@/services/appointmentService';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { aiService, FlagAnalysisResult } from '@/services/aiService';
@@ -12,6 +13,8 @@ import { feedPostService } from '@/services/feedPostService';
 import { useRouter } from 'next/navigation';
 import BanUserModal from '@/components/staff/BanUserModal';
 import DisableCampaignModal from '@/components/staff/DisableCampaignModal';
+import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
+import { useAuth } from '@/contexts/AuthContextProxy';
 
 type FlagStatus = 'PENDING' | 'RESOLVED';
 
@@ -73,6 +76,9 @@ export default function FlagsManagementPage() {
   const [disableCampaignModal, setDisableCampaignModal] = useState<{
     isOpen: boolean; campaignId: number; campaignTitle: string;
   }>({ isOpen: false, campaignId: 0, campaignTitle: '' });
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => { fetchData(); }, []);
 
@@ -190,35 +196,104 @@ export default function FlagsManagementPage() {
   };
 
   const [campaignDetails, setCampaignDetails] = useState<any>(null);
+  const [expenditureDetails, setExpenditureDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [appointmentsMap, setAppointmentsMap] = useState<Map<string, { id: number, createdAt: number }>>(new Map());
 
   useEffect(() => {
-    if (selectedTarget?.type === 'CAMPAIGN' && selectedTarget.targetId) {
+    const firstFlag = selectedTarget?.flags[0];
+    const post = firstFlag?.post as any;
+    
+    // Resolve target campaign ID
+    let targetCampaignId: number | undefined;
+    if (selectedTarget?.type === 'CAMPAIGN') {
+      targetCampaignId = Number(selectedTarget.targetId);
+    } else if (post) {
+      targetCampaignId = post.campaignId || post.targetId; // Some posts use targetId for campaign
+    }
+
+    // Resolve expenditure ID if applicable
+    let targetExpenditureId: number | undefined;
+    if (post && (post.targetType === 'EXPENDITURE' || post.targetType === 'EVIDENCE')) {
+      targetExpenditureId = post.targetId;
+    } else if (post?.expenditureId) {
+      targetExpenditureId = post.expenditureId;
+    }
+
+    if (targetCampaignId || targetExpenditureId) {
       const fetchExtra = async () => {
         setLoadingDetails(true);
         try {
-          const [expenditures, fullCampaign, followerData, userRes] = await Promise.all([
-            campaignService.getExpendituresByCampaignId(Number(selectedTarget.targetId)),
-            campaignService.getById(Number(selectedTarget.targetId)),
-            campaignService.getFollowerCount(Number(selectedTarget.targetId)),
-            selectedTarget.flags[0].campaign?.authorId 
-              ? userService.getUserById(selectedTarget.flags[0].campaign.authorId)
-              : Promise.resolve({ success: false, data: undefined })
-          ]);
-          
-          setCampaignDetails({
-            expenditureCount: expenditures?.length || 0,
-            donorCount: Math.floor(Math.random() * 100) + 12, // Mocking donor count
-            followerCount: followerData || 0,
-            goalAmount: fullCampaign?.activeGoal?.targetAmount || 0,
-            progress: fullCampaign?.activeGoal?.targetAmount 
-              ? (selectedTarget.flags[0].campaign?.raisedAmount || 0) / fullCampaign.activeGoal.targetAmount * 100 
-              : 0,
-            startDate: fullCampaign?.startDate,
-            endDate: fullCampaign?.endDate,
-            categoryName: fullCampaign?.categoryName || fullCampaign?.category || 'Chưa phân loại',
-            authorAvatar: userRes.success && userRes.data ? userRes.data.avatarUrl : undefined
-          });
+          let resolvedCampaignId = targetCampaignId;
+          let expenditureData = null;
+
+          // If we have expenditure ID but no campaign ID, try to get campaign ID from expenditure
+          if (targetExpenditureId) {
+            try {
+              expenditureData = await campaignService.getExpenditureById(targetExpenditureId);
+              if (expenditureData && !resolvedCampaignId) {
+                resolvedCampaignId = expenditureData.campaignId;
+              }
+            } catch (err) {
+              console.error("Failed to fetch expenditure details:", err);
+            }
+          }
+
+          if (resolvedCampaignId) {
+            const [expenditures, fullCampaign, followerData, userRes] = await Promise.all([
+              campaignService.getExpendituresByCampaignId(Number(resolvedCampaignId)),
+              campaignService.getById(Number(resolvedCampaignId)),
+              campaignService.getFollowerCount(Number(resolvedCampaignId)),
+              (selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId)
+                ? userService.getUserById(selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId)
+                : Promise.resolve({ success: false, data: undefined })
+            ]);
+            
+            setCampaignDetails({
+              id: resolvedCampaignId,
+              title: fullCampaign?.title,
+              expenditureCount: expenditures?.length || 0,
+              donorCount: Math.floor(Math.random() * 100) + 12,
+              followerCount: followerData || 0,
+              goalAmount: fullCampaign?.activeGoal?.targetAmount || 0,
+              progress: fullCampaign?.activeGoal?.targetAmount 
+                ? ((fullCampaign as any).raisedAmount || 0) / fullCampaign.activeGoal.targetAmount * 100 
+                : 0,
+              raisedAmount: (fullCampaign as any).raisedAmount || 0,
+              startDate: fullCampaign?.startDate,
+              endDate: fullCampaign?.endDate,
+              categoryName: fullCampaign?.categoryName || fullCampaign?.category || 'Chưa phân loại',
+              authorAvatar: userRes.success && userRes.data ? userRes.data.avatarUrl : undefined,
+              authorName: (fullCampaign as any).authorName || (selectedTarget?.flags[0]?.post as any)?.authorName
+            });
+
+            // Fetch and resolve appointment state
+            const fundOwnerId = selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId || (selectedTarget?.flags[0]?.post as any)?.fundOwnerId;
+            if (fundOwnerId) {
+              try {
+                const userAppts = await appointmentService.getByDonor(fundOwnerId);
+                // Get most recent appointment
+                const latest = userAppts
+                  .filter(a => a.status !== 'CANCELLED')
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+                
+                if (latest) {
+                  setAppointmentsMap(prev => {
+                    const next = new Map(prev);
+                    next.set(selectedTarget.key, { 
+                      id: latest.id, 
+                      createdAt: new Date(latest.createdAt).getTime() 
+                    });
+                    return next;
+                  });
+                }
+              } catch (err) {
+                console.error("Failed to fetch appointments for target:", err);
+              }
+            }
+          }
+
+          setExpenditureDetails(expenditureData);
         } catch (error) {
           console.error("Failed to fetch extra details:", error);
         } finally {
@@ -228,6 +303,7 @@ export default function FlagsManagementPage() {
       fetchExtra();
     } else {
       setCampaignDetails(null);
+      setExpenditureDetails(null);
       setAiResult(null);
     }
   }, [selectedTarget]);
@@ -272,6 +348,8 @@ export default function FlagsManagementPage() {
             createdAt: selectedTarget.flags[0]?.post?.createdAt,
             totalFlags: selectedTarget.totalCount,
             pendingFlags: selectedTarget.pendingCount,
+            campaignInfo: campaignDetails,
+            expenditureInfo: expenditureDetails,
           };
 
       const result = await aiService.analyzeFlag(targetData, selectedTarget.flags);
@@ -641,19 +719,118 @@ export default function FlagsManagementPage() {
                         </div>
                       </div>
                     ) : selectedTarget.type === 'FEED_POST' && selectedTarget.flags[0]?.post ? (
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                         {[
-                          { label: 'Thích', value: selectedTarget.flags[0].post.likeCount ?? 0 },
-                          { label: 'Bình luận', value: selectedTarget.flags[0].post.commentCount ?? 0 },
-                          { label: 'Lượt xem', value: selectedTarget.flags[0].post.viewCount ?? 0 },
-                          { label: 'Trạng thái', value: translateStatus(selectedTarget.flags[0].post.status) },
-                        ].map((stat, i) => (
-                          <div key={i} className="space-y-1">
-                            <p className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{stat.label}</p>
-                            <p className="text-[13px] font-bold text-gray-800">{stat.value}</p>
+                      <div className="space-y-6">
+                        {/* Primary Post Stats */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+                           {[
+                            { label: 'Thích', value: selectedTarget.flags[0].post.likeCount ?? 0 },
+                            { label: 'Bình luận', value: selectedTarget.flags[0].post.commentCount ?? 0 },
+                            { label: 'Lượt xem', value: selectedTarget.flags[0].post.viewCount ?? 0 },
+                            { label: 'Trạng thái', value: translateStatus(selectedTarget.flags[0].post.status) },
+                          ].map((stat, i) => (
+                            <div key={i} className="space-y-1">
+                              <p className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{stat.label}</p>
+                              <p className="text-[13px] font-bold text-gray-800">{stat.value}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Linked Info (Campaign/Expenditure) */}
+                        {(campaignDetails || expenditureDetails) && (
+                          <div className="space-y-3">
+                            {/* Expenditure Info Section (if it's an expenditure/evidence post) */}
+                            {expenditureDetails && (
+                              <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <h5 className="text-[10px] font-black text-orange-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                  <Info className="h-3 w-3" />
+                                  Chi tiết đợt giải ngân # {expenditureDetails.id}
+                                </h5>
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Tiêu đề đợt</p>
+                                    <p className="text-[12px] font-bold text-gray-800 leading-tight">{expenditureDetails.title}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Tổng tiền đợt</p>
+                                    <p className="text-[12px] font-black text-orange-600">{formatCurrency(expenditureDetails.amount)}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Trạng thái đợt</p>
+                                    <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-[9px] font-black uppercase tracking-tight">
+                                      {translateStatus(expenditureDetails.status)}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                {expenditureDetails.items && expenditureDetails.items.length > 0 && (
+                                  <div className="space-y-2 mt-2 pt-2 border-t border-orange-100">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Danh sách hạng mục:</p>
+                                    <div className="grid grid-cols-1 gap-1.5">
+                                      {expenditureDetails.items.slice(0, 3).map((item: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between text-[11px] bg-white/50 p-1.5 rounded border border-orange-100/50">
+                                          <span className="font-bold text-gray-700 truncate max-w-[150px]">{item.description}</span>
+                                          <span className="font-black text-gray-900">{formatCurrency(item.amount)}</span>
+                                        </div>
+                                      ))}
+                                      {expenditureDetails.items.length > 3 && (
+                                        <p className="text-[10px] text-gray-400 italic text-center">... và {expenditureDetails.items.length - 3} hạng mục khác</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Campaign Info Section */}
+                            {campaignDetails && (
+                              <div className="bg-[#446b5f]/5 border border-[#446b5f]/10 rounded-xl p-4 animate-in fade-in slide-in-from-left-2 duration-300">
+                                <h5 className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-3 flex items-center gap-2">
+                                  <Flag className="h-3 w-3" />
+                                  Chiến dịch: {campaignDetails.title}
+                                </h5>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Mục tiêu tổng</p>
+                                    <p className="text-[12px] font-black text-gray-800 leading-tight">{formatCurrency(campaignDetails.goalAmount)}</p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Đã gây quỹ</p>
+                                    <p className="text-[12px] font-black text-emerald-600 leading-tight">
+                                      {formatCurrency(campaignDetails.raisedAmount)}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Tiến độ quyên góp</p>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div className="h-full bg-[#446b5f]" style={{ width: `${Math.min(campaignDetails.progress, 100)}%` }} />
+                                      </div>
+                                      <span className="text-[10px] font-black text-[#446b5f]">{Math.floor(campaignDetails.progress)}%</span>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase">Số đợt giải ngân</p>
+                                    <p className="text-[12px] font-black text-gray-800">{campaignDetails.expenditureCount}</p>
+                                  </div>
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-[#446b5f]/10 flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-gray-400">ID chiến dịch: #{campaignDetails.id}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 rounded bg-gray-100 uppercase">{campaignDetails.categoryName}</span>
+                                  </div>
+                                  <button 
+                                    onClick={() => router.push(`/staff/campaigns/${campaignDetails.id}`)}
+                                    className="text-[10px] font-black text-[#446b5f] uppercase hover:underline flex items-center gap-1"
+                                  >
+                                    Xem chi tiết <ArrowRight className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        ))}
-                        <div className="col-span-2 lg:col-span-4 mt-2 pt-3 border-t border-gray-100 space-y-3">
+                        )}
+
+                        <div className="mt-2 pt-3 border-t border-gray-100 space-y-3">
                            <div className="flex items-center gap-2">
                               <div className="h-6 w-6 rounded bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#446b5f] uppercase overflow-hidden">
                                  {selectedTarget.flags[0].post.authorAvatarUrl ? (
@@ -662,7 +839,7 @@ export default function FlagsManagementPage() {
                               </div>
                               <p className="text-[12px] font-bold text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
                            </div>
-                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#446b5f]/10">
+                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#446b5f]/10 italic">
                              {selectedTarget.flags[0].post.content || '(Không có nội dung)'}
                            </p>
                         </div>
@@ -967,10 +1144,40 @@ export default function FlagsManagementPage() {
                       </>
                     )}
 
-                    <button className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm">
-                      <Clock className="h-3 w-3" />
-                      Lên lịch hẹn
-                    </button>
+                    {/* Only show appointment button if it's a campaign or a post linked to a campaign/expenditure */}
+                    {(selectedTarget.type === 'CAMPAIGN' || selectedTarget.flags[0]?.campaignId || (selectedTarget.flags[0]?.post as any)?.campaignId || (selectedTarget.flags[0]?.post as any)?.targetType === 'CAMPAIGN') && (
+                      (() => {
+                        const targetAppt = appointmentsMap.get(selectedTarget.key);
+                        const latestFlagDate = selectedTarget.flags.reduce((latest, flag) => {
+                          const flagDate = new Date(flag.createdAt).getTime();
+                          return flagDate > latest ? flagDate : latest;
+                        }, 0);
+
+                        // Decision logic: 
+                        // Show "View Detail" if:
+                        // 1. Appointment exists AND (all flags resolved OR appointment is newer than latest flag)
+                        // Otherwise, show "Lên lịch hẹn" (Create Appointment)
+                        const showViewDetail = targetAppt && (selectedTarget.pendingCount === 0 || targetAppt.createdAt >= latestFlagDate);
+
+                        return showViewDetail ? (
+                          <button 
+                            onClick={() => router.push(`/staff/schedule?appointmentId=${targetAppt.id}`)}
+                            className="flex items-center gap-1.5 h-9 px-4 bg-[#446b5f] border border-[#446b5f]/20 rounded-lg text-[11px] font-bold text-white uppercase hover:bg-[#355249] transition-all shadow-md animate-in zoom-in-95 duration-300"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Xem lịch hẹn
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => setShowScheduleModal(true)}
+                            className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Lên lịch hẹn
+                          </button>
+                        );
+                      })()
+                    )}
 
                     <button
                       onClick={() => setBanModal({
@@ -1060,6 +1267,27 @@ export default function FlagsManagementPage() {
         onConfirm={confirmDisableCampaign}
         campaignTitle={disableCampaignModal.campaignTitle}
       />
+
+      {showScheduleModal && (
+        <CreateAppointmentModal
+          staffId={user?.id ? Number(user.id) : 0}
+          initialDonorId={selectedTarget?.type === 'CAMPAIGN' ? (selectedTarget?.flags[0]?.campaign?.authorId) : (selectedTarget?.flags[0]?.post?.authorId || (selectedTarget?.flags[0]?.post as any)?.fundOwnerId)}
+          initialCampaignId={selectedTarget?.type === 'CAMPAIGN' ? selectedTarget.targetId : (selectedTarget?.flags[0]?.campaignId || (selectedTarget?.flags[0]?.post as any)?.campaignId || ((selectedTarget?.flags[0]?.post as any)?.targetType === 'CAMPAIGN' ? (selectedTarget?.flags[0]?.post as any)?.targetId : undefined))}
+          onClose={() => setShowScheduleModal(false)}
+          onCreated={(appointmentId) => {
+            if (selectedTarget && appointmentId) {
+              setAppointmentsMap(prev => {
+                const newMap = new Map(prev);
+                newMap.set(selectedTarget.key, { 
+                  id: appointmentId, 
+                  createdAt: Date.now() 
+                });
+                return newMap;
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
