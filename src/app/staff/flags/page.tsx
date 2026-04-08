@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Flag, Search, CheckCircle, Clock, ExternalLink, Loader2, User, Lock, LockOpen, Megaphone, FileText, X, ChevronDown, ImageIcon, ThumbsUp, MessageCircle, Eye, Ban, Info, ArrowRight, ChevronRight, Check } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Flag, Search, CheckCircle, Clock, Loader2, Lock, X, MessageCircle, Eye, Ban, Info, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { aiService, FlagAnalysisResult } from '@/services/aiService';
-import Link from 'next/link';
+import { chatService } from '@/services/chatService';
+import { feedPostService } from '@/services/feedPostService';
+import { useRouter } from 'next/navigation';
 import BanUserModal from '@/components/staff/BanUserModal';
+import DisableCampaignModal from '@/components/staff/DisableCampaignModal';
 
 type FlagStatus = 'PENDING' | 'RESOLVED';
 
@@ -24,6 +27,23 @@ function formatCurrency(amount?: number | string) {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   if (isNaN(num)) return '-';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(num);
+}
+
+function translateStatus(status?: string) {
+  if (!status) return 'KHÔNG XÁC ĐỊNH';
+  const s = status.toUpperCase();
+  switch (s) {
+    case 'PENDING': return 'ĐANG CHỜ DUYỆT';
+    case 'APPROVED': return 'ĐANG HOẠT ĐỘNG';
+    case 'REJECTED': return 'ĐÃ TỪ CHỐI';
+    case 'DISABLED': return 'ĐÃ KHÓA';
+    case 'LOCKED': return 'ĐÃ KHÓA';
+    case 'CLOSED': return 'ĐÃ KẾT THÚC';
+    case 'PAUSED': return 'ĐANG TẠM DỪNG';
+    case 'ACTIVE': return 'ĐANG HOẠT ĐỘNG';
+    case 'PUBLISHED': return 'ĐÃ ĐĂNG';
+    default: return s;
+  }
 }
 
 interface GroupedTarget {
@@ -44,12 +64,35 @@ export default function FlagsManagementPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | FlagStatus>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTarget, setSelectedTarget] = useState<GroupedTarget | null>(null);
+  const router = useRouter();
 
   const [banModal, setBanModal] = useState<{
     isOpen: boolean; userId: number; userName: string; flagId: number;
   }>({ isOpen: false, userId: 0, userName: '', flagId: 0 });
 
+  const [disableCampaignModal, setDisableCampaignModal] = useState<{
+    isOpen: boolean; campaignId: number; campaignTitle: string;
+  }>({ isOpen: false, campaignId: 0, campaignTitle: '' });
+
   useEffect(() => { fetchData(); }, []);
+
+  // Track selected target key in a ref so effect can read it reliably
+  const selectedTargetKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedTarget) {
+      selectedTargetKeyRef.current = selectedTarget.key;
+    }
+  }, [selectedTarget]);
+
+  // Sync selectedTarget.flags when allFlags changes from server
+  useEffect(() => {
+    const key = selectedTargetKeyRef.current;
+    if (!key) return;
+    const matchingGroup = groupedTargetsRef.current.find(g => g.key === key);
+    if (matchingGroup) {
+      setSelectedTarget(prev => prev ? { ...prev, flags: matchingGroup.flags, pendingCount: matchingGroup.pendingCount, totalCount: matchingGroup.totalCount } : prev);
+    }
+  }, [allFlags]);
 
   const fetchData = async () => {
     try {
@@ -94,7 +137,7 @@ export default function FlagsManagementPage() {
       const group = map.get(key)!;
       group.flags.push(flag);
       group.totalCount++;
-      if (flag.status === 'PENDING') group.pendingCount++;
+      if (flag.status === 'PENDING' || flag.status !== 'RESOLVED') group.pendingCount++;
     });
 
     return Array.from(map.values()).filter(g => {
@@ -113,19 +156,25 @@ export default function FlagsManagementPage() {
     });
   }, [allFlags, searchTerm, statusFilter]);
 
+  // Keep a live ref to groupedTargets so button can read latest without stale closure
+  const groupedTargetsRef = useRef<GroupedTarget[]>([]);
+  useEffect(() => { groupedTargetsRef.current = groupedTargets; }, [groupedTargets]);
+
   const handleReview = async (id: number, status: FlagStatus) => {
     try {
       await flagService.reviewFlag(id, status);
       toast.success(status === 'RESOLVED' ? 'Đã xử lý báo cáo' : 'Đã đưa báo cáo về chờ');
+      setSelectedTarget(prev => {
+        if (!prev) return prev;
+        const updatedFlags = prev.flags.map(f => f.id === id ? { ...f, status } : f);
+        return {
+          ...prev,
+          flags: updatedFlags,
+          pendingCount: updatedFlags.filter(f => f.status !== 'RESOLVED').length,
+        };
+      });
       fetchData();
     } catch { toast.error('Thao tác thất bại'); }
-  };
-
-  const handleLockAccount = (flag: FlagDto) => {
-    const uid = flag.post?.authorId || flag.campaign?.authorId;
-    const name = flag.post?.authorName || flag.campaign?.authorName || 'User';
-    if (!uid) return;
-    setBanModal({ isOpen: true, userId: uid, userName: name, flagId: flag.id });
   };
 
   const confirmLockAccount = async (reason: string) => {
@@ -138,13 +187,6 @@ export default function FlagsManagementPage() {
       fetchData();
     } catch { toast.error('Khóa tài khoản thất bại'); }
     finally { setLoading(false); }
-  };
-
-  // Get target author info from embedded data
-  const getTargetAuthor = (flag: FlagDto) => {
-    if (flag.post) return { id: flag.post.authorId, name: flag.post.authorName, avatar: flag.post.authorAvatarUrl };
-    if (flag.campaign) return { id: flag.campaign.authorId, name: flag.campaign.authorName, avatar: undefined };
-    return null;
   };
 
   const [campaignDetails, setCampaignDetails] = useState<any>(null);
@@ -240,6 +282,102 @@ export default function FlagsManagementPage() {
       toast.error(err?.response?.data?.error || 'Phân tích AI thất bại. Vui lòng thử lại.');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const [isStartingChat, setIsStartingChat] = useState(false);
+  const handleMessage = async () => {
+    if (!selectedTarget) return;
+    
+    setIsStartingChat(true);
+    try {
+      const authorId = selectedTarget.type === 'CAMPAIGN' 
+        ? selectedTarget.flags[0]?.campaign?.authorId 
+        : selectedTarget.flags[0]?.post?.authorId;
+      
+      const campaignId = selectedTarget.type === 'CAMPAIGN' 
+        ? selectedTarget.targetId 
+        : undefined;
+
+      if (!authorId) {
+        toast.error('Không tìm thấy thông tin chủ sở hữu');
+        return;
+      }
+
+      // Check if a conversation already exists for this author and campaign
+      let conversationId: number | undefined;
+      const convListRes = await chatService.getAllConversations();
+      
+      if (convListRes.success && convListRes.data) {
+        const found = convListRes.data.find(c => 
+          c.fundOwnerId === authorId && 
+          (campaignId ? c.campaignId === Number(campaignId) : true)
+        );
+        if (found) {
+          conversationId = found.id;
+        }
+      }
+
+      if (!conversationId) {
+        const res = await chatService.createConversation(authorId, campaignId);
+        if (res.success && res.data) {
+          conversationId = res.data.id;
+        } else {
+          toast.error(res.error || 'Không thể tạo cuộc hội thoại');
+          return;
+        }
+      }
+
+      if (conversationId) {
+        router.push(`/staff/chat?conversationId=${conversationId}`);
+      }
+    } catch (err) {
+      console.error('Failed to start chat:', err);
+      toast.error('Lỗi khi kết nối đến dịch vụ tin nhắn');
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
+
+  const handleLockCampaign = async () => {
+    if (!selectedTarget || selectedTarget.type !== 'CAMPAIGN') return;
+    
+    setDisableCampaignModal({
+      isOpen: true,
+      campaignId: selectedTarget.targetId,
+      campaignTitle: selectedTarget.title
+    });
+  };
+
+  const confirmDisableCampaign = async (reason: string) => {
+    try {
+      setLoading(true);
+      await campaignService.disableCampaign(disableCampaignModal.campaignId, reason);
+      toast.success('Đã khóa chiến dịch thành công');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to lock campaign:', err);
+      toast.error('Khóa chiến dịch thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLockPost = async () => {
+    if (!selectedTarget || selectedTarget.type !== 'FEED_POST') return;
+    
+    if (!window.confirm('Bạn có chắc chắn muốn khóa bài viết này?')) return;
+
+    try {
+      setLoading(true);
+      await feedPostService.lockPost(selectedTarget.targetId);
+      toast.success('Đã khóa bài viết thành công');
+      fetchData();
+    } catch (err) {
+      console.error('Failed to lock post:', err);
+      toast.error('Khóa bài viết thất bại');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -347,16 +485,27 @@ export default function FlagsManagementPage() {
                               <p className="text-[11px] font-bold text-gray-800 truncate uppercase">{group.authorName}</p>
                            </div>
                            <div className="space-y-0.5 text-right">
-                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-tight">Báo cáo</p>
+                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-tight">Báo cáo mới</p>
                               <p className="text-xs font-black text-[#446b5f] bg-[#446b5f]/5 px-2 py-0.5 rounded-md inline-block">
-                                {group.totalCount}
+                                {group.pendingCount}
                               </p>
                            </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-[#446b5f] group-hover:gap-2 transition-all">
-                           <span>Quản lý</span>
-                           <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+                        {/* Status Row */}
+                        <div className="flex items-center justify-between">
+                           {group.pendingCount > 0 ? (
+                             <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-200">
+                               {group.pendingCount} chưa xử lý
+                             </span>
+                           ) : (
+                             <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-200">
+                               Đã xử lý ({group.totalCount})
+                             </span>
+                           )}
+                           <span className="text-[10px] font-black uppercase tracking-widest text-[#446b5f] group-hover:gap-2 transition-all flex items-center gap-1">
+                              Quản lý <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+                           </span>
                         </div>
                       </div>
                     </button>
@@ -419,73 +568,73 @@ export default function FlagsManagementPage() {
                   </div>
                   <div className="p-4">
                     {selectedTarget.type === 'CAMPAIGN' && selectedTarget.flags[0]?.campaign ? (
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-5">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Số tiền quyên góp</p>
-                          <p className="text-sm font-black text-[#446b5f]">{formatCurrency(selectedTarget.flags[0].campaign.raisedAmount)}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Số tiền quyên góp</p>
+                          <p className="text-[13px] font-bold text-[#446b5f]">{formatCurrency(selectedTarget.flags[0].campaign.raisedAmount)}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Mục tiêu (VND)</p>
-                          <p className="text-sm font-black text-gray-800">{loadingDetails ? '...' : formatCurrency(campaignDetails?.goalAmount || 0)}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Mục tiêu (VND)</p>
+                          <p className="text-[13px] font-bold text-gray-800">{loadingDetails ? '...' : formatCurrency(campaignDetails?.goalAmount || 0)}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Tiến độ quyên góp</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Tiến độ quyên góp</p>
                           <div className="flex items-center gap-1.5">
                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                               <div 
-                                 className="h-full bg-[#446b5f]" 
-                                 style={{ width: `${Math.min(campaignDetails?.progress || 0, 100)}%` }} 
+                               <div
+                                 className="h-full bg-[#446b5f]"
+                                 style={{ width: `${Math.min(campaignDetails?.progress || 0, 100)}%` }}
                                />
                              </div>
-                             <span className="text-[10px] font-black text-[#446b5f]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
+                             <span className="text-[11px] font-bold text-[#446b5f]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Trạng thái</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Trạng thái</p>
                           <div className="flex items-center gap-1.5">
                              <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                             <p className="text-xs font-black text-orange-600 uppercase">{selectedTarget.flags[0].campaign.status || 'HOẠT ĐỘNG'}</p>
+                             <p className="text-[12px] font-bold text-orange-600 uppercase">{translateStatus(selectedTarget.flags[0].campaign.status)}</p>
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Số người đã donate</p>
-                          <p className="text-xs font-black text-gray-800">{loadingDetails ? '...' : campaignDetails?.donorCount || '-'}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Số người đã donate</p>
+                          <p className="text-[13px] font-bold text-gray-800">{loadingDetails ? '...' : campaignDetails?.donorCount || '-'}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Số đợt giải ngân</p>
-                          <p className="text-xs font-black text-gray-800">{loadingDetails ? '...' : campaignDetails?.expenditureCount || '-'}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Số đợt giải ngân</p>
+                          <p className="text-[13px] font-bold text-gray-800">{loadingDetails ? '...' : campaignDetails?.expenditureCount || '-'}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Danh mục</p>
-                          <p className="text-xs font-black text-gray-800 uppercase tracking-tighter">{loadingDetails ? '...' : campaignDetails?.categoryName}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Danh mục</p>
+                          <p className="text-[13px] font-bold text-gray-800 uppercase tracking-tighter">{loadingDetails ? '...' : campaignDetails?.categoryName}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Thời gian bắt đầu</p>
-                          <p className="text-xs font-bold text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.startDate)}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Thời gian bắt đầu</p>
+                          <p className="text-[12px] font-medium text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.startDate)}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Thời gian kết thúc</p>
-                          <p className="text-xs font-bold text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.endDate)}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Thời gian kết thúc</p>
+                          <p className="text-[12px] font-medium text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.endDate)}</p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Ngày khởi tạo</p>
-                          <p className="text-xs font-bold text-gray-600">{formatDate(selectedTarget.flags[0].campaign.createdAt)}</p>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Ngày khởi tạo</p>
+                          <p className="text-[12px] font-medium text-gray-600">{formatDate(selectedTarget.flags[0].campaign.createdAt)}</p>
                         </div>
                         <div className="space-y-1">
-                           <p className="text-[10px] font-black text-gray-600 uppercase tracking-tight">Chủ tài khoản</p>
+                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Chủ tài khoản</p>
                            <div className="flex items-center gap-2 mt-0.5">
                               <div className="h-7 w-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#446b5f] uppercase shadow-sm overflow-hidden flex-shrink-0">
                                  {campaignDetails?.authorAvatar ? (
                                     <img src={campaignDetails.authorAvatar} alt="" className="w-full h-full object-cover" />
                                  ) : (selectedTarget.flags[0].campaign?.authorName?.[0] || 'U')}
                               </div>
-                              <p className="text-xs font-black text-gray-800 uppercase truncate">
+                              <p className="text-[12px] font-bold text-gray-800 uppercase truncate">
                                 {selectedTarget.flags[0].campaign?.authorName || 'Vô danh'}
                               </p>
                            </div>
                         </div>
                         <div className="col-span-2 lg:col-span-4 mt-2 pt-3 border-t border-gray-100">
-                          <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-tight mb-2">Nội dung chi tiết chiến dịch</p>
+                          <p className="text-[11px] font-black text-[#446b5f] uppercase tracking-tight mb-2">Nội dung chi tiết chiến dịch</p>
                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed italic line-clamp-6">
                             {selectedTarget.flags[0].campaign.description || 'Không có mô tả chi tiết.'}
                           </p>
@@ -497,11 +646,11 @@ export default function FlagsManagementPage() {
                           { label: 'Thích', value: selectedTarget.flags[0].post.likeCount ?? 0 },
                           { label: 'Bình luận', value: selectedTarget.flags[0].post.commentCount ?? 0 },
                           { label: 'Lượt xem', value: selectedTarget.flags[0].post.viewCount ?? 0 },
-                          { label: 'Trạng thái', value: selectedTarget.flags[0].post.status || '-' },
+                          { label: 'Trạng thái', value: translateStatus(selectedTarget.flags[0].post.status) },
                         ].map((stat, i) => (
                           <div key={i} className="space-y-1">
-                            <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">{stat.label}</p>
-                            <p className="text-xs font-black text-gray-800">{stat.value}</p>
+                            <p className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{stat.label}</p>
+                            <p className="text-[13px] font-bold text-gray-800">{stat.value}</p>
                           </div>
                         ))}
                         <div className="col-span-2 lg:col-span-4 mt-2 pt-3 border-t border-gray-100 space-y-3">
@@ -511,9 +660,9 @@ export default function FlagsManagementPage() {
                                     <img src={selectedTarget.flags[0].post.authorAvatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : (selectedTarget.flags[0].post.authorName?.[0] || 'U')}
                               </div>
-                              <p className="text-xs font-black text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
+                              <p className="text-[12px] font-bold text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
                            </div>
-                           <p className="text-xs font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#446b5f]/10">
+                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#446b5f]/10">
                              {selectedTarget.flags[0].post.content || '(Không có nội dung)'}
                            </p>
                         </div>
@@ -592,52 +741,93 @@ export default function FlagsManagementPage() {
                      </div>
                   </section>
   
-                  {/* Reports List Overhaul - High Density */}
-                  <section className="rounded-lg border border-gray-100 shadow-sm bg-white overflow-hidden flex flex-col h-full">
-                    <div className="bg-gray-50/80 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
-                      <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest">Báo cáo vi phạm</h4>
-                      <span className="text-[10px] font-black text-gray-600 uppercase">Tổng {selectedTarget.totalCount}</span>
-                    </div>
-                    <div className="divide-y divide-gray-50 max-h-[220px] overflow-y-auto custom-scrollbar flex-1">
-                      {selectedTarget.flags.map((flag, idx) => {
-                        return (
-                          <div key={idx} className="p-3 hover:bg-gray-50 transition-colors group">
-                             <div className="flex items-start gap-4">
-                                <div className="flex-1 min-w-0">
-                                   <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center gap-2">
-                                         <div className="h-5 w-5 rounded bg-[#446b5f]/10 flex items-center justify-center text-[9px] font-bold text-[#446b5f]">
-                                            {flag.reporterName?.[0] || 'V'}
-                                         </div>
-                                         <p className="text-[10px] font-black text-gray-800 uppercase truncate">
-                                           {flag.reporterName || 'Vô danh'}
-                                         </p>
-                                      </div>
-                                      <p className="text-[8px] font-bold text-gray-400">{formatDate(flag.createdAt)}</p>
-                                   </div>
-                                   <p className="text-[11px] font-bold text-gray-600 leading-snug pl-7">
-                                      <span className="text-[#446b5f] mr-1 opacity-50">"</span>
-                                      {flag.reason}
-                                      <span className="text-[#446b5f] ml-1 opacity-50">"</span>
-                                   </p>
+                  {/* Reports List - Split by Status */}
+                  {(() => {
+                    const live = groupedTargetsRef.current.find(g => g.key === selectedTarget.key);
+                    const livePending = live?.pendingCount ?? selectedTarget.pendingCount;
+                    const liveTotal = live?.totalCount ?? selectedTarget.totalCount;
+                    const liveResolved = liveTotal - livePending;
+                    const pendingFlags = (live?.flags ?? selectedTarget.flags)
+                      .filter(f => f.status !== 'RESOLVED')
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                    const resolvedFlags = (live?.flags ?? selectedTarget.flags)
+                      .filter(f => f.status === 'RESOLVED')
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                    const renderFlag = (flag: FlagDto, showCheck: boolean) => (
+                      <div key={flag.id} className="p-3 hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <div className="h-5 w-5 rounded bg-[#446b5f]/10 flex items-center justify-center text-[9px] font-bold text-[#446b5f]">
+                                  {flag.reporterName?.[0] || 'V'}
                                 </div>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {flag.status === 'PENDING' ? (
-                                    <button onClick={() => handleReview(flag.id, 'RESOLVED')} className="p-1.5 rounded bg-[#446b5f] text-white hover:bg-[#446b5f]/90 transition-all shadow-sm">
-                                      <Check className="h-2.5 w-2.5" />
-                                    </button>
-                                  ) : (
-                                    <button onClick={() => handleReview(flag.id, 'PENDING')} className="p-1.5 rounded bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all">
-                                      <ArrowRight className="h-2.5 w-2.5 rotate-180" />
-                                    </button>
-                                  )}
-                                </div>
-                             </div>
+                                <p className="text-[10px] font-black text-gray-800 uppercase truncate">
+                                  {flag.reporterName || 'Vô danh'}
+                                </p>
+                              </div>
+                              <p className="text-[8px] font-bold text-gray-400">{formatDate(flag.createdAt)}</p>
+                            </div>
+                            <p className="text-[11px] font-bold text-gray-600 leading-snug pl-7">
+                              <span className="text-[#446b5f] mr-1 opacity-50">"</span>
+                              {flag.reason}
+                              <span className="text-[#446b5f] ml-1 opacity-50">"</span>
+                            </p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </section>
+                          {showCheck && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleReview(flag.id, 'RESOLVED')} className="p-1.5 rounded bg-[#446b5f] text-white hover:bg-[#446b5f]/90 transition-all shadow-sm">
+                                <Check className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+
+                    return (
+                      <div className="flex flex-col gap-3">
+                        {/* Chưa giải quyết */}
+                        <section className="rounded-lg border border-amber-200 bg-white shadow-sm overflow-hidden flex flex-col h-[220px]">
+                          <div className="bg-amber-50/80 px-4 py-2 border-b border-amber-100 flex justify-between items-center">
+                            <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Chưa giải quyết</h4>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 uppercase">
+                              {livePending}
+                            </span>
+                          </div>
+                          <div className="divide-y divide-gray-50 flex-1 overflow-y-auto custom-scrollbar">
+                            {pendingFlags.length > 0 ? (
+                              pendingFlags.map(f => renderFlag(f, true))
+                            ) : (
+                              <p className="text-[10px] text-center text-gray-400 py-6 font-bold uppercase tracking-widest">
+                                Không có báo cáo nào
+                              </p>
+                            )}
+                          </div>
+                        </section>
+
+                        {/* Đã giải quyết */}
+                        <section className="rounded-lg border border-emerald-200 bg-white shadow-sm overflow-hidden flex flex-col h-[220px]">
+                          <div className="bg-emerald-50/80 px-4 py-2 border-b border-emerald-100 flex justify-between items-center">
+                            <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Đã giải quyết</h4>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">
+                              {liveResolved}
+                            </span>
+                          </div>
+                          <div className="divide-y divide-gray-50 flex-1 overflow-y-auto custom-scrollbar">
+                            {resolvedFlags.length > 0 ? (
+                              resolvedFlags.map(f => renderFlag(f, false))
+                            ) : (
+                              <p className="text-[10px] text-center text-gray-400 py-6 font-bold uppercase tracking-widest">
+                                Chưa có báo cáo nào được giải quyết
+                              </p>
+                            )}
+                          </div>
+                        </section>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* AI Analysis Integration */}
@@ -653,24 +843,26 @@ export default function FlagsManagementPage() {
                           <div>
                             <h5 className="text-[13px] font-black uppercase tracking-widest text-[#446b5f]">Kết quả phân tích AI</h5>
                             <p className="text-[10px] text-[#446b5f]/60 uppercase tracking-widest font-bold">
-                              Độ chắc chắn: {aiResult.confidence}
+                              Độ rủi ro: {aiResult.riskLevel === 'HIGH' ? 'CAO' : aiResult.riskLevel === 'MEDIUM' ? 'TRUNG BÌNH' : 'THẤP'}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-lg bg-[#446b5f]">
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-lg ${
+                            aiResult.riskLevel === 'HIGH' ? 'bg-rose-500' : aiResult.riskLevel === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}>
                             {aiResult.riskLevel === 'HIGH' ? 'RỦI RO CAO' : aiResult.riskLevel === 'MEDIUM' ? 'CẢNH BÁO' : 'AN TOÀN'}
                           </span>
                           <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-sm bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20">
-                            Điểm: {aiResult.riskScore}/100
+                            Điểm đánh giá rủi ro: {aiResult.riskScore}/100
                           </span>
                         </div>
                       </div>
 
-                      <div className="p-4 space-y-4">
+                      <div className="p-4 space-y-4 text-[12px]">
                         {/* Summary */}
                         <div className="p-3 rounded bg-white/60 border border-[#446b5f]/10">
-                          <p className="text-[13px] font-black text-[#446b5f] leading-relaxed">{aiResult.summary}</p>
+                          <p className="text-[13px] font-bold text-[#446b5f] leading-relaxed">{aiResult.summary}</p>
                         </div>
 
                         {/* Key Findings */}
@@ -683,7 +875,7 @@ export default function FlagsManagementPage() {
                                   <div className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#446b5f]/10">
                                     <span className="text-[9px] font-black text-[#446b5f]">{i + 1}</span>
                                   </div>
-                                  <p className="text-[13px] font-black text-[#446b5f] leading-snug">{finding}</p>
+                                  <p className="text-[12px] font-medium text-[#446b5f] leading-snug">{finding}</p>
                                 </div>
                               ))}
                             </div>
@@ -692,10 +884,10 @@ export default function FlagsManagementPage() {
                           {/* Recommendation */}
                           <div className="p-4 rounded bg-[#446b5f]/10 border border-[#446b5f]/10">
                              <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-2">Đề xuất hành động</p>
-                             <p className="text-[13px] font-black text-[#446b5f] leading-relaxed mb-4">{aiResult.recommendation}</p>
+                             <p className="text-[12px] font-medium text-[#446b5f] leading-relaxed mb-4">{aiResult.recommendation}</p>
                              <div className="flex flex-wrap gap-1.5">
                                {aiResult.actionTypes.map((action, i) => (
-                                 <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm bg-white text-[#446b5f] border-[#446b5f]/20">
+                                 <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#446b5f] border-[#446b5f]/20">
                                    {action.replace('_', ' ')}
                                  </span>
                                ))}
@@ -707,8 +899,8 @@ export default function FlagsManagementPage() {
                       {/* Footer */}
                       <div className="px-4 py-3 border-t border-[#446b5f]/10 bg-[#446b5f]/5">
                         <button
-                          onClick={() => setAiResult(null)}
-                          className="text-[10px] font-black text-[#446b5f] hover:text-[#446b5f]/80 uppercase tracking-widest flex items-center gap-1.5 transition-colors"
+                          onClick={handleAIAnalysis}
+                          className="text-[10px] font-black text-[#d95f5e] hover:text-[#d95f5e]/80 uppercase tracking-widest flex items-center gap-1.5 transition-colors"
                         >
                           <Info className="h-3 w-3" />
                           Phân tích lại
@@ -719,13 +911,13 @@ export default function FlagsManagementPage() {
                     <button
                       onClick={handleAIAnalysis}
                       disabled={isAnalyzing}
-                      className="w-full h-11 rounded-xl bg-[#446b5f] text-white flex items-center justify-center gap-3 shadow-xl hover:shadow-[#446b5f]/20 transition-all active:scale-[0.98] border border-white/10 group overflow-hidden relative"
+                      className="w-full h-11 rounded-xl bg-[#d95f5e] text-white flex items-center justify-center gap-3 shadow-xl hover:shadow-[#d95f5e]/20 transition-all active:scale-[0.98] border border-white/10 group overflow-hidden relative"
                     >
                       {isAnalyzing ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <>
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#446b5f]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#d95f5e]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                           <div className="h-6 w-6 rounded-lg bg-white/10 flex items-center justify-center">
                             <Info className="h-3 w-3" />
                           </div>
@@ -734,6 +926,104 @@ export default function FlagsManagementPage() {
                       )}
                     </button>
                   )}
+                </div>
+
+                {/* Actions Panel */}
+                <div className="px-2 pb-2 mt-auto pt-4">
+                  <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-3">Hành động</h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button 
+                      onClick={handleMessage}
+                      disabled={isStartingChat}
+                      className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {isStartingChat ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircle className="h-3 w-3" />}
+                      Nhắn tin
+                    </button>
+
+                    {selectedTarget.type === 'CAMPAIGN' && (
+                      <button 
+                        onClick={handleLockCampaign}
+                        className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                      >
+                        <Lock className="h-3 w-3" />
+                        Khóa chiến dịch
+                      </button>
+                    )}
+
+                    {selectedTarget.type === 'FEED_POST' && (
+                      <>
+                        <button 
+                          onClick={handleLockPost}
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Khóa bài viết
+                        </button>
+                        <button className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm">
+                          <MessageCircle className="h-3 w-3" />
+                          Khóa comment
+                        </button>
+                      </>
+                    )}
+
+                    <button className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm">
+                      <Clock className="h-3 w-3" />
+                      Lên lịch hẹn
+                    </button>
+
+                    <button
+                      onClick={() => setBanModal({
+                        isOpen: true,
+                        userId: selectedTarget.type === 'CAMPAIGN' ? (selectedTarget.flags[0]?.campaign?.authorId ?? 0) : (selectedTarget.flags[0]?.post?.authorId ?? 0),
+                        userName: selectedTarget.type === 'CAMPAIGN' ? (selectedTarget.flags[0]?.campaign?.authorName ?? '') : (selectedTarget.flags[0]?.post?.authorName ?? ''),
+                        flagId: selectedTarget.flags[0]?.id ?? 0
+                      })}
+                      className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                    >
+                      <Ban className="h-3 w-3" />
+                      Đình chỉ tài khoản
+                    </button>
+                  </div>
+                </div>
+
+                {/* Resolve All Pending Flags */}
+                <div className="px-2 mt-4">
+                  <button
+                    onClick={async () => {
+                      const live = groupedTargetsRef.current.find(g => g.key === selectedTarget.key);
+                      const currentPending = live?.pendingCount ?? selectedTarget.pendingCount;
+                      if (currentPending === 0) {
+                        toast.success('Không có báo cáo nào đang chờ xử lý');
+                        return;
+                      }
+                      const pending = (live?.flags ?? selectedTarget.flags).filter(f => f.status !== 'RESOLVED');
+                      try {
+                        for (const flag of pending) {
+                          await flagService.reviewFlag(flag.id, 'RESOLVED');
+                        }
+                        toast.success(`Đã giải quyết ${pending.length} báo cáo`);
+                        setSelectedTarget(prev => prev ? {
+                          ...prev,
+                          flags: prev.flags.map(f => f.status !== 'RESOLVED' ? { ...f, status: 'RESOLVED' as const } : f),
+                          pendingCount: 0,
+                        } : prev);
+                        fetchData();
+                      } catch {
+                        toast.error('Thao tác thất bại');
+                      }
+                    }}
+                    className="w-full h-11 rounded-xl bg-[#446b5f] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#355249] transition-all active:scale-[0.98] shadow-lg shadow-[#446b5f]/10"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    {(() => {
+                      const live = groupedTargetsRef.current.find(g => g.key === selectedTarget.key);
+                      const pending = live?.pendingCount ?? selectedTarget.pendingCount;
+                      return pending === 0
+                        ? 'Đã giải quyết tất cả'
+                        : `Giải quyết tất cả (${pending})`;
+                    })()}
+                  </button>
                 </div>
               </div>
             </div>
@@ -762,6 +1052,13 @@ export default function FlagsManagementPage() {
         onClose={() => setBanModal(prev => ({ ...prev, isOpen: false }))}
         onConfirm={confirmLockAccount}
         userName={banModal.userName}
+      />
+
+      <DisableCampaignModal
+        isOpen={disableCampaignModal.isOpen}
+        onClose={() => setDisableCampaignModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmDisableCampaign}
+        campaignTitle={disableCampaignModal.campaignTitle}
       />
     </div>
   );
