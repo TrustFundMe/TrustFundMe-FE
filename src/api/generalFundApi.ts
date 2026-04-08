@@ -27,6 +27,14 @@ export const generalFundApi = {
         return response.data;
     },
 
+    // GET /api/internal-transactions/history/paginated
+    getHistoryPaginated: async (page: number, size: number): Promise<{ content: InternalTransaction[], totalElements: number, totalPages: number }> => {
+        const response = await axiosInstance.get<{ content: InternalTransaction[], totalElements: number, totalPages: number }>('/api/internal-transactions/history/paginated', {
+            params: { page, size, sort: 'createdAt,desc' }
+        });
+        return response.data;
+    },
+
     // POST /api/internal-transactions
     createTransaction: async (data: {
         fromCampaignId?: number;

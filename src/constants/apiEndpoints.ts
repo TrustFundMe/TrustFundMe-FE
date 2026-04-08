@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
     BY_ID: (id: number | string) => `/api/expenditures/${id}`,
     ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
     UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
+    TRANSACTIONS_PAGINATED: (type: string, status: string) => `/api/expenditures/transactions/type/${type}/status/${status}/paginated`,
   },
   APPOINTMENTS: {
     BASE: "/api/appointments",
@@ -112,6 +113,7 @@ export const API_ENDPOINTS = {
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
     CAMPAIGN_ANALYTICS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/analytics`,
     DONATION_SUMMARY: "/api/payments/donations/summary",
+    STATUS_PAGINATED: (status: string) => `/api/payments/status/${status}/paginated`,
   },
   TASKS: {
     BASE: "/api/admin/tasks",

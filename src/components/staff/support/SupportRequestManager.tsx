@@ -8,7 +8,9 @@ import {
     FileText,
     DollarSign,
     X,
-    CheckCircle
+    CheckCircle,
+    Search,
+    ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -251,8 +253,8 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col"
             >
-                {/* Header — giảm padding dưới */}
-                <div className="px-6 pt-5 pb-3 border-b border-gray-50 flex items-center justify-between">
+                {/* Header — giảm padding */}
+                <div className="px-6 pt-4 pb-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
                     <div>
                         <h2 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
                             <HandCoins className="h-4 w-4 text-[#db5945]" />
@@ -260,28 +262,24 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                         </h2>
                         <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Gửi đề xuất trích tiền từ Quỹ chung cho chiến dịch</p>
                     </div>
-                    <button onClick={onClose} className="h-10 w-10 rounded-2xl bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-all">
-                        <X className="h-5 w-5" />
+                    <button onClick={onClose} className="h-9 w-9 rounded-xl bg-white shadow-sm border border-gray-100 text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-all">
+                        <X className="h-4 w-4" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="px-6 pt-3 pb-5 space-y-4">
-                    {/* Chiến dịch */}
-                    <div className="space-y-1">
+                <form onSubmit={handleSubmit} className="px-6 pt-2 pb-5 space-y-4">
+                    {/* Chiến dịch nhận tiền - Searchable Dropdown */}
+                    <div className="space-y-1 relative">
                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 ml-1">
                             <HandCoins className="h-3 w-3" />
                             Chiến dịch nhận tiền
                         </label>
-                        <select
-                            value={formData.toCampaignId}
-                            onChange={(e) => setFormData({ ...formData, toCampaignId: e.target.value })}
-                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
-                        >
-                            <option value="">-- Chọn chiến dịch --</option>
-                            {campaigns.map(c => (
-                                <option key={c.id} value={c.id}>{c.title}</option>
-                            ))}
-                        </select>
+
+                        <CampaignSelector
+                            campaigns={campaigns}
+                            selectedId={formData.toCampaignId}
+                            onSelect={(id) => setFormData({ ...formData, toCampaignId: id })}
+                        />
                     </div>
 
                     {/* Số tiền với định dạng dấu chấm */}
@@ -347,6 +345,93 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                     </div>
                 </form>
             </motion.div>
+        </div>
+    );
+}
+function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: any[], selectedId: string, onSelect: (id: string) => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const selectedCampaign = campaigns.find(c => String(c.id) === String(selectedId));
+
+    const filteredCampaigns = useMemo(() => {
+        if (!searchTerm) return campaigns;
+        const normalizedSearch = searchTerm.toLowerCase().trim();
+        return campaigns.filter(c =>
+            c.title.toLowerCase().includes(normalizedSearch) ||
+            (c.ownerName && c.ownerName.toLowerCase().includes(normalizedSearch))
+        );
+    }, [campaigns, searchTerm]);
+
+    return (
+        <div className="relative">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 flex items-center justify-between text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
+            >
+                <span className={selectedCampaign ? "text-gray-900" : "text-gray-400"}>
+                    {selectedCampaign ? selectedCampaign.title : "-- Chọn chiến dịch --"}
+                </span>
+                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute left-0 right-0 top-[calc(100%+8px)] z-20 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
+                        >
+                            <div className="p-2 border-b border-gray-50 bg-gray-50/30">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm tên chiến dịch hoặc chủ quỹ..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full h-9 pl-9 pr-3 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/20 focus:border-[#db5945] transition-all"
+                                        autoFocus
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="max-h-[220px] overflow-auto py-1 custom-scrollbar">
+                                {filteredCampaigns.length === 0 ? (
+                                    <div className="px-4 py-3 text-center text-[10px] font-bold text-gray-400 italic">
+                                        Không tìm thấy chiến dịch nào
+                                    </div>
+                                ) : (
+                                    filteredCampaigns.map(c => (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => {
+                                                onSelect(String(c.id));
+                                                setIsOpen(false);
+                                                setSearchTerm('');
+                                            }}
+                                            className={`w-full px-4 py-2.5 text-left border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-all flex flex-col gap-0.5 ${String(c.id) === String(selectedId) ? 'bg-[#db5945]/5' : ''}`}
+                                        >
+                                            <span className={`text-[11px] font-black line-clamp-1 ${String(c.id) === String(selectedId) ? 'text-[#db5945]' : 'text-gray-900'}`}>
+                                                {c.title}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-gray-400">
+                                                Chủ quỹ: {c.ownerName || '---'}
+                                            </span>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
