@@ -128,7 +128,7 @@ export const feedPostService = {
   },
 
   async lockPost(id: number): Promise<FeedPostDto> {
-    const res = await api.put<FeedPostDto>(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(id));
+    const res = await api.patch<FeedPostDto>(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(id));
     return res.data;
   },
 };

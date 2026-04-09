@@ -24,9 +24,13 @@ import { useAuth } from "@/contexts/AuthContextProxy";
 import { AnimatePresence } from "framer-motion";
 
 function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
-  const [imgSrc, setImgSrc] = useState(src ?? "");
-  useEffect(() => { setImgSrc(src ?? ""); }, [src]);
+  const [imgSrc, setImgSrc] = useState(src || "");
   const DEFAULT_IMG = "/assets/img/campaign/1.png";
+
+  useEffect(() => {
+    setImgSrc(src || "");
+  }, [src]);
+
   return (
     <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden shadow-inner ring-1 ring-black/5 bg-zinc-100">
       <Image
@@ -35,7 +39,7 @@ function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
         width={40}
         height={40}
         unoptimized
-        onError={() => { if (imgSrc) setImgSrc(""); }}
+        onError={() => { setImgSrc(DEFAULT_IMG); }}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
@@ -186,8 +190,14 @@ const FeedPostDetailPage = () => {
       setCampaignsList(cList);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 404) setError("Không tìm thấy bài viết");
-      else setError((err as Error)?.message ?? "Không tải được bài viết");
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message;
+      if (status === 403) {
+        setError("Bài viết này đã bị khóa và không thể xem.");
+      } else if (status === 404) {
+        setError("Không tìm thấy bài viết");
+      } else {
+        setError(errorMsg ?? "Không tải được bài viết");
+      }
       setPost(null);
     } finally {
       setLoading(false);
