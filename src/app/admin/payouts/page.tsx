@@ -19,6 +19,7 @@ import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
+import type { ExpenditureTransaction } from '@/types/expenditure';
 import type {
     RequestStatus,
     ExpenditureRequest as BaseExpenditureRequest
@@ -72,8 +73,10 @@ export default function AdminPayoutsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [statusFilter, setStatusFilter] = useState<RequestStatus | 'ALL'>('ALL');
     const [searchQuery, setSearchQuery] = useState('');
-    const [expenditureRows, setExpenditureRows] = useState<ExpenditureRequest[]>([]);
+    const [payoutTransactions, setPayoutTransactions] = useState<ExpenditureTransaction[]>([]);
     const [refundTransactions, setRefundTransactions] = useState<RefundTransaction[]>([]);
+    const [campaignMap, setCampaignMap] = useState<Record<number, any>>({});
+    const [mediaMap, setMediaMap] = useState<Record<number, string | null>>({});
     const [selectedExp, setSelectedExp] = useState<ExpenditureRequest | null>(null);
     const [selectedRefund, setSelectedRefund] = useState<RefundTransaction | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,13 +88,17 @@ export default function AdminPayoutsPage() {
     const fetchData = async () => {
         setIsLoading(true);
         try {
+            // Lấy tất cả transactions trực tiếp
+            const allTransactions = await expenditureService.getAllTransactions();
+
+            // Lấy campaigns để lấy title + cover image
             const campaignsData = await campaignService.getAll(0, 1000);
             const allCampaigns = campaignsData.content;
-            const expenditurePromises = allCampaigns.map(c => expenditureService.getByCampaignId(c.id));
-            const expenditureResults = await Promise.all(expenditurePromises);
-            const allExps = expenditureResults.flat();
+            const campaignMap: Record<number, (typeof allCampaigns)[0]> = {};
+            allCampaigns.forEach(c => { campaignMap[c.id] = c; });
+            setCampaignMap(campaignMap);
 
-            // Collect all media for campaigns
+            // Lấy media cho tất cả campaigns
             const mediaMap: Record<number, string | null> = {};
             await Promise.allSettled(
                 allCampaigns.map(async (c) => {
@@ -108,69 +115,25 @@ export default function AdminPayoutsPage() {
                     }
                 })
             );
+            setMediaMap(mediaMap);
 
-            // Process expenditures for PAYOUT tab
-            const enrichedExps: ExpenditureRequest[] = allExps.map((e) => {
-                const campaign = allCampaigns.find(c => c.id === e.campaignId);
+            // Tách PAYOUT và REFUND transactions
+            const payouts: ExpenditureTransaction[] = [];
+            const refunds: RefundTransaction[] = [];
 
-                // Get payout transaction amount
-                const payoutTx = e.transactions
-                    ?.filter(t => t.type === 'PAYOUT')
-                    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0];
-
-                // Display amount: for ITEMIZED use payout tx amount, for AUTHORIZED use totalExpectedAmount
-                let displayAmount = e.totalExpectedAmount;
-                if (campaign?.type === 'ITEMIZED' && payoutTx) {
-                    displayAmount = payoutTx.amount;
-                }
-
-                return {
-                    id: `EXP_${e.id}`,
-                    createdAt: e.createdAt || new Date().toISOString(),
-                    status: (e.status as RequestStatus) || 'PENDING',
-                    type: 'EXPENDITURE',
-                    campaignId: e.campaignId,
-                    campaignTitle: campaign?.title || `Campaign #${e.campaignId}`,
-                    campaignCoverImage: mediaMap[e.campaignId] ?? null,
-                    campaignType: campaign?.type,
-                    requesterName: 'Fund Owner',
-                    totalAmount: displayAmount,
-                    totalExpectedAmount: e.totalExpectedAmount,
-                    expenditureItems: (e.items || []).map((i: any) => ({
-                        description: i.category,
-                        quantity: i.quantity,
-                        price: i.price,
-                    })),
-                    justification: e.plan || 'No justification provided',
-                    disbursementProofUrl: e.disbursementProofUrl || payoutTx?.proofUrl,
-                    disbursedAt: (e as any).disbursedAt,
-                    bankCode: e.bankCode || payoutTx?.toBankCode,
-                    accountNumber: e.accountNumber || payoutTx?.toAccountNumber,
-                    accountHolderName: e.accountHolderName || payoutTx?.toAccountHolderName,
-                    fromBankCode: payoutTx?.fromBankCode,
-                    fromAccountNumber: payoutTx?.fromAccountNumber,
-                    fromAccountHolderName: payoutTx?.fromAccountHolderName,
-                    toBankCode: payoutTx?.toBankCode,
-                    toAccountNumber: payoutTx?.toAccountNumber,
-                    toAccountHolderName: payoutTx?.toAccountHolderName,
-                    transactions: e.transactions,
-                };
-            });
-
-            // Process refund transactions for REFUND tab
-            const refundTxs: RefundTransaction[] = [];
-            allExps.forEach((e) => {
-                const campaign = allCampaigns.find(c => c.id === e.campaignId);
-                const refundTxsRaw = e.transactions?.filter(t => t.type === 'REFUND') || [];
-                refundTxsRaw.forEach(tx => {
-                    refundTxs.push({
+            allTransactions.forEach(tx => {
+                if (tx.type === 'PAYOUT') {
+                    payouts.push(tx);
+                } else if (tx.type === 'REFUND') {
+                    const campaign = campaignMap[tx.campaignId || 0];
+                    refunds.push({
                         id: `REF_${tx.id}`,
                         expenditureId: tx.expenditureId,
                         expenditureIdStr: `EXP_${tx.expenditureId}`,
-                        campaignId: e.campaignId,
-                        campaignTitle: campaign?.title || `Campaign #${e.campaignId}`,
-                        campaignCoverImage: mediaMap[e.campaignId] ?? null,
-                        amount: tx.amount,
+                        campaignId: tx.campaignId || 0,
+                        campaignTitle: campaign?.title || `Campaign #${tx.campaignId}`,
+                        campaignCoverImage: mediaMap[tx.campaignId || 0] ?? null,
+                        amount: Number(tx.amount),
                         status: tx.status,
                         proofUrl: tx.proofUrl,
                         fromBankCode: tx.fromBankCode,
@@ -181,14 +144,14 @@ export default function AdminPayoutsPage() {
                         toAccountHolderName: tx.toAccountHolderName,
                         createdAt: tx.createdAt || new Date().toISOString(),
                     });
-                });
+                }
             });
 
-            setExpenditureRows(enrichedExps.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-            setRefundTransactions(refundTxs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setPayoutTransactions(payouts.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()));
+            setRefundTransactions(refunds.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         } catch (error) {
-            console.error('Failed to fetch expenditures', error);
-            toast.error('Không thể tải danh sách chi tiêu');
+            console.error('Failed to fetch transactions', error);
+            toast.error('Không thể tải danh sách giao dịch');
         } finally {
             setIsLoading(false);
         }
@@ -198,18 +161,19 @@ export default function AdminPayoutsPage() {
         fetchData();
     }, []);
 
-    // Filter for PAYOUT tab (expenditures with WITHDRAWAL_REQUESTED or DISBURSED)
-    const filteredExpenditures = useMemo(() => {
-        return expenditureRows.filter((r) => {
+    // Filter for PAYOUT tab (transactions)
+    const filteredPayouts = useMemo(() => {
+        return payoutTransactions.filter((r) => {
+            const campaign = campaignMap[r.campaignId || 0];
             const matchesStatus = statusFilter === 'ALL'
-                ? ((r.status as string) === 'WITHDRAWAL_REQUESTED' || (r.status as string) === 'DISBURSED')
+                ? true
                 : r.status === statusFilter;
             const matchesSearch = searchQuery === ''
-                || r.campaignTitle.toLowerCase().includes(searchQuery.toLowerCase())
-                || r.id.toLowerCase().includes(searchQuery.toLowerCase());
+                || (`EXP_${r.expenditureId}`).toLowerCase().includes(searchQuery.toLowerCase())
+                || (campaign?.title || '').toLowerCase().includes(searchQuery.toLowerCase());
             return matchesStatus && matchesSearch;
         });
-    }, [expenditureRows, statusFilter, searchQuery]);
+    }, [payoutTransactions, campaignMap, statusFilter, searchQuery]);
 
     // Filter for REFUND tab
     const filteredRefunds = useMemo(() => {
@@ -225,15 +189,15 @@ export default function AdminPayoutsPage() {
     }, [refundTransactions, statusFilter, searchQuery]);
 
     const paginatedData = useMemo(() => {
-        const data = activeTab === 'PAYOUT' ? filteredExpenditures : filteredRefunds;
+        const data = activeTab === 'PAYOUT' ? filteredPayouts : filteredRefunds;
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         return data.slice(start, start + ITEMS_PER_PAGE);
-    }, [activeTab, filteredExpenditures, filteredRefunds, currentPage, statusFilter, searchQuery]);
+    }, [activeTab, filteredPayouts, filteredRefunds, currentPage, statusFilter, searchQuery]);
 
     const totalPages = useMemo(() => {
-        const data = activeTab === 'PAYOUT' ? filteredExpenditures : filteredRefunds;
+        const data = activeTab === 'PAYOUT' ? filteredPayouts : filteredRefunds;
         return Math.ceil(data.length / ITEMS_PER_PAGE);
-    }, [activeTab, filteredExpenditures, filteredRefunds]);
+    }, [activeTab, filteredPayouts, filteredRefunds]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -249,16 +213,16 @@ export default function AdminPayoutsPage() {
     const handleUpdateStatus = async (id: string, next: RequestStatus) => {
         const expId = id.replace('EXP_', '');
         try {
-            await expenditureService.updateStatus(Number(expId), next);
-            setExpenditureRows(prev => prev.map(r => r.id === id ? { ...r, status: next } : r));
-            if (selectedExp?.id === id) setSelectedExp(prev => prev ? { ...prev, status: next } : null);
+            const updated = await expenditureService.updateStatus(Number(expId), next);
+            setPayoutTransactions(prev => prev.map(r => r.expenditureId === Number(expId) ? { ...r, status: next } : r));
+            if (selectedExp?.id === id) setSelectedExp(prev => prev ? { ...prev, status: (updated.status as any) || next } : null);
             toast.success(`Cập nhật trạng thái thành công: ${next}`);
         } catch (error) {
             toast.error('Cập nhật trạng thái thất bại');
         }
     };
 
-    const handleUploadProof = async (file: File) => {
+    const handleUploadProof = async (file: File, txId?: number) => {
         if (!selectedExp) return;
         const expId = Number(selectedExp.id.replace('EXP_', ''));
 
@@ -266,12 +230,10 @@ export default function AdminPayoutsPage() {
         try {
             const mediaRes = await mediaService.uploadMedia(file, undefined, undefined, expId, 'Disbursement Proof', 'PHOTO');
             const updatedUrl = mediaRes.url;
-            setExpenditureRows(prev => prev.map(r =>
-                r.id === selectedExp.id
-                    ? { ...r, disbursementProofUrl: updatedUrl }
-                    : r
-            ));
             setSelectedExp(prev => prev ? { ...prev, disbursementProofUrl: updatedUrl } : null);
+            if (txId) {
+                setPayoutTransactions(prev => prev.map(r => r.id === txId ? { ...r, proofUrl: updatedUrl } : r));
+            }
 
             toast.success('Đã tải minh chứng lên. Vui lòng nhấn "Xác nhận đã chuyển tiền" để hoàn tất.');
         } catch (error) {
@@ -282,7 +244,7 @@ export default function AdminPayoutsPage() {
         }
     };
 
-    const handleDisburse = async () => {
+    const handleDisburse = async (txId?: number) => {
         if (!selectedExp || !selectedExp.disbursementProofUrl) {
             toast.error('Vui lòng tải minh chứng trước khi xác nhận');
             return;
@@ -290,17 +252,63 @@ export default function AdminPayoutsPage() {
         const expId = Number(selectedExp.id.replace('EXP_', ''));
         setIsLoading(true);
         try {
-            await expenditureService.updateStatus(expId, 'DISBURSED', user?.id ? Number(user.id) : undefined, undefined, selectedExp.disbursementProofUrl);
+            const updated = await expenditureService.updateStatus(expId, 'DISBURSED', user?.id ? Number(user.id) : undefined, undefined, selectedExp.disbursementProofUrl);
 
-            setExpenditureRows(prev => prev.map(r =>
-                r.id === selectedExp.id ? { ...r, status: 'DISBURSED' as any } : r
+            setPayoutTransactions(prev => prev.map(r =>
+                r.expenditureId === expId ? { ...r, status: 'COMPLETED' } : r
             ));
-            setSelectedExp(prev => prev ? { ...prev, status: 'DISBURSED' as any } : null);
+            setSelectedExp(prev => prev ? { ...prev, status: (updated.status as any) || 'DISBURSED' } : null);
             toast.success('Chuyển tiền thành công!');
         } catch (error) {
             toast.error('Xác nhận giải ngân thất bại');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const openPayoutDetail = async (tx: ExpenditureTransaction) => {
+        try {
+            const exp = await expenditureService.getById(tx.expenditureId);
+            const campaign = campaignMap[tx.campaignId || 0];
+            // Map transaction status → expenditure status để panel hiển thị đúng
+            const mappedStatus: any = tx.status === 'COMPLETED' ? 'DISBURSED'
+                : tx.status === 'PENDING' ? 'WITHDRAWAL_REQUESTED'
+                : tx.status;
+            setSelectedExp({
+                id: `EXP_${tx.expenditureId}`,
+                createdAt: tx.createdAt || new Date().toISOString(),
+                status: mappedStatus,
+                type: 'EXPENDITURE',
+                campaignId: tx.campaignId || 0,
+                campaignTitle: campaign?.title || `Campaign #${tx.campaignId}`,
+                campaignCoverImage: mediaMap[tx.campaignId || 0] ?? null,
+                campaignType: campaign?.type,
+                requesterName: 'Fund Owner',
+                totalAmount: Number(tx.amount),
+                totalExpectedAmount: exp.totalExpectedAmount,
+                expenditureItems: (exp.items || []).map((i: any) => ({
+                    description: i.category,
+                    quantity: i.quantity,
+                    price: i.price,
+                })),
+                justification: exp.plan || 'No justification provided',
+                disbursementProofUrl: tx.proofUrl,
+                disbursedAt: tx.status === 'COMPLETED' ? (tx.createdAt || new Date().toISOString()) : undefined,
+                bankCode: tx.toBankCode,
+                accountNumber: tx.toAccountNumber,
+                accountHolderName: tx.toAccountHolderName,
+                fromBankCode: tx.fromBankCode,
+                fromAccountNumber: tx.fromAccountNumber,
+                fromAccountHolderName: tx.fromAccountHolderName,
+                toBankCode: tx.toBankCode,
+                toAccountNumber: tx.toAccountNumber,
+                toAccountHolderName: tx.toAccountHolderName,
+                transactions: [],
+            });
+            setSelectedRefund(null);
+            setIsModalOpen(true);
+        } catch (error) {
+            toast.error('Không thể tải chi tiết giao dịch');
         }
     };
 
@@ -335,7 +343,7 @@ export default function AdminPayoutsPage() {
                         }`}
                 >
                     <DollarSign className="h-4 w-4" />
-                    Giải ngân ({filteredExpenditures.length})
+                    Giải ngân ({filteredPayouts.length})
                 </button>
                 <button
                     onClick={() => { setActiveTab('REFUND'); setCurrentPage(1); }}
@@ -396,7 +404,7 @@ export default function AdminPayoutsPage() {
 
             {/* Table Section */}
             <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/50 relative flex-1 min-h-0 overflow-hidden">
-                {isLoading && expenditureRows.length === 0 && (
+                {isLoading && payoutTransactions.length === 0 && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center">
                         <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
                     </div>
@@ -417,44 +425,50 @@ export default function AdminPayoutsPage() {
                             {paginatedData.length > 0 ? (
                                 paginatedData.map((r) => {
                                     if (activeTab === 'PAYOUT') {
-                                        const exp = r as ExpenditureRequest;
+                                        const tx = r as ExpenditureTransaction;
+                                        const campaign = campaignMap[tx.campaignId || 0];
                                         return (
-                                            <tr key={exp.id} className="h-[68px] group hover:bg-slate-50/30 transition-colors">
+                                            <tr key={tx.id} className="h-[68px] group hover:bg-slate-50/30 transition-colors">
                                                 <td className="py-2 pl-8 pr-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-10 w-10 rounded-2xl bg-slate-100 overflow-hidden shadow-inner flex-shrink-0 ring-2 ring-white">
-                                                            {exp.campaignCoverImage ? (
-                                                                <img src={getMediaUrl(exp.campaignCoverImage)} alt={exp.campaignTitle} className="h-full w-full object-cover" />
+                                                            {mediaMap[tx.campaignId || 0] ? (
+                                                                <img src={getMediaUrl(mediaMap[tx.campaignId || 0])} alt={campaign?.title || 'Campaign'} className="h-full w-full object-cover" />
                                                             ) : (
                                                                 <div className="h-full w-full flex items-center justify-center text-slate-300">
                                                                     <Tag className="h-4 w-4" />
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">{exp.campaignTitle}</div>
+                                                        <div>
+                                                            <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">
+                                                                {campaign?.title || `Campaign #${tx.campaignId}`}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 font-medium">EXP_{tx.expenditureId}</div>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-2 pr-4">
-                                                    <span className="text-sm font-black text-slate-900">{formatVnd(exp.totalAmount || exp.totalExpectedAmount)}</span>
-                                                    {exp.campaignType === 'ITEMIZED' && (
+                                                    <span className="text-sm font-black text-slate-900">{formatVnd(Number(tx.amount))}</span>
+                                                    {campaign?.type === 'ITEMIZED' && (
                                                         <span className="ml-1.5 text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full uppercase">Vật phẩm</span>
                                                     )}
                                                 </td>
                                                 <td className="py-2 pr-4 text-slate-500 font-medium text-xs">
-                                                    {new Date(exp.createdAt).toLocaleDateString('vi-VN')}
+                                                    {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('vi-VN') : '-'}
                                                 </td>
                                                 <td className="py-2 pr-4">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${exp.status === 'WITHDRAWAL_REQUESTED' ? 'bg-blue-100 text-blue-700' :
-                                                        exp.status === 'DISBURSED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${tx.status === 'PENDING' ? 'bg-blue-100 text-blue-700' :
+                                                        tx.status === 'COMPLETED' ? 'bg-[#1A685B]/10 text-[#1A685B]' :
                                                             'bg-gray-100 text-gray-700'
                                                         }`}>
-                                                        {exp.status === 'WITHDRAWAL_REQUESTED' ? 'Chờ giải ngân' :
-                                                            exp.status === 'DISBURSED' ? 'Đã giải ngân' : exp.status}
+                                                        {tx.status === 'PENDING' ? 'Chờ giải ngân' :
+                                                            tx.status === 'COMPLETED' ? 'Đã giải ngân' : tx.status}
                                                     </span>
                                                 </td>
                                                 <td className="py-2 pr-8 text-right">
                                                     <button
-                                                        onClick={() => openDetail(exp)}
+                                                        onClick={() => openPayoutDetail(tx)}
                                                         className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-lg transition-all"
                                                         title="Chi tiết"
                                                     >
@@ -538,7 +552,7 @@ export default function AdminPayoutsPage() {
                 {/* Pagination */}
                 <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-8 py-3 flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        Trang {currentPage} / {totalPages || 1} (Tổng {activeTab === 'PAYOUT' ? filteredExpenditures.length : filteredRefunds.length})
+                        Trang {currentPage} / {totalPages || 1} (Tổng {activeTab === 'PAYOUT' ? filteredPayouts.length : filteredRefunds.length})
                     </span>
                     <div className="flex items-center gap-2">
                         <button

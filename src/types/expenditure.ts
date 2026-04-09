@@ -1,6 +1,7 @@
 export interface ExpenditureTransaction {
     id: number;
     expenditureId: number;
+    campaignId?: number;
     fromUserId?: number;
     toUserId?: number;
     amount: number;

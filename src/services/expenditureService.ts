@@ -27,6 +27,11 @@ export const expenditureService = {
         return response.data;
     },
 
+    getApprovedItemsByCampaign: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items/approved`);
+        return response.data;
+    },
+
     updateStatus: async (id: string | number, status: string, staffId?: number, reasonReject?: string, proofUrl?: string): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/status`, {
             status,
@@ -122,6 +127,12 @@ export const expenditureService = {
         const response = await axios.get(`${feOrigin}/api/expenditures/import/template`, {
             responseType: 'blob',
         });
+        return response.data;
+    },
+
+    /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
+    getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
+        const response = await axiosInstance.get('/api/expenditures/transactions');
         return response.data;
     },
 };

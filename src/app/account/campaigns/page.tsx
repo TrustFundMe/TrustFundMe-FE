@@ -301,8 +301,8 @@ export default function CampaignsPage() {
                       <MyCampaignCard
                         key={campaign.id}
                         campaign={campaign}
-                        assignedReviewerName={campaign.id ? campaignStaffMap[campaign.id] : undefined}
-                        hasStaff={!!(campaign.id && campaignStaffMap[campaign.id])}
+                        assignedReviewerName={campaign.id ? (campaignStaffMap[campaign.id] || (campaign.approvedByStaff ? (staffNameMap[campaign.approvedByStaff] || `Staff #${campaign.approvedByStaff}`) : undefined)) : undefined}
+                        hasStaff={!!(campaign.id && (campaignStaffMap[campaign.id] || campaign.approvedByStaff))}
                         onChatClick={() => {
                           console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
                           handleChatClick(campaign);

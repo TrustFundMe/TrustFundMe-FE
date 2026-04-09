@@ -51,6 +51,8 @@ function DonationContent() {
   const [suggestions, setSuggestions] = useState<SuggestionOption[]>([]);
   const [loadingLabels, setLoadingLabels] = useState(false);
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [donationBlocked, setDonationBlocked] = useState(false);
+  const [blockedMessage, setBlockedMessage] = useState('');
 
   useEffect(() => {
     const n = Number(prefillAmount);
@@ -82,18 +84,28 @@ function DonationContent() {
           const campaignData = await campaignService.getById(id);
           setCampaign(campaignData);
 
-          // Fetch Expenditure Items
-          const itemsData = await expenditureService.getItemsByCampaignId(campaignId);
-          const mappedItems: ExpenditureItem[] = itemsData
-            .map(item => ({
-              id: item.id.toString(),
-              name: item.category,
-              description: item.note || '',
-              price: item.expectedPrice,
-              quantityLeft: item.quantityLeft ?? 0
-            }))
-            .filter(item => item.quantityLeft > 0);
-          setExpenditureItems(mappedItems);
+          // Fetch Expenditure Items — chỉ từ expenditure APPROVED mới nhất
+          try {
+            const itemsData = await expenditureService.getApprovedItemsByCampaign(campaignId);
+            const mappedItems: ExpenditureItem[] = itemsData
+              .map(item => ({
+                id: item.id.toString(),
+                name: item.category,
+                description: item.note || '',
+                price: item.expectedPrice,
+                quantityLeft: item.quantityLeft ?? 0
+              }))
+              .filter(item => item.quantityLeft > 0);
+            setExpenditureItems(mappedItems);
+            setDonationBlocked(false);
+          } catch (itemsErr: any) {
+            if (itemsErr.response?.status === 403) {
+              // Không có expenditure APPROVED — chặn donation
+              setExpenditureItems([]);
+              setDonationBlocked(true);
+              setBlockedMessage(itemsErr.response?.data?.message || 'Chiến dịch đang trong quá trình giải ngân, chưa thể nhận quyên góp.');
+            }
+          }
         } catch (error) {
           console.error('Error fetching data:', error);
         }
@@ -434,6 +446,8 @@ function DonationContent() {
         <DonationItemLayout
           campaign={campaign}
           amount={amount}
+          donationBlocked={donationBlocked}
+          blockedMessage={blockedMessage}
           isManualMode={isManualMode}
           items={items}
           visibleItems={visibleItems}
