@@ -1,9 +1,23 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { User } from "./types";
 
 export default function CreatorInfo({ user }: { user: User }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
+    <Link
+      href={`/fund-owner-details?id=${user.id}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "nowrap",
+        cursor: "pointer",
+        textDecoration: "none",
+        color: "inherit",
+        transition: "opacity 0.2s"
+      }}
+      className="creator-info-link"
+    >
       <div
         style={{
           width: 48,
@@ -25,6 +39,11 @@ export default function CreatorInfo({ user }: { user: User }) {
         <div style={{ opacity: 0.75, fontSize: 13 }}>Người tạo</div>
         <div style={{ fontWeight: 700 }}>{user.name}</div>
       </div>
-    </div>
+      <style jsx>{`
+        .creator-info-link:hover {
+          opacity: 0.8;
+        }
+      `}</style>
+    </Link>
   );
 }
