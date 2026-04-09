@@ -74,4 +74,15 @@ export const aiService = {
         });
         return response.data;
     },
+
+    async generateSuggestionLabels(params: {
+        amount: number;
+        options: Array<{
+            items: Array<{ name: string; quantity: number; price: number }>;
+            total: number;
+        }>;
+    }) {
+        const response = await aiApi.post<{ labels: string[] }>('/api/generate-suggestion-labels', params);
+        return response.data.labels;
+    },
 };

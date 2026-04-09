@@ -378,10 +378,17 @@ export default function ExpenditureDetailPage() {
                             <button
                                 onClick={handleRequestWithdrawal}
                                 disabled={loading}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow disabled:opacity-50 text-sm"
+                                className="flex flex-col items-start gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow disabled:opacity-50 text-sm"
                             >
-                                <Clock className="w-4 h-4" />
-                                {loading ? 'Đang xử lý...' : 'Rút tiền'}
+                                <span className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    {loading ? 'Đang xử lý...' : 'Rút tiền'}
+                                </span>
+                                {(campaign?.balance || 0) > 0 && (
+                                    <span className="text-[10px] font-normal opacity-80">
+                                        Số dư đợt trước: {new Intl.NumberFormat('vi-VN').format(campaign?.balance || 0)}
+                                    </span>
+                                )}
                             </button>
                         )}
                     </div>
@@ -470,9 +477,9 @@ export default function ExpenditureDetailPage() {
                                     </div>
                                     <div className="px-3 py-2">
                                         <p className="text-2xl font-extrabold text-gray-700 leading-tight">
-                                            {new Intl.NumberFormat('vi-VN').format(totalVariance)}
+                                            {new Intl.NumberFormat('vi-VN').format((campaign?.balance || 0) + totalVariance)}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Tiền dư sau khi hoàn tất mua hàng</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Dư đợt trước {new Intl.NumberFormat('vi-VN').format(campaign?.balance || 0)} + Dư kỳ này {new Intl.NumberFormat('vi-VN').format(totalVariance)}</p>
                                     </div>
                                 </div>
                             </div>

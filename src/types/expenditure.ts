@@ -40,6 +40,7 @@ export interface Expenditure {
     evidenceSubmittedAt?: string;
     totalAmount: number;
     totalExpectedAmount: number;
+    totalReceivedAmount?: number;
     variance: number;
     isWithdrawalRequested: boolean;
     plan?: string;

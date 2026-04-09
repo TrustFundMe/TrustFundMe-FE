@@ -22,6 +22,7 @@ type DonationItemLayoutProps = {
 
     onPresetClick: (amount: number) => void;
     onAmountChange: (amount: number) => void;
+    onShowSuggestions: () => void;
     onItemSelect: (itemId: string) => void;
     onQuantityChange: (itemId: string, diff: number) => void;
     onPageChange: (page: number) => void;
@@ -50,6 +51,7 @@ export default function DonationItemLayout({
 
     onPresetClick,
     onAmountChange,
+    onShowSuggestions,
     onItemSelect,
     onQuantityChange,
     onPageChange,
@@ -85,6 +87,7 @@ export default function DonationItemLayout({
                     isManualMode={isManualMode}
                     onPresetClick={onPresetClick}
                     onAmountChange={onAmountChange}
+                    onShowSuggestions={onShowSuggestions}
                     compact={true}
                 />
 
