@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Flag, Search, CheckCircle, Clock, Loader2, Lock, X, MessageCircle, Eye, Ban, Info, ArrowRight, Check } from 'lucide-react';
+import { Flag, Search, CheckCircle, Clock, Loader2, Lock, LockOpen, X, MessageCircle, Eye, Ban, Info, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
 import { appointmentService } from '@/services/appointmentService';
@@ -14,7 +14,9 @@ import { useRouter } from 'next/navigation';
 import BanUserModal from '@/components/staff/BanUserModal';
 import DisableCampaignModal from '@/components/staff/DisableCampaignModal';
 import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
+import StaffConfirmModal from '@/components/staff/StaffConfirmModal';
 import { useAuth } from '@/contexts/AuthContextProxy';
+import { UserInfo } from '@/services/userService';
 
 type FlagStatus = 'PENDING' | 'RESOLVED';
 
@@ -78,6 +80,12 @@ export default function FlagsManagementPage() {
   }>({ isOpen: false, campaignId: 0, campaignTitle: '' });
 
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'LOCK_POST' | 'LOCK_COMMENTS';
+    postId: number;
+    title: string;
+    message: string;
+  } | null>(null);
   const { user } = useAuth();
 
   useEffect(() => { fetchData(); }, []);
@@ -190,6 +198,11 @@ export default function FlagsManagementPage() {
       await userService.banUser(userId, reason);
       await flagService.reviewFlag(flagId, 'RESOLVED');
       toast.success('Đã khóa tài khoản và xử lý báo cáo');
+      
+      // Refresh target user info immediately
+      const res = await userService.getUserById(userId);
+      if (res.success && res.data) setTargetUser(res.data);
+      
       fetchData();
     } catch { toast.error('Khóa tài khoản thất bại'); }
     finally { setLoading(false); }
@@ -197,6 +210,7 @@ export default function FlagsManagementPage() {
 
   const [campaignDetails, setCampaignDetails] = useState<any>(null);
   const [expenditureDetails, setExpenditureDetails] = useState<any>(null);
+  const [targetUser, setTargetUser] = useState<UserInfo | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [appointmentsMap, setAppointmentsMap] = useState<Map<string, { id: number, createdAt: number }>>(new Map());
 
@@ -204,15 +218,8 @@ export default function FlagsManagementPage() {
     const firstFlag = selectedTarget?.flags[0];
     const post = firstFlag?.post as any;
     
-    // Resolve target campaign ID
-    let targetCampaignId: number | undefined;
-    if (selectedTarget?.type === 'CAMPAIGN') {
-      targetCampaignId = Number(selectedTarget.targetId);
-    } else if (post) {
-      targetCampaignId = post.campaignId || post.targetId; // Some posts use targetId for campaign
-    }
-
-    // Resolve expenditure ID if applicable
+    // Resolve target IDs
+    let targetCampaignId = selectedTarget?.type === 'CAMPAIGN' ? Number(selectedTarget.targetId) : (post?.campaignId || post?.targetId);
     let targetExpenditureId: number | undefined;
     if (post && (post.targetType === 'EXPENDITURE' || post.targetType === 'EVIDENCE')) {
       targetExpenditureId = post.targetId;
@@ -220,14 +227,14 @@ export default function FlagsManagementPage() {
       targetExpenditureId = post.expenditureId;
     }
 
-    if (targetCampaignId || targetExpenditureId) {
+    if (selectedTarget) {
       const fetchExtra = async () => {
+        if (loadingDetails) return; 
         setLoadingDetails(true);
         try {
           let resolvedCampaignId = targetCampaignId;
           let expenditureData = null;
 
-          // If we have expenditure ID but no campaign ID, try to get campaign ID from expenditure
           if (targetExpenditureId) {
             try {
               expenditureData = await campaignService.getExpenditureById(targetExpenditureId);
@@ -240,13 +247,10 @@ export default function FlagsManagementPage() {
           }
 
           if (resolvedCampaignId) {
-            const [expenditures, fullCampaign, followerData, userRes] = await Promise.all([
+            const [expenditures, fullCampaign, followerData] = await Promise.all([
               campaignService.getExpendituresByCampaignId(Number(resolvedCampaignId)),
               campaignService.getById(Number(resolvedCampaignId)),
-              campaignService.getFollowerCount(Number(resolvedCampaignId)),
-              (selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId)
-                ? userService.getUserById(selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId)
-                : Promise.resolve({ success: false, data: undefined })
+              campaignService.getFollowerCount(Number(resolvedCampaignId))
             ]);
             
             setCampaignDetails({
@@ -263,39 +267,47 @@ export default function FlagsManagementPage() {
               startDate: fullCampaign?.startDate,
               endDate: fullCampaign?.endDate,
               categoryName: fullCampaign?.categoryName || fullCampaign?.category || 'Chưa phân loại',
-              authorAvatar: userRes.success && userRes.data ? userRes.data.avatarUrl : undefined,
-              authorName: (fullCampaign as any).authorName || (selectedTarget?.flags[0]?.post as any)?.authorName
+              authorAvatar: (fullCampaign as any)?.authorAvatar,
+              authorName: (fullCampaign as any)?.authorName || (selectedTarget?.flags[0]?.post as any)?.authorName
             });
-
-            // Fetch and resolve appointment state
-            const fundOwnerId = selectedTarget?.flags[0]?.campaign?.authorId || (selectedTarget?.flags[0]?.post as any)?.authorId || (selectedTarget?.flags[0]?.post as any)?.fundOwnerId;
-            if (fundOwnerId) {
-              try {
-                const userAppts = await appointmentService.getByDonor(fundOwnerId);
-                // Get most recent appointment
-                const latest = userAppts
-                  .filter(a => a.status !== 'CANCELLED')
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-                
-                if (latest) {
-                  setAppointmentsMap(prev => {
-                    const next = new Map(prev);
-                    next.set(selectedTarget.key, { 
-                      id: latest.id, 
-                      createdAt: new Date(latest.createdAt).getTime() 
-                    });
-                    return next;
-                  });
-                }
-              } catch (err) {
-                console.error("Failed to fetch appointments for target:", err);
-              }
-            }
           }
 
+          // Resolve and fetch user independently
+          const rawId = selectedTarget.flags[0]?.campaign?.authorId || (selectedTarget.flags[0]?.post as any)?.authorId || (selectedTarget.flags[0]?.post as any)?.fundOwnerId;
+          const authorId = rawId ? Number(rawId) : undefined;
+          
+          if (authorId && !isNaN(authorId)) {
+            try {
+              const [userRes, userAppts] = await Promise.all([
+                userService.getUserById(authorId),
+                appointmentService.getByDonor(authorId).catch(() => [])
+              ]);
+
+              if (userRes.success && userRes.data) {
+                setTargetUser(userRes.data);
+              }
+
+              const latest = userAppts
+                .filter((a: any) => a.status !== 'CANCELLED')
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+              
+              if (latest) {
+                setAppointmentsMap(prev => {
+                  const next = new Map(prev);
+                  next.set(selectedTarget.key, { 
+                    id: latest.id, 
+                    createdAt: new Date(latest.createdAt).getTime() 
+                  });
+                  return next;
+                });
+              }
+            } catch (err) {
+              console.error("Failed to fetch user/appointments:", err);
+            }
+          }
           setExpenditureDetails(expenditureData);
         } catch (error) {
-          console.error("Failed to fetch extra details:", error);
+          console.error("Failed to fetch details:", error);
         } finally {
           setLoadingDetails(false);
         }
@@ -304,9 +316,10 @@ export default function FlagsManagementPage() {
     } else {
       setCampaignDetails(null);
       setExpenditureDetails(null);
+      setTargetUser(null);
       setAiResult(null);
     }
-  }, [selectedTarget]);
+  }, [selectedTarget?.key]);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<FlagAnalysisResult | null>(null);
@@ -443,17 +456,89 @@ export default function FlagsManagementPage() {
 
   const handleLockPost = async () => {
     if (!selectedTarget || selectedTarget.type !== 'FEED_POST') return;
+    const post = selectedTarget.flags[0]?.post;
+    if (!post) return;
+
+    const isCurrentlyLocked = post.isLocked;
+    const actionText = isCurrentlyLocked ? 'mở khóa bài viết' : 'khóa bài viết';
+
+    setConfirmAction({
+      type: 'LOCK_POST',
+      postId: selectedTarget.targetId,
+      title: isCurrentlyLocked ? 'Mở khóa bài viết?' : 'Khóa bài viết?',
+      message: `Bạn có chắc chắn muốn ${actionText} này không? Bài viết sẽ ${isCurrentlyLocked ? 'hiển thị lại' : 'bị ẩn khỏi bảng tin'} cho người dùng.`
+    });
+  };
+
+  const handleLockComments = async () => {
+    if (!selectedTarget || selectedTarget.type !== 'FEED_POST') return;
+    const post = selectedTarget.flags[0]?.post;
+    if (!post) return;
+
+    const isCurrentlyLocked = post.isLocked;
+    const actionText = isCurrentlyLocked ? 'mở khóa' : 'khóa';
     
-    if (!window.confirm('Bạn có chắc chắn muốn khóa bài viết này?')) return;
+    setConfirmAction({
+      type: 'LOCK_COMMENTS',
+      postId: selectedTarget.targetId,
+      title: isCurrentlyLocked ? 'Mở khóa bình luận?' : 'Khóa bình luận?',
+      message: `Bạn có chắc chắn muốn ${actionText} bình luận của bài viết này không? Người dùng sẽ ${isCurrentlyLocked ? 'có thể' : 'không thể'} gửi bình luận mới.`
+    });
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
 
     try {
       setLoading(true);
-      await feedPostService.lockPost(selectedTarget.targetId);
-      toast.success('Đã khóa bài viết thành công');
-      fetchData();
+      if (confirmAction.type === 'LOCK_POST') {
+        const post = selectedTarget?.flags[0]?.post;
+        const isCurrentlyLocked = post?.isLocked;
+        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
+
+        // Manual update to local state for immediate feedback
+        setAllFlags(prev => prev.map(f => {
+          if (f.postId === confirmAction.postId) {
+            return { ...f, post: updatedPost };
+          }
+          return f;
+        }));
+
+        toast.success(`Đã ${isCurrentlyLocked ? 'mở khóa' : 'khóa'} bài viết thành công`);
+      } else {
+        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
+        
+        // Manual update to local state for immediate feedback
+        setAllFlags(prev => prev.map(f => {
+          if (f.postId === confirmAction.postId) {
+            return { ...f, post: updatedPost };
+          }
+          return f;
+        }));
+
+        toast.success(`Đã cập nhật chặn bình luận`);
+      }
+      fetchData(); // Sync with server
     } catch (err) {
-      console.error('Failed to lock post:', err);
-      toast.error('Khóa bài viết thất bại');
+      toast.error('Thao tác thất bại');
+    } finally {
+      setLoading(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!targetUser) return;
+    try {
+      setLoading(true);
+      await userService.unbanUser(targetUser.id);
+      toast.success('Đã gỡ đình chỉ tài khoản');
+      // Refresh user info
+      const res = await userService.getUserById(targetUser.id);
+      if (res.success && res.data) setTargetUser(res.data);
+      fetchData();
+    } catch {
+      toast.error('Thao tác thất bại');
     } finally {
       setLoading(false);
     }
@@ -733,6 +818,23 @@ export default function FlagsManagementPage() {
                               <p className="text-[13px] font-bold text-gray-800">{stat.value}</p>
                             </div>
                           ))}
+                          {selectedTarget.flags[0].post.isLocked ? (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-black text-gray-700 uppercase tracking-tight">Trạng thái khóa</p>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded text-[11px] font-black">
+                                <Lock className="w-3 h-3" />
+                                Bài viết bị khóa
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-black text-gray-700 uppercase tracking-tight">Trạng thái khóa</p>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[11px] font-black">
+                                <LockOpen className="w-3 h-3" />
+                                Bình thường
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Linked Info (Campaign/Expenditure) */}
@@ -1130,16 +1232,19 @@ export default function FlagsManagementPage() {
 
                     {selectedTarget.type === 'FEED_POST' && (
                       <>
-                        <button 
+                        <button
                           onClick={handleLockPost}
                           className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
                         >
-                          <Eye className="h-3 w-3" />
-                          Khóa bài viết
+                          <Eye className={`h-3 w-3 ${selectedTarget.flags[0]?.post?.isLocked ? 'text-rose-500' : ''}`} />
+                          {selectedTarget.flags[0]?.post?.isLocked ? 'Mở khóa bài viết' : 'Khóa bài viết'}
                         </button>
-                        <button className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm">
-                          <MessageCircle className="h-3 w-3" />
-                          Khóa comment
+                        <button 
+                          onClick={handleLockComments}
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                        >
+                          <MessageCircle className={`h-3 w-3 ${selectedTarget.flags[0]?.post?.isLocked ? 'text-rose-500' : ''}`} />
+                          {selectedTarget.flags[0]?.post?.isLocked ? 'Mở khóa comment' : 'Khóa comment'}
                         </button>
                       </>
                     )}
@@ -1179,18 +1284,40 @@ export default function FlagsManagementPage() {
                       })()
                     )}
 
-                    <button
-                      onClick={() => setBanModal({
-                        isOpen: true,
-                        userId: selectedTarget.type === 'CAMPAIGN' ? (selectedTarget.flags[0]?.campaign?.authorId ?? 0) : (selectedTarget.flags[0]?.post?.authorId ?? 0),
-                        userName: selectedTarget.type === 'CAMPAIGN' ? (selectedTarget.flags[0]?.campaign?.authorName ?? '') : (selectedTarget.flags[0]?.post?.authorName ?? ''),
-                        flagId: selectedTarget.flags[0]?.id ?? 0
-                      })}
-                      className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
-                    >
-                      <Ban className="h-3 w-3" />
-                      Đình chỉ tài khoản
-                    </button>
+                    {(() => {
+                      const isActive = targetUser ? ((targetUser as any).isActive ?? (targetUser as any).is_active) : true;
+                      
+                      if (!targetUser) {
+                        return <div className="flex items-center gap-1.5 h-9 px-4 bg-gray-50 border border-gray-100 rounded-lg animate-pulse w-32" />;
+                      }
+                      
+                      if (isActive === false || isActive === 0) {
+                        return (
+                          <button
+                            onClick={handleUnban}
+                            className="flex items-center gap-1.5 h-9 px-4 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-700 uppercase hover:bg-emerald-100 transition-all shadow-sm"
+                          >
+                            <CheckCircle className="h-3 w-3" />
+                            Ngừng đình chỉ tài khoản
+                          </button>
+                        );
+                      }
+                      
+                      return (
+                        <button
+                          onClick={() => setBanModal({
+                            isOpen: true,
+                            userId: targetUser.id,
+                            userName: targetUser.fullName,
+                            flagId: selectedTarget.flags[0]?.id ?? 0
+                          })}
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                        >
+                          <Ban className="h-3 w-3" />
+                          Đình chỉ tài khoản
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1288,6 +1415,14 @@ export default function FlagsManagementPage() {
           }}
         />
       )}
+
+      <StaffConfirmModal
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={executeConfirmAction}
+        title={confirmAction?.title || ''}
+        message={confirmAction?.message || ''}
+      />
     </div>
   );
 }
