@@ -38,7 +38,7 @@ const EVIDENCE_STATUS_CFG: Record<string, { label: string; color: string; bg: st
     VERIFIED: { label: 'Đã xác nhận', color: '#16a34a', bg: '#dcfce7' },
 };
 
-const CAM_TYPE: Record<string, string> = { AUTHORIZED: 'Quỹ Ủy Quyền', TARGET: 'Quỹ Mục Tiêu' };
+const CAM_TYPE: Record<string, string> = { AUTHORIZED: 'Quỹ Ủy Quyền', TARGET: 'Quỹ Vật Phẩm' };
 
 /* ══════════════════════════════ StatusPill ══════════════════════════════ */
 function StatusPill({ status }: { status: string }) {
@@ -162,10 +162,10 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                     <div className="flex items-center gap-2.5 min-w-0">
                         <div className="h-7 w-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm"
                             style={{ background: 'linear-gradient(135deg,#db5945,#f19082)' }}>
-                            {index + 1}
+                            <CreditCard className="h-4 w-4" />
                         </div>
                         <div className="text-left min-w-0">
-                            <p className="text-xs font-bold text-gray-800 truncate">{exp.plan ?? `Đợt #${exp.id}`}</p>
+                            <p className="text-xs font-bold text-gray-800 truncate">{exp.plan ?? 'Kế hoạch chi tiêu'}</p>
                             <p className="text-[9px] text-gray-400">Tạo: {fmtDate(exp.createdAt)}</p>
                         </div>
                     </div>
@@ -216,11 +216,11 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                 <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                     <table className="w-full text-xs bg-white">
                                         <thead className="bg-[#446b5f] text-white">
-                                            <tr className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
-                                                <th className="py-2 px-3 text-left border-r border-white/10 w-[50px]">STT</th>
+                                            <tr className="text-[9px] font-black uppercase tracking-widest">
+                                                <th className="py-2 px-3 text-left border-r border-white/10 w-[40px]">STT</th>
                                                 <th className="py-2 px-3 text-left border-r border-white/10">Hàng hóa</th>
-                                                <th className="py-2 px-3 text-right border-r border-white/10 w-[120px]">Kế hoạch</th>
-                                                <th className="py-2 px-3 text-right w-[120px]">Đã chi (Nhập liệu)</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/10 w-[110px]">Kế hoạch</th>
+                                                <th className="py-2 px-3 text-right w-[110px]">Thực tế</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
@@ -394,7 +394,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
     const [filtered, setFiltered] = useState<CampaignDto[]>([]);
     const [selected, setSelected] = useState<CampaignDto | null>(null);
     const [search, setSearch] = useState('');
-    const [typeFilter, setTypeFilter] = useState('ALL');
+    const [statusFilter, setStatusFilter] = useState('ALL'); // ALL, PENDING, APPROVED
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
     const searchParams = useSearchParams();
@@ -481,10 +481,12 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
 
     useEffect(() => {
         let list = campaigns;
-        if (typeFilter !== 'ALL') list = list.filter(c => c.type === typeFilter);
+        if (statusFilter === 'PENDING') list = list.filter(c => (c as any).needsAttention);
+        else if (statusFilter === 'APPROVED') list = list.filter(c => !(c as any).needsAttention);
+        
         if (search.trim()) list = list.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
         setFiltered(list);
-    }, [search, typeFilter, campaigns]);
+    }, [search, statusFilter, campaigns]);
 
     const types = Array.from(new Set(campaigns.map(c => c.type || '').filter(Boolean)));
 
@@ -508,20 +510,18 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                             className="w-full pl-7 pr-3 py-1.5 text-[10px] font-semibold rounded-lg border border-gray-100 focus:outline-none focus:ring-1 focus:ring-[#db5945]/20 bg-gray-50/50" />
                     </div>
                     <div className="flex gap-1 overflow-x-auto no-scrollbar">
-                        <button onClick={() => setTypeFilter('ALL')}
-                            className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${typeFilter === 'ALL' ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                }`}>
+                        <button onClick={() => setStatusFilter('ALL')}
+                            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${statusFilter === 'ALL' ? 'bg-[#446b5f] text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
                             TẤT CẢ
                         </button>
-                        {types.map(t => (
-                            <button key={t} onClick={() => setTypeFilter(t)}
-                                className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${typeFilter === t
-                                    ? (t === 'TARGET' ? 'bg-[#446b5f] text-white' : 'bg-[#446b5f] text-white')
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                    }`}>
-                                {CAM_TYPE[t] ?? t}
-                            </button>
-                        ))}
+                        <button onClick={() => setStatusFilter('PENDING')}
+                            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${statusFilter === 'PENDING' ? 'bg-[#db5945] text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                            CHƯA DUYỆT
+                        </button>
+                        <button onClick={() => setStatusFilter('APPROVED')}
+                            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${statusFilter === 'APPROVED' ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                            ĐÃ DUYỆT
+                        </button>
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -553,10 +553,10 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                                         <div className="flex items-center justify-between mt-0.5">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <span className={`text-[8px] font-black uppercase tracking-tighter ${(c as any).needsAttention ? 'text-red-500' : 'text-gray-300'}`}>
-                                                    {(c as any).needsAttention ? 'CẦN DUYỆT' : c.status}
+                                                    {(c as any).needsAttention ? 'CẦN DUYỆT' : 'ĐÃ XỬ LÝ'}
                                                 </span>
                                                 <span className="text-[8px] font-black text-gray-200 uppercase tracking-tighter">•</span>
-                                                <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter">{c.type}</span>
+                                                <span className="text-[8px] font-black text-gray-300 uppercase tracking-tighter">{CAM_TYPE[c.type ?? ''] || c.type}</span>
                                             </div>
                                             <span className="text-[10px] font-black truncate ml-1" style={{ color: isActive ? themeColor : '#db5945' }}>{fmt(c.balance)}</span>
                                         </div>
