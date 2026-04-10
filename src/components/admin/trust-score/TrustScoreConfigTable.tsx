@@ -77,14 +77,12 @@ export function TrustScoreConfigTable({ data, isLoading }: Props) {
 
   return (
     <>
-      <div className="overflow-x-auto custom-scrollbar">
+      <div className="overflow-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100">
-              <th className="text-left py-3 px-4 font-semibold text-slate-600 text-[13px] w-12">STT</th>
+            <tr className="border-b border-slate-100 bg-white sticky top-0 z-10">
               <th className="text-left py-3 px-4 font-semibold text-slate-600 text-[13px]">Key</th>
               <th className="text-left py-3 px-4 font-semibold text-slate-600 text-[13px]">Quy tắc</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600 text-[13px]">Mô tả</th>
               <th className="text-center py-3 px-4 font-semibold text-slate-600 text-[13px]">Điểm</th>
               <th className="text-center py-3 px-4 font-semibold text-slate-600 text-[13px]">Trạng thái</th>
               <th className="text-right py-3 px-4 font-semibold text-slate-600 text-[13px]">Thao tác</th>
@@ -93,25 +91,22 @@ export function TrustScoreConfigTable({ data, isLoading }: Props) {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-400">
+                <td colSpan={5} className="text-center py-12 text-slate-400">
                   Đang tải...
                 </td>
               </tr>
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-400">
+                <td colSpan={5} className="text-center py-12 text-slate-400">
                   Không có quy tắc nào.
                 </td>
               </tr>
             ) : (
-              data.map((item, index) => (
+              data.map((item) => (
                 <tr
                   key={item.id}
                   className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                 >
-                  <td className="py-3 px-4 text-slate-400 font-medium">
-                    {index + 1}
-                  </td>
                   <td className="py-3 px-4">
                     <code className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
                       {item.ruleKey}
@@ -125,9 +120,6 @@ export function TrustScoreConfigTable({ data, isLoading }: Props) {
                       <span className="font-medium text-slate-800">{item.ruleName}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-slate-500 text-[13px] max-w-xs">
-                    {item.description}
-                  </td>
                   <td className="py-3 px-4 text-center">
                     <Badge
                       className={
@@ -136,7 +128,6 @@ export function TrustScoreConfigTable({ data, isLoading }: Props) {
                           : 'bg-red-50 text-red-600 border-red-100'
                       }
                     >
-                      {item.points >= 0 ? '+' : ''}
                       {item.points}
                     </Badge>
                   </td>
