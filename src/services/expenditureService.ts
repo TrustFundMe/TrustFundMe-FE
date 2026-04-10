@@ -56,9 +56,9 @@ export const expenditureService = {
     deleteItem: async (itemId: string | number): Promise<void> => {
         await axiosInstance.delete(`/api/expenditures/items/${itemId}`);
     },
-    updateEvidenceStatus: async (id: string | number, status: string): Promise<Expenditure> => {
+    updateEvidenceStatus: async (id: string | number, status: string, reason?: string): Promise<Expenditure> => {
         const response = await axiosInstance.patch(`/api/expenditures/${id}/evidence-status`, null, {
-            params: { status }
+            params: { status, reason }
         });
         return response.data;
     },
@@ -124,4 +124,14 @@ export const expenditureService = {
         });
         return response.data;
     },
+
+    /** Phân tích chi tiêu bằng AI */
+    analyzeWithAI: async (campaign: any, expenditure: any, items: any[]): Promise<any> => {
+        const response = await axios.post('http://localhost:7000/api/analyze-expenditure', {
+            campaign,
+            expenditure,
+            items
+        });
+        return response.data;
+    }
 };

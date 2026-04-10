@@ -6,7 +6,7 @@ import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, C
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
-import ExpenditureTab from '@/components/staff/request/ExpenditureTab';
+import ExpenditureRequestTab from '@/components/staff/request/ExpenditureRequestTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import KYCTab from '@/components/staff/request/KYCTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
@@ -452,7 +452,7 @@ export default function StaffRequestPage() {
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
-            <ExpenditureTab onModalToggle={setIsModalOpen} />
+            <ExpenditureRequestTab />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
           ) : activeTab === 'KYC' ? (
