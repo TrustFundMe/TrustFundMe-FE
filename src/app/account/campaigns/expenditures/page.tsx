@@ -19,6 +19,8 @@ import { campaignService } from '@/services/campaignService';
 import { mediaService } from '@/services/mediaService';
 import { feedPostService } from '@/services/feedPostService';
 import { paymentService, DonationItemSummary } from '@/services/paymentService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { BankAccountDto } from '@/types/bankAccount';
 import { toast } from 'react-hot-toast';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { CampaignDto } from '@/types/campaign';
@@ -116,6 +118,7 @@ export default function CampaignExpendituresPage() {
     const [refundFilePreview, setRefundFilePreview] = useState<string | null>(null);
     const [refundUploading, setRefundUploading] = useState(false);
     const [refundSubmitting, setRefundSubmitting] = useState(false);
+    const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
 
     const fetchData = useCallback(async () => {
         if (!campaignId) return;
@@ -174,6 +177,14 @@ export default function CampaignExpendituresPage() {
         }
         fetchData();
     }, [fetchData, isAuthenticated, authLoading, router]);
+
+    // Load user bank accounts for refund modal
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        bankAccountService.getMyBankAccounts()
+            .then(setUserBankAccounts)
+            .catch(() => setUserBankAccounts([]));
+    }, [isAuthenticated]);
 
     // Load media for all expenditure items when expenditures change
     useEffect(() => {
@@ -1991,18 +2002,18 @@ export default function CampaignExpendituresPage() {
                             {/* Bank info cards */}
                             {(() => {
                                 const payoutTx = refundExpenditure.transactions?.filter((t: any) => t.type === 'PAYOUT').slice(-1)[0];
-                                const userBank = { name: payoutTx?.toAccountHolderName, bank: payoutTx?.toBankCode, account: payoutTx?.toAccountNumber };
                                 const adminBank = { name: payoutTx?.fromAccountHolderName, bank: payoutTx?.fromBankCode, account: payoutTx?.fromAccountNumber };
+                                const userBank = userBankAccounts.find(b => b.status === 'APPROVED') || userBankAccounts[0];
                                 return (
                                     <div className="space-y-3">
                                         {/* User (fund owner) — sender of refund */}
                                         <div className="bg-orange-50 rounded-xl p-3.5 border border-orange-200">
                                             <p className="text-[9px] font-black uppercase text-orange-400 tracking-widest mb-2">Người gửi (Chủ quỹ)</p>
-                                            {userBank.account ? (
+                                            {userBank ? (
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                                                    <div><span className="text-gray-400">Ngân hàng: </span><span className="font-bold text-gray-800">{userBank.bank || '—'}</span></div>
-                                                    <div><span className="text-gray-400">Số TK: </span><span className="font-bold text-gray-800">{userBank.account}</span></div>
-                                                    <div className="col-span-2"><span className="text-gray-400">Chủ TK: </span><span className="font-bold text-gray-800">{userBank.name || '—'}</span></div>
+                                                    <div><span className="text-gray-400">Ngân hàng: </span><span className="font-bold text-gray-800">{userBank.bankCode || '—'}</span></div>
+                                                    <div><span className="text-gray-400">Số TK: </span><span className="font-bold text-gray-800">{userBank.accountNumber}</span></div>
+                                                    <div className="col-span-2"><span className="text-gray-400">Chủ TK: </span><span className="font-bold text-gray-800">{userBank.accountHolderName || '—'}</span></div>
                                                 </div>
                                             ) : (
                                                 <p className="text-xs text-orange-400 italic">Chưa có thông tin tài khoản</p>
@@ -2110,9 +2121,8 @@ export default function CampaignExpendituresPage() {
                                         setRefundFilePreview(null);
                                         setRefundFile(null);
                                         setRefundAmount('');
-                                        // Reload refund transaction into local state
-                                        const newTx = { id: Date.now(), expenditureId: refundExpenditure.id, campaignId: Number(campaignId), type: 'REFUND', status: 'PENDING', amount: Number(refundAmount), proofUrl: refundFilePreview } as any;
-                                        setExpenditures(prev => prev.map(exp => exp.id === refundExpenditure.id ? { ...exp, transactions: [...(exp.transactions || []), newTx] } : exp));
+                                        // Load lại cả trang để hiện đúng trạng thái
+                                        window.location.reload();
                                     } catch (err: any) {
                                         toast.error(err.response?.data?.message || 'Gửi hoàn tiền thất bại');
                                     } finally {

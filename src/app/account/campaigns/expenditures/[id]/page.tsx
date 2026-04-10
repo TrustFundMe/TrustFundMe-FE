@@ -505,7 +505,23 @@ export default function ExpenditureDetailPage() {
                             <div className="overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 420px)' }}>
                                 {/* Scrollable body */}
                                 <div className="overflow-y-auto flex-1">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-sm table-fixed">
+                                        <colgroup>
+                                            <col />
+                                            {campaign?.type === 'AUTHORIZED' ? (
+                                                <>
+                                                    <col className="w-[200px]" />
+                                                    <col className="w-[250px]" />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <col className="w-[150px]" />
+                                                    <col className="w-[180px]" />
+                                                    <col className="w-[220px]" />
+                                                </>
+                                            )}
+                                            <col className="w-[64px]" />
+                                        </colgroup>
                                         <thead className="bg-gray-50 shrink-0">
                                             <tr>
                                                 <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700">Tên hàng hóa / Dịch vụ</th>
@@ -536,7 +552,7 @@ export default function ExpenditureDetailPage() {
                                                         </th>
                                                     </>
                                                 )}
-                                                <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 w-16 border-l border-gray-200">Ảnh</th>
+                                                <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 border-l border-gray-200">Ảnh</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -620,6 +636,22 @@ export default function ExpenditureDetailPage() {
                                 </div>
                                 {/* Sticky Footer */}
                                 <table className="w-full text-sm shrink-0 table-fixed">
+                                    <colgroup>
+                                        <col />
+                                        {campaign?.type === 'AUTHORIZED' ? (
+                                            <>
+                                                <col className="w-[200px]" />
+                                                <col className="w-[250px]" />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <col className="w-[150px]" />
+                                                <col className="w-[180px]" />
+                                                <col className="w-[220px]" />
+                                            </>
+                                        )}
+                                        <col className="w-[64px]" />
+                                    </colgroup>
                                     <tfoot>
                                         <tr className="bg-gray-100 font-bold text-gray-900 border-t-2 border-gray-300">
                                             <td className="px-2 py-2 text-sm uppercase">Tổng cộng đợt chi</td>

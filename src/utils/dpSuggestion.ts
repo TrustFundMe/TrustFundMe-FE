@@ -23,17 +23,13 @@ type ItemInput = {
 };
 
 // Limits
-// No scaling — keep exact prices for accuracy
-const MAX_SCALED_BUDGET = 500000; // Max 500K VND for DP
+const MAX_SCALED_BUDGET = 2000000; // 2M VND — higher cap so large amounts still generate suggestions
 const MAX_ITEMS = 50;
 const MAX_QTY_PER_ITEM = 20;
 const MAX_OPTIONS = 5;
-// MAX_ITEM_TYPES removed — allow unlimited item types per combination
-// MIN_RATIO: lowered to 0.05 so low-price items (1K-2K) can reach the threshold
-// even when amount is large (e.g. 50K). DP still finds combos, sort picks closest.
-// MAX_RATIO: raised to 1.5 to accommodate over-budget combos (e.g. buying more than target)
+// MAX_RATIO: 2.0 to allow over-budget combos (e.g. buying more than target)
 const MIN_RATIO = 0.05;
-const MAX_RATIO = 1.5;
+const MAX_RATIO = 2.0;
 
 // ─── Helper: get item name ───────────────────────────────────────────────────
 
@@ -41,9 +37,51 @@ function itemToSuggestionItem(item: ItemInput, qty: number): SuggestionItem {
   return { id: item.id, name: item.name, quantity: qty, price: item.price };
 }
 
-// ─── Greedy: generate diverse combinations ─────────────────────────────────────
-// DISABLED — using DP only
-// function greedyVariations(amount: number, items: ItemInput[]): SuggestionOption[] {
+// ─── Greedy: fill as close to target as possible ─────────────────────────────
+
+function greedyGenerate(amount: number, items: ItemInput[]): SuggestionOption[] {
+  if (amount <= 0 || items.length === 0) return [];
+
+  const validItems = items.filter(i => i.price > 0 && i.quantityLeft > 0);
+  if (validItems.length === 0) return [];
+
+  // Sort by price ascending
+  const sorted = [...validItems].sort((a, b) => a.price - b.price);
+
+  let remaining = amount;
+  const qtyMap: Record<string, number> = {};
+  let totalSpent = 0;
+
+  // Greedy: pick as many cheapest items as possible
+  for (const item of sorted) {
+    if (remaining <= 0) break;
+    const maxCanBuy = Math.min(item.quantityLeft, Math.floor(remaining / item.price), MAX_QTY_PER_ITEM);
+    if (maxCanBuy > 0) {
+      qtyMap[item.id] = maxCanBuy;
+      totalSpent += maxCanBuy * item.price;
+      remaining -= maxCanBuy * item.price;
+    }
+  }
+
+  // No items picked
+  const pickedItems = Object.entries(qtyMap)
+    .filter(([, qty]) => qty > 0)
+    .map(([id, qty]) => {
+      const item = sorted.find(i => i.id === id)!;
+      return itemToSuggestionItem(item, qty);
+    });
+
+  if (pickedItems.length === 0) return [];
+
+  return [{
+    items: pickedItems,
+    total: totalSpent,
+    diff: totalSpent - amount,
+    label: 'Greedy',
+  }];
+}
+
+// ─── Merge + deduplicate + sort ──────────────────────────────────────────────
 
 // ─── Brute-force: DISABLED (good for ≤4 items, fails at scale) ─────────────────
 // DISABLED — using DP
@@ -55,8 +93,10 @@ function dpGenerate(amount: number, items: ItemInput[]): SuggestionOption[] {
   const scaledAmount = Math.min(amount, MAX_SCALED_BUDGET);
   if (scaledAmount <= 0) return [];
 
+  // Include all items regardless of price — allow buying expensive single items
+  // DP will only pick at most 1 of an expensive item (since maxQty = floor(amount/price) = 0 or 1)
   const eligible = items
-    .filter(i => i.price > 0 && i.price <= amount)
+    .filter(i => i.price > 0)
     .slice(0, MAX_ITEMS);
   if (eligible.length === 0) return [];
 
@@ -242,6 +282,7 @@ function smartLabel(opt: SuggestionOption, allSorted: SuggestionOption[]): strin
   const hasMultipleTypes = opt.items.length > 1;
 
   if (exactMatch) return 'Đúng số tiền';
+  if (opt.label === 'Greedy') return 'Greedy';
   if (isLowestTotal && isNegativeDiff) return 'Tiết kiệm nhất';
   if (isHighestTotal && !isNegativeDiff) return 'Trọn gói';
   if (hasMultipleTypes && isMostTypes) return 'Đa dạng';
@@ -265,12 +306,26 @@ export function generateSuggestions(amount: number, items: ItemInput[]): Suggest
   const validItems = items.filter(i => i.price > 0 && i.quantityLeft > 0);
   if (validItems.length === 0) return [];
 
-  // DP only — unbounded by item type count
+  // DP first — bounded knapsack for exact combinations
   const options = dpGenerate(amount, validItems);
 
-  if (options.length === 0) return [];
+  // If DP returns nothing (timeout, too many items, over budget, etc.),
+  // fall back to greedy to at least give a suggestion
+  if (options.length === 0) {
+    const greedy = greedyGenerate(amount, validItems);
+    if (greedy.length > 0) {
+      return applyLabels(greedy);
+    }
+    return [];
+  }
 
-  const sorted = sortOptions(options, amount);
+  // Merge greedy with DP results if needed for extra diversity
+  const greedyOpts = greedyGenerate(amount, validItems);
+  const merged = greedyOpts.length > 0
+    ? dedupOptions([...options, ...greedyOpts])
+    : options;
+
+  const sorted = sortOptions(merged, amount);
   return applyLabels(sorted);
 }
 

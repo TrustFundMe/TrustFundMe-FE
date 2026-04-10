@@ -444,7 +444,6 @@ export default function AdminPayoutsPage() {
                                                             <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">
                                                                 {campaign?.title || `Campaign #${tx.campaignId}`}
                                                             </div>
-                                                            <div className="text-[10px] text-slate-400 font-medium">EXP_{tx.expenditureId}</div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -494,7 +493,6 @@ export default function AdminPayoutsPage() {
                                                         </div>
                                                         <div>
                                                             <div className="font-bold text-slate-900 group-hover:text-[#F84D43] transition-colors truncate max-w-[150px]">{refund.campaignTitle}</div>
-                                                            <div className="text-[10px] text-slate-400 font-medium">{refund.expenditureIdStr}</div>
                                                         </div>
                                                     </div>
                                                 </td>
