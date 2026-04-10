@@ -84,7 +84,8 @@ function DonationContent() {
               name: item.category,
               description: item.note || '',
               price: item.expectedPrice,
-              quantityLeft: item.quantityLeft ?? 0
+              quantityLeft: item.quantityLeft ?? 0,
+              reservations: item.reservations ?? 0
             }))
             .filter(item => item.quantityLeft > 0);
           setExpenditureItems(mappedItems);
@@ -115,7 +116,7 @@ function DonationContent() {
     setPage(1);
   };
 
-  const handleItemSelect = (itemId: string) => {
+  const handleItemSelect = async (itemId: string) => {
     setIsManualMode(true);
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
@@ -124,9 +125,38 @@ function DonationContent() {
     const newItems = { ...items };
 
     if (isCurrentlySelected) {
+      // Bỏ chọn → gọi release API
+      if (item.quantityLeft === 1) {
+        try {
+          await expenditureService.releaseReservation(parseInt(itemId));
+        } catch {}
+      }
       delete newItems[itemId];
     } else {
-      newItems[itemId] = 1;
+      // Chọn mới → mặc định qty = 1
+      const qty = 1;
+      newItems[itemId] = qty;
+
+      // Nếu là sản phẩm cuối cùng → gọi reserve API
+      if (item.quantityLeft === 1) {
+        try {
+          const res = await expenditureService.reserveItem(parseInt(itemId), qty);
+          if (!res.success) {
+            alert(res.message || 'Sản phẩm cuối cùng đã có người đang chọn');
+            delete newItems[itemId];
+            setItems({ ...items }); // revert
+            return;
+          }
+        } catch (err: any) {
+          if (err.response?.status === 409) {
+            alert('Sản phẩm cuối cùng đã có người đang chọn');
+            delete newItems[itemId];
+            setItems({ ...items }); // revert
+            return;
+          }
+          console.warn('Reserve API error:', err);
+        }
+      }
     }
 
     setItems(newItems);
@@ -145,6 +175,16 @@ function DonationContent() {
 
     const currentQty = items[itemId] || 0;
     const newQty = Math.min(item.quantityLeft, Math.max(0, currentQty + diff));
+
+    // Khi giảm qty từ bằng quantityLeft xuống thấp hơn → release
+    if (currentQty === item.quantityLeft && newQty < item.quantityLeft) {
+      expenditureService.releaseReservation(parseInt(itemId)).catch(() => {});
+    }
+
+    // Khi tăng qty lên bằng đúng quantityLeft → reserve
+    if (currentQty < item.quantityLeft && newQty === item.quantityLeft) {
+      expenditureService.reserveItem(parseInt(itemId), newQty).catch(() => {});
+    }
 
     const newItems = { ...items, [itemId]: newQty };
     if (newQty === 0) delete newItems[itemId];
@@ -262,7 +302,8 @@ function DonationContent() {
                       name: item.category,
                       description: item.note || '',
                       price: item.expectedPrice,
-                      quantityLeft: item.quantityLeft ?? 0
+                      quantityLeft: item.quantityLeft ?? 0,
+                      reservations: item.reservations ?? 0
                     }))
                     .filter(item => item.quantityLeft > 0);
 

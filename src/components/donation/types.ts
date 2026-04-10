@@ -4,6 +4,7 @@ export type ExpenditureItem = {
     description: string;
     price: number;
     quantityLeft: number;
+    reservations?: number;
 };
 
 export type PaymentMethod = 'payos' | 'paypal' | 'cash';
