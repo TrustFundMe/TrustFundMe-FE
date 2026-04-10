@@ -64,6 +64,7 @@ export default function CampaignExpendituresPage() {
     // Update Modal States (Step 4)
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
+    const isRefundDone = updateExpenditure?.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
 
     // Staff name map: key = expenditure id, value = staff full name
     const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
@@ -120,10 +121,10 @@ export default function CampaignExpendituresPage() {
     const [refundSubmitting, setRefundSubmitting] = useState(false);
     const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isSilent = false) => {
         if (!campaignId) return;
         try {
-            setLoading(true);
+            if (!isSilent) setLoading(true);
             // Fetch campaign details
             const campaignData = await campaignService.getById(Number(campaignId));
             setCampaign(campaignData);
@@ -1744,7 +1745,8 @@ export default function CampaignExpendituresPage() {
                                                                             <label className="text-[8px] font-black uppercase tracking-tighter text-gray-400">SL:</label>
                                                                             <input
                                                                                 type="number" min="0"
-                                                                                className="w-12 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1"
+                                                                                disabled={isRefundDone}
+                                                                                className={`w-12 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                 value={updateItems[index]?.actualQuantity}
                                                                                 onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
                                                                             />
@@ -1753,7 +1755,8 @@ export default function CampaignExpendituresPage() {
                                                                             <label className="text-[8px] font-black uppercase tracking-tighter text-gray-400">ĐG:</label>
                                                                             <input
                                                                                 type="number" min="0"
-                                                                                className="w-24 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1"
+                                                                                disabled={isRefundDone}
+                                                                                className={`w-24 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                 value={updateItems[index]?.price}
                                                                                 onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
                                                                             />
@@ -1855,15 +1858,15 @@ export default function CampaignExpendituresPage() {
                                             </tfoot>
                                         </table>
                                     </div>
-                                </div >
+                                </div>
                                 <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 shrink-0">
                                     <button
                                         type="button"
                                         onClick={handleUpdateSubmit}
-                                        disabled={updating}
-                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-400 hover:bg-orange-500 text-white'}`}
+                                        disabled={updating || isRefundDone}
+                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating || isRefundDone ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-400 hover:bg-orange-500 text-white'}`}
                                     >
-                                        {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
+                                        {updating ? 'Đang lưu...' : isRefundDone ? 'Đã hoàn tiền (Không thể sửa)' : 'Lưu cập nhật'}
                                     </button>
                                     <button
                                         type="button"
@@ -1873,11 +1876,10 @@ export default function CampaignExpendituresPage() {
                                         Hủy
                                     </button>
                                 </div>
-                            </div >
-                        </div >
-                    </div >
-                )
-                }
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Create Post Modal */}
                 {
@@ -1935,13 +1937,13 @@ export default function CampaignExpendituresPage() {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData();
+                                    fetchData(true);
                                 }}
                                 onPostUpdated={() => {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData();
+                                    fetchData(true);
                                 }}
                             />
                         );
@@ -2121,8 +2123,8 @@ export default function CampaignExpendituresPage() {
                                         setRefundFilePreview(null);
                                         setRefundFile(null);
                                         setRefundAmount('');
-                                        // Load lại cả trang để hiện đúng trạng thái
-                                        window.location.reload();
+                                        // Load lại dữ liệu để hiện đúng trạng thái mà không cần reload trang
+                                        fetchData(true);
                                     } catch (err: any) {
                                         toast.error(err.response?.data?.message || 'Gửi hoàn tiền thất bại');
                                     } finally {

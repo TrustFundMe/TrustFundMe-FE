@@ -131,4 +131,12 @@ export const API_ENDPOINTS = {
   USER_POST_SEEN: {
     BASE: "/api/user-post-seen",
   },
+  TRUST_SCORE: {
+    BASE: "/api/trust-score",
+    CONFIG: "/api/trust-score/config",
+    CONFIG_BY_KEY: (ruleKey: string) => `/api/trust-score/config/${ruleKey}`,
+    LOGS: "/api/trust-score/logs",
+    USER: (userId: number | string) => `/api/trust-score/user/${userId}`,
+    LEADERBOARD: "/api/trust-score/leaderboard",
+  },
 } as const;
