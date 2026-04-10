@@ -10,6 +10,7 @@ import CampaignHeader from '@/components/campaign/CampaignHeader';
 import CampaignAnalyticsChart from '@/components/campaign/CampaignAnalyticsChart';
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
+import DonorsModal from '@/components/campaign/DonorsModal';
 import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower } from '@/components/campaign/types';
 import { mockComments } from '@/components/campaign/mock';
 import { feedPostService } from '@/services/feedPostService';
@@ -102,6 +103,7 @@ function CampaignDetailsInner() {
   const [followers, setFollowers] = useState<CampaignFollower[]>([]);
   const [progress, setProgress] = useState<CampaignProgress | null>(null);
   const [recentDonors, setRecentDonors] = useState<RecentDonor[]>([]);
+  const [showDonorsModal, setShowDonorsModal] = useState(false);
 
   const [posts, setPosts] = useState<CampaignPost[]>([]);
   const [postsTotal, setPostsTotal] = useState(0);
@@ -436,6 +438,7 @@ function CampaignDetailsInner() {
                         });
                         router.push(`/donation?${params.toString()}`);
                       }}
+                      onMoreDonorsClick={() => setShowDonorsModal(true)}
                     />
                   )}
                 </div>
@@ -534,6 +537,13 @@ function CampaignDetailsInner() {
           }
         `}</style>
       </section>
+
+      {showDonorsModal && campaignId && (
+        <DonorsModal
+          campaignId={campaignId}
+          onClose={() => setShowDonorsModal(false)}
+        />
+      )}
     </DanboxLayout>
   );
 }

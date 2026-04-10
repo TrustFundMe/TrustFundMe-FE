@@ -86,12 +86,14 @@ export default function CampaignDonateCard({
   progressPercentage,
   recentDonors = [],
   onDonate,
+  onMoreDonorsClick,
 }: {
   raisedAmount: number;
   goalAmount: number;
   progressPercentage: number;
   recentDonors?: any[];
   onDonate: (amount: number) => void;
+  onMoreDonorsClick?: () => void;
 }) {
   const progress = progressPercentage;
 
@@ -224,7 +226,25 @@ export default function CampaignDonateCard({
         <div style={{ marginTop: 24, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap", gap: 8, marginBottom: 15 }}>
             <h5 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#202426", whiteSpace: "nowrap" }}>Người vừa ủng hộ</h5>
-            <span style={{ fontSize: 12, color: "#F84D43", fontWeight: 700, whiteSpace: "nowrap" }}>Mới nhất</span>
+            <button
+              type="button"
+              onClick={onMoreDonorsClick}
+              style={{
+                fontSize: 12,
+                color: "#F84D43",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                padding: "4px 8px",
+                borderRadius: "6px",
+                transition: "background 0.2s"
+              }}
+              className="hover:bg-red-50"
+            >
+              Xem thêm
+            </button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
