@@ -155,7 +155,7 @@ export default function ExpenditureDetailPage() {
 
             const headers = isAuthorized
                 ? ['STT', 'Tên hàng hóa', 'Kế hoạch (VNĐ)', 'Thực tế đã chi (VNĐ)']
-                : ['STT', 'Tên hàng hóa', 'Đã nhận (VNĐ)', 'Đã chi (VNĐ)'];
+                : ['STT', 'Tên hàng hóa', 'Tổng quyên góp (VNĐ)', 'Đã chi (VNĐ)'];
 
             const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
             ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 20 }, { wch: 20 }];
@@ -330,10 +330,9 @@ export default function ExpenditureDetailPage() {
     }
 
     const totalPlan = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.expectedPrice || 0), 0);
-    const totalReceivedTotal = items.reduce((sum, item) => sum + (donationSummary[item.id] || 0) * (item.expectedPrice || 0), 0);
+    const totalReceived = (expenditure.totalReceivedAmount != null) ? Number(expenditure.totalReceivedAmount) : 0;
     const totalActual = items.reduce((sum, item) => sum + ((item.actualQuantity || 0) * (item.price || 0)), 0);
-    const compareValue = campaign?.type === 'ITEMIZED' ? totalReceivedTotal : totalPlan;
-    const totalVariance = compareValue - totalActual;
+    const totalBalance = totalReceived - totalActual;
 
     if (error || !expenditure) {
         return (
@@ -378,10 +377,15 @@ export default function ExpenditureDetailPage() {
                             <button
                                 onClick={handleRequestWithdrawal}
                                 disabled={loading}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow disabled:opacity-50 text-sm"
+                                className="flex flex-col items-start gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow disabled:opacity-50 text-sm"
                             >
-                                <Clock className="w-4 h-4" />
-                                {loading ? 'Đang xử lý...' : 'Rút tiền'}
+                                <span className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    {loading ? 'Đang xử lý...' : 'Rút tiền'}
+                                </span>
+                                <span className="text-[10px] font-normal opacity-80">
+                                    Số tiền rút: {new Intl.NumberFormat('vi-VN').format(totalReceived)}
+                                </span>
                             </button>
                         )}
                     </div>
@@ -444,13 +448,13 @@ export default function ExpenditureDetailPage() {
                                 </div>
                                 <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
                                     <div className="bg-green-50 px-3 py-2 flex items-center gap-1.5">
-                                        <p className="text-[10px] font-semibold text-green-600 uppercase">Đã nhận</p>
+                                        <p className="text-[10px] font-semibold text-green-600 uppercase">Tổng quyên góp</p>
                                     </div>
                                     <div className="px-3 py-2">
                                         <p className="text-2xl font-extrabold text-green-700 leading-tight">
-                                            {new Intl.NumberFormat('vi-VN').format(totalReceivedTotal)}
+                                            {new Intl.NumberFormat('vi-VN').format(totalReceived)}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Tiền thực tế donor đã donate</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">{campaign?.type === 'ITEMIZED' ? 'Tiền đã giải ngân = số dư đợt chi tiêu trước + tổng số tiền nhận từ quyên góp' : 'tổng số tiền nhận từ quyên góp'}</p>
                                     </div>
                                 </div>
                                 <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
@@ -461,7 +465,7 @@ export default function ExpenditureDetailPage() {
                                         <p className="text-2xl font-extrabold text-orange-700 leading-tight">
                                             {new Intl.NumberFormat('vi-VN').format(expenditure.totalAmount)}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Chủ quỹ mua vật phẩm theo kế hoạch</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Số tiền chủ quỹ đã mua vật phẩm theo kế hoạch</p>
                                     </div>
                                 </div>
                                 <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
@@ -470,9 +474,11 @@ export default function ExpenditureDetailPage() {
                                     </div>
                                     <div className="px-3 py-2">
                                         <p className="text-2xl font-extrabold text-gray-700 leading-tight">
-                                            {new Intl.NumberFormat('vi-VN').format(totalVariance)}
+                                            {new Intl.NumberFormat('vi-VN').format(totalBalance)}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Tiền dư sau khi hoàn tất mua hàng</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Tổng nhận {new Intl.NumberFormat('vi-VN').format(totalReceived)} - Đã chi {new Intl.NumberFormat('vi-VN').format(totalActual)}</p>
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Số tiền còn lại sau khi mua vật phẩm</p>
+
                                     </div>
                                 </div>
                             </div>
@@ -499,38 +505,54 @@ export default function ExpenditureDetailPage() {
                             <div className="overflow-hidden flex flex-col" style={{ maxHeight: 'calc(100vh - 420px)' }}>
                                 {/* Scrollable body */}
                                 <div className="overflow-y-auto flex-1">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-sm table-fixed">
+                                        <colgroup>
+                                            <col />
+                                            {campaign?.type === 'AUTHORIZED' ? (
+                                                <>
+                                                    <col className="w-[200px]" />
+                                                    <col className="w-[250px]" />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <col className="w-[150px]" />
+                                                    <col className="w-[180px]" />
+                                                    <col className="w-[220px]" />
+                                                </>
+                                            )}
+                                            <col className="w-[64px]" />
+                                        </colgroup>
                                         <thead className="bg-gray-50 shrink-0">
                                             <tr>
                                                 <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700">Tên hàng hóa / Dịch vụ</th>
                                                 {campaign?.type === 'AUTHORIZED' ? (
                                                     <>
-                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-blue-600">
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-blue-600 border-l border-gray-200">
                                                             <div>Kế hoạch</div>
-                                                            <div className="text-[9px] font-normal text-blue-400">SL x ĐG</div>
+                                                            <div className="text-[9px] font-normal text-blue-400">SL*ĐG(VNĐ)</div>
                                                         </th>
-                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-red-600">
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-red-600 border-l border-gray-200">
                                                             <div>Thực tế đã chi</div>
-                                                            <div className="text-[9px] font-normal text-red-400">SL x ĐG</div>
+                                                            <div className="text-[9px] font-normal text-red-400">SL*ĐG(VNĐ)</div>
                                                         </th>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <th className="px-2 py-1.5 text-right text-sm font-bold text-blue-600">
                                                             <div>Kế hoạch</div>
-                                                            <div className="text-[9px] font-normal text-blue-400">SL x ĐG</div>
+                                                            <div className="text-[9px] font-normal text-blue-400">SL*ĐG(VNĐ)</div>
                                                         </th>
-                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-green-600">
-                                                            <div>Đã nhận</div>
-                                                            <div className="text-[9px] font-normal text-green-400">SL x ĐG</div>
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-green-600 border-l border-gray-200">
+                                                            <div>Tổng quyên góp</div>
+                                                            <div className="text-[9px] font-normal text-green-400">SL*ĐG(VNĐ)</div>
                                                         </th>
-                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-orange-600">
+                                                        <th className="px-2 py-1.5 text-right text-sm font-bold text-orange-600 border-l border-gray-200">
                                                             <div>Đã chi</div>
-                                                            <div className="text-[9px] font-normal text-orange-400">SL x ĐG</div>
+                                                            <div className="text-[9px] font-normal text-orange-400">SL*ĐG(VNĐ)</div>
                                                         </th>
                                                     </>
                                                 )}
-                                                <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 w-16">Ảnh</th>
+                                                <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 border-l border-gray-200">Ảnh</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -555,12 +577,12 @@ export default function ExpenditureDetailPage() {
                                                                 <>
                                                                     <td className="px-2 py-2 text-right">
                                                                         <div className="font-semibold text-blue-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                            <span className="text-xs text-blue-400 mr-0.5">{(item.quantity || 0)}</span>×<span className="text-xs text-blue-400 mr-0.5">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>=<span className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}</span>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-2 py-2 text-right">
+                                                                    <td className="px-2 py-2 text-right border-l border-gray-200">
                                                                         <div className="font-semibold text-red-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * (item.price || 0))}
+                                                                            <span className="text-xs text-red-400 mr-0.5">{(item.actualQuantity || 0)}</span>×<span className="text-xs text-red-400 mr-0.5">{new Intl.NumberFormat('vi-VN').format(item.price || 0)}</span>=<span className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * (item.price || 0))}</span>
                                                                         </div>
                                                                     </td>
                                                                 </>
@@ -568,22 +590,22 @@ export default function ExpenditureDetailPage() {
                                                                 <>
                                                                     <td className="px-2 py-2 text-right">
                                                                         <div className="font-semibold text-blue-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}
+                                                                            <span className="text-xs text-blue-400 mr-0.5">{(item.quantity || 0)}</span>×<span className="text-xs text-blue-400 mr-0.5">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>=<span className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.quantity || 0) * (item.expectedPrice || 0))}</span>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-2 py-2 text-right">
+                                                                    <td className="px-2 py-2 text-right border-l border-gray-200">
                                                                         <div className="font-semibold text-green-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
+                                                                            <span className="text-xs text-green-400 mr-0.5">{(donationSummary[item.id] || 0)}</span>×<span className="text-xs text-green-400 mr-0.5">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>=<span className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}</span>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-2 py-2 text-right">
+                                                                    <td className="px-2 py-2 text-right border-l border-gray-200">
                                                                         <div className="font-semibold text-orange-700">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}
+                                                                            <span className="text-xs text-orange-400 mr-0.5">{(item.actualQuantity || 0)}</span>×<span className="text-xs text-orange-400 mr-0.5">{new Intl.NumberFormat('vi-VN').format(item.price || 0)}</span>=<span className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((item.actualQuantity || 0) * item.price)}</span>
                                                                         </div>
                                                                     </td>
                                                                 </>
                                                             )}
-                                                            <td className="px-2 py-2 text-center">
+                                                            <td className="px-2 py-2 text-center border-l border-gray-200">
                                                                 <button
                                                                     onClick={() => {
                                                                         setGalleryModalItemId(item.id);
@@ -614,13 +636,29 @@ export default function ExpenditureDetailPage() {
                                 </div>
                                 {/* Sticky Footer */}
                                 <table className="w-full text-sm shrink-0 table-fixed">
+                                    <colgroup>
+                                        <col />
+                                        {campaign?.type === 'AUTHORIZED' ? (
+                                            <>
+                                                <col className="w-[200px]" />
+                                                <col className="w-[250px]" />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <col className="w-[150px]" />
+                                                <col className="w-[180px]" />
+                                                <col className="w-[220px]" />
+                                            </>
+                                        )}
+                                        <col className="w-[64px]" />
+                                    </colgroup>
                                     <tfoot>
                                         <tr className="bg-gray-100 font-bold text-gray-900 border-t-2 border-gray-300">
                                             <td className="px-2 py-2 text-sm uppercase">Tổng cộng đợt chi</td>
                                             {campaign?.type === 'AUTHORIZED' ? (
                                                 <>
                                                     <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</td>
-                                                    <td className="px-2 py-2 text-right">
+                                                    <td className="px-2 py-2 text-right border-l border-gray-200">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
                                                         <div className={`text-xs uppercase ${(expenditure.totalExpectedAmount - totalActual) < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                                                             Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((expenditure.totalExpectedAmount || 0) - totalActual)}
@@ -630,16 +668,16 @@ export default function ExpenditureDetailPage() {
                                             ) : (
                                                 <>
                                                     <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalPlan)}</td>
-                                                    <td className="px-2 py-2 text-right">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceivedTotal)}</td>
-                                                    <td className="px-2 py-2 text-right">
+                                                    <td className="px-2 py-2 text-right border-l border-gray-200">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceived)}</td>
+                                                    <td className="px-2 py-2 text-right border-l border-gray-200">
                                                         <div className="text-sm">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}</div>
-                                                        <div className={`text-xs uppercase ${totalVariance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                        <div className={`text-xs uppercase ${totalBalance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                            Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalBalance)}
                                                         </div>
                                                     </td>
                                                 </>
                                             )}
-                                            <td className="px-2 py-2"></td>
+                                            <td className="px-2 py-2 border-l border-gray-200"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -680,7 +718,7 @@ export default function ExpenditureDetailPage() {
                                                 <ShieldCheck className="w-3 h-3" /> Đã hoàn tiền dư
                                             </span>
                                         ) : (
-                                            (totalVariance > 0) && (
+                                            (totalBalance > 0) && (
                                                 <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-amber-200">
                                                     Chờ hoàn tiền dư
                                                 </span>
@@ -837,7 +875,9 @@ export default function ExpenditureDetailPage() {
                                                                 const totalPlan = items.reduce((sum, item) => sum + item.quantity * (item.expectedPrice || 0), 0);
                                                                 const totalActual = updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0);
                                                                 const totalVariance = totalPlan - totalActual;
-                                                                const budgetLimit = campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0);
+                                                                const budgetLimit = campaign?.type === 'AUTHORIZED'
+                                                                    ? (campaign?.balance || 0)
+                                                                    : (expenditure.totalReceivedAmount != null ? Number(expenditure.totalReceivedAmount) : 0);
                                                                 const isOverBudget = totalActual > budgetLimit;
 
                                                                 return (
@@ -881,8 +921,8 @@ export default function ExpenditureDetailPage() {
                                         onClick={handleUpdateSubmit}
                                         disabled={updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))}
                                         className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none sm:ml-3 sm:w-auto sm:text-sm ${updating || updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0) > (campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (expenditure.totalExpectedAmount || 0))
-                                                ? 'bg-gray-400 cursor-not-allowed'
-                                                : 'bg-orange-600 hover:bg-orange-700'
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-orange-600 hover:bg-orange-700'
                                             }`}
                                     >
                                         {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
@@ -902,20 +942,22 @@ export default function ExpenditureDetailPage() {
             </div>
 
             {/* Gallery Modal */}
-            {galleryModalItemId !== null && (
-                <ExpenditureGalleryModal
-                    isOpen={true}
-                    onClose={() => setGalleryModalItemId(null)}
-                    itemName={items.find(i => i.id === galleryModalItemId)?.category || ''}
-                    media={itemMedia[galleryModalItemId!] || []}
-                    loading={itemMediaLoading[galleryModalItemId!]}
-                    isReadOnly={true}
-                    onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId!, mediaId)}
-                    uploadState={itemUploadState[galleryModalItemId!] || { uploading: false, files: [], previews: [] }}
-                    onFileChange={(files) => handleItemFileChange(galleryModalItemId!, files)}
-                    onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId!)}
-                />
-            )}
+            {
+                galleryModalItemId !== null && (
+                    <ExpenditureGalleryModal
+                        isOpen={true}
+                        onClose={() => setGalleryModalItemId(null)}
+                        itemName={items.find(i => i.id === galleryModalItemId)?.category || ''}
+                        media={itemMedia[galleryModalItemId!] || []}
+                        loading={itemMediaLoading[galleryModalItemId!]}
+                        isReadOnly={true}
+                        onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId!, mediaId)}
+                        uploadState={itemUploadState[galleryModalItemId!] || { uploading: false, files: [], previews: [] }}
+                        onFileChange={(files) => handleItemFileChange(galleryModalItemId!, files)}
+                        onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId!)}
+                    />
+                )
+            }
 
             {/* Image Gallery Modal */}
             <ImageZoomModal
@@ -924,6 +966,6 @@ export default function ExpenditureDetailPage() {
                 images={galleryImages}
                 initialIndex={galleryIndex}
             />
-        </div>
+        </div >
     );
 }

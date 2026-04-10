@@ -1,4 +1,4 @@
-import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest } from '@/types/expenditure';
+import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest, ExpenditureTransaction } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
 import axios from 'axios';
 
@@ -24,6 +24,11 @@ export const expenditureService = {
     },
     getItemsByCampaignId: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
         const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items`);
+        return response.data;
+    },
+
+    getApprovedItemsByCampaign: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items/approved`);
         return response.data;
     },
 
@@ -133,5 +138,11 @@ export const expenditureService = {
             items
         });
         return response.data;
-    }
+    },
+
+    /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
+    getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
+        const response = await axiosInstance.get('/api/expenditures/transactions');
+        return response.data;
+    },
 };

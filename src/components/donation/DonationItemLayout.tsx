@@ -9,6 +9,8 @@ import PaymentMethods from './PaymentMethods';
 type DonationItemLayoutProps = {
     campaign: CampaignDto | null;
     amount: number;
+    donationBlocked?: boolean;
+    blockedMessage?: string;
     isManualMode: boolean;
     items: Record<string, number>;
     visibleItems: ExpenditureItem[];
@@ -22,6 +24,7 @@ type DonationItemLayoutProps = {
 
     onPresetClick: (amount: number) => void;
     onAmountChange: (amount: number) => void;
+    onShowSuggestions: () => void;
     onItemSelect: (itemId: string) => void;
     onQuantityChange: (itemId: string, diff: number) => void;
     onPageChange: (page: number) => void;
@@ -37,6 +40,8 @@ type DonationItemLayoutProps = {
 export default function DonationItemLayout({
     campaign,
     amount,
+    donationBlocked = false,
+    blockedMessage = '',
     isManualMode,
     items,
     visibleItems,
@@ -50,6 +55,7 @@ export default function DonationItemLayout({
 
     onPresetClick,
     onAmountChange,
+    onShowSuggestions,
     onItemSelect,
     onQuantityChange,
     onPageChange,
@@ -63,6 +69,18 @@ export default function DonationItemLayout({
 }: DonationItemLayoutProps) {
     const tipAmount = Math.round((amount * tipPercent) / 100);
     const totalAmount = amount + tipAmount;
+
+    if (donationBlocked) {
+        return (
+            <div className="w-full max-w-[1100px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex items-center justify-center p-12">
+                <div className="text-center">
+                    <div className="text-5xl mb-4">⏳</div>
+                    <h3 className="text-xl font-black text-gray-700 mb-2">Tạm ngưng quyên góp</h3>
+                    <p className="text-gray-400 font-medium">{blockedMessage}</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-[1100px] h-[750px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex overflow-hidden">
@@ -85,6 +103,7 @@ export default function DonationItemLayout({
                     isManualMode={isManualMode}
                     onPresetClick={onPresetClick}
                     onAmountChange={onAmountChange}
+                    onShowSuggestions={onShowSuggestions}
                     compact={true}
                 />
 

@@ -47,7 +47,7 @@ export default function ChatSidebar({
                     />
                 </div>
                 {onRefresh && (
-                    <button 
+                    <button
                         onClick={onRefresh}
                         disabled={isLoading}
                         className="h-9 w-9 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-100 transition shadow-sm group active:scale-95 disabled:opacity-50"
@@ -63,7 +63,7 @@ export default function ChatSidebar({
                 {isLoading ? (
                     <div className="text-center py-4 text-sm text-gray-500">Đang tải...</div>
                 ) : conversations.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-gray-500">Không có conversation đã nhận</div>
+                    <div className="text-center py-4 text-sm text-gray-500">Không có conversation Tổng quyên góp</div>
                 ) : (
                     conversations.map((c) => {
                         const active = c.id === activeId;

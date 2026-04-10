@@ -19,6 +19,8 @@ import { campaignService } from '@/services/campaignService';
 import { mediaService } from '@/services/mediaService';
 import { feedPostService } from '@/services/feedPostService';
 import { paymentService, DonationItemSummary } from '@/services/paymentService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { BankAccountDto } from '@/types/bankAccount';
 import { toast } from 'react-hot-toast';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { CampaignDto } from '@/types/campaign';
@@ -62,6 +64,7 @@ export default function CampaignExpendituresPage() {
     // Update Modal States (Step 4)
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
+    const isRefundDone = updateExpenditure?.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
 
     // Staff name map: key = expenditure id, value = staff full name
     const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
@@ -116,11 +119,12 @@ export default function CampaignExpendituresPage() {
     const [refundFilePreview, setRefundFilePreview] = useState<string | null>(null);
     const [refundUploading, setRefundUploading] = useState(false);
     const [refundSubmitting, setRefundSubmitting] = useState(false);
+    const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (isSilent = false) => {
         if (!campaignId) return;
         try {
-            setLoading(true);
+            if (!isSilent) setLoading(true);
             // Fetch campaign details
             const campaignData = await campaignService.getById(Number(campaignId));
             setCampaign(campaignData);
@@ -174,6 +178,14 @@ export default function CampaignExpendituresPage() {
         }
         fetchData();
     }, [fetchData, isAuthenticated, authLoading, router]);
+
+    // Load user bank accounts for refund modal
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        bankAccountService.getMyBankAccounts()
+            .then(setUserBankAccounts)
+            .catch(() => setUserBankAccounts([]));
+    }, [isAuthenticated]);
 
     // Load media for all expenditure items when expenditures change
     useEffect(() => {
@@ -348,11 +360,16 @@ export default function CampaignExpendituresPage() {
             // 3. Update status locally in Expenditure
             await expenditureService.updateEvidenceStatus(expId, 'SUBMITTED');
 
+            // 4. Load posts for this expenditure
+            const postResults = await feedPostService.getByTarget(expId, 'EXPENDITURE').catch(() => [] as any[]);
+            setExpenditurePosts(prev => ({ ...prev, [expId]: postResults }));
+
             toast.success('Đã tải lên các minh chứng và tự động đăng bài viết thành công!');
 
-            // Refresh data
-            const expendituresData = await expenditureService.getByCampaignId(Number(campaignId));
-            setExpenditures(expendituresData);
+            // Update expenditure status locally
+            setExpenditures(prev => prev.map(exp =>
+                exp.id === expId ? { ...exp, evidenceStatus: 'SUBMITTED' } : exp
+            ));
             setEvidenceFiles([]);
             setEvidenceDescription('');
 
@@ -370,7 +387,7 @@ export default function CampaignExpendituresPage() {
     const handleOpenUpdateModal = async (exp: Expenditure) => {
         try {
             const itemsData = await expenditureService.getItems(exp.id);
-            
+
             // Load donation summary if it's ITEMIZED to compare actual vs received
             if (campaign?.type === 'ITEMIZED') {
                 const itemIds = itemsData.map(item => item.id);
@@ -1169,239 +1186,260 @@ export default function CampaignExpendituresPage() {
                                                                                             {/* Phần Minh chứng */}
                                                                                             {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (
                                                                                                 <div className="space-y-4">
-                                                                                                                                                                                                         {/* Bước 4: Cập nhật thực tế & ảnh */}
-                                                                                                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 group/step">
-                                                                                                         <div className="flex items-center gap-4">
-                                                                                                             {(() => {
-                                                                                                                 const isUpdated = (exp.totalAmount || 0) > 0;
-                                                                                                                 return (
-                                                                                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isUpdated ? 'bg-emerald-100' : 'bg-white/50'}`}>
-                                                                                                                         <Receipt className={`w-5 h-5 ${isUpdated ? 'text-emerald-500' : 'text-orange-400'}`} />
-                                                                                                                     </div>
-                                                                                                                 );
-                                                                                                             })()}
-                                                                                                             <div>
-                                                                                                                 <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Thực tế & Minh chứng</p>
-                                                                                                                 <p className="text-[10px] text-black/40 leading-tight">Cập nhật số lượng, đơn giá thực tế và hóa đơn</p>
-                                                                                                             </div>
-                                                                                                         </div>
-                                                                                                         <button
-                                                                                                             onClick={() => handleOpenUpdateModal(exp)}
-                                                                                                             className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${(exp.totalAmount || 0) > 0 ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500'}`}
-                                                                                                         >
-                                                                                                             {(exp.totalAmount || 0) > 0 ? 'Chỉnh sửa' : 'Cập nhật'}
-                                                                                                         </button>
-                                                                                                     </div>
+                                                                                                    {/* Bước 4: Cập nhật thực tế & ảnh */}
+                                                                                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 group/step">
+                                                                                                        <div className="flex items-center gap-4">
+                                                                                                            {(() => {
+                                                                                                                const isUpdated = (exp.totalAmount || 0) > 0;
+                                                                                                                return (
+                                                                                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isUpdated ? 'bg-emerald-100' : 'bg-white/50'}`}>
+                                                                                                                        <Receipt className={`w-5 h-5 ${isUpdated ? 'text-emerald-500' : 'text-orange-400'}`} />
+                                                                                                                    </div>
+                                                                                                                );
+                                                                                                            })()}
+                                                                                                            <div>
+                                                                                                                <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Thực tế & Minh chứng</p>
+                                                                                                                <p className="text-[10px] text-black/40 leading-tight">Cập nhật số lượng, đơn giá thực tế và hóa đơn</p>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                        <button
+                                                                                                            onClick={() => handleOpenUpdateModal(exp)}
+                                                                                                            disabled={exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED')}
+                                                                                                            className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED') ? 'bg-gray-300 cursor-not-allowed' : ((exp.totalAmount || 0) > 0 ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500')}`}
+                                                                                                        >
+                                                                                                            {exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED') ? 'Đã hoàn tiền dư' : ((exp.totalAmount || 0) > 0 ? 'Chỉnh sửa' : 'Cập nhật')}
+                                                                                                        </button>
+                                                                                                    </div>
 
-                                                                                                                                                                                                         {/* Bước 5: Chia sẻ lên bảng tin */}
-                                                                                                     {(() => {
-                                                                                                         const posts = expenditurePosts[exp.id] || [];
-                                                                                                         const publishedPost = posts.find((p: any) => p.status === 'PUBLISHED');
-                                                                                                         const draftPost = posts.find((p: any) => p.status === 'DRAFT');
-                                                                                                         const isPublished = !!publishedPost;
-                                                                                                         const isStepDone = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');
+                                                                                                    {/* Bước 5: Chia sẻ lên bảng tin */}
+                                                                                                    {(() => {
+                                                                                                        const posts = expenditurePosts[exp.id] || [];
+                                                                                                        const publishedPost = posts.find((p: any) => p.status === 'PUBLISHED');
+                                                                                                        const draftPost = posts.find((p: any) => p.status === 'DRAFT');
+                                                                                                        const isPublished = !!publishedPost;
+                                                                                                        const isStepDone = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');
 
-                                                                                                         return (
-                                                                                                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 group/step">
-                                                                                                                 <div className="flex items-center gap-4">
-                                                                                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isStepDone ? 'bg-emerald-100' : 'bg-white/50'}`}>
-                                                                                                                         <ImageIcon className={`w-5 h-5 ${isStepDone ? 'text-emerald-500' : 'text-orange-400'}`} />
-                                                                                                                     </div>
-                                                                                                                     <div>
-                                                                                                                         <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Đăng bài post</p>
-                                                                                                                         <p className="text-[10px] text-black/40 leading-tight">
-                                                                                                                             {isPublished
-                                                                                                                                 ? `Đã đăng lúc ${new Date(publishedPost.updatedAt || publishedPost.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
-                                                                                                                                 : draftPost
-                                                                                                                                     ? 'Bài nháp đang chờ — bấm để tiếp tục sửa'
-                                                                                                                                     : 'Chia sẻ minh chứng lên bảng tin để cộng đồng theo dõi'}
-                                                                                                                         </p>
-                                                                                                                     </div>
-                                                                                                                 </div>
-                                                                                                                 <button
-                                                                                                                     onClick={() => {
-                                                                                                                         setCurrentDraftPost(draftPost || publishedPost || null);
-                                                                                                                         setPostExpenditure(exp);
-                                                                                                                         setIsPostModalOpen(true);
-                                                                                                                     }}
-                                                                                                                     className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${isStepDone ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500'}`}
-                                                                                                                 >
-                                                                                                                     {isPublished ? 'Sửa bài' : draftPost ? 'Tiếp tục' : 'Viết bài'}
-                                                                                                                 </button>
-                                                                                                             </div>
-                                                                                                         );
-                                                                                                     })()}
+                                                                                                        return (
+                                                                                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 group/step">
+                                                                                                                <div className="flex items-center gap-4">
+                                                                                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isStepDone ? 'bg-emerald-100' : 'bg-white/50'}`}>
+                                                                                                                        <ImageIcon className={`w-5 h-5 ${isStepDone ? 'text-emerald-500' : 'text-orange-400'}`} />
+                                                                                                                    </div>
+                                                                                                                    <div>
+                                                                                                                        <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Đăng bài post</p>
+                                                                                                                        <p className="text-[10px] text-black/40 leading-tight">
+                                                                                                                            {isPublished
+                                                                                                                                ? `Đã đăng lúc ${new Date(publishedPost.updatedAt || publishedPost.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+                                                                                                                                : draftPost
+                                                                                                                                    ? 'Bài nháp đang chờ — bấm để tiếp tục sửa'
+                                                                                                                                    : 'Chia sẻ minh chứng lên bảng tin để cộng đồng theo dõi'}
+                                                                                                                        </p>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                                <button
+                                                                                                                    onClick={() => {
+                                                                                                                        setCurrentDraftPost(draftPost || publishedPost || null);
+                                                                                                                        setPostExpenditure(exp);
+                                                                                                                        setIsPostModalOpen(true);
+                                                                                                                    }}
+                                                                                                                    className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${isStepDone ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500'}`}
+                                                                                                                >
+                                                                                                                    {isPublished ? 'Sửa bài' : draftPost ? 'Tiếp tục' : 'Viết bài'}
+                                                                                                                </button>
+                                                                                                            </div>
+                                                                                                        );
+                                                                                                    })()}
 
-                                                                                                     {/* Phần Hoàn tiền dư (Được dời lên trước nút Nộp) */}
-                                                                                                     {exp.status === 'DISBURSED' && (
-                                                                                                         <div className="pt-4 border-t border-black/5 space-y-4">
-                                                                                                             <div className="flex items-center gap-3">
-                                                                                                                 <h4 className="text-[9px] font-black uppercase tracking-[2px] text-orange-900/40">HOÀN TIỀN DƯ</h4>
-                                                                                                                 {(() => {
-                                                                                                                     const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND');
-                                                                                                                     if (refundTx?.status === 'COMPLETED') {
-                                                                                                                         return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-emerald-200">Đã hoàn tất</span>;
-                                                                                                                     }
-                                                                                                                     if (refundTx) {
-                                                                                                                         return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-gray-200 animate-pulse">Đang xử lý</span>;
-                                                                                                                     }
-                                                                                                                     return null;
-                                                                                                                 })()}
-                                                                                                             </div>
+                                                                                                    {/* Phần Hoàn tiền dư (Được dời lên trước nút Nộp) */}
+                                                                                                    {exp.status === 'DISBURSED' && (
+                                                                                                        <div className="pt-4 border-t border-black/5 space-y-4">
+                                                                                                            <div className="flex items-center gap-3">
+                                                                                                                <h4 className="text-[9px] font-black uppercase tracking-[2px] text-orange-900/40">HOÀN TIỀN DƯ</h4>
+                                                                                                                {(() => {
+                                                                                                                    const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND');
+                                                                                                                    if (refundTx?.status === 'COMPLETED') {
+                                                                                                                        return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-emerald-200">Đã hoàn tất</span>;
+                                                                                                                    }
+                                                                                                                    if (refundTx) {
+                                                                                                                        return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-gray-200 animate-pulse">Đang xử lý</span>;
+                                                                                                                    }
+                                                                                                                    return null;
+                                                                                                                })()}
+                                                                                                            </div>
 
-                                                                                                             {(() => {
-                                                                                                                 const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND' && t.status !== 'FAILED');
-                                                                                                                 const variance = (exp.totalExpectedAmount || 0) - (exp.totalAmount || 0);
-                                                                                                                 const needRefund = variance > 0;
-                                                                                                                 const isRefunded = refundTx?.status === 'COMPLETED';
+                                                                                                            {(() => {
+                                                                                                                const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND' && t.status !== 'FAILED');
+                                                                                                                const variance = (exp.variance != null) ? Number(exp.variance) : ((exp.totalExpectedAmount || 0) - (exp.totalAmount || 0));
+                                                                                                                const needRefund = variance > 0;
+                                                                                                                const isActualsUpdated = (exp.totalAmount || 0) > 0;
+                                                                                                                const isRefunded = refundTx?.status === 'COMPLETED';
 
-                                                                                                                 if (refundTx) {
-                                                                                                                     return (
-                                                                                                                         <div className="space-y-3">
-                                                                                                                             <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${isRefunded ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200'}`}>
-                                                                                                                                 <div className="flex items-center gap-4">
-                                                                                                                                     <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
-                                                                                                                                         <CheckCircle className={`w-5 h-5 ${isRefunded ? 'text-emerald-500' : 'text-amber-500'}`} />
-                                                                                                                                     </div>
-                                                                                                                                     <div>
-                                                                                                                                         <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>
-                                                                                                                                         <p className={`text-[10px] font-bold ${isRefunded ? 'text-emerald-600/60' : 'text-amber-600/60'}`}>
-                                                                                                                                             Đã hoàn {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundTx.amount)}
-                                                                                                                                         </p>
-                                                                                                                                     </div>
-                                                                                                                                 </div>
-                                                                                                                                 {isRefunded ? (
-                                                                                                                                     refundTx.proofUrl && (
-                                                                                                                                         <div className="w-20 h-14 rounded-xl border border-emerald-100 overflow-hidden shadow-sm hover:scale-105 transition-transform cursor-pointer relative group bg-white p-0.5" onClick={() => { /* Open image zoom */ }}>
-                                                                                                                                             <img src={refundTx.proofUrl} alt="Minh chứng hoàn tiền" className="w-full h-full object-cover rounded-lg" />
-                                                                                                                                             <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                                                                                                 <ImageIcon className="w-4 h-4 text-white drop-shadow-md" />
-                                                                                                                                             </div>
-                                                                                                                                         </div>
-                                                                                                                                     )
-                                                                                                                                 ) : (
-                                                                                                                                     <button
-                                                                                                                                         onClick={() => {
-                                                                                                                                             setRefundExpenditure(exp);
-                                                                                                                                             setRefundAmount(Math.max(0, variance).toString());
-                                                                                                                                             setShowRefundModal(true);
-                                                                                                                                         }}
-                                                                                                                                         className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
-                                                                                                                                     >
-                                                                                                                                         Cập nhật
-                                                                                                                                     </button>
-                                                                                                                                 )}
-                                                                                                                             </div>
-                                                                                                                         </div>
-                                                                                                                     );
-                                                                                                                 }
+                                                                                                                if (refundTx) {
+                                                                                                                    return (
+                                                                                                                        <div className="space-y-3">
+                                                                                                                            <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${isRefunded ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-200'}`}>
+                                                                                                                                <div className="flex items-center gap-4">
+                                                                                                                                    <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
+                                                                                                                                        <CheckCircle className={`w-5 h-5 ${isRefunded ? 'text-emerald-500' : 'text-amber-500'}`} />
+                                                                                                                                    </div>
+                                                                                                                                    <div>
+                                                                                                                                        <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>
+                                                                                                                                        <p className={`text-[10px] font-bold ${isRefunded ? 'text-emerald-600/60' : 'text-amber-600/60'}`}>
+                                                                                                                                            Đã hoàn {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundTx.amount)}
+                                                                                                                                        </p>
+                                                                                                                                    </div>
+                                                                                                                                </div>
+                                                                                                                                {isRefunded ? (
+                                                                                                                                    refundTx.proofUrl && (
+                                                                                                                                        <div className="w-20 h-14 rounded-xl border border-emerald-100 overflow-hidden shadow-sm hover:scale-105 transition-transform cursor-pointer relative group bg-white p-0.5" onClick={() => { /* Open image zoom */ }}>
+                                                                                                                                            <img src={refundTx.proofUrl} alt="Minh chứng hoàn tiền" className="w-full h-full object-cover rounded-lg" />
+                                                                                                                                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                                                                                                <ImageIcon className="w-4 h-4 text-white drop-shadow-md" />
+                                                                                                                                            </div>
+                                                                                                                                        </div>
+                                                                                                                                    )
+                                                                                                                                ) : (
+                                                                                                                                    <button
+                                                                                                                                        onClick={() => {
+                                                                                                                                            setRefundExpenditure(exp);
+                                                                                                                                            setRefundAmount(Math.max(0, variance).toString());
+                                                                                                                                            setShowRefundModal(true);
+                                                                                                                                        }}
+                                                                                                                                        className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
+                                                                                                                                    >
+                                                                                                                                        Cập nhật
+                                                                                                                                    </button>
+                                                                                                                                )}
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                    );
+                                                                                                                }
 
-                                                                                                                 if (!needRefund) {
-                                                                                                                     return (
-                                                                                                                         <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 flex items-center gap-4">
-                                                                                                                             <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
-                                                                                                                                 <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                                                                                                                             </div>
-                                                                                                                             <div>
-                                                                                                                                 <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Không có tiền dư</p>
-                                                                                                                                 <p className="text-[10px] text-emerald-600/60 leading-tight">Tuyệt vời! Bạn đã chi tiêu đúng hoặc vượt ngân sách ban đầu.</p>
-                                                                                                                             </div>
-                                                                                                                         </div>
-                                                                                                                     );
-                                                                                                                 }
+                                                                                                                if (!needRefund) {
+                                                                                                                    return (
+                                                                                                                        <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 flex items-center gap-4">
+                                                                                                                            <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
+                                                                                                                                <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                                                                                                            </div>
+                                                                                                                            <div>
+                                                                                                                                <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Không có tiền dư</p>
+                                                                                                                                <p className="text-[10px] text-emerald-600/60 leading-tight">Tuyệt vời! Bạn đã chi tiêu đúng hoặc vượt ngân sách ban đầu.</p>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                    );
+                                                                                                                }
 
-                                                                                                                 return (
-                                                                                                                     <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">
-                                                                                                                         <div className="flex items-center gap-4">
-                                                                                                                             <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
-                                                                                                                                 <DollarSign className="w-5 h-5 text-orange-400" />
-                                                                                                                             </div>
-                                                                                                                             <div>
-                                                                                                                                 <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>
-                                                                                                                                 <p className="text-[10px] text-black/40 leading-tight">Thực hiện hoàn trả số tiền còn dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(variance)}</p>
-                                                                                                                             </div>
-                                                                                                                         </div>
-                                                                                                                         <button
-                                                                                                                             onClick={() => {
-                                                                                                                                 setRefundExpenditure(exp);
-                                                                                                                                 setRefundAmount(Math.max(0, variance).toString());
-                                                                                                                                 setShowRefundModal(true);
-                                                                                                                             }}
-                                                                                                                             className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
-                                                                                                                         >
-                                                                                                                             Thực hiện
-                                                                                                                         </button>
-                                                                                                                     </div>
-                                                                                                                 );
-                                                                                                             })()}
-                                                                                                         </div>
-                                                                                                     )}
+                                                                                                                if (!isActualsUpdated) {
+                                                                                                                    return (
+                                                                                                                        <div className="bg-gray-100 rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                                                                                                                            <div className="flex items-center gap-4">
+                                                                                                                                <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
+                                                                                                                                    <DollarSign className="w-5 h-5 text-gray-300" />
+                                                                                                                                </div>
+                                                                                                                                <div>
+                                                                                                                                    <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>
+                                                                                                                                    <p className="text-[10px] text-black/40 leading-tight">Cập nhật đơn giá thực tế để hiện số tiền dư cần hoàn</p>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                            <span className="px-5 py-2.5 bg-gray-200 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-full cursor-not-allowed whitespace-nowrap flex-shrink-0">
+                                                                                                                                Chưa cập nhật
+                                                                                                                            </span>
+                                                                                                                        </div>
+                                                                                                                    );
+                                                                                                                }
 
-                                                                                                     {/* Nút NỘP FINAL */}
-                                                                                                     <div className="flex flex-col gap-3 pt-4 border-t border-black/5">
-                                                                                                         {(() => {
-                                                                                                             const posts = expenditurePosts[exp.id] || [];
-                                                                                                             const isPublished = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');
-                                                                                                             const isActualsUpdated = (exp.totalAmount || 0) > 0;
-                                                                                                             const variance = (exp.totalExpectedAmount || 0) - (exp.totalAmount || 0);
-                                                                                                             const needRefund = variance > 0;
-                                                                                                             const isRefundDone = exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
-                                                                                                             
-                                                                                                             const isReady = isActualsUpdated && isPublished && (!needRefund || isRefundDone);
-                                                                                                             
-                                                                                                             const reasons = [];
-                                                                                                             if (!isActualsUpdated) reasons.push("Chưa cập nhật số liệu thực tế");
-                                                                                                             if (!isPublished) reasons.push("Chưa đăng bài chia sẻ minh chứng");
-                                                                                                             if (needRefund && !isRefundDone) reasons.push("Chưa hoàn tất hoàn tiền dư");
+                                                                                                                return (
+                                                                                                                    <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">
+                                                                                                                        <div className="flex items-center gap-4">
+                                                                                                                            <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">
+                                                                                                                                <DollarSign className="w-5 h-5 text-orange-400" />
+                                                                                                                            </div>
+                                                                                                                            <div>
+                                                                                                                                <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>
+                                                                                                                                <p className="text-[10px] text-black/40 leading-tight">Thực hiện hoàn trả số tiền còn dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(variance)}</p>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <button
+                                                                                                                            onClick={() => {
+                                                                                                                                setRefundExpenditure(exp);
+                                                                                                                                setRefundAmount(Math.max(0, variance).toString());
+                                                                                                                                setShowRefundModal(true);
+                                                                                                                            }}
+                                                                                                                            className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"
+                                                                                                                        >
+                                                                                                                            Thực hiện
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                );
+                                                                                                            })()}
+                                                                                                        </div>
+                                                                                                    )}
 
-                                                                                                             return (
-                                                                                                                 <>
-                                                                                                                     <button
-                                                                                                                         onClick={async () => {
-                                                                                                                             if (!isReady) return;
-                                                                                                                             try {
-                                                                                                                                 setUploadingEvidence(true);
-                                                                                                                                 const draftPost = posts.find((p: any) => p.status === 'DRAFT');
-                                                                                                                                 if (draftPost) {
-                                                                                                                                     await feedPostService.updateStatus(Number(draftPost.id), 'PUBLISHED');
-                                                                                                                                 }
-                                                                                                                                 await expenditureService.updateEvidenceStatus(exp.id, 'SUBMITTED');
-                                                                                                                                 toast.success('Đã nộp minh chứng thành công!');
-                                                                                                                                 fetchData();
-                                                                                                                             } catch (err: any) {
-                                                                                                                                 toast.error(err.response?.data?.message || 'Nộp minh chứng thất bại.');
-                                                                                                                             } finally {
-                                                                                                                                 setUploadingEvidence(false);
-                                                                                                                             }
-                                                                                                                         }}
-                                                                                                                         disabled={uploadingEvidence || !isReady}
-                                                                                                                         className={`w-full py-4 text-white text-xs font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3 ${isReady ? 'bg-orange-400 hover:bg-orange-500' : 'bg-gray-300 cursor-not-allowed shadow-none'}`}
-                                                                                                                     >
-                                                                                                                         {uploadingEvidence ? (
-                                                                                                                             <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang nộp...</>
-                                                                                                                         ) : (
-                                                                                                                             <><Send className="w-4 h-4" /> NỘP MINH CHỨNG</>
-                                                                                                                         )}
-                                                                                                                     </button>
-                                                                                                                     {!isReady && (
-                                                                                                                         <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl">
-                                                                                                                             <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                                                                                                                 <AlertCircle className="w-3 h-3" /> Cần hoàn thành các bước sau:
-                                                                                                                             </p>
-                                                                                                                             <ul className="space-y-1">
-                                                                                                                                 {reasons.map((r, i) => (
-                                                                                                                                     <li key={i} className="text-[9px] font-bold text-amber-600/70 flex items-center gap-2">
-                                                                                                                                         <div className="w-1 h-1 rounded-full bg-amber-300" /> {r}
-                                                                                                                                     </li>
-                                                                                                                                 ))}
-                                                                                                                             </ul>
-                                                                                                                         </div>
-                                                                                                                     )}
-                                                                                                                 </>
-                                                                                                             );
-                                                                                                         })()}
-                                                                                                     </div>
-                                                                                                  </div>
+                                                                                                    {/* Nút NỘP FINAL */}
+                                                                                                    <div className="flex flex-col gap-3 pt-4 border-t border-black/5">
+                                                                                                        {(() => {
+                                                                                                            const posts = expenditurePosts[exp.id] || [];
+                                                                                                            const isPublished = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');
+                                                                                                            const isActualsUpdated = (exp.totalAmount || 0) > 0;
+                                                                                                            const variance = (exp.variance != null) ? Number(exp.variance) : ((exp.totalExpectedAmount || 0) - (exp.totalAmount || 0));
+                                                                                                            const needRefund = variance > 0;
+                                                                                                            const isRefundDone = exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
+
+                                                                                                            const isReady = isActualsUpdated && isPublished && (!needRefund || isRefundDone);
+
+                                                                                                            const reasons = [];
+                                                                                                            if (!isActualsUpdated) reasons.push("Chưa cập nhật số liệu thực tế");
+                                                                                                            if (!isPublished) reasons.push("Chưa đăng bài chia sẻ minh chứng");
+                                                                                                            if (needRefund && !isRefundDone) reasons.push("Chưa hoàn tất hoàn tiền dư");
+
+                                                                                                            return (
+                                                                                                                <>
+                                                                                                                    <button
+                                                                                                                        onClick={async () => {
+                                                                                                                            if (!isReady) return;
+                                                                                                                            try {
+                                                                                                                                setUploadingEvidence(true);
+                                                                                                                                const draftPost = posts.find((p: any) => p.status === 'DRAFT');
+                                                                                                                                if (draftPost) {
+                                                                                                                                    await feedPostService.updateStatus(Number(draftPost.id), 'PUBLISHED');
+                                                                                                                                }
+                                                                                                                                await expenditureService.updateEvidenceStatus(exp.id, 'SUBMITTED');
+                                                                                                                                toast.success('Đã nộp minh chứng thành công!');
+                                                                                                                                fetchData();
+                                                                                                                            } catch (err: any) {
+                                                                                                                                toast.error(err.response?.data?.message || 'Nộp minh chứng thất bại.');
+                                                                                                                            } finally {
+                                                                                                                                setUploadingEvidence(false);
+                                                                                                                            }
+                                                                                                                        }}
+                                                                                                                        disabled={uploadingEvidence || !isReady}
+                                                                                                                        className={`w-full py-4 text-white text-xs font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3 ${isReady ? 'bg-orange-400 hover:bg-orange-500' : 'bg-gray-300 cursor-not-allowed shadow-none'}`}
+                                                                                                                    >
+                                                                                                                        {uploadingEvidence ? (
+                                                                                                                            <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang nộp...</>
+                                                                                                                        ) : (
+                                                                                                                            <><Send className="w-4 h-4" /> NỘP MINH CHỨNG</>
+                                                                                                                        )}
+                                                                                                                    </button>
+                                                                                                                    {!isReady && (
+                                                                                                                        <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                                                                                                                            <p className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                                                                                                                <AlertCircle className="w-3 h-3" /> Cần hoàn thành các bước sau:
+                                                                                                                            </p>
+                                                                                                                            <ul className="space-y-1">
+                                                                                                                                {reasons.map((r, i) => (
+                                                                                                                                    <li key={i} className="text-[9px] font-bold text-amber-600/70 flex items-center gap-2">
+                                                                                                                                        <div className="w-1 h-1 rounded-full bg-amber-300" /> {r}
+                                                                                                                                    </li>
+                                                                                                                                ))}
+                                                                                                                            </ul>
+                                                                                                                        </div>
+                                                                                                                    )}
+                                                                                                                </>
+                                                                                                            );
+                                                                                                        })()}
+                                                                                                    </div>
+                                                                                                </div>
                                                                                             )}
 
 
@@ -1444,8 +1482,38 @@ export default function CampaignExpendituresPage() {
                             {campaign?.type === 'ITEMIZED' && (() => {
                                 const exp = expenditures.find(e => e.id === selectedExpId);
                                 if (!exp?.items || exp.items.length === 0) return null;
+
+                                // Số dư đợt trước = variance của expenditure DISBURSED gần nhất
+                                const latestDisbursed = [...expenditures].sort((a, b) => (b.id || 0) - (a.id || 0)).find(e => e.status === 'DISBURSED');
+                                const previousBalance = (latestDisbursed?.variance != null) ? Number(latestDisbursed.variance) : 0;
+
+                                // Tổng nhận kỳ này = tổng cột Tổng quyên góp (donationSummary)
+                                const currentReceived = exp.items.reduce((sum, item) => {
+                                    const donatedQty = donationSummary[item.id] ?? 0;
+                                    return sum + (donatedQty * (item.expectedPrice || 0));
+                                }, 0);
+
+                                // Tổng rút = balance hiện tại của campaign
+                                const totalWithdrawal = (campaign?.balance != null) ? Number(campaign.balance) : 0;
+
                                 return (
                                     <div className="mb-6">
+                                        {/* Tổng hợp số dư */}
+                                        <div className="grid grid-cols-3 gap-3 mb-6">
+                                            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center">
+                                                <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Số dư đợt trước</p>
+                                                <p className="text-xl font-black text-black">{new Intl.NumberFormat('vi-VN').format(previousBalance)} đ</p>
+                                            </div>
+                                            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center">
+                                                <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Tổng quyên góp</p>
+                                                <p className="text-xl font-black text-black">{new Intl.NumberFormat('vi-VN').format(currentReceived)} đ</p>
+                                            </div>
+                                            <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center">
+                                                <p className="text-[9px] font-black uppercase text-orange-400 tracking-widest mb-1">Tổng rút</p>
+                                                <p className="text-xl font-black text-orange-600">{new Intl.NumberFormat('vi-VN').format(totalWithdrawal)} đ</p>
+                                            </div>
+                                        </div>
+
                                         <div className="flex items-center gap-2 mb-4 px-1">
                                             <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center">
                                                 <DollarSign className="w-3 h-3 text-slate-400" />
@@ -1459,7 +1527,7 @@ export default function CampaignExpendituresPage() {
                                                     <tr className="bg-slate-50/50 border-b border-slate-100">
                                                         <th className="text-left px-5 py-4 font-black text-slate-400 uppercase text-[9px] tracking-widest">Tên hàng hóa</th>
                                                         <th className="px-3 py-4 font-black text-blue-500/80 uppercase text-[9px] tracking-widest text-center">Kế hoạch</th>
-                                                        <th className="px-3 py-4 font-black text-emerald-500/80 uppercase text-[9px] tracking-widest text-center">Đã nhận</th>
+                                                        <th className="px-3 py-4 font-black text-emerald-500/80 uppercase text-[9px] tracking-widest text-center">Tổng quyên góp</th>
                                                         <th className="px-3 py-4 font-black text-orange-500/80 uppercase text-[9px] tracking-widest text-center w-[10%]">%</th>
                                                     </tr>
                                                 </thead>
@@ -1478,7 +1546,7 @@ export default function CampaignExpendituresPage() {
                                                                     const planSubtotal = item.quantity * unitPrice;
                                                                     const donatedSubtotal = donatedQty * unitPrice;
                                                                     const percentage = item.quantity > 0 ? Math.min(100, (donatedQty / item.quantity) * 100) : 0;
-                                                                    
+
                                                                     totalPlanMoney += planSubtotal;
                                                                     totalDonatedMoney += donatedSubtotal;
                                                                     totalPlanQty += item.quantity;
@@ -1517,16 +1585,16 @@ export default function CampaignExpendituresPage() {
                                                                 <tr className="bg-slate-50/20 border-t-2 border-slate-100">
                                                                     <td className="px-5 py-4 font-black text-slate-800 text-[11px] uppercase tracking-wide italic">Tổng cộng</td>
                                                                     <td className="px-3 py-4 text-center">
-                                                                        <div className="text-[11px] font-black text-blue-700 leading-none mb-1">
-                                                                            {new Intl.NumberFormat('vi-VN').format(totalPlanMoney)} <span className="text-[8px] opacity-60">đ</span>
+                                                                        <div className="text-sm font-black text-blue-700 leading-tight">
+                                                                            {new Intl.NumberFormat('vi-VN').format(totalPlanMoney)} đ
                                                                         </div>
                                                                         <div className="text-[9px] font-bold text-blue-400 whitespace-nowrap">
                                                                             {totalPlanQty} vật phẩm
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-3 py-4 text-center bg-emerald-50/30">
-                                                                        <div className="text-[11px] font-black text-emerald-700 leading-none mb-1">
-                                                                            {new Intl.NumberFormat('vi-VN').format(totalDonatedMoney)} <span className="text-[8px] opacity-60">đ</span>
+                                                                        <div className="text-sm font-black text-emerald-700 leading-tight">
+                                                                            {new Intl.NumberFormat('vi-VN').format(totalDonatedMoney)} đ
                                                                         </div>
                                                                         <div className="text-[9px] font-bold text-emerald-500 whitespace-nowrap">
                                                                             {totalDonatedQty} vật phẩm
@@ -1547,7 +1615,7 @@ export default function CampaignExpendituresPage() {
 
                                         <div className="mb-8 p-6 bg-yellow-50/50 border border-yellow-100 rounded-3xl relative">
                                             <p className="text-[11px] font-bold text-yellow-800 text-center leading-relaxed">
-                                                Bạn sắp rút <strong className="text-orange-600 font-black">{new Intl.NumberFormat('vi-VN').format(campaign.balance)} đ</strong> cho đợt chi tiêu này. Tại thời điểm này, hệ thống sẽ <span className="text-orange-700 font-black underline underline-offset-2">dừng nhận donation</span> để tiến hành giải ngân.
+                                                Bạn sắp rút <strong className="text-orange-600 font-black">{new Intl.NumberFormat('vi-VN').format(totalWithdrawal)} đ</strong> cho đợt chi tiêu này. Tại thời điểm này, hệ thống sẽ <span className="text-orange-700 font-black underline underline-offset-2">dừng nhận donation</span> để tiến hành giải ngân.
                                             </p>
                                         </div>
                                     </div>
@@ -1624,7 +1692,7 @@ export default function CampaignExpendituresPage() {
                                                 <tr>
                                                     <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter">Vật phẩm</th>
                                                     <th className="px-4 py-3 text-right text-xs font-black text-gray-500 uppercase tracking-tighter bg-gray-50">
-                                                        {campaign.type === 'ITEMIZED' ? 'Đã nhận' : 'Kế hoạch'}
+                                                        {campaign.type === 'ITEMIZED' ? 'Tổng giải ngân' : 'Kế hoạch'}
                                                     </th>
                                                     <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-100">Thực tế (Nhập)</th>
                                                     <th className="px-4 py-3 text-center text-xs font-black text-gray-500 uppercase tracking-tighter">Minh chứng</th>
@@ -1644,7 +1712,7 @@ export default function CampaignExpendituresPage() {
                                                                     {campaign.type === 'ITEMIZED' ? (
                                                                         <div className="flex items-center justify-end gap-3">
                                                                             <div className="flex items-center gap-1 text-emerald-600">
-                                                                                <span className="text-[8px] font-black uppercase tracking-tighter">Đã nhận:</span>
+                                                                                <span className="text-[8px] font-black uppercase tracking-tighter">Tổng quyên góp:</span>
                                                                                 <span className="text-xs font-black">{(donationSummary[item.id] || 0)}</span>
                                                                             </div>
                                                                             <div className="flex items-center gap-1 text-black/40 border-l border-gray-200 pl-3">
@@ -1677,7 +1745,8 @@ export default function CampaignExpendituresPage() {
                                                                             <label className="text-[8px] font-black uppercase tracking-tighter text-gray-400">SL:</label>
                                                                             <input
                                                                                 type="number" min="0"
-                                                                                className="w-12 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1"
+                                                                                disabled={isRefundDone}
+                                                                                className={`w-12 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                 value={updateItems[index]?.actualQuantity}
                                                                                 onChange={(e) => handleUpdateItemChange(index, 'actualQuantity', e.target.value)}
                                                                             />
@@ -1686,7 +1755,8 @@ export default function CampaignExpendituresPage() {
                                                                             <label className="text-[8px] font-black uppercase tracking-tighter text-gray-400">ĐG:</label>
                                                                             <input
                                                                                 type="number" min="0"
-                                                                                className="w-24 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1"
+                                                                                disabled={isRefundDone}
+                                                                                className={`w-24 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                                 value={updateItems[index]?.price}
                                                                                 onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
                                                                             />
@@ -1729,39 +1799,50 @@ export default function CampaignExpendituresPage() {
                                                     const totalPlan = updateItemsData.reduce((sum, item) => sum + item.quantity * (item.expectedPrice || 0), 0);
                                                     const totalDonated = updateItemsData.reduce((sum, item) => sum + (donationSummary[item.id] || 0) * (item.expectedPrice || 0), 0);
                                                     const totalActual = updateItems.reduce((sum, item) => sum + (item.actualQuantity * item.price), 0);
+                                                    const totalReceived = (updateExpenditure.totalReceivedAmount != null) ? Number(updateExpenditure.totalReceivedAmount) : 0;
+                                                    const latestDisbursed = [...expenditures].sort((a, b) => (b.id || 0) - (a.id || 0)).find(e => e.status === 'DISBURSED');
+                                                    const previousBalance = (latestDisbursed?.variance != null) ? Number(latestDisbursed.variance) : 0;
 
                                                     const referenceTotal = isItemized ? totalDonated : totalPlan;
-                                                    const totalVariance = referenceTotal - totalActual;
+                                                    const totalVariance = isItemized ? totalReceived - totalActual : referenceTotal - totalActual;
                                                     const budgetLimit = campaign?.type === 'AUTHORIZED' ? (campaign?.balance || 0) : (updateExpenditure.totalExpectedAmount || 0);
                                                     const isOverBudget = totalActual > budgetLimit;
 
                                                     return (
                                                         <>
                                                             <tr>
-                                                                <td className="px-4 py-4 font-black text-gray-900 text-sm">TỔNG CỘNG (INVOICE TOTAL)</td>
-                                                                <td className="px-4 py-4 text-right bg-gray-50">
+                                                                <td className="px-4 py-2 font-black text-gray-900 text-sm align-middle">TỔNG CỘNG (INVOICE TOTAL)</td>
+                                                                <td className="px-4 py-2 text-right bg-gray-50 align-middle">
                                                                     <div className="text-[10px] uppercase font-black text-gray-500 mb-0.5">
-                                                                        {isItemized ? 'Tổng đã nhận' : 'Tổng Kế hoạch'}
+                                                                        {isItemized ? 'Tổng giải ngân' : 'Tổng Kế hoạch'}
                                                                     </div>
-                                                                    <div className={`text-3xl lg:text-4xl font-black ${isItemized ? 'text-emerald-600' : 'text-orange-600'}`}>
-                                                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(referenceTotal)}
-                                                                    </div>
+                                                                    {isItemized ? (
+                                                                        <div className="text-xl lg:text-2xl font-black text-emerald-600 leading-tight">
+                                                                            <div>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDonated)}</div>
+                                                                            <div className="text-[10px] font-bold text-gray-400">+ Số dư kỳ trước: {new Intl.NumberFormat('vi-VN').format(previousBalance)}</div>
+                                                                            <div className="text-2xl lg:text-3xl font-black text-emerald-800 mt-1">= {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceived)}</div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className={`text-3xl lg:text-4xl font-black text-orange-600`}>
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(referenceTotal)}
+                                                                        </div>
+                                                                    )}
                                                                 </td>
-                                                                <td className="px-4 py-4 text-right bg-orange-100/50">
+                                                                <td className="px-4 py-2 text-right bg-orange-100/50 align-middle">
                                                                     <div className="text-[10px] uppercase font-black text-orange-400 mb-0.5 whitespace-nowrap">Tổng Thực tế đã chi</div>
                                                                     <div className={`text-2xl lg:text-3xl font-black ${isOverBudget ? 'text-rose-600' : 'text-emerald-800'}`}>
                                                                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalActual)}
                                                                     </div>
                                                                     <div className={`mt-2 p-3 rounded-2xl border-2 ${totalVariance < 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-gray-50 border-gray-200 text-gray-900'}`}>
                                                                         <div className="text-[10px] uppercase font-black opacity-40 mb-1">
-                                                                            {totalVariance < 0 ? 'CHÚ Ý: Vượt hạn mức chi phí' : 'Số dư cần hoàn'}
+                                                                            {isItemized ? 'Số dư' : (totalVariance < 0 ? 'Vượt hạn mức chi phí' : 'Số dư cần hoàn')}
                                                                         </div>
                                                                         <div className="text-xl font-black">
-                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalVariance)}
+                                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(isItemized ? (totalReceived - totalActual) : totalVariance)}
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-4 bg-gray-100"></td>
+                                                                <td className="px-4 py-2 bg-gray-100 align-middle"></td>
                                                             </tr>
                                                             {isOverBudget && (
                                                                 <tr className="bg-rose-50">
@@ -1777,15 +1858,15 @@ export default function CampaignExpendituresPage() {
                                             </tfoot>
                                         </table>
                                     </div>
-                                </div >
+                                </div>
                                 <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 shrink-0">
                                     <button
                                         type="button"
                                         onClick={handleUpdateSubmit}
-                                        disabled={updating}
-                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-400 hover:bg-orange-500 text-white'}`}
+                                        disabled={updating || isRefundDone}
+                                        className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium sm:w-auto sm:text-sm ${updating || isRefundDone ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-400 hover:bg-orange-500 text-white'}`}
                                     >
-                                        {updating ? 'Đang lưu...' : 'Lưu cập nhật'}
+                                        {updating ? 'Đang lưu...' : isRefundDone ? 'Đã hoàn tiền (Không thể sửa)' : 'Lưu cập nhật'}
                                     </button>
                                     <button
                                         type="button"
@@ -1795,11 +1876,10 @@ export default function CampaignExpendituresPage() {
                                         Hủy
                                     </button>
                                 </div>
-                            </div >
-                        </div >
-                    </div >
-                )
-                }
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Create Post Modal */}
                 {
@@ -1816,8 +1896,8 @@ export default function CampaignExpendituresPage() {
                                 campaignTitlesMap={{ [campaign.id]: campaign.title }}
                                 initialData={currentDraftPost ? {
                                     ...currentDraftPost,
-                                    attachments: (currentDraftPost.medias && currentDraftPost.medias.length > 0) 
-                                        ? currentDraftPost.medias 
+                                    attachments: (currentDraftPost.medias && currentDraftPost.medias.length > 0)
+                                        ? currentDraftPost.medias
                                         : (currentDraftPost.attachments && currentDraftPost.attachments.length > 0)
                                             ? currentDraftPost.attachments
                                             : evidencePhotos,
@@ -1857,13 +1937,13 @@ export default function CampaignExpendituresPage() {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData();
+                                    fetchData(true);
                                 }}
                                 onPostUpdated={() => {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData();
+                                    fetchData(true);
                                 }}
                             />
                         );
@@ -1924,18 +2004,18 @@ export default function CampaignExpendituresPage() {
                             {/* Bank info cards */}
                             {(() => {
                                 const payoutTx = refundExpenditure.transactions?.filter((t: any) => t.type === 'PAYOUT').slice(-1)[0];
-                                const userBank = { name: payoutTx?.toAccountHolderName, bank: payoutTx?.toBankCode, account: payoutTx?.toAccountNumber };
                                 const adminBank = { name: payoutTx?.fromAccountHolderName, bank: payoutTx?.fromBankCode, account: payoutTx?.fromAccountNumber };
+                                const userBank = userBankAccounts.find(b => b.status === 'APPROVED') || userBankAccounts[0];
                                 return (
                                     <div className="space-y-3">
                                         {/* User (fund owner) — sender of refund */}
                                         <div className="bg-orange-50 rounded-xl p-3.5 border border-orange-200">
                                             <p className="text-[9px] font-black uppercase text-orange-400 tracking-widest mb-2">Người gửi (Chủ quỹ)</p>
-                                            {userBank.account ? (
+                                            {userBank ? (
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                                                    <div><span className="text-gray-400">Ngân hàng: </span><span className="font-bold text-gray-800">{userBank.bank || '—'}</span></div>
-                                                    <div><span className="text-gray-400">Số TK: </span><span className="font-bold text-gray-800">{userBank.account}</span></div>
-                                                    <div className="col-span-2"><span className="text-gray-400">Chủ TK: </span><span className="font-bold text-gray-800">{userBank.name || '—'}</span></div>
+                                                    <div><span className="text-gray-400">Ngân hàng: </span><span className="font-bold text-gray-800">{userBank.bankCode || '—'}</span></div>
+                                                    <div><span className="text-gray-400">Số TK: </span><span className="font-bold text-gray-800">{userBank.accountNumber}</span></div>
+                                                    <div className="col-span-2"><span className="text-gray-400">Chủ TK: </span><span className="font-bold text-gray-800">{userBank.accountHolderName || '—'}</span></div>
                                                 </div>
                                             ) : (
                                                 <p className="text-xs text-orange-400 italic">Chưa có thông tin tài khoản</p>
@@ -2043,7 +2123,8 @@ export default function CampaignExpendituresPage() {
                                         setRefundFilePreview(null);
                                         setRefundFile(null);
                                         setRefundAmount('');
-                                        fetchData();
+                                        // Load lại dữ liệu để hiện đúng trạng thái mà không cần reload trang
+                                        fetchData(true);
                                     } catch (err: any) {
                                         toast.error(err.response?.data?.message || 'Gửi hoàn tiền thất bại');
                                     } finally {
