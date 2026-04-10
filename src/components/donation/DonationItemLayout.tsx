@@ -11,6 +11,7 @@ type DonationItemLayoutProps = {
     amount: number;
     isManualMode: boolean;
     items: Record<string, number>;
+    uiQuantities: Record<string, number>;
     visibleItems: ExpenditureItem[];
     page: number;
     itemsPerPage: number;
@@ -22,8 +23,9 @@ type DonationItemLayoutProps = {
 
     onPresetClick: (amount: number) => void;
     onAmountChange: (amount: number) => void;
-    onItemSelect: (itemId: string) => void;
+    onItemSelect: (itemId: string, qty: number) => void;
     onQuantityChange: (itemId: string, diff: number) => void;
+    onItemDeselect: (itemId: string) => void;
     onPageChange: (page: number) => void;
     onTipChange: (percent: number) => void;
     onPaymentMethodChange: (method: PaymentMethod) => void;
@@ -39,6 +41,7 @@ export default function DonationItemLayout({
     amount,
     isManualMode,
     items,
+    uiQuantities,
     visibleItems,
     page,
     itemsPerPage,
@@ -52,6 +55,7 @@ export default function DonationItemLayout({
     onAmountChange,
     onItemSelect,
     onQuantityChange,
+    onItemDeselect,
     onPageChange,
     onTipChange,
     onPaymentMethodChange,
@@ -92,11 +96,13 @@ export default function DonationItemLayout({
                 <ItemList
                     visibleItems={visibleItems}
                     selectedItems={items}
+                    uiQuantities={uiQuantities}
                     page={page}
                     itemsPerPage={itemsPerPage}
                     onPageChange={onPageChange}
                     onItemSelect={onItemSelect}
                     onQuantityChange={onQuantityChange}
+                    onItemDeselect={onItemDeselect}
                     amount={amount}
                 />
             </div>

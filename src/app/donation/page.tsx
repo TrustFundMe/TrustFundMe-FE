@@ -32,6 +32,7 @@ function DonationContent() {
   const [campaign, setCampaign] = useState<CampaignDto | null>(null);
   const [expenditureItems, setExpenditureItems] = useState<ExpenditureItem[]>([]);
   const [items, setItems] = useState<Record<string, number>>({});
+  const [uiQuantities, setUiQuantities] = useState<Record<string, number>>({});
   const [isManualMode, setIsManualMode] = useState(false);
   const [tipPercent, setTipPercent] = useState(10);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payos');
@@ -89,6 +90,11 @@ function DonationContent() {
             }))
             .filter(item => item.quantityLeft > 0);
           setExpenditureItems(mappedItems);
+
+          // Initialize UI quantities
+          const initialQtys: Record<string, number> = {};
+          mappedItems.forEach(i => initialQtys[i.id] = 1);
+          setUiQuantities(initialQtys);
         } catch (error) {
           console.error('Error fetching data:', error);
         }
@@ -116,49 +122,53 @@ function DonationContent() {
     setPage(1);
   };
 
-  const handleItemSelect = async (itemId: string) => {
+  const handleItemSelect = async (itemId: string, qty: number) => {
     setIsManualMode(true);
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
 
-    const isCurrentlySelected = !!items[itemId];
-    const newItems = { ...items };
-
-    if (isCurrentlySelected) {
-      // Bỏ chọn → gọi release API
-      if (item.quantityLeft === 1) {
-        try {
-          await expenditureService.releaseReservation(parseInt(itemId));
-        } catch {}
-      }
-      delete newItems[itemId];
-    } else {
-      // Chọn mới → mặc định qty = 1
-      const qty = 1;
-      newItems[itemId] = qty;
-
-      // Nếu là sản phẩm cuối cùng → gọi reserve API
-      if (item.quantityLeft === 1) {
-        try {
-          const res = await expenditureService.reserveItem(parseInt(itemId), qty);
-          if (!res.success) {
-            alert(res.message || 'Sản phẩm cuối cùng đã có người đang chọn');
-            delete newItems[itemId];
-            setItems({ ...items }); // revert
-            return;
-          }
-        } catch (err: any) {
-          if (err.response?.status === 409) {
-            alert('Sản phẩm cuối cùng đã có người đang chọn');
-            delete newItems[itemId];
-            setItems({ ...items }); // revert
-            return;
-          }
-          console.warn('Reserve API error:', err);
+    // Nếu chọn HẾT số lượng còn lại → gọi reserve API
+    if (qty === item.quantityLeft) {
+      console.log(`[Selection] Reserving item ${itemId} because quantity selected (${qty}) matches quantityLeft (${item.quantityLeft})`);
+      try {
+        const res = await expenditureService.reserveItem(parseInt(itemId), qty);
+        if (!res.success) {
+          alert(res.message || 'Sản phẩm này đã có người khác đang chọn giữ chỗ');
+          return;
         }
+      } catch (err: any) {
+        if (err.response?.status === 409) {
+          alert('Sản phẩm này đã có người khác đang chọn giữ chỗ');
+          return;
+        }
+        console.warn('Reserve API error:', err);
       }
     }
 
+    const newItems = { ...items, [itemId]: qty };
+    setItems(newItems);
+
+    const newTotal = Object.entries(newItems).reduce((sum, [id, q]) => {
+      const i = expenditureItems.find(x => x.id === id);
+      return sum + (i ? i.price * q : 0);
+    }, 0);
+    setAmount(newTotal);
+  };
+
+  const handleItemDeselect = async (itemId: string) => {
+    const item = expenditureItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    // Nếu đang giữ chỗ (chọn hết số lượng) thì nhả chỗ
+    if (items[itemId] === item.quantityLeft) {
+      console.log(`[Deselection] Releasing reservation for item ${itemId} because it was fully selected`);
+      try {
+        await expenditureService.releaseReservation(parseInt(itemId));
+      } catch { }
+    }
+
+    const newItems = { ...items };
+    delete newItems[itemId];
     setItems(newItems);
 
     const newTotal = Object.entries(newItems).reduce((sum, [id, qty]) => {
@@ -168,34 +178,48 @@ function DonationContent() {
     setAmount(newTotal);
   };
 
-  const handleItemChange = (itemId: string, diff: number) => {
-    setIsManualMode(true);
+  const handleItemChange = async (itemId: string, diff: number) => {
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
 
-    const currentQty = items[itemId] || 0;
-    const newQty = Math.min(item.quantityLeft, Math.max(0, currentQty + diff));
+    const currentQty = uiQuantities[itemId] || 1;
+    const newQty = Math.min(item.quantityLeft, Math.max(1, currentQty + diff));
 
-    // Khi giảm qty từ bằng quantityLeft xuống thấp hơn → release
-    if (currentQty === item.quantityLeft && newQty < item.quantityLeft) {
-      expenditureService.releaseReservation(parseInt(itemId)).catch(() => {});
+    setUiQuantities(prev => ({ ...prev, [itemId]: newQty }));
+
+    // If item is already selected, update its contribution to the donation
+    if (items[itemId]) {
+      // Handle Reservation edge cases during quantity change
+      if (items[itemId] === item.quantityLeft && newQty < item.quantityLeft) {
+        // Vừa rồi là giữ hết → giờ giảm xuống → nhả reserve
+        console.log(`[Quantity Change] Releasing reservation for item ${itemId} because qty decreased from ${items[itemId]} to ${newQty}`);
+        try {
+          await expenditureService.releaseReservation(parseInt(itemId));
+        } catch { }
+      } else if (items[itemId] < item.quantityLeft && newQty === item.quantityLeft) {
+        // Vừa rồi chưa giữ → giờ tăng lên kịch trần → reserve
+        console.log(`[Quantity Change] Reserving item ${itemId} because qty increased from ${items[itemId]} to ${newQty}`);
+        try {
+          const res = await expenditureService.reserveItem(parseInt(itemId), newQty);
+          if (!res.success) {
+            alert(res.message || 'Số lượng cuối cùng của sản phẩm này đã có người giữ');
+            return; // Don't update to newQty if reservation fails
+          }
+        } catch (err: any) {
+          alert('Không thể giữ chỗ cho sản phẩm này');
+          return;
+        }
+      }
+
+      const newItems = { ...items, [itemId]: newQty };
+      setItems(newItems);
+
+      const newTotal = Object.entries(newItems).reduce((sum, [id, qty]) => {
+        const i = expenditureItems.find(x => x.id === id);
+        return sum + (i ? i.price * qty : 0);
+      }, 0);
+      setAmount(newTotal);
     }
-
-    // Khi tăng qty lên bằng đúng quantityLeft → reserve
-    if (currentQty < item.quantityLeft && newQty === item.quantityLeft) {
-      expenditureService.reserveItem(parseInt(itemId), newQty).catch(() => {});
-    }
-
-    const newItems = { ...items, [itemId]: newQty };
-    if (newQty === 0) delete newItems[itemId];
-
-    setItems(newItems);
-
-    const newTotal = Object.entries(newItems).reduce((sum, [id, qty]) => {
-      const i = expenditureItems.find(x => x.id === id);
-      return sum + (i ? i.price * qty : 0);
-    }, 0);
-    setAmount(newTotal);
   };
 
   const handleSubmit = async () => {
@@ -286,10 +310,10 @@ function DonationContent() {
               if (response.donationId) {
                 try {
                   await paymentService.verifyPayment(response.donationId);
-                } catch {}
+                } catch { }
 
                 // Sync quantity in background (non-blocking)
-                paymentService.syncQuantity(response.donationId).catch(() => {});
+                paymentService.syncQuantity(response.donationId).catch(() => { });
               }
 
               // Refresh quantityLeft from backend after successful payment
@@ -394,6 +418,7 @@ function DonationContent() {
           amount={amount}
           isManualMode={isManualMode}
           items={items}
+          uiQuantities={uiQuantities}
           visibleItems={visibleItems}
           page={page}
           itemsPerPage={ITEMS_PER_PAGE}
@@ -406,6 +431,7 @@ function DonationContent() {
           onAmountChange={handleAmountInput}
           onItemSelect={handleItemSelect}
           onQuantityChange={handleItemChange}
+          onItemDeselect={handleItemDeselect}
           onPageChange={setPage}
           onTipChange={setTipPercent}
           onPaymentMethodChange={setPaymentMethod}

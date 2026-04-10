@@ -22,6 +22,7 @@ export interface ExpenditureItem {
     category: string;
     quantity: number;
     quantityLeft?: number;
+    reservations?: number;
     actualQuantity?: number;
     price: number;
     expectedPrice: number;

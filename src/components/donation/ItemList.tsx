@@ -4,22 +4,26 @@ import ItemRow from './ItemRow';
 type ItemListProps = {
     visibleItems: ExpenditureItem[];
     selectedItems: Record<string, number>;
+    uiQuantities: Record<string, number>;
     page: number;
     itemsPerPage: number;
     onPageChange: (page: number) => void;
-    onItemSelect: (itemId: string) => void;
+    onItemSelect: (itemId: string, qty: number) => void;
     onQuantityChange: (itemId: string, diff: number) => void;
+    onItemDeselect: (itemId: string) => void;
     amount: number;
 };
 
 export default function ItemList({
     visibleItems,
     selectedItems,
+    uiQuantities,
     page,
     itemsPerPage,
     onPageChange,
     onItemSelect,
     onQuantityChange,
+    onItemDeselect,
     amount
 }: ItemListProps) {
     const totalPages = Math.ceil(visibleItems.length / itemsPerPage);
@@ -34,6 +38,9 @@ export default function ItemList({
                     <li><span className="font-bold text-red-700">Cách 1:</span> Nhập số tiền ở trên, hệ thống sẽ tự lọc các vật phẩm phù hợp.</li>
                     <li><span className="font-bold text-red-700">Cách 2:</span> Chọn trực tiếp vật phẩm bên dưới, tổng tiền sẽ tự cộng dồn.</li>
                 </ul>
+                <div className="mt-2 pt-2 border-t border-red-100 text-orange-600 font-medium">
+                    ⚠️ Có thể điều chỉnh số lượng trước hoặc sau khi chọn.
+                </div>
             </div>
 
             <div className="flex-1 flex flex-col justify-between min-h-0 border border-gray-200 bg-white overflow-hidden">
@@ -47,10 +54,11 @@ export default function ItemList({
                             <ItemRow
                                 key={item.id}
                                 item={item}
-                                quantity={selectedItems[item.id] || 0}
-                                isSelected={(selectedItems[item.id] || 0) > 0}
-                                onSelect={() => onItemSelect(item.id)}
+                                quantity={uiQuantities[item.id] || 1}
+                                isSelected={!!selectedItems[item.id]}
+                                onSelect={(qty) => onItemSelect(item.id, qty)}
                                 onQuantityChange={(diff) => onQuantityChange(item.id, diff)}
+                                onDeselect={() => onItemDeselect(item.id)}
                             />
                         ))
                     )}
