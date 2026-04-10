@@ -58,7 +58,10 @@ const FeedPostDetailPage = () => {
   const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<FeedPost[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  /** Sidebar "Chiến dịch khác" — mọi chiến dịch (khám phá) */
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string; coverImage?: string }[]>([]);
+  /** Modal tạo/sửa bài — chỉ chiến dịch của user đang đăng nhập */
+  const [myCampaignsList, setMyCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -93,6 +96,7 @@ const FeedPostDetailPage = () => {
       mediaService.getMediaByPostId(id).then((mediaList) => {
         if (!mediaList?.length) return;
         const attachments = mediaList.map((m) => ({
+          id: m.id,
           type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
           url: m.url,
           name: m.fileName,
@@ -208,6 +212,19 @@ const FeedPostDetailPage = () => {
     loadPost();
   }, [loadPost]);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setMyCampaignsList([]);
+      return;
+    }
+    campaignService
+      .getByFundOwner(Number(user.id))
+      .then((mine) =>
+        setMyCampaignsList(mine.map((c) => ({ id: c.id, title: c.title ?? "" })))
+      )
+      .catch(() => setMyCampaignsList([]));
+  }, [user]);
+
   // Restore scroll when modal closes — fix Radix Dialog scroll lock
   useEffect(() => {
     if (!editModalOpen && !flagModalOpen) {
@@ -239,7 +256,7 @@ const FeedPostDetailPage = () => {
   if (loading) {
     return (
       <DanboxLayout header={4} footer={2}>
-        <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[200px]">
+        <div className="flex justify-center items-center" style={{ minHeight: "calc(100vh - 120px)" }}>
           <div className="animate-spin w-8 h-8 border-4 border-[#ff5e14] border-t-transparent rounded-full" />
         </div>
       </DanboxLayout>
@@ -329,7 +346,7 @@ const FeedPostDetailPage = () => {
           <CreateOrEditPostModal
             isOpen={editModalOpen}
             onClose={() => setEditModalOpen(false)}
-            campaignsList={campaignsList}
+            campaignsList={myCampaignsList}
             campaignTitlesMap={campaignTitlesMap}
             initialData={post}
             onPostUpdated={loadPost}

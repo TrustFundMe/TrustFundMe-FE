@@ -86,20 +86,25 @@ export default function MyFeedPage() {
   }, [authLoading, isAuthenticated, user, router, loadMyPosts]);
 
   useEffect(() => {
-    campaignService.getAll(0, 100).then((res: { content?: { id: number; title?: string; fundOwnerId?: number }[] } | null) => {
-      const camps = Array.isArray(res) ? res : (res?.content ?? []);
-      const titles: Record<string, string> = {};
-      const list: { id: number; title: string }[] = [];
-      camps.forEach(c => {
-        const title = c.title ?? "";
-        titles[String(c.id)] = title;
-        if (user?.id && Number(c.fundOwnerId) === Number(user.id)) {
+    if (!user?.id) {
+      setCampaignTitles({});
+      setCampaignsList([]);
+      return;
+    }
+    campaignService
+      .getByFundOwner(Number(user.id))
+      .then((mine) => {
+        const titles: Record<string, string> = {};
+        const list: { id: number; title: string }[] = [];
+        mine.forEach((c) => {
+          const title = c.title ?? "";
+          titles[String(c.id)] = title;
           list.push({ id: c.id, title });
-        }
-      });
-      setCampaignTitles(titles);
-      setCampaignsList(list);
-    }).catch(() => { /* non-critical */ });
+        });
+        setCampaignTitles(titles);
+        setCampaignsList(list);
+      })
+      .catch(() => { /* non-critical */ });
   }, [user]);
 
   useEffect(() => {

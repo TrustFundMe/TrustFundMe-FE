@@ -162,6 +162,11 @@ export const mediaService = {
         await api.patch(`/api/media/${id}/status`, null, { params: { status } });
     },
 
+    /** Set postId = null — removes image association from a post without deleting the file. */
+    async unlinkFromPost(id: number): Promise<void> {
+        await api.delete(`/api/media/${id}/post`);
+    },
+
     async getMediaById(id: number): Promise<MediaUploadResponse> {
         const res = await api.get<MediaUploadResponse>(`/api/media/${id}`);
         return res.data;
@@ -183,8 +188,14 @@ export const mediaService = {
     },
 
     async getMediaByPostId(postId: number): Promise<MediaUploadResponse[]> {
-        const res = await api.get<MediaUploadResponse[]>(`/api/media/posts/${postId}`);
-        return res.data;
+        try {
+            const res = await api.get<MediaUploadResponse[]>(`/api/media/posts/${postId}`);
+            if (Array.isArray(res.data)) return res.data;
+            return [];
+        } catch (err) {
+            console.warn(`[mediaService] getMediaByPostId(${postId}) failed:`, err);
+            return [];
+        }
     },
 
     async getMediaByExpenditureId(expenditureId: number): Promise<MediaUploadResponse[]> {

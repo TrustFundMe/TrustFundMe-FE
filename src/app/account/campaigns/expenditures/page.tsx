@@ -1896,11 +1896,9 @@ export default function CampaignExpendituresPage() {
                                 campaignTitlesMap={{ [campaign.id]: campaign.title }}
                                 initialData={currentDraftPost ? {
                                     ...currentDraftPost,
-                                    attachments: (currentDraftPost.medias && currentDraftPost.medias.length > 0)
-                                        ? currentDraftPost.medias
-                                        : (currentDraftPost.attachments && currentDraftPost.attachments.length > 0)
-                                            ? currentDraftPost.attachments
-                                            : evidencePhotos,
+                                    attachments: (currentDraftPost.attachments && currentDraftPost.attachments.length > 0)
+                                        ? currentDraftPost.attachments
+                                        : evidencePhotos,
                                     author: { id: String(currentDraftPost.authorId || ''), name: '', avatar: '' },
                                     liked: false,
                                     comments: [],

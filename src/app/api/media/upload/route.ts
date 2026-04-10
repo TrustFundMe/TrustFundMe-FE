@@ -123,14 +123,26 @@ export async function POST(request: NextRequest) {
           const mediaRecord = await registerRes.json();
           return NextResponse.json(mediaRecord);
         }
-        // If register fails, still return the URL (upload succeeded)
-        console.warn("[media/upload] register failed with", registerRes.status, "— returning URL only");
+
+        const registerErrText = await registerRes.text().catch(() => "");
+        console.warn("[media/upload] register failed with", registerRes.status, registerErrText, "— returning URL-only fallback");
       } catch (regErr) {
         console.warn("[media/upload] register error (non-fatal):", regErr);
       }
 
-      // Fallback: return minimal response if register failed
-      return NextResponse.json({ url: publicUrl });
+      // Fallback: Supabase upload succeeded but DB register failed.
+      // Return a minimal valid MediaUploadResponse so callers get the URL.
+      // id=0 signals the DB record is missing — callers should not rely on id in this case.
+      return NextResponse.json({
+        id: 0,
+        url: publicUrl,
+        mediaType: registerPayload.mediaType ?? "PHOTO",
+        fileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        createdAt: new Date().toISOString(),
+        status: "PENDING",
+      });
     }
 
     // ── Path B: proxy multipart to media-service (supabaseAdmin was null) ──

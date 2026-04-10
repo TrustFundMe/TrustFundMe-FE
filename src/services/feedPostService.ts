@@ -4,6 +4,8 @@ import type {
   FeedPostDto,
   CreateFeedPostRequest,
   UpdateFeedPostRequest,
+  FeedPostRevisionDto,
+  RevisionPage,
 } from "@/types/feedPost";
 import { mediaService } from "@/services/mediaService";
 
@@ -124,11 +126,31 @@ export const feedPostService = {
 
   async uploadImage(file: File, postId?: number): Promise<{ url: string; mediaId: number }> {
     const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, "PHOTO");
-    return { url: result.url ?? "", mediaId: result.id };
+    if (!result.url) throw new Error("Upload thất bại: không nhận được URL từ media service.");
+    return { url: result.url, mediaId: result.id ?? 0 };
   },
 
   async lockPost(id: number): Promise<FeedPostDto> {
     const res = await api.patch<FeedPostDto>(API_ENDPOINTS.FEED_POSTS.ADMIN_LOCK(id));
+    return res.data;
+  },
+
+  /** Paginated revision history for a post. No auth required for PUBLISHED posts. */
+  async getRevisions(postId: number, params?: { page?: number; size?: number }): Promise<RevisionPage> {
+    const requestedSize = params?.size ?? 10;
+    const size = Math.min(Math.max(requestedSize, 1), 50);
+    const res = await api.get<RevisionPage>(`/api/feed-posts/${postId}/revisions`, {
+      params: { page: params?.page ?? 0, size },
+    });
+    if (Array.isArray(res.data)) {
+      return { content: res.data as FeedPostRevisionDto[], totalElements: (res.data as FeedPostRevisionDto[]).length, totalPages: 1 };
+    }
+    return res.data;
+  },
+
+  /** Single revision detail */
+  async getRevisionById(postId: number, revisionId: number): Promise<FeedPostRevisionDto> {
+    const res = await api.get<FeedPostRevisionDto>(`/api/feed-posts/${postId}/revisions/${revisionId}`);
     return res.data;
   },
 };

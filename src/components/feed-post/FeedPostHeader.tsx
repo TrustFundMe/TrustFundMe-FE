@@ -11,6 +11,7 @@ interface FeedPostHeaderProps {
   expenditure?: Expenditure | null;
   onToggleLike?: () => void;
   onToggleFlag?: () => void;
+  onViewHistory?: () => void;
 }
 
 export default function FeedPostHeader({
@@ -18,6 +19,7 @@ export default function FeedPostHeader({
   expenditure,
   onToggleLike,
   onToggleFlag,
+  onViewHistory,
 }: FeedPostHeaderProps) {
   const formatTimeAgo = (date: string) => {
     const now = new Date();
@@ -72,12 +74,40 @@ export default function FeedPostHeader({
           </div>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
               opacity: 0.5,
               fontSize: 12,
               fontFamily: "var(--font-dm-sans)",
+              flexWrap: "wrap",
             }}
           >
-            {formatTimeAgo(post.createdAt)}
+            <span>{formatTimeAgo(post.createdAt)}</span>
+            {post.hasRevisions && post.updatedAt && (
+              <>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onViewHistory?.(); }}
+                  style={{
+                    border: "none",
+                    background: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: "#1A685B",
+                    fontWeight: 600,
+                    fontFamily: "var(--font-dm-sans)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                    opacity: 1,
+                  }}
+                >
+                  Đã chỉnh sửa
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

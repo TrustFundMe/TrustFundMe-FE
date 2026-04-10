@@ -28,6 +28,8 @@ export type FeedPostDto = {
   isLiked?: boolean;
   isPinned?: boolean;
   isLocked?: boolean;
+  /** True when the post has at least one revision snapshot (edited after feature launch). Use this — NOT updatedAt vs createdAt — to show the "Đã chỉnh sửa" label. */
+  hasRevisions?: boolean;
   attachments?: { id?: number; type?: string; url: string; fileName?: string; fileSize?: number; mimeType?: string; displayOrder?: number }[];
 };
 
@@ -51,6 +53,7 @@ export type FeedPostComment = {
 };
 
 export type FeedPostAttachment = {
+  id?: number;
   type: "image" | "file";
   url: string;
   name?: string;
@@ -85,6 +88,8 @@ export type FeedPost = {
   viewCount: number;
   isPinned: boolean;
   isLocked: boolean;
+  /** True when the post has at least one revision snapshot (edited after feature launch). */
+  hasRevisions?: boolean;
 };
 
 export type CreateFeedPostRequest = {
@@ -117,4 +122,33 @@ export type UpdateFeedPostRequest = {
   title?: string | null;
   content?: string;
   status?: string;
+};
+
+/** One item from media_snapshot_json */
+export type RevisionMediaItem = {
+  mediaId?: number;
+  url: string;
+  mediaType?: string;
+  sortOrder?: number;
+};
+
+/** Revision snapshot — state of post BEFORE an edit */
+export type FeedPostRevisionDto = {
+  id: number;
+  postId: number;
+  revisionNo: number;
+  title: string | null;
+  content: string;
+  status: string;
+  mediaSnapshot: RevisionMediaItem[];
+  editedBy: number;
+  editedByName: string | null;
+  editNote: string | null;
+  createdAt: string;
+};
+
+export type RevisionPage = {
+  content: FeedPostRevisionDto[];
+  totalElements: number;
+  totalPages: number;
 };
