@@ -18,6 +18,7 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Aurora from '@/components/ui/Aurora';
 
 // --- Data & Mocks ---
 
@@ -54,7 +55,7 @@ const pendingTasks = [
 // --- Sub-components ---
 
 const StatCard = ({ icon: Icon, label, value, progress, footer, bgColor, iconColor }: any) => (
-  <div className={`p-4 rounded-[20px] ${bgColor} border border-white/50 backdrop-blur-sm flex flex-col justify-between`}>
+  <div className={`p-4 rounded-[20px] ${bgColor.replace('/30', '/20').replace('/35', '/25').replace('/40', '/30')} border border-white/50 backdrop-blur-md flex flex-col justify-between`}>
     <div className="flex justify-between items-start">
       <div className={`h-8 w-8 rounded-xl bg-white flex items-center justify-center ${iconColor} shadow-sm`}>
         <Icon className="h-4 w-4" />
@@ -135,7 +136,7 @@ const PerformanceChart = () => (
 );
 
 const TimelineView = () => (
-  <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+  <div className="p-6 flex flex-col h-full overflow-hidden">
     <div className="flex justify-between items-center mb-6">
       <h3 className="text-base font-black text-gray-900">Timeline Project</h3>
       <div className="bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 flex items-center gap-1.5">
@@ -174,7 +175,7 @@ const TimelineView = () => (
 );
 
 const Leaderboard = () => (
-  <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
+  <div className="p-6 flex flex-col h-full overflow-hidden">
     <div className="flex justify-between items-center mb-6">
       <h3 className="text-base font-black text-gray-900">Leaderboard <span className="text-gray-400 font-bold">(12)</span></h3>
       <button className="text-[10px] font-black text-gray-500 flex items-center gap-1 hover:text-gray-900">
@@ -202,7 +203,7 @@ const Leaderboard = () => (
 );
 
 const TaskTable = () => (
-  <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full min-h-0 overflow-hidden">
+  <div className="p-6 flex flex-col h-full min-h-0 overflow-hidden">
     <div className="flex items-center justify-between mb-6 flex-shrink-0">
       <h3 className="text-base font-black text-gray-900">Recommended Task</h3>
       <div className="flex items-center gap-3">
@@ -258,51 +259,68 @@ const TaskTable = () => (
 
 export default function StaffDashboard() {
   return (
-    <div className="h-full flex flex-col p-2 bg-[#f8fafc] overflow-hidden gap-4">
-
-      {/* Dashboard Header */}
-      <div className="flex items-center justify-between px-4 flex-shrink-0">
-          <h1 className="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-            <LayoutGrid className="w-5 h-5 text-[#446b5f]" />
-            Tổng quan công việc
-          </h1>
-          <button 
-            onClick={() => window.location.reload()}
-            className="h-10 w-10 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95"
-            title="Tải lại bảng điều khiển"
-          >
-            <RefreshCw className="h-5 w-5 transition-transform group-hover:rotate-180" />
-          </button>
+    <div className="h-full relative flex flex-col p-4 bg-slate-50/40 dark:bg-zinc-950/40 overflow-hidden gap-4">
+      {/* Background Aurora */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-30">
+        <Aurora
+          colorStops={["#4ADE80", "#86EFAC", "#DCFCE7"]}
+          blend={0.5}
+          amplitude={1.0}
+          speed={0.8}
+        />
       </div>
 
-      {/* Top Section */}
-      <div className="flex-1 min-h-0 flex gap-4">
-        {/* Unified Left Sidebar Card */}
-        <div className="flex-[3.5] bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col gap-8 overflow-hidden">
-          <div className="grid grid-cols-2 gap-4 flex-shrink-0">
-            {taskStats.map((stat, i) => (
-              <StatCard key={i} {...stat} />
-            ))}
-          </div>
-          <div className="flex-1 min-h-0">
-            <PerformanceChart />
-          </div>
+      <div className="relative z-10 flex flex-col h-full gap-4">
+        {/* Dashboard Header */}
+        <div className="flex items-center justify-between px-2 flex-shrink-0">
+            <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+              <LayoutGrid className="w-5 h-5 text-[#1A685B]" />
+              Bảng điều khiển
+            </h1>
+            <button 
+              onClick={() => window.location.reload()}
+              className="h-10 w-10 rounded-2xl border border-white/50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md flex items-center justify-center text-gray-400 hover:text-[#1A685B] transition shadow-sm group active:scale-95"
+              title="Tải lại bảng điều khiển"
+            >
+              <RefreshCw className="h-5 w-5 transition-transform group-hover:rotate-180" />
+            </button>
         </div>
 
-        {/* Middle/Bottom Right Section */}
-        <div className="flex-[8.5] flex flex-col gap-4 min-h-0">
-          {/* Top Row: Timeline & Leaderboard */}
-          <div className="flex-[4] min-h-0 flex gap-4">
-            <div className="flex-[7] min-h-0">
-              <TimelineView />
+        {/* Top Section */}
+        <div className="flex-1 min-h-0 flex gap-4">
+          {/* Unified Left Sidebar Card */}
+          <div className="flex-[3.5] bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md p-6 rounded-[32px] shadow-sm border border-white/40 dark:border-zinc-800/40 flex flex-col gap-8 overflow-hidden">
+            <div className="grid grid-cols-2 gap-4 flex-shrink-0">
+              {taskStats.map((stat, i) => (
+                <StatCard key={i} {...stat} />
+              ))}
             </div>
-            <div className="flex-[4] min-h-0">
-              <Leaderboard />
+            <div className="flex-1 min-h-0">
+              <PerformanceChart />
             </div>
           </div>
-          {/* Bottom Row: Recommended Tasks */}
-          <div className="flex-[6] min-h-0">
-            <TaskTable />
+
+          {/* Middle/Bottom Right Section */}
+          <div className="flex-[8.5] flex flex-col gap-4 min-h-0">
+            {/* Top Row: Timeline & Leaderboard */}
+            <div className="flex-[4] min-h-0 flex gap-4">
+              <div className="flex-[7] min-h-0">
+                <div className="h-full bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md rounded-[32px] shadow-sm border border-white/40 dark:border-zinc-800/40 overflow-hidden">
+                  <TimelineView />
+                </div>
+              </div>
+              <div className="flex-[4] min-h-0">
+                <div className="h-full bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md rounded-[32px] shadow-sm border border-white/40 dark:border-zinc-800/40 overflow-hidden">
+                  <Leaderboard />
+                </div>
+              </div>
+            </div>
+            {/* Bottom Row: Recommended Tasks */}
+            <div className="flex-[6] min-h-0">
+              <div className="h-full bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md rounded-[32px] shadow-sm border border-white/40 dark:border-zinc-800/40 overflow-hidden">
+                <TaskTable />
+              </div>
+            </div>
           </div>
         </div>
       </div>
