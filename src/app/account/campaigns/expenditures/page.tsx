@@ -156,9 +156,10 @@ export default function CampaignExpendituresPage() {
                     .catch(() => [] as any[])
             );
             const postResults = await Promise.all(postPromises);
+            // Filter only posts with targetName === 'evidence'
             const postsMap: Record<number, any[]> = {};
             disbursedExps.forEach((e: any, i: number) => {
-                postsMap[e.id] = postResults[i];
+                postsMap[e.id] = (postResults[i] || []).filter((p: any) => p.targetName === 'evidence');
             });
             setExpenditurePosts(postsMap);
 
@@ -349,20 +350,22 @@ export default function CampaignExpendituresPage() {
 
             // 2. Create Feed Post (Automated reporting)
             await feedPostService.create({
-                type: 'POST',
+                type: 'DISCUSSION',
                 visibility: 'PUBLIC',
                 title: `Cập nhật minh chứng chi tiêu: ${campaign?.title}`,
                 content: evidenceDescription || `Tôi vừa cập nhật minh chứng cho hoạt động chi tiêu thuộc chiến dịch "${campaign?.title}". Mời mọi người cùng theo dõi sự minh bạch của dự án!`,
-                targetId: Number(campaignId),
-                targetType: 'CAMPAIGN',
+                targetId: expId,
+                targetType: 'EXPENDITURE',
+                targetName: 'evidence',
             } as any);
 
             // 3. Update status locally in Expenditure
             await expenditureService.updateEvidenceStatus(expId, 'SUBMITTED');
 
             // 4. Load posts for this expenditure
-            const postResults = await feedPostService.getByTarget(expId, 'EXPENDITURE').catch(() => [] as any[]);
-            setExpenditurePosts(prev => ({ ...prev, [expId]: postResults }));
+            const allPosts = await feedPostService.getByTarget(expId, 'EXPENDITURE').catch(() => [] as any[]);
+            const evidencePosts = allPosts.filter((p: any) => p.targetName === 'evidence');
+            setExpenditurePosts(prev => ({ ...prev, [expId]: evidencePosts }));
 
             toast.success('Đã tải lên các minh chứng và tự động đăng bài viết thành công!');
 
@@ -1928,6 +1931,7 @@ export default function CampaignExpendituresPage() {
                                     updatedAt: new Date().toISOString(),
                                     targetId: postExpenditure.id,
                                     targetType: 'EXPENDITURE',
+                                    targetName: 'evidence',
                                     attachments: evidencePhotos,
                                 }}
                                 draftMode={true}

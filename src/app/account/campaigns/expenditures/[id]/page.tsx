@@ -101,10 +101,10 @@ export default function ExpenditureDetailPage() {
                     }
                 }
 
-                // Fetch posts
+                // Fetch posts — only evidence posts for the evidence section
                 try {
                     const postData = await feedPostService.getByTarget(Number(id), 'EXPENDITURE');
-                    setPosts(postData || []);
+                    setPosts((postData || []).filter((p: any) => p.targetName?.startsWith('evidence')));
                 } catch (postErr) {
                     console.error('Failed to load posts:', postErr);
                 }
@@ -689,18 +689,30 @@ export default function ExpenditureDetailPage() {
                     <div className="w-80 shrink-0 flex flex-col gap-4">
 
                         {/* New Evidence Submission Status - VISUAL FOCUS */}
-                        {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
-                            <div className="bg-emerald-50 shadow-sm rounded-2xl border-2 border-emerald-100 p-4 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-emerald-100 rounded-full opacity-30 animate-pulse"></div>
+                        {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (() => {
+                            const isLate = expenditure.evidenceSubmittedAt && expenditure.evidenceDueAt && new Date(expenditure.evidenceSubmittedAt) > new Date(expenditure.evidenceDueAt);
+                            const boxBgClass = isLate ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100";
+                            const blobClass = isLate ? "bg-red-100" : "bg-emerald-100";
+                            const iconClass = isLate ? "text-red-600" : "text-emerald-600";
+                            const titleClass = isLate ? "text-red-900" : "text-emerald-900";
+                            const timeClass = isLate ? "text-red-600/70" : "text-emerald-600/70";
+                            const linkBorderClass = isLate ? "border-red-200 border-t" : "border-emerald-200 border-t";
+                            const linkTextClass = isLate ? "text-red-800/40" : "text-emerald-800/40";
+                            const postCardClass = isLate ? "border-red-100 hover:border-red-300 text-red-700 hover:text-red-800" : "border-emerald-100 hover:border-emerald-300 text-emerald-700";
+                            const arrowClass = isLate ? "group-hover:text-red-500" : "group-hover:text-emerald-500";
+
+                            return (
+                            <div className={`shadow-sm rounded-2xl border-2 p-4 relative overflow-hidden ${boxBgClass}`}>
+                                <div className={`absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 rounded-full opacity-30 animate-pulse ${blobClass}`}></div>
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-3 mb-4">
-                                        <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-emerald-600">
+                                        <div className={`w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center ${iconClass}`}>
                                             <CheckCircle className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h3 className="text-base font-black text-emerald-900 uppercase tracking-wide">Đã nộp minh chứng</h3>
+                                            <h3 className={`text-base font-black uppercase tracking-wide ${titleClass}`}>Đã nộp minh chứng</h3>
                                             {expenditure.evidenceSubmittedAt && (
-                                                <p className="text-[11px] font-bold text-emerald-600/70">
+                                                <p className={`text-[11px] font-bold ${timeClass}`}>
                                                     Lúc {new Date(expenditure.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             )}
@@ -708,10 +720,16 @@ export default function ExpenditureDetailPage() {
                                     </div>
 
                                     <div className="flex flex-wrap gap-2 mb-6">
-                                        {expenditure.evidenceSubmittedAt && expenditure.evidenceDueAt && new Date(expenditure.evidenceSubmittedAt) <= new Date(expenditure.evidenceDueAt) && (
-                                            <span className="px-2.5 py-1 bg-white text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
-                                                Nộp đúng hạn
-                                            </span>
+                                        {expenditure.evidenceSubmittedAt && expenditure.evidenceDueAt && (
+                                            isLate ? (
+                                                <span className="px-2.5 py-1 bg-red-100 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-red-200 shadow-sm">
+                                                    Nộp trễ
+                                                </span>
+                                            ) : (
+                                                <span className="px-2.5 py-1 bg-white text-emerald-700 text-[10px] font-black uppercase tracking-widest rounded-lg border border-emerald-100 shadow-sm">
+                                                    Nộp đúng hạn
+                                                </span>
+                                            )
                                         )}
                                         {expenditure.transactions?.some(t => t.type === 'REFUND' && t.status === 'COMPLETED') ? (
                                             <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-md flex items-center gap-1.5">
@@ -728,18 +746,18 @@ export default function ExpenditureDetailPage() {
 
                                     {/* Link to Post */}
                                     {posts.length > 0 && (
-                                        <div className="pt-4 border-t border-emerald-200">
-                                            <p className="text-[10px] font-black text-emerald-800/40 uppercase tracking-[2px] mb-3">Bài viết minh chứng</p>
+                                        <div className={`pt-4 border-t ${linkBorderClass}`}>
+                                            <p className={`text-[10px] font-black uppercase tracking-[2px] mb-3 ${linkTextClass}`}>Bài viết minh chứng</p>
                                             <div className="flex flex-col gap-2">
                                                 {posts.map(p => (
                                                     <Link
                                                         key={p.id}
                                                         href={`/post/${p.id}`}
                                                         target="_blank"
-                                                        className="flex items-center justify-between p-3 bg-white rounded-xl border border-emerald-100 hover:border-emerald-300 hover:translate-x-1 transition-all group shadow-sm text-sm font-bold text-emerald-700"
+                                                        className={`flex items-center justify-between p-3 bg-white rounded-xl border hover:translate-x-1 transition-all group shadow-sm text-sm font-bold ${postCardClass}`}
                                                     >
                                                         <span className="truncate flex-1 pr-4">{p.title || 'Xem chi tiết bài viết'}</span>
-                                                        <ArrowLeft className="w-4 h-4 rotate-180 opacity-40 group-hover:opacity-100 group-hover:text-emerald-500 transition-all" />
+                                                        <ArrowLeft className={`w-4 h-4 rotate-180 opacity-40 group-hover:opacity-100 transition-all ${arrowClass}`} />
                                                     </Link>
                                                 ))}
                                             </div>
@@ -748,7 +766,8 @@ export default function ExpenditureDetailPage() {
 
                                 </div>
                             </div>
-                        )}
+                            );
+                        })()}
 
                         {/* Plan/Description */}
                         <div className="bg-white rounded p-4 border border-gray-200">

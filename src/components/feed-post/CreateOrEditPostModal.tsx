@@ -45,7 +45,7 @@ export default function CreateOrEditPostModal({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   // "none" = không liên kết, "CAMPAIGN" = liên kết chiến dịch, "EXPENDITURE" = liên kết đợt chi tiêu
-  const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE">("none");
+  const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE">("none");
   const [linkedCampaignId, setLinkedCampaignId] = useState("");
   /** expenditureId chỉ set khi user chọn expenditure trong dropdown */
   const [selectedExpenditureId, setSelectedExpenditureId] = useState<number | null>(null);
@@ -54,7 +54,7 @@ export default function CreateOrEditPostModal({
   /** Ảnh đang upload: preview local, xong thì done=true */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string; done: boolean }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isLinkLocked = isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none";
+  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName === "evidence");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
   /** Snapshot of images when modal opens in EDIT mode — used to detect removed images */
@@ -68,14 +68,17 @@ export default function CreateOrEditPostModal({
       setContent(initialData.content ?? "");
       if (initialData.targetId) {
         const rawTt = initialData.targetType;
-        const tt: "none" | "CAMPAIGN" | "EXPENDITURE" =
-          rawTt === "CAMPAIGN" || rawTt === "EXPENDITURE" ? rawTt : "none";
+        const tt: "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE" =
+          rawTt === "CAMPAIGN" ? "CAMPAIGN" :
+          (rawTt === "EXPENDITURE" && initialData.targetName === "evidence") ? "EVIDENCE" :
+          rawTt === "EXPENDITURE" ? "EXPENDITURE" :
+          rawTt === "EVIDENCE" ? "EVIDENCE" : "none";
         setLinkType(tt);
         if (tt === "CAMPAIGN") {
           setLinkedCampaignId(String(initialData.targetId));
           setSelectedExpenditureId(null);
           setExpendituresOfCampaign([]);
-        } else if (tt === "EXPENDITURE") {
+        } else if (tt === "EXPENDITURE" || tt === "EVIDENCE") {
           expenditureService
             .getById(initialData.targetId)
             .then((exp) => {
@@ -126,8 +129,8 @@ export default function CreateOrEditPostModal({
           setContent(draft.content || "");
           setLinkedCampaignId(draft.campaignId || "");
           setLinkType(
-            draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE"
-              ? draft.targetType
+            draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE" || draft.targetType === "EVIDENCE"
+              ? (draft.targetType === "EXPENDITURE" && draft.targetName === "evidence") ? "EVIDENCE" : draft.targetType
               : "none"
           );
           setSelectedExpenditureId(null);
@@ -191,9 +194,12 @@ export default function CreateOrEditPostModal({
       const effectiveTargetId =
         linkType === "CAMPAIGN"
           ? linkedCampaignId ? Number(linkedCampaignId) : null
-          : linkType === "EXPENDITURE"
+          : (linkType === "EXPENDITURE" || linkType === "EVIDENCE")
           ? selectedExpenditureId
           : null;
+
+      const effectiveTargetType = linkType === "EVIDENCE" ? "EXPENDITURE" : (linkType === "none" ? null : linkType);
+      const effectiveTargetName = linkType === "EVIDENCE" ? "evidence" : null;
 
       const postTitle = title || content.slice(0, 50);
 
@@ -209,7 +215,8 @@ export default function CreateOrEditPostModal({
           content,
           status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
-          targetType: linkType === "none" ? null : linkType,
+          targetType: effectiveTargetType,
+          targetName: effectiveTargetName,
         });
 
         // Step 2: Unlink removed images AFTER snapshot captured old state
@@ -245,7 +252,8 @@ export default function CreateOrEditPostModal({
           content,
           status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
-          targetType: linkType === "none" ? null : linkType,
+          targetType: effectiveTargetType,
+          targetName: effectiveTargetName,
         });
         const postId = Number(newPost.id);
 
@@ -344,7 +352,7 @@ export default function CreateOrEditPostModal({
               value={linkType}
               disabled={isLinkLocked}
               onChange={(e) => {
-                const val = e.target.value as "none" | "CAMPAIGN" | "EXPENDITURE";
+                const val = e.target.value as "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE";
                 setLinkType(val);
                 setLinkedCampaignId("");
                 setSelectedExpenditureId(null);
@@ -355,6 +363,9 @@ export default function CreateOrEditPostModal({
               <option value="none">Liên kết...</option>
               <option value="CAMPAIGN">Chiến dịch</option>
               <option value="EXPENDITURE">Đợt chi tiêu</option>
+              {initialData?.targetName?.startsWith('evidence') && (
+                <option value="EVIDENCE">Minh chứng (Chi tiêu)</option>
+              )}
             </select>
 
             {linkType === "CAMPAIGN" && (
@@ -390,7 +401,7 @@ export default function CreateOrEditPostModal({
               </span>
             )}
 
-            {linkType === "EXPENDITURE" && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && (
               <select
                 value={linkedCampaignId}
                 disabled={isLinkLocked}
@@ -421,7 +432,7 @@ export default function CreateOrEditPostModal({
                 ))}
               </select>
             )}
-            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length > 0 && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && linkedCampaignId && expendituresOfCampaign.length > 0 && (
               <select
                 value={selectedExpenditureId ?? ""}
                 disabled={isLinkLocked}
@@ -436,10 +447,10 @@ export default function CreateOrEditPostModal({
                 ))}
               </select>
             )}
-            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length === 0 && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && linkedCampaignId && expendituresOfCampaign.length === 0 && (
               <span className="text-sm text-zinc-400 italic">Chưa có đợt chi tiêu</span>
             )}
-            {linkType === "EXPENDITURE" && selectedExpenditureId && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && selectedExpenditureId && (
               <span
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,

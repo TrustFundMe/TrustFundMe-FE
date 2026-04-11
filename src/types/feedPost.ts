@@ -96,6 +96,7 @@ export type CreateFeedPostRequest = {
   // Target: links post to expenditure or campaign
   targetId?: number | null;
   targetType?: string | null;
+  targetName?: string | null;
   categoryId?: number | null;
   // Legacy/compat (some screens may still send these)
   campaignId?: number | null;
@@ -112,6 +113,7 @@ export type UpdateFeedPostRequest = {
   // Target: links post to expenditure or campaign
   targetId?: number | null;
   targetType?: string | null;
+  targetName?: string | null;
   categoryId?: number | null;
   // Legacy/compat
   campaignId?: number | null;

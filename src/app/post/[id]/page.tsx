@@ -21,6 +21,7 @@ import type { Expenditure } from "@/types/expenditure";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
 import { useAuth } from "@/contexts/AuthContextProxy";
+import { CampaignDto } from "@/types/campaign";
 import { AnimatePresence } from "framer-motion";
 
 function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
@@ -121,10 +122,10 @@ const FeedPostDetailPage = () => {
           const raised = campaign.balance ?? 0;
           const goal = raised > 0 ? raised : 1;
 
-          let coverImageUrl = campaign.coverImage;
+          let coverImageUrl = campaign.coverImageUrl;
           if (!coverImageUrl) {
             const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
-            coverImageUrl = firstImage?.url || campaign.coverImage;
+            coverImageUrl = firstImage?.url || campaign.coverImageUrl;
           }
 
           setPost((prev) =>
@@ -175,19 +176,19 @@ const FeedPostDetailPage = () => {
       setRelatedPosts(sameCampaignPosts.slice(0, 4));
       setFeedPosts(allFeedPosts);
       setCategories([...new Set(allFeedPosts.map((p) => p.category).filter((c): c is string => Boolean(c)))]);
-      const campaigns = (campaignsRes as { content?: typeof list }).content ?? [];
+      const campaigns = (campaignsRes as { content?: CampaignDto[] }).content ?? [];
       const titles: Record<string, string> = {};
       const cList: { id: number; title: string; coverImage?: string }[] = [];
       const imgPromises = campaigns.map(async (c) => {
         titles[String(c.id)] = c.title ?? "";
-        let coverImage = c.coverImage as string | undefined;
+        let coverImage = c.coverImageUrl;
         if (!coverImage) {
           try {
             const firstImage = await mediaService.getCampaignFirstImage(c.id).catch(() => null);
             coverImage = firstImage?.url || undefined;
           } catch { /* ignore */ }
         }
-        cList.push({ id: c.id, title: c.title ?? "", coverImage });
+        cList.push({ id: c.id, title: c.title ?? "", coverImage: coverImage ?? undefined });
       });
       await Promise.all(imgPromises);
       setCampaignTitlesMap(titles);
