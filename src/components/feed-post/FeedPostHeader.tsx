@@ -11,6 +11,7 @@ interface FeedPostHeaderProps {
   expenditure?: Expenditure | null;
   onToggleLike?: () => void;
   onToggleFlag?: () => void;
+  onViewHistory?: () => void;
 }
 
 export default function FeedPostHeader({
@@ -18,6 +19,7 @@ export default function FeedPostHeader({
   expenditure,
   onToggleLike,
   onToggleFlag,
+  onViewHistory,
 }: FeedPostHeaderProps) {
   const formatTimeAgo = (date: string) => {
     const now = new Date();
@@ -72,12 +74,40 @@ export default function FeedPostHeader({
           </div>
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
               opacity: 0.5,
               fontSize: 12,
               fontFamily: "var(--font-dm-sans)",
+              flexWrap: "wrap",
             }}
           >
-            {formatTimeAgo(post.createdAt)}
+            <span>{formatTimeAgo(post.createdAt)}</span>
+            {post.hasRevisions && post.updatedAt && (
+              <>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onViewHistory?.(); }}
+                  style={{
+                    border: "none",
+                    background: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    color: "#1A685B",
+                    fontWeight: 600,
+                    fontFamily: "var(--font-dm-sans)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                    opacity: 1,
+                  }}
+                >
+                  Đã chỉnh sửa
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -208,14 +238,16 @@ export default function FeedPostHeader({
       )}
 
       {/* EXPENDITURE card — right after title */}
-      {post.targetType === "EXPENDITURE" && expenditure && (
+      {post.targetType === "EXPENDITURE" && expenditure && (() => {
+        const isEvidence = post.targetName?.startsWith('evidence');
+        return (
         <a
           href={`/account/campaigns/expenditures/${post.targetId}`}
           style={{
             display: "block",
             padding: "14px 16px",
-            background: "#FAFAFA",
-            border: "1px solid rgba(124,58,237,0.2)",
+            background: isEvidence ? "rgba(124,58,237,0.03)" : "#FAFAFA",
+            border: isEvidence ? "1px solid rgba(124,58,237,0.3)" : "1px solid rgba(124,58,237,0.2)",
             borderRadius: 10,
             fontFamily: "var(--font-dm-sans)",
             textDecoration: "none",
@@ -225,18 +257,18 @@ export default function FeedPostHeader({
             transition: "border-color 0.2s, background 0.2s",
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = "#F5F0FF";
+            (e.currentTarget as HTMLElement).style.background = isEvidence ? "rgba(124,58,237,0.08)" : "#F5F0FF";
             (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.4)";
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = "#FAFAFA";
-            (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.2)";
+            (e.currentTarget as HTMLElement).style.background = isEvidence ? "rgba(124,58,237,0.03)" : "#FAFAFA";
+            (e.currentTarget as HTMLElement).style.borderColor = isEvidence ? "rgba(124,58,237,0.3)" : "rgba(124,58,237,0.2)";
           }}
         >
           {/* Badge */}
           <div style={{ marginBottom: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: "#7C3AED", background: "#EDE9FE", padding: "3px 10px", borderRadius: 20 }}>
-              Đợt chi tiêu
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: isEvidence ? "#7C3AED" : "#6B21A8", background: isEvidence ? "#EDE9FE" : "#F3E8FF", padding: "3px 10px", borderRadius: 20 }}>
+              {isEvidence ? "Minh chứng" : "Đợt chi tiêu"}
             </span>
           </div>
 
@@ -291,7 +323,7 @@ export default function FeedPostHeader({
             Số tiền rút: <span style={{ color: "#7C3AED" }}>{expenditure.totalExpectedAmount.toLocaleString("vi-VN")}đ</span>
           </div>
         </a>
-      )}
+      );})()}
 
       {/* Content */}
       <div

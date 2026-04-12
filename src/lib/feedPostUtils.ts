@@ -51,10 +51,20 @@ export function dtoToFeedPost(dto: FeedPostDtoFromApi): FeedPost {
     viewCount: dto.viewCount ?? 0,
     isPinned: coalesceBool(dto, "isPinned", "pinned"),
     isLocked: coalesceBool(dto, "isLocked", "locked"),
-    attachments: dto.attachments?.map((att) => ({
-      type: (att.type?.toLowerCase() === "image" ? "image" : "file") as "image" | "file",
-      url: att.url,
-      name: att.fileName ?? undefined,
-    })),
+    hasRevisions: dto.hasRevisions === true,
+    attachments: dto.attachments?.map((att) => {
+      // Backend attachment maps use "mediaType" key (from MediaFileResponse),
+      // not "type". Fall back through all possible field names.
+      const raw = (att as Record<string, unknown>);
+      const rawType = (raw["mediaType"] ?? raw["type"] ?? "") as string;
+      const t = rawType.toLowerCase();
+      const isImage = t === "image" || t === "photo" || t === "video";
+      return {
+        id: att.id ?? (raw["id"] as number | undefined),
+        type: (isImage ? "image" : "file") as "image" | "file",
+        url: att.url,
+        name: att.fileName ?? (raw["fileName"] as string | undefined),
+      };
+    }),
   };
 }

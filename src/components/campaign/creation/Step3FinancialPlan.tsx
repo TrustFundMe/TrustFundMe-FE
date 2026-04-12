@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Plus, Trash2, FileSpreadsheet, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, FileSpreadsheet, ShieldCheck, ChevronLeft, ChevronRight, Download, Sparkles } from 'lucide-react';
 import { aiService } from '@/services/aiService';
+import { expenditureService } from '@/services/expenditureService';
 import { useToast } from '@/components/ui/Toast';
 
 interface ExpenditureItem {
@@ -29,6 +30,114 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     const [isDragging, setIsDragging] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const excelInputRef = useRef<HTMLInputElement>(null);
+
+    // ── Excel Import / Export ───────────────────────────────────────────────
+    const handleDownloadTemplate = () => {
+        import('xlsx').then((XLSX) => {
+            const headers = [['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Ghi chú']];
+            const example = [[1, 'Ví dụ: Mì tôm', 'thùng', 10, 50000, 'Chi tiêu đợt 1']];
+            const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
+            ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 25 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Mẫu');
+            XLSX.writeFile(wb, 'Mau_KeHoach_ChiTieu.xlsx');
+        });
+    };
+
+    const handleExportItems = () => {
+        import('xlsx').then((XLSX) => {
+            const rows = items.map((item, idx) => [
+                idx + 1,
+                item.name,
+                item.unit,
+                item.quantity,
+                item.price,
+                (item.quantity * item.price).toLocaleString('vi-VN'),
+                item.note,
+            ]);
+            const ws = XLSX.utils.aoa_to_sheet([
+                ['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Thành tiền (VNĐ)', 'Ghi chú'],
+                ...rows,
+            ]);
+            ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 25 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Chi tiêu');
+            const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '');
+            XLSX.writeFile(wb, `KeHoach_ChiTieu_${today}.xlsx`);
+        });
+    };
+
+    const [isExcelImporting, setIsExcelImporting] = useState(false);
+
+    const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsExcelImporting(true);
+        try {
+            const result = await expenditureService.importItemsFromExcel(file);
+            if (!result.success || !result.data) {
+                toast(result.error || 'Không thể đọc file Excel', 'error');
+                return;
+            }
+
+            const errors: string[] = [];
+            result.data.forEach((item, idx) => {
+                const row = idx + 1;
+                const errs: string[] = [];
+                if (!item.category || item.category.trim() === '') {
+                    errs.push(`Dòng ${row}: Thiếu tên vật phẩm`);
+                }
+                const qty = Number(item.quantity);
+                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
+                    errs.push(`Dòng ${row}: Thiếu số lượng`);
+                } else if (qty <= 0) {
+                    errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
+                } else if (!Number.isInteger(qty)) {
+                    errs.push(`Dòng ${row}: Số lượng phải là số nguyên`);
+                } else if (qty > 10000) {
+                    errs.push(`Dòng ${row}: Số lượng không được vượt quá 10.000`);
+                }
+                const price = Number(item.expectedPrice);
+                if (item.expectedPrice === undefined || item.expectedPrice === null || isNaN(price)) {
+                    errs.push(`Dòng ${row}: Thiếu đơn giá`);
+                } else if (price < 0) {
+                    errs.push(`Dòng ${row}: Đơn giá không được nhỏ hơn 0`);
+                }
+                if (item.category && item.category.trim().length > 50) {
+                    errs.push(`Dòng ${row}: Tên vật phẩm không được vượt quá 50 ký tự`);
+                }
+                if (item.note && item.note.trim().length > 100) {
+                    errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
+                }
+                errors.push(...errs);
+            });
+
+            if (errors.length > 0) {
+                toast('File Excel có lỗi:\n' + errors.slice(0, 10).join('\n') + (errors.length > 10 ? `\n...và ${errors.length - 10} lỗi khác` : ''), 'error');
+                return;
+            }
+
+            const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
+                id: Math.random().toString(36).substr(2, 9),
+                name: item.category || '',
+                unit: 'chiếc',
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.expectedPrice) || 0,
+                note: item.note || '',
+            }));
+            const updated = [...items, ...newItems];
+            onChange('expenditureItems', updated);
+            setCurrentPage(Math.ceil(updated.length / PAGE_SIZE));
+            toast(`Đã nhập ${newItems.length} vật phẩm từ file Excel!`, 'success');
+        } catch (err: any) {
+            console.error('[Excel Import Error]', err);
+            toast('Lỗi khi nhập file Excel', 'error');
+        } finally {
+            setIsExcelImporting(false);
+            e.target.value = '';
+        }
+    };
 
     const items: ExpenditureItem[] = data.expenditureItems || [];
     const total = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
@@ -67,17 +176,56 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     const handleFileUpload = async (file: File) => {
         setIsParsing(true);
         try {
-            const parsedItems = await aiService.parseExpenditureExcel(file);
-            if (!parsedItems || parsedItems.length === 0) {
-                toast('Không tìm thấy dữ liệu vật phẩm trong file. Vui lòng kiểm tra lại.', 'error');
+            const result = await expenditureService.importItemsFromExcel(file);
+            if (!result.success || !result.data) {
+                toast(result.error || 'Không thể đọc file Excel', 'error');
                 return;
             }
-            const newItems: ExpenditureItem[] = parsedItems.map(item => ({
+
+            // Validate items from Excel
+            const errors: string[] = [];
+            result.data.forEach((item, idx) => {
+                const row = idx + 1;
+                const errs: string[] = [];
+                if (!item.category || item.category.trim() === '') {
+                    errs.push(`Dòng ${row}: Thiếu tên vật phẩm`);
+                }
+                const qty = Number(item.quantity);
+                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
+                    errs.push(`Dòng ${row}: Thiếu số lượng`);
+                } else if (qty <= 0) {
+                    errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
+                } else if (!Number.isInteger(qty)) {
+                    errs.push(`Dòng ${row}: Số lượng phải là số nguyên`);
+                } else if (qty > 10000) {
+                    errs.push(`Dòng ${row}: Số lượng không được vượt quá 10.000`);
+                }
+                const price = Number(item.expectedPrice);
+                if (item.expectedPrice === undefined || item.expectedPrice === null || isNaN(price)) {
+                    errs.push(`Dòng ${row}: Thiếu đơn giá`);
+                } else if (price < 0) {
+                    errs.push(`Dòng ${row}: Đơn giá không được nhỏ hơn 0`);
+                }
+                if (item.category && item.category.trim().length > 50) {
+                    errs.push(`Dòng ${row}: Tên vật phẩm không được vượt quá 50 ký tự`);
+                }
+                if (item.note && item.note.trim().length > 100) {
+                    errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
+                }
+                errors.push(...errs);
+            });
+
+            if (errors.length > 0) {
+                toast('File Excel có lỗi:\n' + errors.slice(0, 10).join('\n') + (errors.length > 10 ? `\n...và ${errors.length - 10} lỗi khác` : ''), 'error');
+                return;
+            }
+
+            const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
-                name: item.name || '',
-                unit: item.unit || 'chiếc',
-                quantity: Math.max(1, parseInt(String(item.quantity)) || 1),
-                price: Math.max(0, parseInt(String(item.price).replace(/\D/g, '')) || 0),
+                name: item.category || '',
+                unit: 'chiếc',
+                quantity: Number(item.quantity) || 1,
+                price: Number(item.expectedPrice) || 0,
                 note: item.note || '',
             }));
             const updated = [...items, ...newItems];
@@ -140,6 +288,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     return (
         <div className="max-w-5xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row gap-4">
+                {/* AI Import */}
                 <div
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
@@ -166,11 +315,11 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     ) : (
                         <>
                             <div className={`h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center transition-transform duration-500 group-hover:scale-105 ${isDragging ? 'rotate-12 scale-105' : ''}`}>
-                                <FileSpreadsheet className={`h-5 w-5 ${isDragging ? 'text-[#dc2626]' : 'text-black/20'}`} />
+                                <Sparkles className={`h-5 w-5 ${isDragging ? 'text-[#dc2626]' : 'text-indigo-400'}`} />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors">
-                                    {isDragging ? 'Thả tệp vào đây' : 'Import kế hoạch từ Excel (AI)'}
+                                    {isDragging ? 'Thả tệp vào đây' : 'Phân tích kế hoạch bằng AI'}
                                 </span>
                                 <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
                                     Kéo thả hoặc nhấn để chọn tệp
@@ -179,6 +328,64 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                         </>
                     )}
                 </div>
+
+                {/* Excel Import */}
+                <div
+                    onClick={() => !isExcelImporting && excelInputRef.current?.click()}
+                    className={`relative group h-24 flex-1 rounded-[1.5rem] border-2 border-dashed transition-all cursor-pointer flex items-center justify-center gap-4 overflow-hidden ${isExcelImporting
+                        ? 'cursor-wait border-[#dc2626] bg-[#dc2626]/5'
+                        : 'border-black/5 bg-gray-50/50 hover:bg-white hover:border-black/10'
+                        }`}
+                >
+                    <input
+                        type="file"
+                        ref={excelInputRef}
+                        className="hidden"
+                        onChange={handleExcelImport}
+                        accept=".xlsx,.xls"
+                    />
+
+                    {isExcelImporting ? (
+                        <div className="flex items-center gap-3">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#dc2626] border-t-transparent shadow-sm" />
+                            <span className="text-xs font-black text-black">Đang nhập...</span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                <FileSpreadsheet className="h-5 w-5 text-black/20" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors">
+                                    Nhập Excel trực tiếp
+                                </span>
+                                <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
+                                    Nhấn để chọn tệp Excel (.xlsx)
+                                </span>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Tải mẫu / Xuất Excel buttons */}
+            <div className="flex items-center justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={handleDownloadTemplate}
+                    className="text-[9px] font-black text-gray-500 hover:text-[#dc2626] px-3 py-1 rounded-full bg-gray-50 border border-gray-200 transition-all uppercase tracking-widest"
+                >
+                    Tải mẫu
+                </button>
+                {items.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={handleExportItems}
+                        className="text-[9px] font-black text-gray-500 hover:text-[#dc2626] px-3 py-1 rounded-full bg-gray-50 border border-gray-200 transition-all uppercase tracking-widest"
+                    >
+                        Xuất Excel
+                    </button>
+                )}
             </div>
 
             <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">

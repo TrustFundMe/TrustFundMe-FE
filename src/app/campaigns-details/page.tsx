@@ -23,6 +23,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { mediaService } from '@/services/mediaService';
 import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymentService';
 import { flagService } from '@/services/flagService';
+import { trustScoreService } from '@/services/trustScoreService';
 import toast from 'react-hot-toast';
 
 const mapCampaignDtoToUi = (
@@ -30,7 +31,8 @@ const mapCampaignDtoToUi = (
   activeGoal: FundraisingGoal | null,
   owner?: { name: string; avatar: string },
   galleryUrls: string[] = [],
-  coverUrl?: string
+  coverUrl?: string,
+  trustScore?: number
 ): Campaign => {
   // Use coverUrl if provided by API, otherwise fallback to DTO's coverImageUrl string.
   const finalCover = coverUrl || dto.coverImageUrl || '';
@@ -48,6 +50,7 @@ const mapCampaignDtoToUi = (
       id: String(dto.fundOwnerId),
       name: owner?.name || `Người tạo #${dto.fundOwnerId}`,
       avatar: owner?.avatar || '/assets/img/defaul.jpg',
+      trustScore,
     },
     followers: [],
     followed: false,
@@ -224,7 +227,16 @@ function CampaignDetailsInner() {
 
         if (!mounted) return;
 
-        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl);
+        // Fetch trust score for campaign owner
+        let trustScore: number | undefined;
+        try {
+          const scoreRes = await trustScoreService.getUserScore(dto.fundOwnerId);
+          trustScore = scoreRes.totalScore;
+        } catch {
+          // Trust score is optional, ignore errors
+        }
+
+        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl, trustScore);
         campaignData.followed = followed;
         campaignData.followerCount = followerCount;
         campaignData.flagged = alreadyFlagged;   // ← pre-set from existing flags

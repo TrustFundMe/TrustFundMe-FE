@@ -22,7 +22,7 @@ export default function CampaignsPage() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const itemsPerPage = 5;
   const { toast } = useToast();
 
 
@@ -212,11 +212,6 @@ export default function CampaignsPage() {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
   const handleChatClick = async (campaign: CampaignDto) => {
     if (!user?.id) return;
 
@@ -247,8 +242,8 @@ export default function CampaignsPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#F8FAFC] py-4 flex flex-col">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col w-full">
+      <div className="h-full bg-[#F8FAFC] flex flex-col overflow-hidden pt-4 pb-2">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col w-full min-h-0">
           {/* Filters & Search Bar */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2 mt-2">
             <div className="md:col-span-3 relative">
@@ -294,15 +289,15 @@ export default function CampaignsPage() {
                 </div>
               </div>
             ) : filteredCampaigns.length > 0 ? (
-              <div className="animate-in fade-in duration-700 flex flex-col pb-3">
-                <div className="overflow-y-auto pr-2 custom-scrollbar flex-1">
+              <div className="animate-in fade-in duration-700 flex flex-col h-full min-h-0">
+                <div className="overflow-y-auto pr-2 custom-scrollbar flex-1 pb-4">
                   <div className="grid grid-cols-1 gap-6">
                     {displayCampaigns.map((campaign) => (
                       <MyCampaignCard
                         key={campaign.id}
                         campaign={campaign}
-                        assignedReviewerName={campaign.id ? campaignStaffMap[campaign.id] : undefined}
-                        hasStaff={!!(campaign.id && campaignStaffMap[campaign.id])}
+                        assignedReviewerName={campaign.id ? (campaignStaffMap[campaign.id] || (campaign.approvedByStaff ? (staffNameMap[campaign.approvedByStaff] || `Staff #${campaign.approvedByStaff}`) : undefined)) : undefined}
+                        hasStaff={!!(campaign.id && (campaignStaffMap[campaign.id] || campaign.approvedByStaff))}
                         onChatClick={() => {
                           console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
                           handleChatClick(campaign);
@@ -340,8 +335,8 @@ export default function CampaignsPage() {
           </div>
 
           {/* Pagination Controls Moved Out - Sticky at bottom */}
-          {!loading && !isInitialLoad && filteredCampaigns.length > 0 && computedTotalPages > 1 && (
-            <div className="sticky bottom-0 bg-[#F8FAFC] py-1 border-t border-gray-100 mt-0 z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          {!loading && !isInitialLoad && filteredCampaigns.length > 0 && (
+            <div className="flex-shrink-0 bg-[#F8FAFC] py-3 border-t border-gray-100 z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-xs font-medium text-gray-500 italic">
                 Hiển thị <span className="text-gray-900 font-bold">{Math.min((currentPage - 1) * itemsPerPage + 1, filteredCampaigns.length)}</span>-<span className="text-gray-900 font-bold">{Math.min(currentPage * itemsPerPage, filteredCampaigns.length)}</span> / <span className="text-gray-900 font-bold">{filteredCampaigns.length}</span> chiến dịch
               </p>

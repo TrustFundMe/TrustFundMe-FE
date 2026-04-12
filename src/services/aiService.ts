@@ -20,6 +20,16 @@ export interface FlagAnalysisResult {
     confidence: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
+export interface ExpenditureAnalysisResult {
+    summary: string;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    riskScore: number;
+    redFlags: string[];
+    spendingAnalysis: string[];
+    recommendation: string;
+    confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
 export const aiService = {
     async generateDescription(prompt: string, rules?: string) {
         const response = await aiApi.post('/api/generate-description', {
@@ -73,5 +83,29 @@ export const aiService = {
             flags,
         });
         return response.data;
+    },
+
+    async analyzeExpenditure(
+        campaign: Record<string, any>,
+        expenditure: Record<string, any>,
+        items: Record<string, any>[]
+    ) {
+        const response = await aiApi.post<ExpenditureAnalysisResult>('/api/analyze-expenditure', {
+            campaign,
+            expenditure,
+            items,
+        });
+        return response.data;
+    },
+
+    async generateSuggestionLabels(params: {
+        amount: number;
+        options: Array<{
+            items: Array<{ name: string; quantity: number; price: number }>;
+            total: number;
+        }>;
+    }) {
+        const response = await aiApi.post<{ labels: string[] }>('/api/generate-suggestion-labels', params);
+        return response.data.labels;
     },
 };

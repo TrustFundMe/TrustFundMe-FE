@@ -21,12 +21,17 @@ import type { Expenditure } from "@/types/expenditure";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
 import { useAuth } from "@/contexts/AuthContextProxy";
+import { CampaignDto } from "@/types/campaign";
 import { AnimatePresence } from "framer-motion";
 
 function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
-  const [imgSrc, setImgSrc] = useState(src ?? "");
-  useEffect(() => { setImgSrc(src ?? ""); }, [src]);
+  const [imgSrc, setImgSrc] = useState(src || "");
   const DEFAULT_IMG = "/assets/img/campaign/1.png";
+
+  useEffect(() => {
+    setImgSrc(src || "");
+  }, [src]);
+
   return (
     <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden shadow-inner ring-1 ring-black/5 bg-zinc-100">
       <Image
@@ -35,7 +40,7 @@ function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
         width={40}
         height={40}
         unoptimized
-        onError={() => { if (imgSrc) setImgSrc(""); }}
+        onError={() => { setImgSrc(DEFAULT_IMG); }}
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     </div>
@@ -54,7 +59,10 @@ const FeedPostDetailPage = () => {
   const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<FeedPost[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  /** Sidebar "Chiến dịch khác" — mọi chiến dịch (khám phá) */
   const [campaignsList, setCampaignsList] = useState<{ id: number; title: string; coverImage?: string }[]>([]);
+  /** Modal tạo/sửa bài — chỉ chiến dịch của user đang đăng nhập */
+  const [myCampaignsList, setMyCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
   const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -89,6 +97,7 @@ const FeedPostDetailPage = () => {
       mediaService.getMediaByPostId(id).then((mediaList) => {
         if (!mediaList?.length) return;
         const attachments = mediaList.map((m) => ({
+          id: m.id,
           type: (m.mediaType === "PHOTO" || m.mediaType === "VIDEO") ? "image" as const : "file" as const,
           url: m.url,
           name: m.fileName,
@@ -113,10 +122,10 @@ const FeedPostDetailPage = () => {
           const raised = campaign.balance ?? 0;
           const goal = raised > 0 ? raised : 1;
 
-          let coverImageUrl = campaign.coverImage;
+          let coverImageUrl = campaign.coverImageUrl;
           if (!coverImageUrl) {
             const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
-            coverImageUrl = firstImage?.url || campaign.coverImage;
+            coverImageUrl = firstImage?.url || campaign.coverImageUrl;
           }
 
           setPost((prev) =>
@@ -167,27 +176,33 @@ const FeedPostDetailPage = () => {
       setRelatedPosts(sameCampaignPosts.slice(0, 4));
       setFeedPosts(allFeedPosts);
       setCategories([...new Set(allFeedPosts.map((p) => p.category).filter((c): c is string => Boolean(c)))]);
-      const campaigns = (campaignsRes as { content?: typeof list }).content ?? [];
+      const campaigns = (campaignsRes as { content?: CampaignDto[] }).content ?? [];
       const titles: Record<string, string> = {};
       const cList: { id: number; title: string; coverImage?: string }[] = [];
       const imgPromises = campaigns.map(async (c) => {
         titles[String(c.id)] = c.title ?? "";
-        let coverImage = c.coverImage as string | undefined;
+        let coverImage = c.coverImageUrl;
         if (!coverImage) {
           try {
             const firstImage = await mediaService.getCampaignFirstImage(c.id).catch(() => null);
             coverImage = firstImage?.url || undefined;
           } catch { /* ignore */ }
         }
-        cList.push({ id: c.id, title: c.title ?? "", coverImage });
+        cList.push({ id: c.id, title: c.title ?? "", coverImage: coverImage ?? undefined });
       });
       await Promise.all(imgPromises);
       setCampaignTitlesMap(titles);
       setCampaignsList(cList);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 404) setError("Không tìm thấy bài viết");
-      else setError((err as Error)?.message ?? "Không tải được bài viết");
+      const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message;
+      if (status === 403) {
+        setError("Bài viết này đã bị khóa và không thể xem.");
+      } else if (status === 404) {
+        setError("Không tìm thấy bài viết");
+      } else {
+        setError(errorMsg ?? "Không tải được bài viết");
+      }
       setPost(null);
     } finally {
       setLoading(false);
@@ -197,6 +212,19 @@ const FeedPostDetailPage = () => {
   useEffect(() => {
     loadPost();
   }, [loadPost]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setMyCampaignsList([]);
+      return;
+    }
+    campaignService
+      .getByFundOwner(Number(user.id))
+      .then((mine) =>
+        setMyCampaignsList(mine.map((c) => ({ id: c.id, title: c.title ?? "" })))
+      )
+      .catch(() => setMyCampaignsList([]));
+  }, [user]);
 
   // Restore scroll when modal closes — fix Radix Dialog scroll lock
   useEffect(() => {
@@ -229,7 +257,7 @@ const FeedPostDetailPage = () => {
   if (loading) {
     return (
       <DanboxLayout header={4} footer={2}>
-        <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[200px]">
+        <div className="flex justify-center items-center" style={{ minHeight: "calc(100vh - 120px)" }}>
           <div className="animate-spin w-8 h-8 border-4 border-[#ff5e14] border-t-transparent rounded-full" />
         </div>
       </DanboxLayout>
@@ -319,7 +347,7 @@ const FeedPostDetailPage = () => {
           <CreateOrEditPostModal
             isOpen={editModalOpen}
             onClose={() => setEditModalOpen(false)}
-            campaignsList={campaignsList}
+            campaignsList={myCampaignsList}
             campaignTitlesMap={campaignTitlesMap}
             initialData={post}
             onPostUpdated={loadPost}

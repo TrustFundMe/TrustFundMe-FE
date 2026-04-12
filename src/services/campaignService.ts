@@ -68,6 +68,11 @@ export const campaignService = {
     return res.data;
   },
 
+  async getExpenditureById(id: number): Promise<any> {
+    const res = await api.get<any>(API_ENDPOINTS.EXPENDITURES.BY_ID(id));
+    return res.data;
+  },
+
   async reviewCampaign(id: number, status: 'APPROVED' | 'REJECTED' | 'DISABLED', rejectionReason?: string): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.REVIEW(id), {
       status,

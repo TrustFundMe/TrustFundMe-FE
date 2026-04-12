@@ -1,6 +1,7 @@
 export interface ExpenditureTransaction {
     id: number;
     expenditureId: number;
+    campaignId?: number;
     fromUserId?: number;
     toUserId?: number;
     amount: number;
@@ -41,6 +42,7 @@ export interface Expenditure {
     evidenceSubmittedAt?: string;
     totalAmount: number;
     totalExpectedAmount: number;
+    totalReceivedAmount?: number;
     variance: number;
     isWithdrawalRequested: boolean;
     plan?: string;

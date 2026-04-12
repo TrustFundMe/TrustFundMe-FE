@@ -8,7 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import {
   User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
-  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag, Search, Box
+  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag, Search, Box,
+  Star, ScrollText, Plus, Minus
 } from 'lucide-react';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
@@ -16,6 +17,7 @@ import { appointmentService, AppointmentScheduleDto } from '@/services/appointme
 import { bankAccountService } from '@/services/bankAccountService';
 import { BankAccountDto } from '@/types/bankAccount';
 import { flagService, FlagDto } from '@/services/flagService';
+import { trustScoreService } from '@/services/trustScoreService';
 
 // ─── Flags Modal ─────────────────────────────────────────────────────────────
 
@@ -154,6 +156,195 @@ function FlagsModal({
   );
 }
 
+// ─── Trust Score Logs Modal ─────────────────────────────────────────────────
+
+function TrustScoreLogsModal({
+  userId,
+  userName,
+  onClose,
+}: {
+  userId: number;
+  userName: string;
+  onClose: () => void;
+}) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (id: number) => {
+    const newSet = new Set(expandedLogs);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setExpandedLogs(newSet);
+  };
+  const pageSize = 20;
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', h); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  useEffect(() => {
+    setLoading(true);
+    trustScoreService.getLogs({ userId, page, size: pageSize })
+      .then(res => {
+        setLogs(res.content || []);
+        setTotalPages(res.totalPages || 0);
+      })
+      .catch(() => setLogs([]))
+      .finally(() => setLoading(false));
+  }, [userId, page]);
+
+  const formatDate = (d: string) => new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  }).format(new Date(d));
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
+      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ maxHeight: '90vh', animation: 'apptSlideUp .25s cubic-bezier(.34,1.56,.64,1)' }}
+      >
+        {/* Header */}
+        <div
+          className="relative flex items-center justify-between px-7 pt-6 pb-14"
+          style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}
+        >
+          <div>
+            <h2 className="text-xl font-bold text-white">Nhật Ký Điểm Uy Tín</h2>
+            <p className="text-sm text-white/70 mt-0.5">{userName}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 transition-colors"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1200 50" preserveAspectRatio="none" style={{ display: 'block', height: '36px' }}>
+            <path d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z" fill="white" />
+          </svg>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+              <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-amber-50">
+                <Star className="h-7 w-7 text-amber-300" />
+              </div>
+              <p className="font-semibold text-gray-500 text-sm">Chưa có nhật ký điểm uy tín nào.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 220px)' }}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50 sticky top-0">
+                    <th className="text-left py-3 px-5 font-semibold text-gray-500 text-xs">Quy tắc</th>
+                    <th className="text-left py-3 px-5 font-semibold text-gray-500 text-xs">Mô tả</th>
+                    <th className="text-center py-3 px-5 font-semibold text-gray-500 text-xs">Điểm</th>
+                    <th className="text-left py-3 px-5 font-semibold text-gray-500 text-xs">Liên kết</th>
+                    <th className="text-right py-3 px-5 font-semibold text-gray-500 text-xs">Thời gian</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map(log => {
+                    const href = log.referenceId
+                      ? log.referenceType === 'CAMPAIGN'
+                        ? `/campaigns-details?id=${log.referenceId}`
+                        : log.referenceType === 'POST'
+                          ? `/post/${log.referenceId}`
+                          : log.referenceType === 'EXPENDITURE'
+                            ? `/account/campaigns/expenditures/${log.referenceId}`
+                            : null
+                      : null;
+                    return (
+                      <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                        <td className="py-3 px-5">
+                          <code className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                            {log.ruleKey}
+                          </code>
+                        </td>
+                        <td className="py-3 px-5 text-gray-600 text-xs max-w-xl min-w-[200px]">
+                          <div className={expandedLogs.has(log.id) ? "" : "line-clamp-2"}>
+                            {log.description || '-'}
+                          </div>
+                          {(log.description && log.description.length > 50) && (
+                            <button
+                              onClick={() => toggleExpand(log.id)}
+                              className="text-[10px] font-bold text-amber-600 hover:text-amber-700 mt-1 uppercase tracking-tight"
+                            >
+                              {expandedLogs.has(log.id) ? 'Thu gọn' : 'Xem thêm'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="py-3 px-5 text-center">
+                          <span className={`inline-flex items-center gap-0.5 font-bold text-sm ${log.pointsChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                            {log.pointsChange >= 0 ? <Plus className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
+                            {Math.abs(log.pointsChange)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-5">
+                          {href ? (
+                            <Link
+                              href={href}
+                              className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                            >
+                              Xem {log.referenceType === 'CAMPAIGN' ? 'chiến dịch' : log.referenceType === 'POST' ? 'bài viết' : log.referenceType === 'EXPENDITURE' ? 'chi tiêu' : 'chi tiết'}
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-5 text-right text-xs text-gray-400">{formatDate(log.createdAt)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 py-4 border-t border-gray-100">
+                  <button
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="px-4 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    Trước
+                  </button>
+                  <span className="text-sm text-gray-500">{page + 1} / {totalPages}</span>
+                  <button
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={page >= totalPages - 1}
+                    className="px-4 py-1.5 rounded-lg border border-gray-200 text-sm font-medium disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    Sau
+                  </button>
+                </div>
+              )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -167,6 +358,11 @@ export default function ProfilePage() {
   const [showFlags, setShowFlags] = useState(false);
   const [myFlags, setMyFlags] = useState<FlagDto[]>([]);
   const [flagsLoading, setFlagsLoading] = useState(false);
+
+  // Trust Score state
+  const [trustScore, setTrustScore] = useState<number | null>(null);
+  const [trustScoreLoading, setTrustScoreLoading] = useState(false);
+  const [showTrustScoreLogs, setShowTrustScoreLogs] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -229,6 +425,20 @@ export default function ProfilePage() {
   }, []);
 
   const openFlags = () => { setShowFlags(true); fetchFlags(); };
+
+  // Fetch trust score
+  useEffect(() => {
+    if (user?.id) {
+      setTrustScoreLoading(true);
+      trustScoreService.getUserScore(Number(user.id))
+        .then(res => setTrustScore(res.totalScore ?? 0))
+        .catch((err) => {
+          console.error('Failed to fetch trust score:', err);
+          setTrustScore(0);
+        })
+        .finally(() => setTrustScoreLoading(false));
+    }
+  }, [user?.id]);
 
   const handleEdit = () => {
     const parts = user?.fullName?.split(' ') || [];
@@ -423,9 +633,51 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
             {user.fullName || 'Thành viên'}
           </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-8">
+          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">
             Hội viên TrustFundMe
           </p>
+
+          {/* Premium Trust Score Section */}
+          <div className="w-full mt-4 px-8">
+            <div className="bg-white rounded-[2rem] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-amber-100/40 relative overflow-hidden group">
+              {/* Background Glow */}
+              <div className="absolute -right-2 -top-2 w-16 h-16 bg-amber-400/5 rounded-full blur-xl group-hover:bg-amber-400/10 transition-all duration-500" />
+              
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
+                  <Star className="h-5 w-5 text-amber-500" fill="currentColor" fillOpacity={0.2} />
+                </div>
+                
+                {trustScoreLoading ? (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="h-6 w-16 bg-gray-100 animate-pulse rounded-md" />
+                    <div className="h-2.5 w-24 bg-gray-50 animate-pulse rounded-sm" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-2xl font-black text-gray-900 leading-none">
+                        {trustScore ?? 0}
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">đ</span>
+                    </div>
+                    <p className="text-[9px] font-bold text-gray-400 mt-0.5 uppercase tracking-widest">
+                      Độ Uy Tín
+                    </p>
+                    
+                    <button 
+                      onClick={() => setShowTrustScoreLogs(true)}
+                      className="mt-3 flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wider transition-all"
+                    >
+                      <ScrollText className="h-2.5 w-2.5" />
+                      Biến động
+                      <ChevronRight className="h-2.5 w-2.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
 
           <div className="w-full space-y-4">
             {!isEditing && (
@@ -558,6 +810,15 @@ export default function ProfilePage() {
           flags={myFlags}
           loading={flagsLoading}
           onClose={() => setShowFlags(false)}
+        />
+      )}
+
+      {/* ── Trust Score Logs Modal ── */}
+      {showTrustScoreLogs && user?.id && (
+        <TrustScoreLogsModal
+          userId={Number(user.id)}
+          userName={user.fullName || 'Người dùng'}
+          onClose={() => setShowTrustScoreLogs(false)}
         />
       )}
     </div>

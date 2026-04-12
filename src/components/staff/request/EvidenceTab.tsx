@@ -47,7 +47,7 @@ export default function EvidenceTab() {
                         const media = await mediaService.getMediaByExpenditureId(exp.id);
                         
                         return {
-                            id: `EVID_${exp.id}`,
+                            id: task.id.toString(),
                             createdAt: exp.createdAt || new Date().toISOString(),
                             status: (exp.evidenceStatus || 'PENDING') as any,
                             type: 'EVIDENCE' as const,

@@ -3,8 +3,10 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ExpenditureItem, PaymentMethod } from '@/components/donation/types';
+import { generateSuggestions, SuggestionOption } from '@/utils/dpSuggestion';
 import SuccessScreen from '@/components/donation/SuccessScreen';
 import TermsModal from '@/components/donation/TermsModal';
+import SuggestionModal from '@/components/donation/SuggestionModal';
 import DonationGeneralLayout from '@/components/donation/DonationGeneralLayout';
 import DonationItemLayout from '@/components/donation/DonationItemLayout';
 import { expenditureService } from '@/services/expenditureService';
@@ -12,6 +14,7 @@ import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
 import { paymentService, CreatePaymentRequest } from '@/services/paymentService';
 import { authService } from '@/services/authService';
+import { aiService } from '@/services/aiService';
 import Script from 'next/script';
 
 // Mock data for donors
@@ -46,6 +49,11 @@ function DonationContent() {
   const [showTerms, setShowTerms] = useState(false);
   const [finalData, setFinalData] = useState<any>(null);
   const [isGuest, setIsGuest] = useState(true);
+  const [suggestions, setSuggestions] = useState<SuggestionOption[]>([]);
+  const [loadingLabels, setLoadingLabels] = useState(false);
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [donationBlocked, setDonationBlocked] = useState(false);
+  const [blockedMessage, setBlockedMessage] = useState('');
 
   useEffect(() => {
     const n = Number(prefillAmount);
@@ -77,24 +85,34 @@ function DonationContent() {
           const campaignData = await campaignService.getById(id);
           setCampaign(campaignData);
 
-          // Fetch Expenditure Items
-          const itemsData = await expenditureService.getItemsByCampaignId(campaignId);
-          const mappedItems: ExpenditureItem[] = itemsData
-            .map(item => ({
-              id: item.id.toString(),
-              name: item.category,
-              description: item.note || '',
-              price: item.expectedPrice,
-              quantityLeft: item.quantityLeft ?? 0,
-              reservations: item.reservations ?? 0
-            }))
-            .filter(item => item.quantityLeft > 0);
-          setExpenditureItems(mappedItems);
+          // Fetch Expenditure Items — chỉ từ expenditure APPROVED mới nhất
+          try {
+            const itemsData = await expenditureService.getApprovedItemsByCampaign(campaignId);
+            const mappedItems: ExpenditureItem[] = itemsData
+              .map(item => ({
+                id: item.id.toString(),
+                name: item.category,
+                description: item.note || '',
+                price: item.expectedPrice,
+                quantityLeft: item.quantityLeft ?? 0,
+                reservations: item.reservations ?? 0
+              }))
+              .filter(item => item.quantityLeft > 0);
+            setExpenditureItems(mappedItems);
+            setDonationBlocked(false);
 
-          // Initialize UI quantities
-          const initialQtys: Record<string, number> = {};
-          mappedItems.forEach(i => initialQtys[i.id] = 1);
-          setUiQuantities(initialQtys);
+            // Initialize UI quantities
+            const initialQtys: Record<string, number> = {};
+            mappedItems.forEach(i => initialQtys[i.id] = 1);
+            setUiQuantities(initialQtys);
+          } catch (itemsErr: any) {
+            if (itemsErr.response?.status === 403) {
+              // Không có expenditure APPROVED — chặn donation
+              setExpenditureItems([]);
+              setDonationBlocked(true);
+              setBlockedMessage(itemsErr.response?.data?.message || 'Chiến dịch đang trong quá trình giải ngân, chưa thể nhận quyên góp.');
+            }
+          }
         } catch (error) {
           console.error('Error fetching data:', error);
         }
@@ -106,6 +124,30 @@ function DonationContent() {
   // Derived Values
   const tipAmount = Math.round((amount * tipPercent) / 100);
   const totalAmount = amount + tipAmount;
+
+  // Tạo gợi ý khi có amount + items
+  const generateForAmount = (val: number) => {
+    if (val <= 0 || expenditureItems.length === 0) return;
+    const suggs = generateSuggestions(val, expenditureItems);
+    setSuggestions(suggs);
+    setShowSuggestionsModal(suggs.length > 0);
+
+    // AI labels
+    if (suggs.length > 0) {
+      setLoadingLabels(true);
+      aiService.generateSuggestionLabels({ amount: val, options: suggs })
+        .then((labels) => {
+          setSuggestions((prev) =>
+            prev.map((opt, i) => ({
+              ...opt,
+              label: labels[i] || opt.label,
+            }))
+          );
+        })
+        .catch(() => { })
+        .finally(() => setLoadingLabels(false));
+    }
+  };
 
   // Handlers
   const handlePresetClick = (val: number) => {
@@ -120,6 +162,39 @@ function DonationContent() {
     setAmount(val);
     setItems({});
     setPage(1);
+  };
+
+  // Tạo suggestions khi bấm nút "Xem gợi ý"
+  const handleShowSuggestions = () => {
+    console.log('[DEBUG] handleShowSuggestions called', { amount, itemCount: expenditureItems.length });
+    if (expenditureItems.length === 0) {
+      console.log('[DEBUG] expenditureItems is empty — data may not be loaded yet');
+      alert('Dữ liệu vật phẩm chưa tải xong. Vui lòng đợi.');
+      return;
+    }
+    if (amount <= 0) {
+      console.log('[DEBUG] amount is 0 or invalid');
+      return;
+    }
+    const suggs = generateSuggestions(amount, expenditureItems);
+    console.log('[DEBUG] generateSuggestions result:', suggs.length, 'options');
+    setSuggestions(suggs);
+    setShowSuggestionsModal(suggs.length > 0);
+
+    if (suggs.length > 0) {
+      setLoadingLabels(true);
+      aiService.generateSuggestionLabels({ amount, options: suggs })
+        .then((labels) => {
+          setSuggestions((prev) =>
+            prev.map((opt, i) => ({
+              ...opt,
+              label: labels[i] || opt.label,
+            }))
+          );
+        })
+        .catch(() => { })
+        .finally(() => setLoadingLabels(false));
+    }
   };
 
   const handleItemSelect = async (itemId: string, qty: number) => {
@@ -178,7 +253,19 @@ function DonationContent() {
     setAmount(newTotal);
   };
 
+  const handleApplySuggestion = (option: SuggestionOption) => {
+    setIsManualMode(true);
+    const newItems: Record<string, number> = {};
+    option.items.forEach((item) => {
+      newItems[item.id] = item.quantity;
+    });
+    setItems(newItems);
+    setAmount(option.total);
+    setSuggestions([]);
+  };
+
   const handleItemChange = async (itemId: string, diff: number) => {
+    setIsManualMode(true);
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
 
@@ -391,6 +478,15 @@ function DonationContent() {
         strategy="lazyOnload"
       />
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
+      {showSuggestionsModal && suggestions.length > 0 && (
+        <SuggestionModal
+          suggestions={suggestions}
+          onApply={handleApplySuggestion}
+          onClose={() => setShowSuggestionsModal(false)}
+          targetAmount={amount}
+          loading={loadingLabels}
+        />
+      )}
 
       {isGeneralMode ? (
         <DonationGeneralLayout
@@ -416,6 +512,8 @@ function DonationContent() {
         <DonationItemLayout
           campaign={campaign}
           amount={amount}
+          donationBlocked={donationBlocked}
+          blockedMessage={blockedMessage}
           isManualMode={isManualMode}
           items={items}
           uiQuantities={uiQuantities}
@@ -429,6 +527,7 @@ function DonationContent() {
           submitting={submitting}
           onPresetClick={handlePresetClick}
           onAmountChange={handleAmountInput}
+          onShowSuggestions={handleShowSuggestions}
           onItemSelect={handleItemSelect}
           onQuantityChange={handleItemChange}
           onItemDeselect={handleItemDeselect}

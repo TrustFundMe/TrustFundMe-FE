@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useInView, motion } from "framer-motion";
 import Link from "next/link";
 import CampaignBannerCta from "@/components/campaign/CampaignBannerCta";
+import ShapeBlur from "@/components/ui/ShapeBlur";
 
 interface CampaignBannerProps {
   heading?: string;
@@ -73,9 +74,20 @@ const CampaignBanner = ({
           ) : (
             <Link
               href={ctaHref}
-              className="inline-flex items-center justify-center w-28 h-28 md:w-36 md:h-36 lg:w-[150px] lg:h-[150px] rounded-full border-2 border-white bg-transparent hover:bg-white/10 text-white font-medium text-sm md:text-base lg:text-lg transition-all duration-300 backdrop-blur-sm text-center px-2"
+              className="relative overflow-hidden group inline-flex items-center justify-center w-28 h-28 md:w-36 md:h-36 lg:w-[150px] lg:h-[150px] rounded-full border-2 border-white bg-transparent hover:bg-white/10 text-white font-medium text-sm md:text-base lg:text-lg transition-all duration-300 backdrop-blur-sm text-center px-2"
             >
-              {ctaLabel}
+              <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 scale-150">
+                <ShapeBlur
+                  variation={0}
+                  pixelRatioProp={typeof window !== 'undefined' ? window.devicePixelRatio : 1}
+                  shapeSize={1.5}
+                  roundness={0.5}
+                  borderSize={0.05}
+                  circleSize={0.3}
+                  circleEdge={0.5}
+                />
+              </div>
+              <span className="relative z-10">{ctaLabel}</span>
             </Link>
           )}
         </motion.div>

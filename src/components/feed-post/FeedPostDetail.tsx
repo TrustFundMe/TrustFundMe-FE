@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle, Check, Lock } from "lucide-react";
+import { Heart, MessageCircle, Send, MoreHorizontal, Flag, X, AlertTriangle, Check, Lock, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -10,6 +10,7 @@ import "swiper/css/pagination";
 import FeedPostHeader from "./FeedPostHeader";
 import CommentItem from "./CommentItem";
 import ImageZoomModal, { type ZoomImage } from "./ImageZoomModal";
+import PostRevisionHistoryModal from "./PostRevisionHistoryModal";
 import type { FeedPost, FeedPostComment } from "@/types/feedPost";
 import type { CampaignInfo } from "@/components/feed-post/CampaignCard";
 import type { Expenditure } from "@/types/expenditure";
@@ -59,6 +60,7 @@ export default function FeedPostDetail({
   const { isAuthenticated, user } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [liked, setLiked] = useState(post.liked);
   const [likeCount, setLikeCount] = useState(post.likeCount);
@@ -413,12 +415,16 @@ export default function FeedPostDetail({
                       Đổi đối tượng xem
                     </button>
                   )}
+                  <button type="button" onClick={() => { setSettingsOpen(false); setHistoryOpen(true); }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 16px", border: "none", borderTop: "1px solid rgba(0,0,0,0.06)", background: "none", textAlign: "left", cursor: "pointer", fontSize: 14, color: "#1a1a1a" }}>
+                    <Clock size={14} color="rgba(0,0,0,0.45)" /> Lịch sử chỉnh sửa
+                  </button>
                 </div>
               </>
             )}
           </div>
         )}
-        <FeedPostHeader post={post} expenditure={expenditure} onToggleLike={onToggleLike} onToggleFlag={onToggleFlag} />
+        <FeedPostHeader post={post} expenditure={expenditure} onToggleLike={onToggleLike} onToggleFlag={onToggleFlag} onViewHistory={() => setHistoryOpen(true)} />
       </fieldset>
 
       {/* Media Field */}
@@ -544,6 +550,18 @@ export default function FeedPostDetail({
           <button type="button" style={{ border: "none", background: "transparent", padding: "8px 0", cursor: "pointer", fontSize: 14, fontWeight: 600, color: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", gap: 6 }} title="Chia sẻ (sắp ra mắt)">
             <Send className="w-5 h-5" /> Chia sẻ
           </button>
+
+          {post.status === "PUBLISHED" && (
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              style={{ border: "none", background: "transparent", padding: "8px 0", cursor: "pointer", fontSize: 14, fontWeight: 600, color: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 6 }}
+              title="Xem lịch sử chỉnh sửa"
+            >
+              <Clock className="w-4 h-4" />
+              Lịch sử
+            </button>
+          )}
 
           {!canEdit && isAuthenticated && (
             <button
@@ -703,6 +721,15 @@ export default function FeedPostDetail({
         onOpenChange={setZoomOpen}
         images={zoomImages}
         initialIndex={zoomIndex}
+      />
+
+      <PostRevisionHistoryModal
+        postId={Number(post.id)}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        currentTitle={post.title}
+        currentContent={post.content}
+        currentMediaCount={post.attachments?.length ?? 0}
       />
     </article>
   );

@@ -292,7 +292,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                     issuePlace: ocrData.issuePlace || prev.issuePlace
                                 }));
                                 const docLabel = ocrData.idType === 'PASSPORT' ? 'Hộ chiếu' : ocrData.idType === 'DRIVER_LICENSE' ? 'Bằng lái xe' : 'CCCD';
-                                return `AI đã nhận diện ${docLabel} và điền thông tin ${fieldName === 'idImageFront' ? 'mặt trước' : 'mặt sau'} thành công!`;
+                                return `AI Tổng quyên góp diện ${docLabel} và điền thông tin ${fieldName === 'idImageFront' ? 'mặt trước' : 'mặt sau'} thành công!`;
                             },
                             error: (err: any) => err.message || 'AI không thể đọc được nội dung ảnh này. Vui lòng kiểm tra lại.'
                         },
@@ -333,8 +333,8 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                 {formData.idType === 'PASSPORT'
                                     ? <>Chỉ cần tải <span className="font-bold text-[#446b5f]">trang ảnh Hộ chiếu</span> lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
                                     : formData.idType === 'DRIVER_LICENSE'
-                                    ? <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của Bằng lái xe lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
-                                    : <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của CCCD lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
+                                        ? <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của Bằng lái xe lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
+                                        : <>Chỉ cần tải <span className="font-bold text-[#446b5f]">Mặt trước</span> và <span className="font-bold text-[#446b5f]">Mặt sau</span> của CCCD lên, hệ thống sẽ dùng AI tự động trích xuất và điền thông tin bên dưới.</>
                                 }
                             </span>
                         </p>
@@ -353,7 +353,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
                         <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
                             {formData.idType === 'PASSPORT' ? 'Trang ảnh Hộ chiếu' :
-                             formData.idType === 'DRIVER_LICENSE' ? 'Mặt trước Bằng lái xe' : 'Mặt trước CCCD'}
+                                formData.idType === 'DRIVER_LICENSE' ? 'Mặt trước Bằng lái xe' : 'Mặt trước CCCD'}
                         </p>
                         <div className="space-y-3">
                             <input
@@ -444,142 +444,142 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             </div>
 
             <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Người dùng</label>
-                <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
-                    {userName ? (
-                        <span className="font-medium text-gray-900">{userName}</span>
-                    ) : (
-                        <span className="text-gray-500">Mã người dùng (ID): {userId}</span>
-                    )}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Người dùng</label>
+                    <div className="mt-1 block w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-sm">
+                        {userName ? (
+                            <span className="font-medium text-gray-900">{userName}</span>
+                        ) : (
+                            <span className="text-gray-500">Mã người dùng (ID): {userId}</span>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Loại định danh</label>
-                    <select
-                        name="idType"
-                        value={formData.idType}
-                        onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
-                        disabled={readOnly}
-                    >
-                        <option value="CCCD">CCCD</option>
-                        <option value="PASSPORT">Hộ chiếu (Passport)</option>
-                        <option value="DRIVER_LICENSE">Bằng lái xe</option>
-                    </select>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Loại định danh</label>
+                        <select
+                            name="idType"
+                            value={formData.idType}
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
+                            disabled={readOnly}
+                        >
+                            <option value="CCCD">CCCD</option>
+                            <option value="PASSPORT">Hộ chiếu (Passport)</option>
+                            <option value="DRIVER_LICENSE">Bằng lái xe</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            {formData.idType === 'PASSPORT' ? 'Số hộ chiếu'
+                                : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe'
+                                    : 'Số CCCD/CMND'}
+                        </label>
+                        <input
+                            type="text"
+                            name="idNumber"
+                            required
+                            value={formData.idNumber}
+                            onChange={handleChange}
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'}`}
+                            placeholder={
+                                formData.idType === 'PASSPORT' ? 'VD: B1234567'
+                                    : formData.idType === 'DRIVER_LICENSE' ? '12 chữ số'
+                                        : '12 chữ số'
+                            }
+                            maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
+                            disabled={readOnly}
+                        />
+                        {errors.idNumber && (
+                            <p className="mt-1 text-xs text-red-600">{errors.idNumber}</p>
+                        )}
+                    </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Ngày cấp</label>
+                        <DatePicker
+                            selected={formData.issueDate}
+                            onChange={(date: Date | null) => handleDateChange('issueDate', date)}
+                            dateFormat="dd/MM/yyyy"
+                            placeholderText="DD/MM/YYYY"
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
+                                }`}
+                            showYearDropdown
+                            showMonthDropdown
+                            dropdownMode="select"
+                            maxDate={new Date()}
+                            required
+                            disabled={readOnly}
+                        />
+                        {errors.issueDate && (
+                            <p className="mt-1 text-xs text-red-600">{errors.issueDate}</p>
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Ngày hết hạn</label>
+                        <DatePicker
+                            selected={formData.expiryDate}
+                            onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
+                            dateFormat="dd/MM/yyyy"
+                            placeholderText="DD/MM/YYYY"
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
+                                }`}
+                            showYearDropdown
+                            showMonthDropdown
+                            dropdownMode="select"
+                            minDate={formData.issueDate || undefined}
+                            required
+                            disabled={readOnly}
+                        />
+                        {errors.expiryDate && (
+                            <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p>
+                        )}
+                    </div>
+                </div>
+
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        {formData.idType === 'PASSPORT' ? 'Số hộ chiếu'
-                         : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe'
-                         : 'Số CCCD/CMND'}
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700">Nơi cấp</label>
                     <input
                         type="text"
-                        name="idNumber"
+                        name="issuePlace"
                         required
-                        value={formData.idNumber}
+                        value={formData.issuePlace}
                         onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'}`}
-                        placeholder={
-                            formData.idType === 'PASSPORT' ? 'VD: B1234567'
-                            : formData.idType === 'DRIVER_LICENSE' ? '12 chữ số'
-                            : '12 chữ số'
-                        }
-                        maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
-                        disabled={readOnly}
-                    />
-                    {errors.idNumber && (
-                        <p className="mt-1 text-xs text-red-600">{errors.idNumber}</p>
-                    )}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Ngày cấp</label>
-                    <DatePicker
-                        selected={formData.issueDate}
-                        onChange={(date: Date | null) => handleDateChange('issueDate', date)}
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="DD/MM/YYYY"
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
                             }`}
-                        showYearDropdown
-                        showMonthDropdown
-                        dropdownMode="select"
-                        maxDate={new Date()}
-                        required
+                        placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
                         disabled={readOnly}
                     />
-                    {errors.issueDate && (
-                        <p className="mt-1 text-xs text-red-600">{errors.issueDate}</p>
+                    {errors.issuePlace && (
+                        <p className="mt-1 text-xs text-red-600">{errors.issuePlace}</p>
                     )}
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Ngày hết hạn</label>
-                    <DatePicker
-                        selected={formData.expiryDate}
-                        onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
-                        dateFormat="dd/MM/yyyy"
-                        placeholderText="DD/MM/YYYY"
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
-                            }`}
-                        showYearDropdown
-                        showMonthDropdown
-                        dropdownMode="select"
-                        minDate={formData.issueDate || undefined}
-                        required
-                        disabled={readOnly}
-                    />
-                    {errors.expiryDate && (
-                        <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p>
+
+
+                <div className="flex justify-end gap-3 pt-4">
+                    {onCancel && (
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f]"
+                            disabled={uploading || loading || fetching}
+                        >
+                            Đóng
+                        </button>
+                    )}
+                    {!readOnly && (
+                        <button
+                            type="submit"
+                            disabled={loading || uploading || fetching || Object.values(errors).some(error => error !== undefined)}
+                            className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#446b5f] text-base font-medium text-white hover:bg-[#35534a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Đang gửi...' : uploading ? 'Đang tải lên...' : isUpdate ? 'Cập nhật KYC' : 'Gửi KYC'}
+                        </button>
                     )}
                 </div>
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Nơi cấp</label>
-                <input
-                    type="text"
-                    name="issuePlace"
-                    required
-                    value={formData.issuePlace}
-                    onChange={handleChange}
-                    className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-[#446b5f]'
-                        }`}
-                    placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
-                    disabled={readOnly}
-                />
-                {errors.issuePlace && (
-                    <p className="mt-1 text-xs text-red-600">{errors.issuePlace}</p>
-                )}
-            </div>
-
-
-            <div className="flex justify-end gap-3 pt-4">
-                {onCancel && (
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f]"
-                        disabled={uploading || loading || fetching}
-                    >
-                        Đóng
-                    </button>
-                )}
-                {!readOnly && (
-                    <button
-                        type="submit"
-                        disabled={loading || uploading || fetching || Object.values(errors).some(error => error !== undefined)}
-                        className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#446b5f] text-base font-medium text-white hover:bg-[#35534a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#446b5f] sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading ? 'Đang gửi...' : uploading ? 'Đang tải lên...' : isUpdate ? 'Cập nhật KYC' : 'Gửi KYC'}
-                    </button>
-                )}
-            </div>
             </div>
         </form>
     );

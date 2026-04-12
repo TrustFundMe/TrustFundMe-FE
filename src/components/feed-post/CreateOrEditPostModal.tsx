@@ -45,7 +45,7 @@ export default function CreateOrEditPostModal({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   // "none" = không liên kết, "CAMPAIGN" = liên kết chiến dịch, "EXPENDITURE" = liên kết đợt chi tiêu
-  const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE">("none");
+  const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE">("none");
   const [linkedCampaignId, setLinkedCampaignId] = useState("");
   /** expenditureId chỉ set khi user chọn expenditure trong dropdown */
   const [selectedExpenditureId, setSelectedExpenditureId] = useState<number | null>(null);
@@ -54,8 +54,11 @@ export default function CreateOrEditPostModal({
   /** Ảnh đang upload: preview local, xong thì done=true */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string; done: boolean }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName === "evidence");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
+  /** Snapshot of images when modal opens in EDIT mode — used to detect removed images */
+  const initialImagesRef = useRef<{ url: string; mediaId: number }[]>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -65,14 +68,17 @@ export default function CreateOrEditPostModal({
       setContent(initialData.content ?? "");
       if (initialData.targetId) {
         const rawTt = initialData.targetType;
-        const tt: "none" | "CAMPAIGN" | "EXPENDITURE" =
-          rawTt === "CAMPAIGN" || rawTt === "EXPENDITURE" ? rawTt : "none";
+        const tt: "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE" =
+          rawTt === "CAMPAIGN" ? "CAMPAIGN" :
+          (rawTt === "EXPENDITURE" && initialData.targetName === "evidence") ? "EVIDENCE" :
+          rawTt === "EXPENDITURE" ? "EXPENDITURE" :
+          rawTt === "EVIDENCE" ? "EVIDENCE" : "none";
         setLinkType(tt);
         if (tt === "CAMPAIGN") {
           setLinkedCampaignId(String(initialData.targetId));
           setSelectedExpenditureId(null);
           setExpendituresOfCampaign([]);
-        } else if (tt === "EXPENDITURE") {
+        } else if (tt === "EXPENDITURE" || tt === "EVIDENCE") {
           expenditureService
             .getById(initialData.targetId)
             .then((exp) => {
@@ -105,13 +111,14 @@ export default function CreateOrEditPostModal({
       }
       const initialImages = (initialData.attachments && initialData.attachments.length > 0)
         ? initialData.attachments
-        : (initialData.medias && initialData.medias.length > 0)
-          ? initialData.medias
-          : [];
-      setExistingImages(initialImages.map((img: any) => ({
-        url: img.url || img.mediaUrl,
-        mediaId: img.id || img.mediaId || img.id
-      })));
+        : [];
+      const mappedInitial = initialImages.map((img) => ({
+        url: img.url,
+        mediaId: img.id ?? 0,
+      }));
+      setExistingImages(mappedInitial);
+      // Snapshot for tracking deletions — never mutated
+      initialImagesRef.current = mappedInitial;
       setUploadingItems([]);
     } else {
       const savedDraft = localStorage.getItem(DRAFT_KEY);
@@ -122,8 +129,8 @@ export default function CreateOrEditPostModal({
           setContent(draft.content || "");
           setLinkedCampaignId(draft.campaignId || "");
           setLinkType(
-            draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE"
-              ? draft.targetType
+            draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE" || draft.targetType === "EVIDENCE"
+              ? (draft.targetType === "EXPENDITURE" && draft.targetName === "evidence") ? "EVIDENCE" : draft.targetType
               : "none"
           );
           setSelectedExpenditureId(null);
@@ -187,38 +194,57 @@ export default function CreateOrEditPostModal({
       const effectiveTargetId =
         linkType === "CAMPAIGN"
           ? linkedCampaignId ? Number(linkedCampaignId) : null
-          : linkType === "EXPENDITURE"
+          : (linkType === "EXPENDITURE" || linkType === "EVIDENCE")
           ? selectedExpenditureId
           : null;
 
+      const effectiveTargetType = linkType === "EVIDENCE" ? "EXPENDITURE" : (linkType === "none" ? null : linkType);
+      const effectiveTargetName = linkType === "EVIDENCE" ? "evidence" : null;
+
       const postTitle = title || content.slice(0, 50);
 
-      if (isEdit && initialData?.id) {
+        if (isEdit && initialData?.id) {
         // === EDIT MODE ===
         const postId = Number(initialData.id);
+
+        // Step 1: update() FIRST — triggers snapshotRevision() which captures
+        // the BEFORE state (old text + old media still linked). Must happen
+        // before any media changes so the snapshot is accurate.
         await feedPostService.update(postId, {
           title: postTitle,
           content,
           status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
-          targetType: linkType === "none" ? null : linkType,
+          targetType: effectiveTargetType,
+          targetName: effectiveTargetName,
         });
-        // Re-link existing images
-        for (const img of existingImages) {
-          if (img.mediaId) {
-            try { await mediaService.updateMedia(img.mediaId, { postId }); } catch { /* noop */ }
+
+        // Step 2: Unlink removed images AFTER snapshot captured old state
+        const removedMediaIds = initialImagesRef.current
+          .filter((orig) => orig.mediaId > 0 && !existingImages.some((cur) => cur.mediaId === orig.mediaId))
+          .map((orig) => orig.mediaId);
+        for (const mediaId of removedMediaIds) {
+          try { await mediaService.unlinkFromPost(mediaId); } catch { /* noop */ }
+        }
+
+        // Step 3: Upload new images
+        let uploadFailCount = 0;
+        for (const { file } of uploadingItems) {
+          try {
+            await feedPostService.uploadImage(file, postId);
+            setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+          } catch (e) {
+            uploadFailCount++;
+            console.error("Upload failed:", e);
           }
         }
-        // Upload new images WITH postId, mark each as done
-        for (const { file } of uploadingItems) {
-          try { await feedPostService.uploadImage(file, postId); } catch (e) { console.error("Upload failed:", e); }
-          setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+        if (uploadFailCount > 0) {
+          alert(`Bài viết đã lưu, nhưng ${uploadFailCount} ảnh upload thất bại. Vui lòng thử lại.`);
         }
         if (!initialData?.title && title) localStorage.removeItem(DRAFT_KEY);
         onPostUpdated?.();
       } else {
         // === CREATE MODE ===
-        // Nếu draftMode=true → chỉ tạo DRAFT. Ngược lại → tạo DRAFT → upload ảnh → PUBLIC
         const newPost = await feedPostService.create({
           type: "DISCUSSION",
           visibility: "PUBLIC",
@@ -226,26 +252,24 @@ export default function CreateOrEditPostModal({
           content,
           status: draftMode ? "DRAFT" : "PUBLISHED",
           targetId: effectiveTargetId ?? null,
-          targetType: linkType === "none" ? null : linkType,
+          targetType: effectiveTargetType,
+          targetName: effectiveTargetName,
         });
         const postId = Number(newPost.id);
 
-        // Upload all images with postId, mark each as done
+        // Upload all images with postId, mark only successful ones as done
+        let uploadFailCount = 0;
         for (const { file } of uploadingItems) {
-          try { await feedPostService.uploadImage(file, postId); } catch (e) { console.error("Upload failed:", e); }
-          setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+          try {
+            await feedPostService.uploadImage(file, postId);
+            setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+          } catch (e) {
+            uploadFailCount++;
+            console.error("Upload failed:", e);
+          }
         }
-
-        // Nếu không phải draftMode → publish luôn
-        if (!draftMode) {
-          await feedPostService.update(postId, {
-            title: postTitle,
-            content,
-            status: "PUBLISHED",
-            visibility: "PUBLIC",
-            targetId: effectiveTargetId ?? null,
-            targetType: linkType === "none" ? null : linkType,
-          });
+        if (uploadFailCount > 0) {
+          alert(`Bài viết đã đăng, nhưng ${uploadFailCount} ảnh upload thất bại. Vui lòng chỉnh sửa bài và thêm lại ảnh.`);
         }
 
         localStorage.removeItem(DRAFT_KEY);
@@ -326,25 +350,30 @@ export default function CreateOrEditPostModal({
           <div className="flex items-center gap-2 flex-wrap mb-4">
             <select
               value={linkType}
+              disabled={isLinkLocked}
               onChange={(e) => {
-                const val = e.target.value as "none" | "CAMPAIGN" | "EXPENDITURE";
+                const val = e.target.value as "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE";
                 setLinkType(val);
                 setLinkedCampaignId("");
                 setSelectedExpenditureId(null);
                 setExpendituresOfCampaign([]);
               }}
-              className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
+              className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="none">Liên kết...</option>
               <option value="CAMPAIGN">Chiến dịch</option>
               <option value="EXPENDITURE">Đợt chi tiêu</option>
+              {initialData?.targetName?.startsWith('evidence') && (
+                <option value="EVIDENCE">Minh chứng (Chi tiêu)</option>
+              )}
             </select>
 
             {linkType === "CAMPAIGN" && (
               <select
                 value={linkedCampaignId}
+                disabled={isLinkLocked}
                 onChange={(e) => setLinkedCampaignId(e.target.value)}
-                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px]"
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">Chọn chiến dịch...</option>
                 {campaignsList.map((c) => (
@@ -372,9 +401,10 @@ export default function CreateOrEditPostModal({
               </span>
             )}
 
-            {linkType === "EXPENDITURE" && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && (
               <select
                 value={linkedCampaignId}
+                disabled={isLinkLocked}
                 onChange={async (e) => {
                   const cId = e.target.value;
                   setLinkedCampaignId(cId);
@@ -392,7 +422,7 @@ export default function CreateOrEditPostModal({
                     setExpendituresOfCampaign(sorted.map((exp) => ({ id: exp.id, plan: exp.plan ?? "" })));
                   }
                 }}
-                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">Chọn chiến dịch...</option>
                 {campaignsList.map((c) => (
@@ -402,11 +432,12 @@ export default function CreateOrEditPostModal({
                 ))}
               </select>
             )}
-            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length > 0 && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && linkedCampaignId && expendituresOfCampaign.length > 0 && (
               <select
                 value={selectedExpenditureId ?? ""}
+                disabled={isLinkLocked}
                 onChange={(e) => setSelectedExpenditureId(e.target.value ? Number(e.target.value) : null)}
-                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px]"
+                className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer flex-1 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">Chọn đợt chi tiêu...</option>
                 {expendituresOfCampaign.map((exp) => (
@@ -416,10 +447,10 @@ export default function CreateOrEditPostModal({
                 ))}
               </select>
             )}
-            {linkType === "EXPENDITURE" && linkedCampaignId && expendituresOfCampaign.length === 0 && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && linkedCampaignId && expendituresOfCampaign.length === 0 && (
               <span className="text-sm text-zinc-400 italic">Chưa có đợt chi tiêu</span>
             )}
-            {linkType === "EXPENDITURE" && selectedExpenditureId && (
+            {(linkType === "EXPENDITURE" || linkType === "EVIDENCE") && selectedExpenditureId && (
               <span
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
@@ -471,7 +502,9 @@ export default function CreateOrEditPostModal({
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={content.url} alt="" className="absolute inset-0 w-full h-full object-contain" />
                 ) : content.done ? (
+                  // Uploaded successfully — show green checkmark
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[1]">
                       <div className="w-7 h-7 bg-[#1A685B] rounded-full flex items-center justify-center">
@@ -481,13 +514,19 @@ export default function CreateOrEditPostModal({
                       </div>
                     </div>
                   </>
-                ) : (
+                ) : isSubmitting ? (
+                  // Submitting + not done yet → actually uploading now → spinner
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[1]">
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
                   </>
+                ) : (
+                  // Pending — selected but not yet submitted → just show preview, no overlay
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
                 )}
                 <button
                   type="button"

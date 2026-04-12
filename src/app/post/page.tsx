@@ -19,6 +19,7 @@ import {
   UserRound, FilePenLine,
 } from "lucide-react";
 import { CommunityFeedPostCard, FEED_CAT_COLORS } from "@/components/feed-post/CommunityFeedPostCard";
+import Aurora from "@/components/ui/Aurora";
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -165,22 +166,30 @@ export default function ForumPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts]);
 
-  // Load campaigns for create-post modal (independent from feed)
+  // Titles map: dùng cho banner lọc theo campaignId (?campaignId=)
   useEffect(() => {
-    campaignService.getAll(0, 100).then((res: { content?: { id: number; title?: string; fundOwnerId?: number }[]; totalElements?: number } | null) => {
+    campaignService.getAll(0, 100).then((res) => {
       const camps = Array.isArray(res) ? res : (res?.content ?? []);
       const titles: Record<string, string> = {};
-      const list: { id: number; title: string }[] = [];
-      camps.forEach(c => {
-        const title = c.title ?? "";
-        titles[String(c.id)] = title;
-        if (user?.id && Number(c.fundOwnerId) === Number(user.id)) {
-          list.push({ id: c.id, title });
-        }
+      camps.forEach((c: { id: number; title?: string }) => {
+        titles[String(c.id)] = c.title ?? "";
       });
       setCampaignTitles(titles);
-      setCampaignsList(list);
     }).catch(() => { /* non-critical */ });
+  }, []);
+
+  // Modal đăng bài: chỉ chiến dịch của user (API fund-owner — không phụ thuộc field trên trang list)
+  useEffect(() => {
+    if (!user?.id) {
+      setCampaignsList([]);
+      return;
+    }
+    campaignService
+      .getByFundOwner(Number(user.id))
+      .then((mine) => {
+        setCampaignsList(mine.map((c) => ({ id: c.id, title: c.title ?? "" })));
+      })
+      .catch(() => setCampaignsList([]));
   }, [user]);
 
   const markSeen = useCallback(async (postId: string) => {
@@ -340,8 +349,18 @@ export default function ForumPage() {
 
   return (
     <DanboxLayout header={4} footer={0}>
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950" style={{ paddingTop: 100 }}>
-        <div className="max-w-3xl mx-auto px-4 pt-4 pb-16">
+      <div className="min-h-screen relative overflow-hidden bg-zinc-50 dark:bg-zinc-950" style={{ paddingTop: 100 }}>
+        {/* Background Aurora */}
+        <div className="fixed inset-0 z-0 pointer-events-none opacity-30">
+          <Aurora
+            colorStops={["#4ADE80", "#86EFAC", "#DCFCE7"]}
+            blend={0.5}
+            amplitude={1.2}
+            speed={1}
+          />
+        </div>
+
+        <div className="relative z-10 max-w-3xl mx-auto px-4 pt-4 pb-16">
           {/* ── MAIN FEED ── */}
           <main className="flex-1 min-w-0 space-y-3">
 
@@ -437,9 +456,9 @@ export default function ForumPage() {
               </div>
             )}
 
-            {/* Loading initial */}
+            {/* Loading initial — fill available height so footer stays at bottom */}
             {loading && !isLoadingMore && (
-              <div className="flex justify-center py-24">
+              <div className="flex justify-center items-center" style={{ minHeight: "calc(100vh - 280px)" }}>
                 <div className="w-7 h-7 rounded-full border-2 border-zinc-200 dark:border-zinc-700 border-t-[#ff5e14] animate-spin" />
               </div>
             )}

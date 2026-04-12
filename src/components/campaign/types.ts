@@ -2,6 +2,7 @@ export type User = {
   id: string;
   name: string;
   avatar: string;
+  trustScore?: number;
 };
 
 export type CampaignFollower = {

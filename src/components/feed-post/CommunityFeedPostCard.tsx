@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  Heart, Eye, Pin, Lock, FileText, Building2,
+  Heart, Eye, Pin, Lock, FileText, Building2, BadgeCheck,
 } from "lucide-react";
 import type { FeedPost } from "@/types/feedPost";
 
@@ -79,18 +79,32 @@ export function CommunityFeedPostCard({
 
   const imgs = (post.attachments ?? []).filter(a => a.type === "image" && a.url);
   const text = post.content.replace(/<[^>]*>/g, "").trim();
+  const isEvidence = post.targetName?.startsWith('evidence');
+  let evidencePlanName = post.targetName?.includes('|') ? post.targetName.split('|')[1] : null;
+  if (!evidencePlanName && post.title?.includes('Cập nhật minh chứng chi tiêu:')) {
+    evidencePlanName = post.title.replace('Cập nhật minh chứng chi tiêu: ', '').trim();
+  }
 
   return (
     <article
       ref={cardRef}
       onClick={onOpen}
       data-post-id={String(post.id)}
-      className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer
-        border border-zinc-100 dark:border-zinc-800
-        hover:border-zinc-200 dark:hover:border-zinc-700
-        hover:shadow-md transition-all duration-200"
+      className={`relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer
+        transition-all duration-300
+        ${isEvidence 
+          ? 'border-2 border-purple-200 dark:border-purple-800/50 shadow-sm hover:shadow-[0_8px_30px_rgba(168,85,247,0.15)] hover:border-purple-300 hover:-translate-y-0.5' 
+          : 'border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 hover:shadow-md hover:-translate-y-0.5'}`}
     >
-      <div className="flex items-start gap-3 p-4 pb-3">
+      {isEvidence && (
+        <div className="absolute top-4 -right-1 z-10 pointer-events-none drop-shadow-md">
+           <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[9px] font-extrabold uppercase tracking-widest py-1.5 pl-3 pr-3 rounded-l-full relative flex items-center gap-1.5">
+             <BadgeCheck className="w-3.5 h-3.5" /> MINH CHỨNG
+             <div className="absolute top-full right-0 w-0 h-0 border-t-[4px] border-t-purple-900 border-r-[4px] border-r-transparent"></div>
+           </div>
+        </div>
+      )}
+      <div className="flex items-start gap-3 p-4 pb-3 relative z-0">
         <div className="relative mt-0.5">
           <Ava name={author} src={authorAvatar} size={38} />
           {post.isPinned && (
@@ -169,7 +183,16 @@ export function CommunityFeedPostCard({
                 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors shadow-sm"
             >
               <FileText className="w-3.5 h-3.5" />
-              {post.targetName || `Minh chứng #${post.targetId}`}
+              {isEvidence ? (
+                <>
+                  <span className="text-purple-700 dark:text-purple-300 font-extrabold flex items-center gap-1">
+                    Minh chứng cho
+                  </span>
+                  <span className="ml-[2px] font-bold text-purple-900 dark:text-purple-100">{evidencePlanName || `#${post.targetId}`}</span>
+                </>
+              ) : (
+                post.targetName || `Đợt chi tiêu #${post.targetId}`
+              )}
             </Link>
           ) : post.targetType === "CAMPAIGN" ? (
             <Link

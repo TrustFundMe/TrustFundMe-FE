@@ -1,4 +1,4 @@
-import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest } from '@/types/expenditure';
+import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest, ExpenditureTransaction } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
 import axios from 'axios';
 
@@ -24,6 +24,11 @@ export const expenditureService = {
     },
     getItemsByCampaignId: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
         const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items`);
+        return response.data;
+    },
+
+    getApprovedItemsByCampaign: async (campaignId: string | number): Promise<ExpenditureItem[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/items/approved`);
         return response.data;
     },
 
@@ -56,9 +61,9 @@ export const expenditureService = {
     deleteItem: async (itemId: string | number): Promise<void> => {
         await axiosInstance.delete(`/api/expenditures/items/${itemId}`);
     },
-    updateEvidenceStatus: async (id: string | number, status: string): Promise<Expenditure> => {
+    updateEvidenceStatus: async (id: string | number, status: string, reason?: string): Promise<Expenditure> => {
         const response = await axiosInstance.patch(`/api/expenditures/${id}/evidence-status`, null, {
-            params: { status }
+            params: { status, reason }
         });
         return response.data;
     },
@@ -139,6 +144,22 @@ export const expenditureService = {
      */
     releaseReservation: async (itemId: string | number): Promise<{ success: boolean; message: string }> => {
         const response = await axiosInstance.delete(`/api/expenditures/items/${itemId}/reserve`);
+        return response.data;
+    },
+
+    /** Phân tích chi tiêu bằng AI */
+    analyzeWithAI: async (campaign: any, expenditure: any, items: any[]): Promise<any> => {
+        const response = await axios.post('http://localhost:7000/api/analyze-expenditure', {
+            campaign,
+            expenditure,
+            items
+        });
+        return response.data;
+    },
+
+    /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
+    getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
+        const response = await axiosInstance.get('/api/expenditures/transactions');
         return response.data;
     },
 };
