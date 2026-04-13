@@ -21,41 +21,47 @@ const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1488521787991-ed7bbaae
 const fmt = (v: number) => new Intl.NumberFormat('vi-VN').format(v) + ' VND';
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('vi-VN');
 
-const STATUS_EXP = {
-    'PENDING': { label: 'Chờ duyệt', color: '#f59e0b', bg: '#fffbeb' },
-    'PENDING_REVIEW': { label: 'Rà soát', color: '#3b82f6', bg: '#eff6ff' },
-    'APPROVED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
-    'REJECTED': { label: 'Từ chối', color: '#ef4444', bg: '#fef2f2' },
-    'DISBURSED': { label: 'Giải ngân', color: '#8b5cf6', bg: '#f5f3ff' },
-    'COMPLETED': { label: 'Xong', color: '#059669', bg: '#f0fdf4' }
+const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
+    'PENDING':              { label: 'Chờ duyệt',    color: '#f59e0b', bg: '#fffbeb' },
+    'PENDING_REVIEW':       { label: 'Chờ duyệt',    color: '#f59e0b', bg: '#fffbeb' },
+    'APPROVED':             { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
+    'WITHDRAWAL_REQUESTED': { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
+    'CLOSED':               { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
+    'REJECTED':             { label: 'Từ chối',     color: '#ef4444', bg: '#fef2f2' },
+    'DISBURSED':            { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
+    'COMPLETED':            { label: 'Hoàn tất',     color: '#059669', bg: '#f0fdf4' },
 };
 
-const EVIDENCE_STATUS = {
-    'NOT_SUBMITTED': { label: 'Chưa nộp', color: '#94a3b8', bg: '#f8fafc' },
-    'SUBMITTED': { label: 'Chờ MC', color: '#f59e0b', bg: '#fffbeb' },
-    'APPROVED': { label: 'MC OK', color: '#10b981', bg: '#ecfdf5' },
-    'REJECTED': { label: 'MC Lỗi', color: '#ef4444', bg: '#fef2f2' }
+const EVIDENCE_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+    'NOT_SUBMITTED': { label: 'Chưa nộp MC',    color: '#94a3b8', bg: '#f8fafc' },
+    'SUBMITTED':     { label: 'Đã nộp — chờ', color: '#f59e0b', bg: '#fffbeb' },
+    'APPROVED':      { label: 'MC hợp lệ',       color: '#10b981', bg: '#ecfdf5' },
+    'REJECTED':      { label: 'MC không hợp lệ', color: '#ef4444', bg: '#fef2f2' },
 };
 
-const CAM_TYPE = { 'AUTHORIZED': 'Ủy Quyền', 'ITEMIZED': 'Vật Phẩm' };
+const CAM_TYPE: Record<string, string> = { 'AUTHORIZED': 'Ủy Quyền', 'ITEMIZED': 'Vật Phẩm' };
 
-/* ══════════════════════════════ SUB-COMPONENTS ══════════════════════════════ */
+/* ════════════════════════════ SUB-COMPONENTS ════════════════════════════ */
 
-const StatusPill = ({ status }: { status: string }) => {
-    const cfg = (STATUS_EXP as any)[status] || { label: status, color: '#6b7280', bg: '#f3f4f6' };
+// Hiện 1 badge duy nhất: ưu tiên evidence status nếu đã nộp, ngược lại hiện expenditure status
+const CombinedStatusPill = ({ expStatus, evidenceStatus }: { expStatus: string; evidenceStatus?: string }) => {
+    const evKey = (evidenceStatus ?? '').toUpperCase();
+    const exKey = (expStatus ?? '').toUpperCase();
+    // Nếu evidence đã nộp (SUBMITTED / APPROVED / REJECTED) → hiện badge evidence
+    if (evKey && evKey !== 'NOT_SUBMITTED' && EVIDENCE_STATUS[evKey]) {
+        const cfg = EVIDENCE_STATUS[evKey];
+        return (
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
+                style={{ color: cfg.color, backgroundColor: cfg.bg, borderColor: `${cfg.color}30` }}>
+                {cfg.label}
+            </span>
+        );
+    }
+    // Ngược lại hiện expenditure status
+    const cfg = STATUS_EXP[exKey] ?? { label: 'Không rõ', color: '#6b7280', bg: '#f3f4f6' };
     return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
             style={{ color: cfg.color, backgroundColor: cfg.bg, borderColor: `${cfg.color}30` }}>
-            {cfg.label}
-        </span>
-    );
-};
-
-const EvidencePill = ({ status }: { status: string }) => {
-    const cfg = (EVIDENCE_STATUS as any)[status] || { label: status, color: '#6b7280', bg: '#f3f4f6' };
-    return (
-        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
-            style={{ color: cfg.color, backgroundColor: cfg.bg }}>
             {cfg.label}
         </span>
     );
@@ -138,8 +144,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                     <div className="space-y-0.5">
                         <h5 className="text-[11px] font-bold text-gray-900 uppercase leading-none">{exp.plan}</h5>
                         <div className="flex items-center gap-2">
-                            <StatusPill status={exp.status || 'PENDING'} />
-                            {(exp.evidenceStatus && exp.evidenceStatus !== 'NOT_SUBMITTED') && <EvidencePill status={exp.evidenceStatus} />}
+                            <CombinedStatusPill expStatus={exp.status || 'PENDING'} evidenceStatus={exp.evidenceStatus} />
                         </div>
                         {(exp.status === 'REJECTED' || exp.evidenceStatus === 'REJECTED') && exp.rejectReason && (
                             <p className="text-[9px] text-rose-600 font-bold mt-1 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 italic leading-tight">
