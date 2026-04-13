@@ -99,13 +99,6 @@ export default function ChatSidebar({
                                             {c.name.charAt(0).toUpperCase()}
                                         </div>
                                     )}
-                                    <span
-                                        className="absolute bottom-0 right-0 w-2 h-2 rounded-full border"
-                                        style={{
-                                            backgroundColor: '#22c55e',
-                                            borderColor: active ? '#dc2626' : 'white',
-                                        }}
-                                    />
                                 </div>
 
                                 {/* Text — dùng span thay p để tránh Bootstrap margin-bottom:1rem trên p */}

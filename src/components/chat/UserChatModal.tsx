@@ -356,7 +356,6 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
                             {campaign.title}
                         </div>
                         <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: '11px', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
                             Hỗ trợ chiến dịch
                         </div>
                     </div>
