@@ -113,10 +113,10 @@ export const feedPostService = {
   },
 
   async getByTarget(targetId: number, targetType: string): Promise<FeedPostDto[]> {
-    const res = await api.get<FeedPostDto[]>("/api/feed-posts/by-target", {
+    const res = await api.get<FeedPostDto[] | { content: FeedPostDto[] }>(API_ENDPOINTS.FEED_POSTS.BASE, {
       params: { targetId, targetType },
     });
-    return res.data;
+    return unwrapPage(res.data);
   },
 
   async updateStatus(id: number, status: string): Promise<FeedPostDto> {
