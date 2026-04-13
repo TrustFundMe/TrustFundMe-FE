@@ -130,23 +130,6 @@ export const expenditureService = {
         return response.data;
     },
 
-    /**
-     * Cố gắng giữ chỗ sản phẩm cuối cùng.
-     * @returns success: true = giữ được, false = đã có người giữ rồi
-     */
-    reserveItem: async (itemId: string | number, qty: number): Promise<{ success: boolean; message: string }> => {
-        const response = await axiosInstance.post(`/api/expenditures/items/${itemId}/reserve?qty=${qty}`);
-        return response.data;
-    },
-
-    /**
-     * Nhả chỗ giữ sản phẩm.
-     */
-    releaseReservation: async (itemId: string | number): Promise<{ success: boolean; message: string }> => {
-        const response = await axiosInstance.delete(`/api/expenditures/items/${itemId}/reserve`);
-        return response.data;
-    },
-
     /** Phân tích chi tiêu bằng AI */
     analyzeWithAI: async (campaign: any, expenditure: any, items: any[]): Promise<any> => {
         const response = await axios.post('http://localhost:7000/api/analyze-expenditure', {

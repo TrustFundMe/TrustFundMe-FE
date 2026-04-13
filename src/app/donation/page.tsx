@@ -15,6 +15,7 @@ import { CampaignDto } from '@/types/campaign';
 import { paymentService, CreatePaymentRequest } from '@/services/paymentService';
 import { authService } from '@/services/authService';
 import { aiService } from '@/services/aiService';
+import { useToast } from '@/components/ui/Toast';
 import Script from 'next/script';
 
 // Mock data for donors
@@ -26,6 +27,7 @@ const mockRecentDonors = [
 
 function DonationContent() {
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const prefillAmount = searchParams.get('amount');
   const isGeneralMode = searchParams.get('fundType') === 'general';
   const campaignId = searchParams.get('campaignId');
@@ -94,8 +96,7 @@ function DonationContent() {
                 name: item.category,
                 description: item.note || '',
                 price: item.expectedPrice,
-                quantityLeft: item.quantityLeft ?? 0,
-                reservations: item.reservations ?? 0
+                quantityLeft: item.quantityLeft ?? 0
               }))
               .filter(item => item.quantityLeft > 0);
             setExpenditureItems(mappedItems);
@@ -169,7 +170,7 @@ function DonationContent() {
     console.log('[DEBUG] handleShowSuggestions called', { amount, itemCount: expenditureItems.length });
     if (expenditureItems.length === 0) {
       console.log('[DEBUG] expenditureItems is empty — data may not be loaded yet');
-      alert('Dữ liệu vật phẩm chưa tải xong. Vui lòng đợi.');
+      toast('Dữ liệu vật phẩm chưa tải xong. Vui lòng đợi.', 'info');
       return;
     }
     if (amount <= 0) {
@@ -202,24 +203,6 @@ function DonationContent() {
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
 
-    // Nếu chọn HẾT số lượng còn lại → gọi reserve API
-    if (qty === item.quantityLeft) {
-      console.log(`[Selection] Reserving item ${itemId} because quantity selected (${qty}) matches quantityLeft (${item.quantityLeft})`);
-      try {
-        const res = await expenditureService.reserveItem(parseInt(itemId), qty);
-        if (!res.success) {
-          alert(res.message || 'Sản phẩm này đã có người khác đang chọn giữ chỗ');
-          return;
-        }
-      } catch (err: any) {
-        if (err.response?.status === 409) {
-          alert('Sản phẩm này đã có người khác đang chọn giữ chỗ');
-          return;
-        }
-        console.warn('Reserve API error:', err);
-      }
-    }
-
     const newItems = { ...items, [itemId]: qty };
     setItems(newItems);
 
@@ -233,14 +216,6 @@ function DonationContent() {
   const handleItemDeselect = async (itemId: string) => {
     const item = expenditureItems.find(i => i.id === itemId);
     if (!item) return;
-
-    // Nếu đang giữ chỗ (chọn hết số lượng) thì nhả chỗ
-    if (items[itemId] === item.quantityLeft) {
-      console.log(`[Deselection] Releasing reservation for item ${itemId} because it was fully selected`);
-      try {
-        await expenditureService.releaseReservation(parseInt(itemId));
-      } catch { }
-    }
 
     const newItems = { ...items };
     delete newItems[itemId];
@@ -276,28 +251,6 @@ function DonationContent() {
 
     // If item is already selected, update its contribution to the donation
     if (items[itemId]) {
-      // Handle Reservation edge cases during quantity change
-      if (items[itemId] === item.quantityLeft && newQty < item.quantityLeft) {
-        // Vừa rồi là giữ hết → giờ giảm xuống → nhả reserve
-        console.log(`[Quantity Change] Releasing reservation for item ${itemId} because qty decreased from ${items[itemId]} to ${newQty}`);
-        try {
-          await expenditureService.releaseReservation(parseInt(itemId));
-        } catch { }
-      } else if (items[itemId] < item.quantityLeft && newQty === item.quantityLeft) {
-        // Vừa rồi chưa giữ → giờ tăng lên kịch trần → reserve
-        console.log(`[Quantity Change] Reserving item ${itemId} because qty increased from ${items[itemId]} to ${newQty}`);
-        try {
-          const res = await expenditureService.reserveItem(parseInt(itemId), newQty);
-          if (!res.success) {
-            alert(res.message || 'Số lượng cuối cùng của sản phẩm này đã có người giữ');
-            return; // Don't update to newQty if reservation fails
-          }
-        } catch (err: any) {
-          alert('Không thể giữ chỗ cho sản phẩm này');
-          return;
-        }
-      }
-
       const newItems = { ...items, [itemId]: newQty };
       setItems(newItems);
 
@@ -311,7 +264,7 @@ function DonationContent() {
 
   const handleSubmit = async () => {
     if (paymentMethod === 'paypal') {
-      alert("Phương thức thanh toán này đang được phát triển");
+      toast("Phương thức thanh toán này đang được phát triển", "info");
       return;
     }
 
@@ -364,7 +317,7 @@ function DonationContent() {
             const checkResult = await paymentService.checkExpenditureItemLimit(item.expenditureItemId, item.quantity);
             if (!checkResult.canDonateMore) {
               console.warn(`🛑 [Donation] Limit exceeded for item ${item.expenditureItemId}:`, checkResult.message);
-              alert(checkResult.message || "Số lượng vật phẩm đã đạt giới hạn.");
+              toast(checkResult.message || "Số lượng vật phẩm đã đạt giới hạn.", "error");
               setSubmitting(false);
               return;
             }
@@ -413,8 +366,7 @@ function DonationContent() {
                       name: item.category,
                       description: item.note || '',
                       price: item.expectedPrice,
-                      quantityLeft: item.quantityLeft ?? 0,
-                      reservations: item.reservations ?? 0
+                      quantityLeft: item.quantityLeft ?? 0
                     }))
                     .filter(item => item.quantityLeft > 0);
 
@@ -457,7 +409,7 @@ function DonationContent() {
       }
     } catch (error) {
       console.error('Error creating payment flow:', error);
-      alert("Có lỗi xảy ra khi khởi tạo thanh toán. Vui lòng thử lại sau.");
+      toast("Có lỗi xảy ra khi khởi tạo thanh toán. Vui lòng thử lại sau.", "error");
     } finally {
       setSubmitting(false);
     }
