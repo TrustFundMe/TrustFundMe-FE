@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Search, AlertCircle, FileImage, Sparkles, Mail, Lock, ShieldAlert, Megaphone, Phone, Info, AlertTriangle, Building2, MapPin, X, ExternalLink, ChevronDown, ChevronRight, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Search, AlertCircle, FileImage, Sparkles, MessageSquare, Lock, ShieldAlert, Megaphone, Phone, Info, AlertTriangle, Building2, MapPin, X, ExternalLink, ChevronDown, ChevronRight, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
 import { userService } from '@/services/userService';
 import { notificationService } from '@/services/notificationService';
+import { chatService } from '@/services/chatService';
 import { useAuth } from '@/contexts/AuthContextProxy';
+import { useRouter } from 'next/navigation';
 import AIAnalysisModal from './AIAnalysisModal';
 import axios from 'axios';
 
@@ -76,7 +78,6 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel, dange
 function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () => void }) {
     const [aiResult, setAiResult] = useState<AIResult | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
-    const [mailing, setMailing] = useState(false);
     const [confirm, setConfirm] = useState<null | 'lock_campaign' | 'lock_account' | 'post_fraud' | 'send_legal'>(null);
     const [photosOpen, setPhotosOpen] = useState(true);
     const [lightbox, setLightbox] = useState<string | null>(null);
@@ -85,12 +86,24 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
     const overdue = d !== null && d < 0;
     const hasPhotos = rec.evidencePhotos.length > 0;
 
-    const sendReminder = async () => {
-        setMailing(true);
+    const [isChatting, setIsChatting] = useState(false);
+    const router = useRouter();
+
+    const startChat = async () => {
+        setIsChatting(true);
         try {
-            await notificationService.createEvent({ userId: rec.ownerId, type: 'EVIDENCE_REMINDER', message: `Vui lòng nộp minh chứng cho đợt "${rec.plan}" trong chiến dịch "${rec.campaignTitle}". Hạn: ${fmtDate(rec.evidenceDueAt)}.` });
-            toast.success('Đã gửi nhắc nhở qua email');
-        } catch { toast.error('Gửi email thất bại'); } finally { setMailing(false); }
+            const res = await chatService.createConversation(rec.ownerId, rec.campaignId);
+            if (res.success && res.data) {
+                toast.success('Đang chuyển đến cuộc hội thoại...');
+                router.push(`/staff/chat?conversationId=${res.data.id}`);
+            } else {
+                toast.error('Không thể tạo cuộc hội thoại');
+            }
+        } catch { 
+            toast.error('Lỗi kết nối chat'); 
+        } finally { 
+            setIsChatting(false); 
+        }
     };
 
     const doAction = async (type: typeof confirm) => {
@@ -121,7 +134,8 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 purpose: rec.purpose || '', 
                 totalAmount: rec.totalAmount, 
                 items: rec.expenditureItems, 
-                photoUrls: rec.evidencePhotos 
+                photoUrls: rec.evidencePhotos,
+                createdAt: rec.createdAt
             });
             setAiResult(res.data);
         } catch { toast.error('AI phân tích thất bại'); } finally { setAnalyzing(false); }
@@ -265,10 +279,10 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                         <Sparkles className="h-4 w-4" />
                         {analyzing ? 'Đang phân tích...' : 'AI phân tích minh chứng'}
                     </button>
-                    <button onClick={sendReminder} disabled={mailing} title="Gửi email nhắc nhở nộp minh chứng"
+                    <button onClick={startChat} disabled={isChatting} title="Nhắn tin với chủ quỹ về minh chứng này"
                         className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white transition-all disabled:opacity-50">
-                        <Mail className="h-4 w-4" />
-                        {mailing ? 'Đang gửi...' : 'Nhắc qua email'}
+                        <MessageSquare className="h-4 w-4" />
+                        {isChatting ? 'Đang mở...' : 'Nhắn tin'}
                     </button>
                 </div>
 
