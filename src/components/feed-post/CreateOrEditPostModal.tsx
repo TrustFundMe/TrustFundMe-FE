@@ -41,9 +41,11 @@ export default function CreateOrEditPostModal({
 }: CreateOrEditPostModalProps) {
   const { user } = useAuth();
   const isEdit = Boolean(initialData?.id);
+  const isEditingDraft = isEdit && initialData?.status === "DRAFT";
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [visibility, setVisibility] = useState<"PUBLIC" | "FOLLOWERS">("PUBLIC");
   // "none" = không liên kết, "CAMPAIGN" = liên kết chiến dịch, "EXPENDITURE" = liên kết đợt chi tiêu
   const [linkType, setLinkType] = useState<"none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE">("none");
   const [linkedCampaignId, setLinkedCampaignId] = useState("");
@@ -66,6 +68,7 @@ export default function CreateOrEditPostModal({
     if (initialData) {
       setTitle(initialData.title ?? "");
       setContent(initialData.content ?? "");
+      setVisibility(initialData.visibility === "FOLLOWERS" ? "FOLLOWERS" : "PUBLIC");
       if (initialData.targetId) {
         const rawTt = initialData.targetType;
         const tt: "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE" =
@@ -127,6 +130,7 @@ export default function CreateOrEditPostModal({
           const draft = JSON.parse(savedDraft);
           setTitle(draft.title || "");
           setContent(draft.content || "");
+          setVisibility(draft.visibility === "FOLLOWERS" ? "FOLLOWERS" : "PUBLIC");
           setLinkedCampaignId(draft.campaignId || "");
           setLinkType(
             draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE" || draft.targetType === "EVIDENCE"
@@ -141,6 +145,7 @@ export default function CreateOrEditPostModal({
       } else {
         setTitle("");
         setContent("");
+        setVisibility("PUBLIC");
         setLinkType("none");
         setLinkedCampaignId("");
       }
@@ -151,9 +156,9 @@ export default function CreateOrEditPostModal({
 
   useEffect(() => {
     if (!isOpen || isEdit) return;
-    const draft = { title, content, campaignId: linkedCampaignId, targetType: linkType };
+    const draft = { title, content, campaignId: linkedCampaignId, targetType: linkType, visibility };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [title, content, linkedCampaignId, linkType, isOpen, isEdit]);
+  }, [title, content, linkedCampaignId, linkType, visibility, isOpen, isEdit]);
 
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,7 +188,8 @@ export default function CreateOrEditPostModal({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (nextStatus: "DRAFT" | "PUBLISHED") => {
+    if (isSubmitting) return;
     if (!user) {
       alert("Vui lòng đăng nhập để đăng bài!");
       return;
@@ -200,12 +206,18 @@ export default function CreateOrEditPostModal({
 
       const effectiveTargetType = linkType === "EVIDENCE" ? "EXPENDITURE" : (linkType === "none" ? null : linkType);
       const effectiveTargetName = linkType === "EVIDENCE" ? "evidence" : null;
+      if (visibility === "FOLLOWERS" && !effectiveTargetId) {
+        alert("Bài viết chỉ người theo dõi cần gắn với một chiến dịch cụ thể.");
+        return;
+      }
 
       const postTitle = title || content.slice(0, 50);
 
         if (isEdit && initialData?.id) {
         // === EDIT MODE ===
         const postId = Number(initialData.id);
+        const shouldPublishDraft =
+          initialData.status === "DRAFT" && !draftMode && nextStatus === "PUBLISHED";
 
         // Step 1: update() FIRST — triggers snapshotRevision() which captures
         // the BEFORE state (old text + old media still linked). Must happen
@@ -213,7 +225,8 @@ export default function CreateOrEditPostModal({
         await feedPostService.update(postId, {
           title: postTitle,
           content,
-          status: draftMode ? "DRAFT" : "PUBLISHED",
+          status: draftMode ? "DRAFT" : nextStatus,
+          visibility,
           targetId: effectiveTargetId ?? null,
           targetType: effectiveTargetType,
           targetName: effectiveTargetName,
@@ -241,16 +254,21 @@ export default function CreateOrEditPostModal({
         if (uploadFailCount > 0) {
           alert(`Bài viết đã lưu, nhưng ${uploadFailCount} ảnh upload thất bại. Vui lòng thử lại.`);
         }
+
+        if (shouldPublishDraft) {
+          await feedPostService.updateStatus(postId, "PUBLISHED");
+        }
+
         if (!initialData?.title && title) localStorage.removeItem(DRAFT_KEY);
         onPostUpdated?.();
       } else {
         // === CREATE MODE ===
         const newPost = await feedPostService.create({
           type: "DISCUSSION",
-          visibility: "PUBLIC",
+          visibility,
           title: postTitle,
           content,
-          status: draftMode ? "DRAFT" : "PUBLISHED",
+          status: draftMode ? "DRAFT" : nextStatus,
           targetId: effectiveTargetId ?? null,
           targetType: effectiveTargetType,
           targetName: effectiveTargetName,
@@ -279,6 +297,7 @@ export default function CreateOrEditPostModal({
       onClose();
       setTitle("");
       setContent("");
+      setVisibility("PUBLIC");
       setLinkedCampaignId("");
       setLinkType("none");
       setSelectedExpenditureId(null);
@@ -348,6 +367,14 @@ export default function CreateOrEditPostModal({
 
           {/* Liên kết section */}
           <div className="flex items-center gap-2 flex-wrap mb-4">
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value === "FOLLOWERS" ? "FOLLOWERS" : "PUBLIC")}
+              className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
+            >
+              <option value="PUBLIC">Công khai</option>
+              <option value="FOLLOWERS">Chỉ người theo dõi chiến dịch</option>
+            </select>
             <select
               value={linkType}
               disabled={isLinkLocked}
@@ -601,12 +628,22 @@ export default function CreateOrEditPostModal({
           </label>
         </div>
 
-        <div className="p-4 border-t border-zinc-200 dark:border-zinc-700">
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-700 flex items-center gap-2">
+          {!draftMode && (
+            <button
+              type="button"
+              onClick={() => handleSubmit("DRAFT")}
+              disabled={(!title.trim() && !content.trim()) || isSubmitting}
+              className="py-2.5 px-4 rounded-lg font-semibold transition-all border border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              Lưu bản nháp
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit("PUBLISHED")}
             disabled={(!title.trim() && !content.trim()) || isSubmitting}
-            className={`w-full py-2.5 rounded-lg text-white font-semibold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 rounded-lg text-white font-semibold transition-all flex items-center justify-center gap-2 ${
               (title.trim() || content.trim()) && !isSubmitting
                 ? "bg-[#ff5e14] hover:bg-[#e05312] shadow-md hover:shadow-lg"
                 : "bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed text-zinc-500"
@@ -615,7 +652,9 @@ export default function CreateOrEditPostModal({
             {isSubmitting && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            {isSubmitting ? (isEdit ? "Đang lưu..." : "Đang đăng...") : isEdit ? "Lưu thay đổi" : "Đăng bài"}
+            {isSubmitting
+              ? (isEditingDraft ? "Đang đăng..." : isEdit ? "Đang lưu..." : "Đang đăng...")
+              : (isEditingDraft ? "Đăng bài" : isEdit ? "Lưu thay đổi" : "Đăng bài")}
           </button>
         </div>
       </motion.div>

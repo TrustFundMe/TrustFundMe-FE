@@ -122,24 +122,6 @@ export default function FeedPostHeader({
             padding: "4px 10px",
             borderRadius: 20,
             border: "1px solid rgba(0,0,0,0.08)",
-            background: "rgba(248, 77, 67, 0.08)",
-            fontWeight: 600,
-            letterSpacing: 0.2,
-            fontSize: 11,
-            textTransform: "uppercase",
-            color: "#F84D43",
-          }}
-        >
-          {post.type === "DISCUSSION" ? "Thảo luận" : post.type === "QUESTION" ? "Hỏi đáp" : post.type === "ANNOUNCEMENT" ? "Thông báo" : post.type === "CAMPAIGN_UPDATE" ? "Cập nhật chiến dịch" : post.type}
-        </span>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 10px",
-            borderRadius: 20,
-            border: "1px solid rgba(0,0,0,0.08)",
             background: "rgba(26, 104, 91, 0.08)",
             fontWeight: 600,
             letterSpacing: 0.2,
@@ -198,7 +180,7 @@ export default function FeedPostHeader({
       {post.targetId && post.targetType === "CAMPAIGN" && (
         <div style={{ marginBottom: 12 }}>
           <Link
-            href={`/campaign/${post.targetId}`}
+            href={`/campaigns-details?id=${post.targetId}`}
             style={{
               display: "inline-flex",
               alignItems: "center",
