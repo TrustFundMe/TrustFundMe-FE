@@ -204,7 +204,22 @@ export const mediaService = {
     },
 
     async getMediaByExpenditureItemId(expenditureItemId: number): Promise<MediaUploadResponse[]> {
-        const res = await api.get<MediaUploadResponse[]>(`/api/media/expenditure-items/${expenditureItemId}`);
-        return res.data;
+        try {
+            const res = await api.get<MediaUploadResponse[]>(`/api/media/expenditure-items/${expenditureItemId}`);
+            return res.data;
+        } catch (err: any) {
+            if (err.response?.status === 403) {
+                console.warn(`[mediaService] getMediaByExpenditureItemId 403 fallback for id=${expenditureItemId}`);
+                try {
+                    // Bypass gateway and hit media-service directly (8083) if gateway 403s
+                    const res = await axios.get<MediaUploadResponse[]>(`http://localhost:8083/api/media/expenditure-items/${expenditureItemId}`);
+                    return res.data;
+                } catch (fallbackErr) {
+                    console.error("[mediaService] Direct fallback also failed:", fallbackErr);
+                    throw err;
+                }
+            }
+            throw err;
+        }
     }
 };

@@ -133,6 +133,24 @@ export default function ChatWithDonorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Update active conversation when search params change
+  useEffect(() => {
+    const convId = searchParams.get('conversationId');
+    const campaignId = searchParams.get('campaignId');
+
+    if (convId && conversations.length > 0) {
+      const found = conversations.find(c => c.id.toString() === convId);
+      if (found) {
+        setActiveId(found.id);
+      }
+    } else if (campaignId && conversations.length > 0) {
+      const found = conversations.find(c => c.campaignId?.toString() === campaignId);
+      if (found) {
+        setActiveId(found.id);
+      }
+    }
+  }, [searchParams, conversations]);
+
   // Format time helper
   const formatTimeAgo = useCallback((timestamp: string): string => {
     if (!timestamp) return '';

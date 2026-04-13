@@ -159,7 +159,10 @@ export default function CampaignExpendituresPage() {
             // Filter only posts with targetName === 'evidence'
             const postsMap: Record<number, any[]> = {};
             disbursedExps.forEach((e: any, i: number) => {
-                postsMap[e.id] = (postResults[i] || []).filter((p: any) => p.targetName === 'evidence');
+                postsMap[e.id] = (postResults[i] || []).filter((p: any) => 
+                    p.targetName === 'evidence' || 
+                    (p.targetName && p.targetName.toString().startsWith('evidence|'))
+                );
             });
             setExpenditurePosts(postsMap);
 
@@ -246,11 +249,14 @@ export default function CampaignExpendituresPage() {
             case 'APPROVED':
             case 'WITHDRAWAL_REQUESTED':
             case 'CLOSED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-orange-50 text-orange-400 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã duyệt</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle className="w-3 h-3 mr-1" /> Đã duyệt</span>;
             case 'DISBURSED':
-                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-orange-50 text-orange-400 border border-emerald-100"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-blue-50 text-blue-700 border border-blue-200"><CheckCircle className="w-3 h-3 mr-1" /> Đã giải ngân</span>;
             case 'REJECTED':
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-100"><X className="w-3 h-3 mr-1" /> Bị từ chối</span>;
+            case 'PENDING':
+            case 'PENDING_REVIEW':
+                return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 text-amber-700 border border-amber-200"><Clock className="w-3 h-3 mr-1" /> Chờ duyệt</span>;
             default:
                 return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-100">{status}</span>;
         }
@@ -494,7 +500,7 @@ export default function CampaignExpendituresPage() {
                         file,
                         Number(campaignId),
                         undefined,
-                        undefined,
+                        updateExpenditure?.id,
                         `Minh chứng vật phẩm #${itemId}`,
                         'PHOTO',
                         undefined,
@@ -508,6 +514,8 @@ export default function CampaignExpendituresPage() {
             }));
             setItemUploadState(prev => ({ ...prev, [itemId]: { uploading: false, files: [], previews: [] } }));
             toast.success(`Đã tải lên ${uploadResults.length} ảnh minh chứng!`);
+            // Trigger a full data refresh to update the UI status indicators
+            fetchData();
         } catch (err: any) {
             console.error('Item media upload failed:', err);
             toast.error(err.response?.data?.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
@@ -1382,17 +1390,17 @@ export default function CampaignExpendituresPage() {
                                                                                                     <div className="flex flex-col gap-3 pt-4 border-t border-black/5">
                                                                                                         {(() => {
                                                                                                             const posts = expenditurePosts[exp.id] || [];
-                                                                                                            const isPublished = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');
+                                                                                                            const hasEvidencePost = posts.length > 0;
                                                                                                             const isActualsUpdated = (exp.totalAmount || 0) > 0;
                                                                                                             const variance = (exp.variance != null) ? Number(exp.variance) : ((exp.totalExpectedAmount || 0) - (exp.totalAmount || 0));
                                                                                                             const needRefund = variance > 0;
                                                                                                             const isRefundDone = exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
 
-                                                                                                            const isReady = isActualsUpdated && isPublished && (!needRefund || isRefundDone);
+                                                                                                            const isReady = isActualsUpdated && hasEvidencePost && (!needRefund || isRefundDone);
 
                                                                                                             const reasons = [];
                                                                                                             if (!isActualsUpdated) reasons.push("Chưa cập nhật số liệu thực tế");
-                                                                                                            if (!isPublished) reasons.push("Chưa đăng bài chia sẻ minh chứng");
+                                                                                                            if (!hasEvidencePost) reasons.push("Chưa chuẩn bị bài chia sẻ minh chứng");
                                                                                                             if (needRefund && !isRefundDone) reasons.push("Chưa hoàn tất hoàn tiền dư");
 
                                                                                                             return (
@@ -1939,13 +1947,13 @@ export default function CampaignExpendituresPage() {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData(true);
+                                    fetchData();
                                 }}
                                 onPostUpdated={() => {
                                     setIsPostModalOpen(false);
                                     setPostExpenditure(null);
                                     setCurrentDraftPost(null);
-                                    fetchData(true);
+                                    fetchData();
                                 }}
                             />
                         );

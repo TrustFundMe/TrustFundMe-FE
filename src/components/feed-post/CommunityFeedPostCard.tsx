@@ -49,7 +49,7 @@ function Ava({ name, src, size = 40 }: { name: string; src?: string; size?: numb
 
 export function CommunityFeedPostCard({
   post, author, authorAvatar, banned,
-  catColor, isSeen: _isSeen, onVisible, onOpen, onToggleLike,
+  catColor, isSeen: _isSeen, onVisible, onOpen, onToggleLike, isFollowerLocked = false, onFollowCampaign,
 }: {
   post: FeedPost;
   author: string;
@@ -60,6 +60,8 @@ export function CommunityFeedPostCard({
   onVisible: (postId: string) => void;
   onOpen: () => void;
   onToggleLike?: (postId: string) => void;
+  isFollowerLocked?: boolean;
+  onFollowCampaign?: () => void;
 }) {
   const cardRef = useRef<HTMLElement>(null);
 
@@ -88,13 +90,14 @@ export function CommunityFeedPostCard({
   return (
     <article
       ref={cardRef}
-      onClick={onOpen}
+      onClick={isFollowerLocked ? undefined : onOpen}
       data-post-id={String(post.id)}
       className={`relative bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer
         transition-all duration-300
         ${isEvidence 
           ? 'border-2 border-purple-200 dark:border-purple-800/50 shadow-sm hover:shadow-[0_8px_30px_rgba(168,85,247,0.15)] hover:border-purple-300 hover:-translate-y-0.5' 
-          : 'border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 hover:shadow-md hover:-translate-y-0.5'}`}
+          : 'border border-zinc-100 dark:border-zinc-800 hover:border-zinc-200 dark:hover:border-zinc-700 hover:shadow-md hover:-translate-y-0.5'}
+        ${isFollowerLocked ? "cursor-default" : ""}`}
     >
       {isEvidence && (
         <div className="absolute top-4 -right-1 z-10 pointer-events-none drop-shadow-md">
@@ -160,6 +163,14 @@ export function CommunityFeedPostCard({
                 Riêng tư
               </span>
             )}
+            {post.visibility === "FOLLOWERS" && (
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 inline-flex items-center gap-1 border border-indigo-100 dark:border-indigo-900/60"
+                title="Chỉ người theo dõi chiến dịch mới xem đầy đủ">
+                <Lock className="w-3 h-3 shrink-0 opacity-70" />
+                Chỉ follower
+              </span>
+            )}
             {post.isLocked && (
               <span
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 inline-flex items-center gap-1 border border-rose-100 dark:border-rose-900/50"
@@ -196,7 +207,7 @@ export function CommunityFeedPostCard({
             </Link>
           ) : post.targetType === "CAMPAIGN" ? (
             <Link
-              href={`/campaign/${post.targetId}`}
+              href={`/campaigns-details?id=${post.targetId}`}
               onClick={e => e.stopPropagation()}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
                 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400
@@ -219,7 +230,7 @@ export function CommunityFeedPostCard({
 
       {text && (
         <p className={`px-4 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed
-          ${post.title ? "line-clamp-2 pb-2" : "line-clamp-3 pb-3"}`}>
+          ${post.title ? "line-clamp-2 pb-2" : "line-clamp-3 pb-3"} ${isFollowerLocked ? "blur-[2px] select-none" : ""}`}>
           {text}
         </p>
       )}
@@ -233,7 +244,7 @@ export function CommunityFeedPostCard({
               src={imgs[0].url}
               alt=""
               className="w-full h-full object-cover"
-              style={{ filter: "none" }}
+              style={{ filter: isFollowerLocked ? "blur(6px)" : "none" }}
             />
           ) : (
             <div
@@ -247,7 +258,7 @@ export function CommunityFeedPostCard({
                     src={img.url}
                     alt=""
                     className="w-full h-full object-cover"
-                    style={{ filter: "none" }}
+                    style={{ filter: isFollowerLocked ? "blur(6px)" : "none" }}
                   />
                   {i === 2 && imgs.length > 3 && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -261,6 +272,27 @@ export function CommunityFeedPostCard({
         </div>
       )}
 
+      {isFollowerLocked && (
+        <div className="px-4 pb-3">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/70 p-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Nội dung này dành cho người theo dõi campaign.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Theo dõi để xem đầy đủ cập nhật mới nhất.</p>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFollowCampaign?.();
+              }}
+              className="px-3 py-1.5 rounded-lg bg-[#ff5e14] text-white text-sm font-semibold hover:bg-[#e05312] transition-colors"
+            >
+              Theo dõi
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-3 mt-1 flex items-center gap-5 border-t border-zinc-100 dark:border-zinc-800">
         <button
           type="button"
@@ -268,6 +300,7 @@ export function CommunityFeedPostCard({
             e.stopPropagation();
             onToggleLike?.(post.id);
           }}
+          disabled={isFollowerLocked}
           className="flex items-center gap-1.5 text-zinc-500 hover:text-red-500 transition-colors text-sm"
         >
           <Heart className={`w-[18px] h-[18px] ${post.liked ? "fill-red-500 text-red-500" : ""}`} />

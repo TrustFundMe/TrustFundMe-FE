@@ -252,7 +252,7 @@ export default function StaffRequestPage() {
       )}
 
       {/* Folder Body Container */}
-      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative z-10 flex flex-col">
+      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative flex flex-col">
         <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white">
           {activeTab === 'CAMPAIGN' ? (
             <>

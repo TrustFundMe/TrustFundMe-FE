@@ -23,26 +23,28 @@ const fmtDate = (s?: string | null) =>
     s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>;
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
-    PENDING_REVIEW: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
-    APPROVED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
-    CLOSED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
-    WITHDRAWAL_REQUESTED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
-    REJECTED: { label: 'Từ chối', color: '#dc2626', bg: '#fee2e2' },
-    DISBURSED: { label: 'Đã giải ngân', color: '#16a34a', bg: '#dcfce7' },
+    PENDING:              { label: 'Chờ duyệt',    color: '#d97706', bg: '#fef3c7' },
+    PENDING_REVIEW:       { label: 'Chờ duyệt',    color: '#d97706', bg: '#fef3c7' },
+    APPROVED:             { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
+    CLOSED:               { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
+    WITHDRAWAL_REQUESTED: { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
+    REJECTED:             { label: 'Từ chối',     color: '#dc2626', bg: '#fee2e2' },
+    DISBURSED:            { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
 };
 
 const EVIDENCE_STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING: { label: 'Chờ bằng chứng', color: '#d97706', bg: '#fef3c7' },
-    SUBMITTED: { label: 'Đã nộp — chờ duyệt', color: '#2563eb', bg: '#dbeafe' },
-    VERIFIED: { label: 'Đã xác nhận', color: '#16a34a', bg: '#dcfce7' },
+    PENDING:      { label: 'Chờ bằng chứng',       color: '#d97706', bg: '#fef3c7' },
+    SUBMITTED:    { label: 'Đã nộp — chờ duyệt', color: '#2563eb', bg: '#dbeafe' },
+    VERIFIED:     { label: 'Đã xác nhận',         color: '#16a34a', bg: '#dcfce7' },
+    REJECTED:     { label: 'Bằng chứng sai',       color: '#dc2626', bg: '#fee2e2' },
 };
 
-const CAM_TYPE: Record<string, string> = { AUTHORIZED: 'Quỹ Ủy Quyền', TARGET: 'Quỹ Vật Phẩm' };
+const CAM_TYPE: Record<string, string> = { AUTHORIZED: 'Quỹ Ủy Quyền', ITEMIZED: 'Quỹ Vật Phẩm', TARGET: 'Quỹ Mục Tiêu' };
 
-/* ══════════════════════════════ StatusPill ══════════════════════════════ */
+/* ════════════════════════════ StatusPill ════════════════════════════ */
 function StatusPill({ status }: { status: string }) {
-    const cfg = STATUS_EXP[status] ?? { label: status, color: '#6b7280', bg: '#f3f4f6' };
+    const key = (status ?? '').toUpperCase().replace(/[- ]/g, '_');
+    const cfg = STATUS_EXP[key] ?? { label: STATUS_EXP[status]?.label ?? 'Không xác định', color: '#6b7280', bg: '#f3f4f6' };
     return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
             style={{ color: cfg.color, background: cfg.bg }}>
@@ -131,7 +133,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
         setApproving(true);
         try {
             const updated = await expenditureService.updateStatus(exp.id, 'APPROVED', user?.id);
-            setExp(updated);
+            setExp(prev => ({ ...prev, ...(updated ?? {}), status: 'APPROVED' }));
             toast.success(`Đã duyệt: ${exp.plan}`);
         } catch {
             toast.error('Lỗi khi duyệt');
@@ -144,7 +146,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
         setShowRejectModal(false);
         try {
             const updated = await expenditureService.updateStatus(exp.id, 'REJECTED', user?.id, reason);
-            setExp(updated);
+            setExp(prev => ({ ...prev, ...(updated ?? {}), status: 'REJECTED', rejectReason: reason }));
             toast.success('Đã từ chối');
         } catch {
             toast.error('Lỗi khi từ chối');

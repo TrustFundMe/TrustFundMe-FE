@@ -44,6 +44,7 @@ export default function ForumPage() {
   const [initialSeenIds, setInitialSeenIds] = useState<Set<string>>(new Set()); // snapshot at mount — used for filtering
   const [seenIdsLoaded, setSeenIdsLoaded]   = useState(false); // guard: don't trigger observer until seenIds are fetched from DB
   const [quickFilter, setQuickFilter]       = useState<"all" | "unseen" | "seen" | "pinned">("all");
+  const [followedCampaignMap, setFollowedCampaignMap] = useState<Record<number, boolean>>({});
   // Scroll-based seen tracking
   const seenTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()); // postId → timer
   // Infinite scroll
@@ -71,6 +72,7 @@ export default function ForumPage() {
       });
 
       setPosts(mapped);
+      setFollowedCampaignMap({});
       setHasMore(mapped.length >= PAGE_SIZE && mapped.length < raw.total);
       setCategories([
         ...new Set(mapped.map(p => p.category).filter((c): c is string => Boolean(c))),
@@ -130,6 +132,49 @@ export default function ForumPage() {
       setIsLoadingMore(false);
     }
   };
+
+  const getLinkedCampaignId = useCallback((post: FeedPost): number | null => {
+    if (post.targetType === "CAMPAIGN" && post.targetId) return Number(post.targetId);
+    if (post.campaignId) return Number(post.campaignId);
+    return null;
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const ids = Array.from(new Set(
+      posts
+        .filter((p) => p.visibility === "FOLLOWERS")
+        .map((p) => getLinkedCampaignId(p))
+        .filter((id): id is number => Boolean(id && Number.isFinite(id)))
+    ));
+    const missing = ids.filter((id) => followedCampaignMap[id] === undefined);
+    if (!missing.length) return;
+    Promise.all(
+      missing.map(async (campaignId) => ({
+        campaignId,
+        isFollowing: await campaignService.isFollowing(campaignId).catch(() => false),
+      }))
+    ).then((pairs) => {
+      setFollowedCampaignMap((prev) => {
+        const next = { ...prev };
+        for (const pair of pairs) next[pair.campaignId] = pair.isFollowing;
+        return next;
+      });
+    });
+  }, [posts, user, getLinkedCampaignId, followedCampaignMap]);
+
+  const handleFollowCampaign = useCallback(async (campaignId: number) => {
+    if (!user) {
+      alert("Vui lòng đăng nhập để theo dõi chiến dịch.");
+      return;
+    }
+    try {
+      await campaignService.followCampaign(campaignId);
+      setFollowedCampaignMap((prev) => ({ ...prev, [campaignId]: true }));
+    } catch {
+      alert("Không thể theo dõi chiến dịch lúc này. Vui lòng thử lại.");
+    }
+  }, [user]);
 
   // Fetch media for posts that don't have it yet
   useEffect(() => {
@@ -488,6 +533,15 @@ export default function ForumPage() {
             {!loading && visible.length > 0 && (
               <AnimatePresence mode="popLayout">
                 {visible.map((post, idx) => {
+                  const linkedCampaignId = getLinkedCampaignId(post);
+                  const isAuthor = user ? String(user.id) === String(post.author.id) : false;
+                  const isFollowerLocked =
+                    post.visibility === "FOLLOWERS" &&
+                    !isAuthor &&
+                    (
+                      !user ||
+                      (linkedCampaignId != null && followedCampaignMap[linkedCampaignId] === false)
+                    );
                   return (
                     <motion.div
                       key={post.id}
@@ -506,6 +560,10 @@ export default function ForumPage() {
                         onVisible={handleVisible}
                         onOpen={() => router.push(`/post/${post.id}`)}
                         onToggleLike={handleToggleLike}
+                        isFollowerLocked={isFollowerLocked}
+                        onFollowCampaign={
+                          linkedCampaignId != null ? () => handleFollowCampaign(linkedCampaignId) : undefined
+                        }
                       />
                     </motion.div>
                   );

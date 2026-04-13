@@ -208,15 +208,14 @@ export default function ExpenditureDetailPage() {
     const getStatusBadge = (status: string) => {
         switch (status?.toUpperCase()) {
             case 'APPROVED':
-                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã duyệt</span>;
+            case 'WITHDRAWAL_REQUESTED':
+            case 'CLOSED':
+                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã duyệt</span>;
             case 'PENDING':
             case 'PENDING_REVIEW':
                 return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800"><Clock className="w-4 h-4 mr-1.5" /> Chờ duyệt</span>;
-            case 'CLOSED':
-            case 'WITHDRAWAL_REQUESTED':
-                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"><Clock className="w-4 h-4 mr-1.5" /> Yêu cầu rút tiền</span>;
             case 'DISBURSED':
-                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã giải ngân</span>;
+                return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"><CheckCircle className="w-4 h-4 mr-1.5" /> Đã giải ngân</span>;
             case 'REJECTED':
                 return <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800"><AlertCircle className="w-4 h-4 mr-1.5" /> Từ chối</span>;
             default:
