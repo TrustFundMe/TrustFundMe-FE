@@ -170,12 +170,37 @@ export const paymentService = {
             console.error("❌ [Payment] Donation Summary Error:", err);
             return [];
         }
+    },
+    async getMyPaidDonations(limit: number = 50): Promise<MyDonationImpactResponse[]> {
+        console.log(`🔍 [Payment] Fetching my paid donations with limit:`, limit);
+        try {
+            const res = await api.get<MyDonationImpactResponse[]>(API_ENDPOINTS.PAYMENTS.MY_DONATIONS, {
+                params: { limit }
+            });
+            return res.data;
+        } catch (err: any) {
+            console.error("❌ [Payment] My Paid Donations Error:", err);
+            throw err;
+        }
     }
 };
 
 export interface DonationItemSummary {
     expenditureItemId: number;
     donatedQuantity: number;
+}
+
+export interface MyDonationImpactResponse {
+    donationId: number;
+    donorId: number | null;
+    campaignId: number | null;
+    campaignTitle: string | null;
+    donationAmount: number;
+    tipAmount: number;
+    totalAmount: number;
+    status: string;
+    anonymous: boolean;
+    createdAt: string;
 }
 
 export interface ChartPoint {

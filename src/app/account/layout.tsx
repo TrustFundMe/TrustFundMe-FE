@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 const NAV_ITEMS = [
     { href: '/account/profile', label: 'Hồ sơ', icon: User },
     { href: '/account/campaigns', label: 'Chiến dịch', icon: FolderOpen },
-    { href: '/account/impact', label: 'Tác động', icon: Heart },
+    { href: '/account/impact', label: 'Lịch sử quyên góp', icon: Heart },
     { href: '/account/schedule', label: 'Lịch hẹn', icon: CalendarClock },
     { href: '/account/chat', label: 'Trò chuyện', icon: MessageCircle },
 ];

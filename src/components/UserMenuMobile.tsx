@@ -98,7 +98,7 @@ export function UserMenuMobile() {
             className="d-flex align-items-center py-3 px-3 text-gray-700 hover:bg-gray-100 transition-colors rounded-lg text-decoration-none"
           >
             <TrendingUp className="w-5 h-5 me-3" style={{ flexShrink: 0 }} />
-            <span>Tác động của bạn</span>
+            <span>Lịch sử quyên góp</span>
           </Link>
         </li>
 
