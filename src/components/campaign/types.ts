@@ -49,6 +49,7 @@ export type Campaign = {
   id: string;
   title: string;
   category: string;
+  categoryIconUrl?: string | null;
   description: string;
   coverImage: string;
   galleryImages?: string[];

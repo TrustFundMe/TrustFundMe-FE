@@ -24,3 +24,12 @@ export function formatCurrency(value: number) {
     currency: 'VND',
   }).format(value);
 }
+
+export function formatDate(dateString: string | undefined | null) {
+  if (!dateString) return '---';
+  return new Date(dateString).toLocaleDateString('vi-VN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
