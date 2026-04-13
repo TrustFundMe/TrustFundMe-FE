@@ -30,6 +30,8 @@ interface AIAnalysisModalProps {
             total: number;
             matchStatus: 'MATCHED' | 'PARTIAL' | 'MISMATCHED';
             plannedCategory?: string;
+            plannedAmount?: number;
+            differenceAmount?: number;
         }[];
     };
     onClose: () => void;
@@ -144,32 +146,51 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                         <th className="px-4 py-2.5 border-b border-slate-100">Sản phẩm phát hiện</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100">SL</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100 text-right">Đơn giá</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Thành tiền</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100">Đối chiếu kế hoạch</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100">Kế hoạch</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Dự kiến</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Số tiền hóa đơn</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Chênh lệch</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100 text-center">Trạng thái</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {result.detectedItems?.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                                            <td className="px-4 py-2 text-xs font-black text-slate-800">{item.name}</td>
-                                            <td className="px-4 py-2 text-xs font-bold text-slate-600">{item.quantity}</td>
-                                            <td className="px-4 py-2 text-xs font-bold text-slate-600 text-right">{fmt(item.unitPrice)}</td>
-                                            <td className="px-4 py-2 text-xs font-black text-slate-900 text-right">{fmt(item.total)}</td>
-                                            <td className="px-4 py-2 text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">
-                                                {item.plannedCategory || '---'}
-                                            </td>
-                                            <td className="px-4 py-2 text-center uppercase">
-                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border inline-block min-w-[60px] ${
-                                                    item.matchStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                    item.matchStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                    'bg-rose-50 text-rose-700 border-rose-100'
+                                    {result.detectedItems?.map((item, idx) => {
+                                        const actual = item.total || (item.quantity * item.unitPrice) || 0;
+                                        const planned = item.plannedAmount || 0;
+                                        const diff = item.differenceAmount !== undefined ? item.differenceAmount : (actual - planned);
+                                        
+                                        return (
+                                            <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                                <td className="px-4 py-2 text-xs font-black text-slate-800">{item.name}</td>
+                                                <td className="px-4 py-2 text-xs font-bold text-slate-600">{item.quantity}</td>
+                                                <td className="px-4 py-2 text-xs font-bold text-slate-600 text-right">{fmt(item.unitPrice)}</td>
+                                                <td className="px-4 py-2 text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">
+                                                    {item.plannedCategory || '---'}
+                                                </td>
+                                                <td className="px-4 py-2 text-xs font-bold text-slate-500 text-right">
+                                                    {planned > 0 ? fmt(planned) : '---'}
+                                                </td>
+                                                <td className="px-4 py-2 text-xs font-black text-slate-900 text-right">
+                                                    {fmt(actual)}
+                                                </td>
+                                                <td className={`px-4 py-2 text-xs font-black text-right ${
+                                                    diff > 0 ? 'text-rose-600' : 
+                                                    diff < 0 ? 'text-emerald-600' : 'text-slate-400'
                                                 }`}>
-                                                    {item.matchStatus === 'MATCHED' ? 'Khớp' : item.matchStatus === 'PARTIAL' ? 'Một phần' : 'Không khớp'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                    {diff !== 0 ? (diff > 0 ? '+' : '') + fmt(diff) : '0 ₫'}
+                                                </td>
+                                                <td className="px-4 py-2 text-center uppercase">
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border inline-block min-w-[60px] ${
+                                                        item.matchStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                        item.matchStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                        'bg-rose-50 text-rose-700 border-rose-100'
+                                                    }`}>
+                                                        {item.matchStatus === 'MATCHED' ? 'Khớp' : item.matchStatus === 'PARTIAL' ? 'Một phần' : 'Không khớp'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                     {(!result.detectedItems || result.detectedItems.length === 0) && (
                                         <tr>
                                             <td colSpan={6} className="px-4 py-10 text-center text-[11px] font-medium text-slate-400 italic">Không có dữ liệu bóc tách chi tiết</td>
@@ -186,15 +207,20 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                         <div className="space-y-2">
                              <div className="flex items-center gap-2 px-1">
                                 <AlertTriangle className="h-4 w-4 text-rose-500" />
-                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Cảnh báo vi phạm & Nghi vấn ({result.redFlags.length})</p>
+                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
+                                    Cảnh báo vi phạm & Nghi vấn ({Array.isArray(result.redFlags) ? result.redFlags.length : (typeof result.redFlags === 'string' ? 1 : 0)})
+                                </p>
                             </div>
                             <div className="space-y-1.5">
-                                {result.redFlags.map((flag, idx) => (
+                                {(Array.isArray(result.redFlags) ? result.redFlags : []).map((flag, idx) => (
                                     <div key={idx} className="p-2.5 rounded-lg border border-rose-100 bg-rose-50/30 flex items-start gap-2 group hover:bg-rose-50 transition-colors">
                                         <AlertTriangle className="h-3 w-3 text-rose-400 mt-0.5" />
                                         <p className="text-[11px] font-bold text-rose-900 leading-snug">{flag}</p>
                                     </div>
                                 ))}
+                                {(!result.redFlags || (Array.isArray(result.redFlags) && result.redFlags.length === 0)) && (
+                                    <p className="text-[10px] text-slate-400 italic px-2">Không phát hiện dấu hiệu vi phạm</p>
+                                )}
                             </div>
                         </div>
 
@@ -205,12 +231,15 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cơ sở lập luận của AI</p>
                             </div>
                             <div className="rounded-xl border border-slate-100 bg-white shadow-sm divide-y divide-slate-50">
-                                {result.spendingAnalysis?.map((point, idx) => (
+                                {(Array.isArray(result.spendingAnalysis) ? result.spendingAnalysis : (typeof result.spendingAnalysis === 'string' ? [result.spendingAnalysis] : [])).map((point, idx) => (
                                     <div key={idx} className="p-2.5 flex gap-3 items-start group hover:bg-slate-50 transition-colors">
                                         <div className="h-4 w-4 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400 shrink-0 mt-0.5">{idx + 1}</div>
                                         <p className="text-[11px] font-medium text-slate-600 leading-relaxed">{point}</p>
                                     </div>
                                 ))}
+                                {(!result.spendingAnalysis || (Array.isArray(result.spendingAnalysis) && result.spendingAnalysis.length === 0)) && (
+                                    <p className="text-[11px] text-slate-400 italic p-4 text-center">Chưa có dữ liệu lập luận</p>
+                                )}
                             </div>
                         </div>
                     </div>
