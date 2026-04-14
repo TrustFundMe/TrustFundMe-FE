@@ -90,10 +90,8 @@ export default function CampaignsPage() {
     Math.max(1, Math.ceil(filteredCampaigns.length / itemsPerPage))
     , [filteredCampaigns.length, itemsPerPage]);
 
-  // States for enriched data (goals, images)
   const [enrichedCampaigns, setEnrichedCampaigns] = useState<Record<number, CampaignDto>>({});
   const [enriching, setEnriching] = useState<Record<number, boolean>>({});
-  const [campaignStaffMap, setCampaignStaffMap] = useState<Record<number, string>>({});
   const [campaignRawStaffIdMap, setCampaignRawStaffIdMap] = useState<Record<number, number>>({});
 
   // Fetch all staff names once
@@ -132,37 +130,13 @@ export default function CampaignsPage() {
       try {
         const task = await campaignService.getTaskByCampaign(c.id);
         if (task?.staffId) {
-          setCampaignStaffMap(prev => {
-            if (prev[c.id!]) return prev; // already resolved
-            return { ...prev, [c.id!]: task.staffId };
-          });
           setCampaignRawStaffIdMap(prev => ({ ...prev, [c.id!]: task.staffId }));
         }
       } catch { }
     }));
   }, [paginatedCampaigns]);
 
-  // When staffNameMap is ready, resolve staffId -> name
-  useEffect(() => {
-    if (Object.keys(staffNameMap).length === 0) return;
-    setCampaignStaffMap(prev => {
-      const next: Record<number, string> = {};
-      let changed = false;
-      Object.entries(prev).forEach(([cid, val]) => {
-        const id = Number(cid);
-        if (typeof val === 'number') {
-          // val is staffId, resolve to name
-          const name = staffNameMap[val] || `Staff #${val}`;
-          next[id] = name;
-          changed = true;
-        } else {
-          // already a name string
-          next[id] = val;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [staffNameMap]);
+
 
   useEffect(() => {
     const enrichVisible = async () => {
@@ -292,18 +266,23 @@ export default function CampaignsPage() {
               <div className="animate-in fade-in duration-700 flex flex-col h-full min-h-0">
                 <div className="overflow-y-auto pr-2 custom-scrollbar flex-1 pb-4">
                   <div className="grid grid-cols-1 gap-6">
-                    {displayCampaigns.map((campaign) => (
-                      <MyCampaignCard
-                        key={campaign.id}
-                        campaign={campaign}
-                        assignedReviewerName={campaign.id ? (campaignStaffMap[campaign.id] || (campaign.approvedByStaff ? (staffNameMap[campaign.approvedByStaff] || `Staff #${campaign.approvedByStaff}`) : undefined)) : undefined}
-                        hasStaff={!!(campaign.id && (campaignStaffMap[campaign.id] || campaign.approvedByStaff))}
-                        onChatClick={() => {
-                          console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
-                          handleChatClick(campaign);
-                        }}
-                      />
-                    ))}
+                    {displayCampaigns.map((campaign) => {
+                      const staffId = campaign.approvedByStaff || (campaign.id ? campaignRawStaffIdMap[campaign.id] : undefined);
+                      const staffName = staffId ? (staffNameMap[staffId] || `Đang chờ phân bổ...`) : undefined;
+                      
+                      return (
+                        <MyCampaignCard
+                          key={campaign.id}
+                          campaign={campaign}
+                          assignedReviewerName={staffName}
+                          hasStaff={!!staffId}
+                          onChatClick={() => {
+                            console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
+                            handleChatClick(campaign);
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               </div>

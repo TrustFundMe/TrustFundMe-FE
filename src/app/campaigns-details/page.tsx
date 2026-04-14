@@ -11,7 +11,8 @@ import CampaignAnalyticsChart from '@/components/campaign/CampaignAnalyticsChart
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import DonorsModal from '@/components/campaign/DonorsModal';
-import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower } from '@/components/campaign/types';
+import TrustScoreLogsModal from '@/components/campaign/TrustScoreLogsModal';
+import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower, CampaignMedia } from '@/components/campaign/types';
 import { mockComments } from '@/components/campaign/mock';
 import { feedPostService } from '@/services/feedPostService';
 import type { FeedPostDto } from '@/types/feedPost';
@@ -32,7 +33,8 @@ const mapCampaignDtoToUi = (
   owner?: { name: string; avatar: string },
   galleryUrls: string[] = [],
   coverUrl?: string,
-  trustScore?: number
+  trustScore?: number,
+  attachments?: CampaignMedia[]
 ): Campaign => {
   // Use coverUrl if provided by API, otherwise fallback to DTO's coverImageUrl string.
   const finalCover = coverUrl || dto.coverImageUrl || '';
@@ -63,6 +65,7 @@ const mapCampaignDtoToUi = (
     type: dto.type || 'general',
     status: dto.status,
     rejectionReason: dto.rejectionReason || undefined,
+    attachments,
   };
 };
 
@@ -99,6 +102,7 @@ function CampaignDetailsInner() {
   const campaignId = campaignIdStr ? parseInt(campaignIdStr, 10) : null;
 
   const { isStaff, isAdmin } = usePermissions();
+  const [showTrustScoreLogs, setShowTrustScoreLogs] = useState(false);
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [plans, setPlans] = useState<CampaignPlan[]>([]);
@@ -185,6 +189,7 @@ function CampaignDetailsInner() {
         let galleryUrls: string[] = [];
         let finalCoverUrl = '';
         const mediaList = mediaResult as any[];
+        const attachments: CampaignMedia[] = [];
         if (mediaList && mediaList.length > 0) {
           const coverMedia = mediaList.find(m => m.id === dto.coverImage);
           finalCoverUrl = coverMedia ? coverMedia.url : mediaList[0].url;
@@ -193,7 +198,21 @@ function CampaignDetailsInner() {
             if (b.id === dto.coverImage) return 1;
             return 0;
           });
-          galleryUrls = sortedMedia.map((m: any) => m.url);
+
+          // Tách riêng ảnh, video, file
+          const photos: string[] = [];
+          sortedMedia.forEach((m: any) => {
+            const mediaType = m.mediaType || m.type || '';
+            if (mediaType === 'PHOTO') {
+              photos.push(m.url);
+            } else if (mediaType === 'VIDEO') {
+              photos.push(m.url);
+            }
+            if (mediaType === 'FILE') {
+              attachments.push({ id: m.id, type: 'FILE', url: m.url, name: m.fileName || m.name || `Tệp đính kèm` });
+            }
+          });
+          galleryUrls = photos;
         }
 
         const followed = (followResult as [boolean, number])[0];
@@ -233,11 +252,13 @@ function CampaignDetailsInner() {
         try {
           const scoreRes = await trustScoreService.getUserScore(dto.fundOwnerId);
           trustScore = scoreRes.totalScore;
-        } catch {
+          console.log('[DEBUG trustScore] ownerId=', dto.fundOwnerId, 'score=', scoreRes.totalScore);
+        } catch (err) {
+          console.log('[DEBUG trustScore] failed for', dto.fundOwnerId, err);
           // Trust score is optional, ignore errors
         }
 
-        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl, trustScore);
+        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl, trustScore, attachments);
         campaignData.followed = followed;
         campaignData.followerCount = followerCount;
         campaignData.flagged = alreadyFlagged;   // ← pre-set from existing flags
@@ -362,6 +383,7 @@ function CampaignDetailsInner() {
               <CampaignHeader
                 campaign={campaign}
                 followers={followers}
+                onShowTrustScore={() => setShowTrustScoreLogs(true)}
                 onToggleFollow={async () => {
                   if (!campaignId) return;
                   try {
@@ -555,6 +577,14 @@ function CampaignDetailsInner() {
         <DonorsModal
           campaignId={campaignId}
           onClose={() => setShowDonorsModal(false)}
+        />
+      )}
+
+      {showTrustScoreLogs && campaign && (
+        <TrustScoreLogsModal
+          userId={campaign.creator.id}
+          userName={campaign.creator.name}
+          onClose={() => setShowTrustScoreLogs(false)}
         />
       )}
     </DanboxLayout>

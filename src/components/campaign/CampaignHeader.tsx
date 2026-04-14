@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Campaign, CampaignFollower } from "./types";
+import { FileText, ExternalLink } from "lucide-react";
+import type { Campaign, CampaignFollower, CampaignMedia } from "./types";
 import CampaignActions from "./CampaignActions";
 import CampaignImageSlider from "./CampaignImageSlider";
 import CreatorInfo from "./CreatorInfo";
@@ -11,12 +12,14 @@ export default function CampaignHeader({
   onToggleFollow,
   onToggleFlag,
   onSubmitFlag,
+  onShowTrustScore,
   followers = [],
 }: {
   campaign: Campaign;
   onToggleFollow: () => void;
   onToggleFlag: () => void;
   onSubmitFlag?: (reason: string) => Promise<void>;
+  onShowTrustScore?: () => void;
   followers?: CampaignFollower[];
 }) {
   const sliderImages = useMemo(() => {
@@ -25,6 +28,15 @@ export default function CampaignHeader({
       : [campaign.coverImage];
     return list.filter(Boolean);
   }, [campaign.coverImage, campaign.galleryImages]);
+
+  const fileAttachments = useMemo(
+    () => (campaign.attachments || []).filter((a) => a.type === "FILE"),
+    [campaign.attachments]
+  );
+
+  const openFile = (file: CampaignMedia) => {
+    window.open(file.url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="causes-details-items">
@@ -69,9 +81,40 @@ export default function CampaignHeader({
 
       <CampaignImageSlider images={sliderImages} alt={campaign.title} />
 
+      {/* Tệp đính kèm — ngay bên dưới ảnh */}
+      {fileAttachments.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-[10px] font-black text-black/30 uppercase tracking-widest mb-3">
+            Tệp đính kèm
+          </h4>
+          <div className="flex flex-col gap-2">
+            {fileAttachments.map((file) => (
+              <button
+                key={file.id}
+                onClick={() => openFile(file)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-black/8 bg-gray-50 hover:bg-gray-100 transition-all text-left group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
+                  <FileText className="h-4 w-4 text-[#dc2626]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors truncate">
+                    {file.name || "Tệp đính kèm"}
+                  </p>
+                  <p className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
+                    Tải xuống để xem
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-black/20 group-hover:text-[#dc2626] transition-colors shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="details-content" style={{ paddingTop: 16 }}>
         <div style={{ marginTop: 8, marginBottom: 18 }}>
-          <CreatorInfo user={campaign.creator} />
+          <CreatorInfo user={campaign.creator} onShowTrustScore={onShowTrustScore} />
         </div>
 
         <div className="mt-4">

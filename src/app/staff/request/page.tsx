@@ -41,84 +41,112 @@ export default function StaffRequestPage() {
   const [campaignRows, setCampaignRows] = useState<any[]>([]);
   const [campaignStatus, setCampaignStatus] = useState<RequestStatus | 'ALL' | 'DISABLED'>('ALL');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
+  const [selectedCampaignDetail, setSelectedCampaignDetail] = useState<any | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const targetCampaignId = searchParams.get('campaignId');
 
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const pageSize = 10;
 
-  // Fetch functions moved to component scope
+  // Fetch campaign list — fast initial load (tasks + page 0 + users), then background fetch remaining pages
   const fetchCampaigns = async () => {
     if (!currentUser) return;
     setIsLoading(true);
     try {
-      // 1. Fetch tasks assigned to this staff
-      const tasks = await campaignService.getTasksByStaff(currentUser.id);
+      const [tasks, campaignsPage, allUsersResult] = await Promise.all([
+        campaignService.getTasksByStaff(currentUser.id),
+        campaignService.getAll(0, pageSize),
+        userService.getAllUsers(0, 1000),
+      ]);
+
       const campaignTaskIds = new Set(
         tasks.filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED').map(t => t.targetId)
       );
+      const total = campaignsPage.totalPages || 1;
+      setTotalPages(total);
 
-      const allCampaignsResp = await campaignService.getAll(currentPage, pageSize);
-      const allCampaigns = allCampaignsResp.content || [];
-      setTotalPages(allCampaignsResp.totalPages || 0);
-
-      // Fetch users for campaign owners
-      const allUsersResult = await userService.getAllUsers(0, 1000);
       const userMap = new Map<number, UserInfo>();
-      if (allUsersResult.success && allUsersResult.data && allUsersResult.data.content) {
-        allUsersResult.data.content.forEach(user => {
-          userMap.set(user.id, user);
-        });
+      if (allUsersResult.success && allUsersResult.data?.content) {
+        allUsersResult.data.content.forEach(user => userMap.set(user.id, user));
       }
       setUsers(userMap);
 
-      const mappedCampaigns: CampaignRequest[] = allCampaigns
-        .filter(c => campaignTaskIds.has(c.id))
-        .map(c => {
-          // Map Backend Status to Frontend Request Status
-          let status: RequestStatus = 'PENDING';
-          if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
-          else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
-          else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
-          else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
-          else status = c.status as RequestStatus;
+      const buildCampaignRows = (campaigns: any[]): CampaignRequest[] =>
+        (campaigns || [])
+          .filter(c => campaignTaskIds.has(c.id))
+          .map(c => {
+            let status: RequestStatus = 'PENDING';
+            if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
+            else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
+            else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
+            else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
+            else status = c.status as RequestStatus;
 
-          const owner = userMap.get(c.fundOwnerId);
+            const owner = userMap.get(c.fundOwnerId);
+            return {
+              id: `CAMP_${c.id}`,
+              createdAt: c.createdAt || new Date().toISOString(),
+              status,
+              type: 'APPROVE_CAMPAIGN' as const,
+              campaignId: c.id,
+              campaignTitle: c.title,
+              requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
+              description: c.description || '',
+              category: c.categoryName || '',
+              rejectionReason: c.rejectionReason || undefined,
+              kycVerified: c.kycVerified,
+              bankVerified: c.bankVerified,
+              fundOwnerId: c.fundOwnerId,
+            };
+          })
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-          return {
-            id: `CAMP_${c.id}`,
-            createdAt: c.createdAt || new Date().toISOString(),
-            status: status,
-            type: 'APPROVE_CAMPAIGN' as const,
-            campaignId: c.id,
-            campaignTitle: c.title,
-            requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
-            description: c.description || '',
-            category: c.categoryName || '',
-            rejectionReason: c.rejectionReason || undefined,
-            kycVerified: c.kycVerified,
-            bankVerified: c.bankVerified,
-            fundOwnerId: c.fundOwnerId,
-          };
-        })
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Hiển thị page 0 ngay, không cần chờ
+      setCampaignRows(buildCampaignRows(campaignsPage.content));
 
-      setCampaignRows(mappedCampaigns);
-
-      // Auto-select from URL or first item
-      if (targetCampaignId) {
-        setSelectedCampaignId(`CAMP_${targetCampaignId}`);
-      } else if (mappedCampaigns.length > 0 && !selectedCampaignId) {
-        setSelectedCampaignId(mappedCampaigns[0].id);
+      // Fetch remaining pages in background
+      if (total > 1) {
+        const remaining = await Promise.all(
+          Array.from({ length: total - 1 }, (_, i) => campaignService.getAll(i + 1, pageSize))
+        );
+        const allCampaigns = remaining.flatMap(p => p.content || []);
+        setCampaignRows(prev => {
+          const page0 = buildCampaignRows(campaignsPage.content);
+          const rest = buildCampaignRows(allCampaigns);
+          // merge + dedupe
+          const map = new Map<string, CampaignRequest>();
+          [...page0, ...rest].forEach(c => map.set(c.id, c));
+          return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
       }
 
+      // Auto-select from URL
+      if (targetCampaignId) {
+        setSelectedCampaignId(`CAMP_${targetCampaignId}`);
+      }
     } catch (error) {
       console.error('Failed to fetch campaigns', error);
-      toast.error('Không thể tải dữ liệu yêu cầu. Vui lòng thử lại sau.');
+      toast.error('Không thể tải danh sách yêu cầu. Vui lòng thử lại.');
       setCampaignRows([]);
-      setSelectedCampaignId(undefined);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Gọi khi click vào một dòng — load chi tiết campaign
+  const handleSelectCampaign = async (campaignRequest: CampaignRequest) => {
+    setSelectedCampaignId(campaignRequest.id);
+    setSelectedCampaignDetail(null); // clear stale data
+    setIsLoadingDetail(true);
+    try {
+      const detail = await campaignService.getCampaignById(campaignRequest.campaignId);
+      setSelectedCampaignDetail(detail);
+    } catch (err) {
+      console.error('Failed to load campaign detail:', err);
+      toast.error('Không thể tải chi tiết chiến dịch.');
+    } finally {
+      setIsLoadingDetail(false);
     }
   };
 
@@ -281,10 +309,23 @@ export default function StaffRequestPage() {
                     <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách nhiệm vụ duyệt chiến dịch</h2>
                   </div>
                   <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm transition-all duration-500">
+                    {isLoading ? (
+                      <div className="p-4 space-y-3 animate-pulse">
+                        {[...Array(5)].map((_, i) => (
+                          <div key={i} className="flex items-center gap-4">
+                            <div className="h-4 bg-gray-100 rounded w-[30%]" />
+                            <div className="h-4 bg-gray-100 rounded w-[15%]" />
+                            <div className="h-4 bg-gray-100 rounded w-[20%]" />
+                            <div className="h-4 bg-gray-100 rounded w-[15%]" />
+                            <div className="h-4 bg-gray-100 rounded w-[10%]" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
                     <RequestTable
                       rows={filteredCampaigns}
                       selectedId={selectedCampaignId}
-                      onSelect={(r) => setSelectedCampaignId(r.id)}
+                      onSelect={(r) => handleSelectCampaign(r)}
                       columns={[
                         {
                           key: 'campaign',
@@ -395,6 +436,7 @@ export default function StaffRequestPage() {
                         },
                       ]}
                     />
+                    )}
                   </div>
 
                   {/* Pagination Controls */}
@@ -423,6 +465,12 @@ export default function StaffRequestPage() {
 
                 {selectedCampaignId && (
                   <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar animate-in slide-in-from-right-4 transition-all duration-500">
+                    {isLoadingDetail ? (
+                      <div className="flex flex-col items-center justify-center h-48 gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#446b5f] border-t-transparent" />
+                        <span className="text-xs font-bold text-gray-400">Đang tải chi tiết...</span>
+                      </div>
+                    ) : (
                     <RequestDetailPanel
                       request={selectedCampaign}
                       title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
@@ -447,6 +495,7 @@ export default function StaffRequestPage() {
                       onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
                       onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
                     />
+                    )}
                   </div>
                 )}
               </div>
