@@ -162,14 +162,18 @@ function FeaturedBlock({
 const CategoryCard = ({
   id,
   title,
-  Icon,
+  iconUrl,
   onClick,
 }: {
   id: string;
   title: string;
-  Icon: React.ComponentType<{ className?: string }> | string;
+  iconUrl?: string | null;
   onClick: (categoryId: string) => void;
 }) => {
+  // Resolve icon: DB iconUrl > ICON_MAP URL > fallback Lucide icon
+  const fallbackIcon = getIcon(title);
+  const resolvedUrl = iconUrl || (typeof fallbackIcon === "string" ? fallbackIcon : null);
+
   return (
     <button
       type="button"
@@ -177,14 +181,14 @@ const CategoryCard = ({
       className="group flex flex-col items-center justify-center gap-3 py-6 px-6 hover:bg-slate-50 border-b-2 border-transparent hover:border-[#F84D43] transition-all duration-300 min-w-[120px] md:min-w-[140px]"
     >
       <div className="text-slate-400 group-hover:text-[#F84D43] transition-all duration-300 transform group-hover:scale-110">
-        {typeof Icon === "string" ? (
+        {resolvedUrl ? (
           <img
-            src={Icon}
+            src={resolvedUrl}
             alt={title}
             className="h-14 w-14 md:h-16 md:w-16 object-contain opacity-50 contrast-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:contrast-100 transition-all duration-300"
           />
         ) : (
-          <Icon className="h-14 w-14 md:h-16 md:w-16 stroke-[1.2]" />
+          <HeartHandshake className="h-14 w-14 md:h-16 md:w-16 stroke-[1.2]" />
         )}
       </div>
       <span className="text-[12px] md:text-sm font-semibold text-slate-500 group-hover:text-slate-900 tracking-tight text-center leading-tight whitespace-nowrap">
@@ -333,12 +337,12 @@ export function CampaignCategoriesSection() {
         <div className="flex justify-center w-full">
           {!showSlider ? (
             <div className="flex flex-wrap items-center justify-center">
-              {categories.map(({ name, id }) => (
+              {categories.map(({ name, id, iconUrl }) => (
                 <CategoryCard
                   key={id}
                   id={id.toString()}
                   title={name}
-                  Icon={getIcon(name)}
+                  iconUrl={iconUrl}
                   onClick={handleCategoryClick}
                 />
               ))}
@@ -367,12 +371,12 @@ export function CampaignCategoriesSection() {
               }}
               className="category-swiper w-full px-12"
             >
-              {categories.map(({ name, id }) => (
+              {categories.map(({ name, id, iconUrl }) => (
                 <SwiperSlide key={id}>
                   <CategoryCard
                     id={id.toString()}
                     title={name}
-                    Icon={getIcon(name)}
+                    iconUrl={iconUrl}
                     onClick={handleCategoryClick}
                   />
                 </SwiperSlide>

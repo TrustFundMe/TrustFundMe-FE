@@ -43,6 +43,7 @@ const mapCampaignDtoToUi = (
     id: String(dto.id),
     title: dto.title,
     category: dto.categoryName || dto.category || 'Chiến dịch',
+    categoryIconUrl: dto.categoryIconUrl,
     description: dto.description ?? '',
     coverImage: finalCover,
     galleryImages: galleryUrls.length > 0 ? galleryUrls : (finalCover ? [finalCover] : []),

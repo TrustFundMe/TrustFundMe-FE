@@ -55,6 +55,13 @@ export default function CampaignHeader({
               letterSpacing: 0.2,
             }}
           >
+            {campaign.categoryIconUrl ? (
+              <img
+                src={campaign.categoryIconUrl}
+                alt={campaign.category}
+                className="h-5 w-5 object-contain"
+              />
+            ) : null}
             {campaign.category.toUpperCase()}
           </span>
         </div>

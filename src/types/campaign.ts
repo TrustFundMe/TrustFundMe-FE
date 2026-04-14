@@ -12,6 +12,8 @@ export interface CampaignCategory {
   id: number;
   name: string;
   description?: string;
+  icon?: number;
+  iconUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -30,6 +32,7 @@ export interface CampaignDto {
   coverImageUrl?: string | null;
   categoryId?: number | null;
   categoryName?: string | null;
+  categoryIconUrl?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   status: string;
