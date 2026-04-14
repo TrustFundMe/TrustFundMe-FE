@@ -10,14 +10,18 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { paymentService, CampaignAnalyticsResponse } from '@/services/paymentService';
+import { paymentService, CampaignAnalyticsResponse, ChartPoint } from '@/services/paymentService';
 
 interface Props {
     campaignId?: number | string;
 }
 
+interface ExtendedResponse extends CampaignAnalyticsResponse {
+    phases?: { key: string; type: string }[];
+}
+
 const CampaignAnalyticsChart = ({ campaignId }: Props) => {
-    const [data, setData] = useState<CampaignAnalyticsResponse | null>(null);
+    const [data, setData] = useState<ExtendedResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('Tháng');
 
@@ -31,8 +35,111 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                 console.log("📊 [Analytics] Fetching data for ID:", id, "period:", period);
                 const res = await paymentService.getCampaignAnalytics(id, period);
                 console.log("📊 [Analytics] Success:", res);
-                setData(res);
-            } catch (err: any) {
+
+                const generateSlots = (p: string) => {
+                    const slots = [];
+                    const now = new Date();
+
+                    if (p === 'Ngày') {
+                        const currentHour = now.getHours();
+                        for (let i = 0; i <= currentHour; i++) {
+                            slots.push(`${i.toString().padStart(2, '0')}h`);
+                        }
+                    } else if (p === 'Tuần') {
+                        const day = now.getDay();
+                        const limit = day === 0 ? 7 : day; // If Sunday, limit is 7, otherwise 1-6
+                        const allDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+                        for (let i = 0; i < limit; i++) {
+                            slots.push(allDays[i]);
+                        }
+                    } else if (p === 'Tháng') {
+                        const currentDay = now.getDate();
+                        const month = now.getMonth();
+                        for (let i = 1; i <= currentDay; i++) {
+                            slots.push(`${i.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}`);
+                        }
+                    } else if (p === 'Năm') {
+                        const currentMonth = now.getMonth() + 1;
+                        for (let i = 1; i <= currentMonth; i++) {
+                            slots.push(`Tháng ${i}`);
+                        }
+                    }
+                    return slots;
+                };
+
+                const extractSlot = (dateStr: string, p: string) => {
+                    if (!dateStr) return '';
+                    if (p === 'Ngày') {
+                        if (dateStr.includes('T')) return `${new Date(dateStr).getHours().toString().padStart(2, '0')}h`;
+                        const m = dateStr.match(/(\d{2}):(\d{2})/);
+                        if (m) return `${m[1]}h`;
+                    } else if (p === 'Tuần') {
+                        if (dateStr.startsWith('T') || dateStr === 'CN') return dateStr;
+                    } else if (p === 'Tháng') {
+                        if (dateStr.includes('/')) return dateStr;
+                    } else if (p === 'Năm') {
+                        if (dateStr.toLowerCase().includes('tháng')) {
+                            const m = dateStr.replace(/\D/g, '');
+                            return `Tháng ${parseInt(m, 10)}`;
+                        }
+                    }
+                    return dateStr;
+                };
+
+                const parsedSlots = generateSlots(period);
+                const lastBalancesPerSlot = new Map<string, number>();
+                if (res && res.chartData) {
+                    res.chartData.forEach(d => {
+                        const s = extractSlot(d.date, period);
+                        const b = (d.balanceGreen !== undefined && d.balanceGreen !== null) ? d.balanceGreen : (d.balanceRed !== null ? d.balanceRed : 0);
+                        lastBalancesPerSlot.set(s, b);
+                    });
+                }
+
+                let currentBal = 0;
+                const finalBalances = parsedSlots.map(slot => {
+                    if (lastBalancesPerSlot.has(slot)) {
+                        currentBal = lastBalancesPerSlot.get(slot)!;
+                    }
+                    return { slot, balance: currentBal };
+                });
+
+                const formattedChartData: Record<string, string | number | null>[] = parsedSlots.map(slot => ({ date: slot, tooltipBalance: null }));
+
+                let currentPhaseType = finalBalances.length > 1 && finalBalances[1].balance >= finalBalances[0].balance ? 'green' : 'red';
+                let currentPhaseIndex = 0;
+                let phaseKey = `${currentPhaseType}_${currentPhaseIndex}`;
+                const phases = [{ key: phaseKey, type: currentPhaseType }];
+
+                if (finalBalances.length > 0) {
+                    formattedChartData[0][phaseKey] = finalBalances[0].balance;
+                    formattedChartData[0].tooltipBalance = finalBalances[0].balance;
+                }
+
+                for (let i = 1; i < finalBalances.length; i++) {
+                    const prev = finalBalances[i - 1];
+                    const curr = finalBalances[i];
+                    const segType = curr.balance >= prev.balance ? 'green' : 'red';
+
+                    if (segType !== currentPhaseType) {
+                        currentPhaseType = segType;
+                        currentPhaseIndex++;
+                        phaseKey = `${currentPhaseType}_${currentPhaseIndex}`;
+                        phases.push({ key: phaseKey, type: currentPhaseType });
+
+                        formattedChartData[i - 1][phaseKey] = prev.balance;
+                    }
+
+                    formattedChartData[i][phaseKey] = curr.balance;
+                    formattedChartData[i].tooltipBalance = curr.balance;
+                }
+
+                const extendedRes = res as ExtendedResponse;
+                extendedRes.phases = phases;
+
+                if (extendedRes) extendedRes.chartData = formattedChartData as unknown as ChartPoint[];
+                setData(extendedRes);
+            } catch (err) {
                 console.error("❌ Failed to fetch campaign analytics:", err);
             } finally {
                 setLoading(false);
@@ -42,11 +149,34 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
         fetchData();
     }, [campaignId, period]);
 
-    const customTooltipFormatter = (value: any) => {
-        if (typeof value === 'number') {
-            return [new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value), 'Số dư'];
+    const formatYAxisTick = (value: number) => {
+        if (value === 0) return '0';
+        if (value >= 1000000) {
+            const tr = value / 1000000;
+            return `${Number.isInteger(tr) ? tr : tr.toFixed(1).replace('.', ',')} Tr`;
         }
-        return [value, 'Số dư'];
+        if (value >= 1000) {
+            const n = value / 1000;
+            return `${Number.isInteger(n) ? n : n.toFixed(1).replace('.', ',')} N`;
+        }
+        return value.toString();
+    };
+
+    const CustomTooltipContent = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+        if (active && payload && payload.length) {
+            // Find the balance explicitly set OR the first available value
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const balanceData = payload.find((p: any) => p.payload && p.payload.tooltipBalance !== undefined);
+            const val = balanceData ? Math.max(balanceData.payload.tooltipBalance, 0) : Math.max(payload[0].value, 0);
+            const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+            return (
+                <div style={{ background: '#fff', padding: '12px', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                    <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#6B7280', fontSize: 13 }}>{label}</p>
+                    <p style={{ margin: 0, color: '#111827', fontWeight: 800, fontSize: 15 }}>Số dư: <span style={{ color: '#0F5D51' }}>{formatted}</span></p>
+                </div>
+            );
+        }
+        return null;
     };
 
     if (loading) {
@@ -92,7 +222,6 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                         >
-                            <option value="Năm">Năm</option>
                             <option value="Tháng">Tháng</option>
                             <option value="Tuần">Tuần</option>
                             <option value="Ngày">Ngày</option>
@@ -124,6 +253,9 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                         </span>
                     </div>
                 </div>
+                <div style={{ marginTop: '4px', fontSize: 12, color: '#6B7280', fontStyle: 'italic', paddingLeft: 4 }}>
+                    *Chú thích: Tr = Triệu đồng, N = Nghìn đồng
+                </div>
             </div>
 
             <div style={{ width: '100%', height: 350, position: 'relative' }}>
@@ -148,7 +280,7 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                         data={data.chartData}
-                        margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
+                        margin={{ top: 10, right: 30, left: 20, bottom: (data.chartData && data.chartData.length > 15) ? 40 : 20 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                         <XAxis
@@ -157,39 +289,34 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                             tickLine={{ stroke: '#E5E7EB' }}
                             tick={{ fill: '#6B7280', fontSize: 12 }}
                             dy={10}
+                            interval={0}
+                            angle={(data.chartData && data.chartData.length > 15) ? -45 : 0}
+                            textAnchor={(data.chartData && data.chartData.length > 15) ? 'end' : 'middle'}
                             padding={{ left: 10, right: 10 }}
+                            height={(data.chartData && data.chartData.length > 15) ? 60 : 30}
                         />
                         <YAxis
                             axisLine={{ stroke: '#E5E7EB', strokeWidth: 1 }}
                             tickLine={{ stroke: '#E5E7EB' }}
                             tick={{ fill: '#6B7280', fontSize: 12 }}
-                            tickFormatter={(value) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(value)}
+                            tickFormatter={formatYAxisTick}
                             dx={-10}
-                            domain={[0, Number(data.targetAmount) > 0 ? Number(data.targetAmount) : 1000000]}
+                            domain={[0, 'auto']}
                         />
-                        <Tooltip
-                            formatter={customTooltipFormatter}
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)', fontWeight: 600 }}
-                            itemStyle={{ fontWeight: 600 }}
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="balanceGreen"
-                            stroke="#0F5D51"
-                            strokeWidth={3}
-                            dot={{ r: 4, fill: '#0F5D51', strokeWidth: 0 }}
-                            activeDot={{ r: 6 }}
-                            animationDuration={1000}
-                        />
-                        <Line
-                            type="monotone"
-                            dataKey="balanceRed"
-                            stroke="#ef4444"
-                            strokeWidth={3}
-                            dot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }}
-                            activeDot={{ r: 6 }}
-                            animationDuration={1000}
-                        />
+                        <Tooltip content={<CustomTooltipContent />} cursor={{ stroke: '#9CA3AF', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                        {data.phases && data.phases.map(p => (
+                            <Line
+                                key={p.key}
+                                type="monotone"
+                                dataKey={p.key}
+                                stroke={p.type === 'green' ? '#0F5D51' : '#ef4444'}
+                                strokeWidth={3}
+                                dot={{ r: 4, fill: p.type === 'green' ? '#0F5D51' : '#ef4444', strokeWidth: 0 }}
+                                activeDot={{ r: 6 }}
+                                animationDuration={1000}
+                                connectNulls={false}
+                            />
+                        ))}
                     </LineChart>
                 </ResponsiveContainer>
             </div>

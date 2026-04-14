@@ -1,4 +1,5 @@
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { ExpenditureItem, PaymentMethod } from './types';
 import { CampaignDto } from '@/types/campaign';
 import AmountInput from './AmountInput';
@@ -71,6 +72,7 @@ export default function DonationItemLayout({
     onSubmit,
     isGuest = false
 }: DonationItemLayoutProps) {
+    const router = useRouter();
     const tipAmount = Math.round((amount * tipPercent) / 100);
     const totalAmount = amount + tipAmount;
 
@@ -91,14 +93,23 @@ export default function DonationItemLayout({
             {/* LEFT COLUMN: CONFIGURATION (65%) */}
             <div className="flex-[0.65] p-6 flex flex-col gap-3 border-r border-gray-50 bg-white">
                 {/* Header */}
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="w-5 h-1.5 bg-[#dc2626] rounded-full"></div>
-                        <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">
-                            {campaign?.type?.toUpperCase() === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Quỹ ủy quyền'}
-                        </span>
+                <div className="flex items-start gap-4">
+                    {/* Back Button */}
+                    <button
+                        onClick={() => router.back()}
+                        className="mt-1 p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="w-5 h-1.5 bg-[#dc2626] rounded-full"></div>
+                            <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">
+                                {campaign?.type?.toUpperCase() === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Quỹ ủy quyền'}
+                            </span>
+                        </div>
+                        <h1 className="text-3xl font-black tracking-tight text-gray-900">{campaign?.title || 'Đang tải...'}</h1>
                     </div>
-                    <h1 className="text-3xl font-black tracking-tight text-gray-900">{campaign?.title || 'Đang tải...'}</h1>
                 </div>
 
                 {/* Amount Input */}

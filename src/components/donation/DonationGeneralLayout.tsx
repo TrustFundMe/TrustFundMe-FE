@@ -1,4 +1,5 @@
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { PaymentMethod } from './types';
 import { CampaignDto } from '@/types/campaign';
 import AmountInput from './AmountInput';
@@ -44,13 +45,22 @@ export default function DonationGeneralLayout({
     onSubmit,
     isGuest = false
 }: DonationGeneralLayoutProps) {
+    const router = useRouter();
     const tipAmount = Math.round((amount * tipPercent) / 100);
     const totalAmount = amount + tipAmount;
 
     return (
         <div className="w-full max-w-[540px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col overflow-hidden">
             {/* TOP SECTION: CONFIGURATION */}
-            <div className="p-6 pb-2 flex flex-col gap-2 bg-white items-center text-center">
+            <div className="p-6 pb-2 flex flex-col gap-2 bg-white items-center text-center relative">
+                {/* Back Button */}
+                <button
+                    onClick={() => router.back()}
+                    className="absolute top-6 left-6 p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+
                 {/* Header */}
                 <div className="w-full max-w-md">
                     <div className="flex items-center gap-2 mb-2 justify-center">
