@@ -638,7 +638,7 @@ export default function ProfilePage() {
           </p>
 
           {/* Premium Trust Score Section */}
-          <div className="w-full mt-4 px-8">
+          <div className="w-full mt-3 px-8">
             <div className="bg-white rounded-[2rem] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-amber-100/40 relative overflow-hidden group">
               {/* Background Glow */}
               <div className="absolute -right-2 -top-2 w-16 h-16 bg-amber-400/5 rounded-full blur-xl group-hover:bg-amber-400/10 transition-all duration-500" />

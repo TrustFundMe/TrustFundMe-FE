@@ -290,7 +290,11 @@ export default function CampaignCreationPage() {
       case 'setup':
         return Object.keys(campaignBasicErrors).length === 0;
       case 'plan':
-        return campaign.fundType === 'ITEMIZED' ? (totalExpenditure > 0) : true;
+        if (campaign.fundType === 'ITEMIZED') {
+          if (totalExpenditure === 0) return false;
+          if (campaign.targetAmount > 0 && totalExpenditure > campaign.targetAmount) return false;
+        }
+        return true;
       case 'banking':
         return Object.keys(campaignBankingErrors).length === 0;
       case 'review':
@@ -305,6 +309,7 @@ export default function CampaignCreationPage() {
     currentStep.id,
     totalExpenditure,
     campaign.fundType,
+    campaign.targetAmount,
     campaign.evidenceDueAt
   ]);
 
@@ -323,6 +328,8 @@ export default function CampaignCreationPage() {
       } else if (currentStep.id === 'plan' && campaign.fundType === 'ITEMIZED') {
         if (totalExpenditure === 0) {
           toast('Vui lòng thêm ít nhất một vật phẩm có giá tiền để tiếp tục.', 'error');
+        } else if (campaign.targetAmount > 0 && totalExpenditure > campaign.targetAmount) {
+          toast('Tổng chi tiêu không được vượt quá mục tiêu quỹ đã đặt.', 'error');
         }
       } else if (currentStep.id === 'banking') {
         const firstError = Object.values(campaignBankingErrors)[0];

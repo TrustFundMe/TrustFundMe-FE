@@ -4,6 +4,10 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import ImageZoomModal, { type ZoomImage } from "@/components/feed-post/ImageZoomModal";
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|avi|mkv)$/i.test(url) || url.includes("video") || url.includes("stream");
+}
+
 export default function CampaignImageSlider({
   images,
   alt,
@@ -22,17 +26,24 @@ export default function CampaignImageSlider({
   if (!slides.length) return null;
 
   const canNav = slides.length > 1;
+  const currentUrl = slides[index];
+  const isVideo = isVideoUrl(currentUrl);
+
   const zoomImages: ZoomImage[] = useMemo(
-    () => slides.map((url) => ({ url, alt })),
+    () => slides.filter(url => !isVideoUrl(url)).map((url) => ({ url, alt })),
     [slides, alt]
   );
 
+  const originalImageIndex = useMemo(() => {
+    let imageCount = 0;
+    for (let i = 0; i < index; i++) {
+      if (!isVideoUrl(slides[i])) imageCount++;
+    }
+    return imageCount;
+  }, [slides, index]);
+
   return (
-    <div
-      style={{
-        width: "100%",
-      }}
-    >
+    <div style={{ width: "100%" }}>
       <div
         style={{
           position: "relative",
@@ -47,38 +58,50 @@ export default function CampaignImageSlider({
             width: "100%",
             aspectRatio: "16 / 11",
             maxHeight: 360,
-          }}
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.preventDefault();
-            setZoomOpen(true);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setZoomOpen(true);
-            }
+            background: "#000",
           }}
         >
-          <Image
-            src={slides[index]}
-            alt={alt}
-            fill
-            sizes="(min-width: 1024px) 40vw, 100vw"
-            style={{ objectFit: "cover" }}
-            priority={false}
-          />
+          {isVideo ? (
+            <video
+              key={currentUrl}
+              src={currentUrl}
+              controls
+              controlsList="nodownload"
+              style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "all" }}
+              className="relative z-10"
+            />
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setZoomOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setZoomOpen(true);
+                }
+              }}
+              style={{ position: "absolute", inset: 0, cursor: "pointer", pointerEvents: "all" }}
+            >
+              <Image
+                src={currentUrl}
+                alt={alt}
+                fill
+                sizes="(min-width: 1024px) 40vw, 100vw"
+                style={{ objectFit: "cover" }}
+                priority={false}
+              />
+            </div>
+          )}
         </div>
 
+        {/* Navigation buttons — always shown if more than 1 slide */}
         {canNav ? (
           <>
             <button
               type="button"
-              aria-label="Previous image"
-              onClick={() =>
-                setIndex((i) => (i - 1 + slides.length) % slides.length)
-              }
+              aria-label="Trước"
+              onClick={() => setIndex((i) => (i - 1 + slides.length) % slides.length)}
               style={{
                 position: "absolute",
                 left: 12,
@@ -88,13 +111,14 @@ export default function CampaignImageSlider({
                 height: 36,
                 borderRadius: 9999,
                 border: "1px solid rgba(255,255,255,0.35)",
-                background: "rgba(0,0,0,0.40)",
+                background: "rgba(0,0,0,0.50)",
                 color: "#fff",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
                 cursor: "pointer",
+                zIndex: 20,
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -104,7 +128,7 @@ export default function CampaignImageSlider({
 
             <button
               type="button"
-              aria-label="Next image"
+              aria-label="Sau"
               onClick={() => setIndex((i) => (i + 1) % slides.length)}
               style={{
                 position: "absolute",
@@ -115,13 +139,14 @@ export default function CampaignImageSlider({
                 height: 36,
                 borderRadius: 9999,
                 border: "1px solid rgba(255,255,255,0.35)",
-                background: "rgba(0,0,0,0.40)",
+                background: "rgba(0,0,0,0.50)",
                 color: "#fff",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.3)",
                 cursor: "pointer",
+                zIndex: 20,
               }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -129,6 +154,7 @@ export default function CampaignImageSlider({
               </svg>
             </button>
 
+            {/* Dot indicators */}
             <div
               style={{
                 position: "absolute",
@@ -136,31 +162,64 @@ export default function CampaignImageSlider({
                 bottom: 12,
                 display: "flex",
                 gap: 6,
+                zIndex: 20,
               }}
             >
-              {slides.map((_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    width: i === index ? 18 : 8,
-                    height: 8,
-                    borderRadius: 9999,
-                    background:
-                      i === index ? "#F84D43" : "rgba(255,255,255,0.7)",
-                    transition: "all 180ms ease",
-                  }}
-                />
-              ))}
+              {slides.map((url, i) => {
+                const dotIsVideo = isVideoUrl(url);
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      width: i === index ? 18 : 8,
+                      height: 8,
+                      borderRadius: 9999,
+                      background:
+                        i === index
+                          ? dotIsVideo
+                            ? "#F84D43"
+                            : "#F84D43"
+                          : "rgba(255,255,255,0.7)",
+                      transition: "all 180ms ease",
+                      display: "inline-block",
+                    }}
+                  />
+                );
+              })}
             </div>
+
+            {/* Type label badge */}
+            {isVideo && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  left: 12,
+                  background: "rgba(0,0,0,0.50)",
+                  color: "#fff",
+                  padding: "3px 10px",
+                  borderRadius: 9999,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  zIndex: 20,
+                }}
+              >
+                Video
+              </div>
+            )}
           </>
         ) : null}
       </div>
-      <ImageZoomModal
-        open={zoomOpen}
-        onOpenChange={setZoomOpen}
-        images={zoomImages}
-        initialIndex={index}
-      />
+      {zoomImages.length > 0 && (
+        <ImageZoomModal
+          open={zoomOpen}
+          onOpenChange={setZoomOpen}
+          images={zoomImages}
+          initialIndex={originalImageIndex}
+        />
+      )}
     </div>
   );
 }

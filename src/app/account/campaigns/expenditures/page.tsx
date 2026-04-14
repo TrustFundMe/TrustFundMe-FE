@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Fragment, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ArrowRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt, ChevronDown, DollarSign, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, CheckCircle, Clock, AlertCircle, ArrowUpRight, ArrowRight, ShieldCheck, User, MoreVertical, X, Image as ImageIcon, Upload, Trash2, ChevronRight, Receipt, ChevronDown, DollarSign, CreditCard, Loader2, MessageSquare } from 'lucide-react';
 import CreateOrEditPostModal from '@/components/feed-post/CreateOrEditPostModal';
 import Image from 'next/image';
 
@@ -20,6 +20,7 @@ import { mediaService } from '@/services/mediaService';
 import { feedPostService } from '@/services/feedPostService';
 import { paymentService, DonationItemSummary } from '@/services/paymentService';
 import { bankAccountService } from '@/services/bankAccountService';
+import { chatService } from '@/services/chatService';
 import { BankAccountDto } from '@/types/bankAccount';
 import { toast } from 'react-hot-toast';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
@@ -66,8 +67,9 @@ export default function CampaignExpendituresPage() {
     const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
     const isRefundDone = updateExpenditure?.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
 
-    // Staff name map: key = expenditure id, value = staff full name
+    // Staff name map: key = expenditure id, value = staff full name + staffId
     const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
+    const [staffIdMap, setStaffIdMap] = useState<Record<number, number>>({});
 
     useEffect(() => {
         if (!expenditures || expenditures.length === 0) return;
@@ -76,10 +78,13 @@ export default function CampaignExpendituresPage() {
             try {
                 const res = await api.get(`/api/admin/tasks/type/EXPENDITURE/target/${exp.id}`);
                 const name = res.data?.staffName;
+                const staffId = res.data?.staffId;
                 if (name) {
                     setStaffNameMap(prev => ({ ...prev, [exp.id]: name }));
-                } else if (res.data?.staffId) {
-                    setStaffNameMap(prev => ({ ...prev, [exp.id]: `Nhân viên #${res.data.staffId}` }));
+                    if (staffId) setStaffIdMap(prev => ({ ...prev, [exp.id]: staffId }));
+                } else if (staffId) {
+                    setStaffNameMap(prev => ({ ...prev, [exp.id]: `Nhân viên #${staffId}` }));
+                    setStaffIdMap(prev => ({ ...prev, [exp.id]: staffId }));
                 } else {
                     setStaffNameMap(prev => ({ ...prev, [exp.id]: '' }));
                 }
@@ -120,6 +125,25 @@ export default function CampaignExpendituresPage() {
     const [refundUploading, setRefundUploading] = useState(false);
     const [refundSubmitting, setRefundSubmitting] = useState(false);
     const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
+
+    // Chat với staff
+    const handleChatWithStaff = async (expId: number, staffId: number, staffName: string) => {
+        if (!user?.id || !campaignId) return;
+        try {
+            const result = await chatService.createConversation(
+                user.id,          // fundOwnerId (current user)
+                Number(campaignId), // campaignId
+                staffId           // staffId
+            );
+            if (result.success && result.data?.id) {
+                router.push(`/account/chat?conversationId=${result.data.id}`);
+            } else {
+                toast.error(result.error || 'Không thể mở cuộc trò chuyện.');
+            }
+        } catch {
+            toast.error('Lỗi khi mở cuộc trò chuyện với nhân viên.');
+        }
+    };
 
     const fetchData = useCallback(async (isSilent = false) => {
         if (!campaignId) return;
@@ -1038,7 +1062,17 @@ export default function CampaignExpendituresPage() {
                                                                                                     </div>
                                                                                                     <div>
                                                                                                         <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Staff đảm nhận</label>
-                                                                                                        <p className="text-xs font-bold text-black">{staffNameMap[exp.id] || 'Chưa phân công'}</p>
+                                                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                                                            <p className="text-xs font-bold text-black">{staffNameMap[exp.id] || 'Chưa phân công'}</p>
+                                                                                                            {staffIdMap[exp.id] && (
+                                                                                                                <button
+                                                                                                                    onClick={() => handleChatWithStaff(exp.id, staffIdMap[exp.id], staffNameMap[exp.id])}
+                                                                                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 text-[10px] font-black transition-all border border-blue-100"
+                                                                                                                >
+                                                                                                                    Chat với nhân viên phụ trách
+                                                                                                                </button>
+                                                                                                            )}
+                                                                                                        </div>
                                                                                                     </div>
                                                                                                 </div>
                                                                                             </div>

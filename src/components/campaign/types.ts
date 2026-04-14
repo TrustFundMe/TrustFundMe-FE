@@ -45,6 +45,13 @@ export type CampaignPlan = {
   date: string;
 };
 
+export type CampaignMedia = {
+  id: number;
+  type: 'PHOTO' | 'VIDEO' | 'FILE';
+  url: string;
+  name?: string;
+};
+
 export type Campaign = {
   id: string;
   title: string;
@@ -65,4 +72,5 @@ export type Campaign = {
   type?: string;
   status?: string;
   rejectionReason?: string;
+  attachments?: CampaignMedia[];
 };

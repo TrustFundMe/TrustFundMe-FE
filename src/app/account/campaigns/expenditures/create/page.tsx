@@ -29,7 +29,7 @@ export default function CreateExpenditurePage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [plan, setPlan] = useState('Chi tiêu đợt 1');
+    const [plan, setPlan] = useState('Đang tải...');
     const [evidenceDueAt, setEvidenceDueAt] = useState('');
     const [items, setItems] = useState<CreateExpenditureItemRequest[]>([
         { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }
@@ -53,9 +53,10 @@ export default function CreateExpenditurePage() {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [campaignData, bankAccounts] = await Promise.all([
+                const [campaignData, bankAccounts, existingExpenditures] = await Promise.all([
                     campaignService.getById(Number(campaignId)),
-                    bankAccountService.getMyBankAccounts()
+                    bankAccountService.getMyBankAccounts(),
+                    expenditureService.getByCampaignId(Number(campaignId))
                 ]);
 
                 if (campaignData.status === 'DISABLED') {
@@ -65,6 +66,10 @@ export default function CreateExpenditurePage() {
                 }
 
                 setCampaign(campaignData);
+                
+                // Set default plan name based on count
+                const nextNumber = (existingExpenditures?.length || 0) + 1;
+                setPlan(`Chi tiêu đợt ${nextNumber}`);
 
                 // Prioritize approved bank accounts, then fall back to any available
                 const approvedBank = bankAccounts.find(acc => acc.status === 'APPROVED');
@@ -324,7 +329,7 @@ export default function CreateExpenditurePage() {
                 campaignId: Number(campaignId),
                 plan: plan,
                 evidenceDueAt: evidenceDueAt ? new Date(evidenceDueAt).toISOString() : undefined,
-                evidenceStatus: 'PENDING',
+                evidenceStatus: campaign?.type === 'ITEMIZED' ? 'PENDING_REVIEW' : 'PENDING',
                 items: items.map(item => ({
                     ...item,
                     quantity: Number(item.quantity),
