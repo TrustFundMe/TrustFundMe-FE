@@ -2,16 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Search, AlertCircle, FileImage, Sparkles, MessageSquare, Lock, ShieldAlert, Megaphone, Phone, Info, AlertTriangle, Building2, MapPin, X, ExternalLink, ChevronDown, ChevronRight, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Search, AlertCircle, FileImage, Sparkles, MessageSquare, Lock, LockOpen, Ban, ShieldAlert, Megaphone, Phone, Info, AlertTriangle, Building2, MapPin, X, ExternalLink, ChevronDown, ChevronRight, RefreshCw, CheckCircle2, Calendar, CheckCircle } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { mediaService } from '@/services/mediaService';
 import { userService } from '@/services/userService';
 import { notificationService } from '@/services/notificationService';
 import { chatService } from '@/services/chatService';
+import { feedPostService } from '@/services/feedPostService';
+import { appointmentService } from '@/services/appointmentService';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useRouter } from 'next/navigation';
 import AIAnalysisModal from './AIAnalysisModal';
+import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
+import BanUserModal from '@/components/staff/BanUserModal';
+import DisableCampaignModal from '@/components/staff/DisableCampaignModal';
+import StaffConfirmModal from '@/components/staff/StaffConfirmModal';
 import axios from 'axios';
 
 /* ══ HELPERS ══ */
@@ -30,6 +36,8 @@ interface EvidenceRecord {
     ownerName: string; ownerEmail: string; ownerPhone: string; ownerId: number;
     plan: string; totalAmount: number; evidenceStatus: string; evidenceDueAt?: string | null;
     createdAt: string; evidencePhotos: string[]; expenditureItems: any[]; purpose?: string;
+    ownerIsActive: boolean; campaignStatus: string; hasFraudReport: boolean;
+    hasAppointment: boolean; appointmentDate?: string;
 }
 
 /* ══ STATUS CONFIG ══ */
@@ -78,9 +86,27 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel, dange
 function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () => void }) {
     const [aiResult, setAiResult] = useState<AIResult | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
-    const [confirm, setConfirm] = useState<null | 'lock_campaign' | 'lock_account' | 'post_fraud' | 'send_legal'>(null);
+    const [confirm, setConfirm] = useState<null | 'post_fraud' | 'send_legal'>(null);
+    const [showSchedule, setShowSchedule] = useState(false);
     const [photosOpen, setPhotosOpen] = useState(true);
     const [lightbox, setLightbox] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [hasPostedFraud, setHasPostedFraud] = useState(rec.hasFraudReport);
+
+    const [banModal, setBanModal] = useState<{
+        isOpen: boolean; userId: number; userName: string;
+    }>({ isOpen: false, userId: 0, userName: '' });
+
+    const [disableCampaignModal, setDisableCampaignModal] = useState<{
+        isOpen: boolean; campaignId: number; campaignTitle: string;
+    }>({ isOpen: false, campaignId: 0, campaignTitle: '' });
+
+    const [confirmAction, setConfirmAction] = useState<{
+        type: 'UNLOCK_CAMPAIGN';
+        id: number;
+        title: string;
+        message: string;
+    } | null>(null);
 
     const d = daysLeft(rec.evidenceDueAt);
     const overdue = d !== null && d < 0;
@@ -88,6 +114,13 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
 
     const [isChatting, setIsChatting] = useState(false);
     const router = useRouter();
+    const { user } = useAuth();
+
+    useEffect(() => {
+        if (rec.hasFraudReport) {
+            setHasPostedFraud(true);
+        }
+    }, [rec.hasFraudReport, rec.campaignId]);
 
     const startChat = async () => {
         setIsChatting(true);
@@ -96,30 +129,119 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
             if (res.success && res.data) {
                 toast.success('Đang chuyển đến cuộc hội thoại...');
                 router.push(`/staff/chat?conversationId=${res.data.id}`);
-            } else {
-                toast.error('Không thể tạo cuộc hội thoại');
-            }
-        } catch { 
-            toast.error('Lỗi kết nối chat'); 
-        } finally { 
-            setIsChatting(false); 
-        }
+            } else { toast.error('Không thể tạo cuộc hội thoại'); }
+        } catch { toast.error('Lỗi kết nối chat'); } 
+        finally { setIsChatting(false); }
     };
 
     const doAction = async (type: typeof confirm) => {
         setConfirm(null);
         try {
-            if (type === 'lock_campaign') { await notificationService.createEvent({ userId: rec.ownerId, type: 'CAMPAIGN_LOCKED', message: `Chiến dịch "${rec.campaignTitle}" bị khóa do không nộp minh chứng.` }); toast.success('Đã khóa chiến dịch'); }
-            else if (type === 'lock_account') { await userService.banUser(rec.ownerId, 'Không nộp minh chứng đúng hạn'); toast.success('Đã khóa tài khoản'); }
-            else if (type === 'post_fraud') { toast.success('Đã đăng bài tố cáo'); }
-            else if (type === 'send_legal') { await notificationService.createEvent({ userId: rec.ownerId, type: 'LEGAL_WARNING', message: `Cảnh báo pháp lý: Vi phạm hợp đồng do không nộp minh chứng đợt "${rec.plan}".` }); toast.success('Đã gửi cảnh báo pháp lý'); }
+            if (type === 'post_fraud') { 
+                await feedPostService.create({
+                    campaignId: rec.campaignId,
+                    targetId: rec.campaignId,
+                    targetType: 'CAMPAIGN',
+                    type: 'ANNOUNCEMENT',
+                    visibility: 'PUBLIC',
+                    title: `CẢNH BÁO RỦI RO: Chiến dịch "${rec.campaignTitle}"`,
+                    content: `[HỆ THỐNG CẢNH BÁO THÔNG TIN]\n\nChiến dịch quyên góp "${rec.campaignTitle}" của chủ quỹ ${rec.ownerName} hiện đang bị đưa vào danh sách rủi ro và theo dõi đặc biệt do các dấu hiệu nghi vấn về tính minh bạch trong minh chứng chi tiêu.\n\nHiện tại, hệ thống của chúng tôi đang trong quá trình xử lý vi phạm, đối soát dữ liệu và yêu cầu giải trình từ phía chủ quỹ để làm rõ các sai lệch này cho mọi người cùng biết. \n\nBan quản trị khuyến cáo các nhà hảo tâm nên tạm dừng các giao dịch quyên góp liên quan đến chiến dịch này cho đến khi có kết luận cuối cùng. Chúng tôi cam kết bảo vệ quyền lợi của cộng đồng và sự minh bạch của hệ thống.`,
+                    status: 'PUBLISHED',
+                    category: 'Cảnh báo'
+                });
+                // Save to local cache to prevent flickering even if backend is slow
+                try {
+                    const cache = JSON.parse(localStorage.getItem('reported_campaigns') || '[]');
+                    if (!cache.includes(rec.campaignId)) {
+                        localStorage.setItem('reported_campaigns', JSON.stringify([...cache, rec.campaignId]));
+                    }
+                } catch (e) { console.error('Cache error:', e); }
+
+                toast.success('Đã đăng bài tố cáo thành công'); 
+                setHasPostedFraud(true);
+                setTimeout(() => onRefresh(), 2000);
+            }
+            else if (type === 'send_legal') { 
+                await notificationService.createEvent({ 
+                    userId: rec.ownerId, 
+                    type: 'LEGAL_WARNING', 
+                    title: `CẢNH BÁO PHÁP LÝ: CHIẾN DỊCH "${rec.campaignTitle.toUpperCase()}"`,
+                    content: `Bạn đã vi phạm nghiêm trọng các điều khoản cam kết minh bạch tài chính trong chiến dịch "${rec.campaignTitle}". Hệ thống của chúng tôi đang tiến hành bàn giao hồ sơ vi phạm và đối soát bằng chứng của bạn cho các cơ quan pháp luật có thẩm quyền để xử lý dựa trên Bản cam kết trách nhiệm mà bạn đã ký kết từ trước. Chúng tôi yêu cầu bạn thực hiện giải trình ngay lập tức để tránh các hậu quả pháp lý nghiêm trọng.`,
+                    targetId: rec.campaignId,
+                    targetType: 'CAMPAIGN',
+                    data: { campaignTitle: rec.campaignTitle, plan: rec.plan }
+                }); 
+                toast.success('Đã gửi thông báo pháp lý thành công'); 
+                onRefresh(); 
+            }
+        } catch (err: any) { 
+            console.error('Action failed:', err);
+            toast.error(err?.response?.data?.message || 'Thao tác thất bại'); 
+        }
+    };
+
+    const handleLockAccount = async () => {
+        if (rec.ownerIsActive) {
+            setBanModal({ isOpen: true, userId: rec.ownerId, userName: rec.ownerName });
+        } else {
+            try {
+                setLoading(true);
+                await userService.unbanUser(rec.ownerId);
+                toast.success('Đã gỡ đình chỉ tài khoản');
+                onRefresh();
+            } catch { toast.error('Thao tác thất bại'); }
+            finally { setLoading(false); }
+        }
+    };
+
+    const confirmLockAccount = async (reason: string) => {
+        try {
+            setLoading(true);
+            await userService.banUser(rec.ownerId, reason);
+            toast.success('Đã khóa tài khoản');
+            onRefresh();
+        } catch { toast.error('Khóa tài khoản thất bại'); }
+        finally { setLoading(false); }
+    };
+
+    const handleLockCampaign = async () => {
+        const isLocked = rec.campaignStatus?.toUpperCase() === 'DISABLED' || rec.campaignStatus?.toUpperCase() === 'LOCKED';
+        if (!isLocked) {
+            setDisableCampaignModal({ isOpen: true, campaignId: rec.campaignId, campaignTitle: rec.campaignTitle });
+        } else {
+            setConfirmAction({
+                type: 'UNLOCK_CAMPAIGN',
+                id: rec.campaignId,
+                title: 'Mở khóa chiến dịch?',
+                message: `Bạn có chắc chắn muốn mở khóa chiến dịch "${rec.campaignTitle}"? Chiến dịch sẽ hiển thị và tiếp nhận quyên góp trở lại.`
+            });
+        }
+    };
+
+    const confirmDisableCampaign = async (reason: string) => {
+        try {
+            setLoading(true);
+            await campaignService.disableCampaign(rec.campaignId, reason);
+            toast.success('Đã khóa chiến dịch thành công');
+            onRefresh();
+        } catch { toast.error('Khóa chiến dịch thất bại'); }
+        finally { setLoading(false); }
+    };
+
+    const executeConfirmAction = async () => {
+        if (!confirmAction) return;
+        try {
+            setLoading(true);
+            if (confirmAction.type === 'UNLOCK_CAMPAIGN') {
+                await campaignService.reviewCampaign(rec.campaignId, 'APPROVED');
+                toast.success('Đã mở khóa chiến dịch thành công');
+            }
             onRefresh();
         } catch { toast.error('Thao tác thất bại'); }
+        finally { setLoading(false); setConfirmAction(null); }
     };
 
     const CONFIRMS = {
-        lock_campaign: { title: 'Khóa chiến dịch', message: `Tạm dừng chiến dịch "${rec.campaignTitle}" do không nộp minh chứng đúng hạn.`, confirmLabel: 'Xác nhận khóa', danger: true },
-        lock_account:  { title: 'Khóa tài khoản',  message: `Chủ quỹ "${rec.ownerName}" sẽ không thể đăng nhập cho đến khi được mở khóa.`, confirmLabel: 'Xác nhận khóa', danger: true },
         post_fraud:    { title: 'Đăng bài tố cáo',  message: `Đăng bài cảnh báo về chiến dịch "${rec.campaignTitle}" lên trang cộng đồng.`, confirmLabel: 'Xác nhận đăng', danger: true },
         send_legal:    { title: 'Cảnh báo pháp lý', message: `Gửi email cảnh báo vi phạm hợp đồng đến "${rec.ownerEmail}".`, confirmLabel: 'Gửi cảnh báo', danger: false },
     };
@@ -151,6 +273,28 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 </div>
             )}
             {confirm && <ConfirmModal {...CONFIRMS[confirm]} onConfirm={() => doAction(confirm)} onCancel={() => setConfirm(null)} />}
+            
+            <BanUserModal
+                isOpen={banModal.isOpen}
+                onClose={() => setBanModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmLockAccount}
+                userName={banModal.userName}
+            />
+
+            <DisableCampaignModal
+                isOpen={disableCampaignModal.isOpen}
+                onClose={() => setDisableCampaignModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmDisableCampaign}
+                campaignTitle={disableCampaignModal.campaignTitle}
+            />
+
+            <StaffConfirmModal
+                isOpen={!!confirmAction}
+                onClose={() => setConfirmAction(null)}
+                onConfirm={executeConfirmAction}
+                title={confirmAction?.title || ''}
+                message={confirmAction?.message || ''}
+            />
 
             {/* ── Header ── */}
             <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-gray-50/40">
@@ -286,21 +430,69 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     </button>
                 </div>
 
-                {/* Hàng 2 — chỉ hiện khi quá hạn */}
-                {overdue && (
-                    <div className="flex gap-1.5">
-                        {([
-                            { k: 'lock_campaign', icon: Lock, label: 'Khóa chiến dịch', title: 'Tạm dừng toàn bộ hoạt động chiến dịch' },
-                            { k: 'lock_account',  icon: ShieldAlert, label: 'Khóa tài khoản', title: 'Chặn đăng nhập tài khoản chủ quỹ' },
-                            { k: 'post_fraud',    icon: Megaphone, label: 'Tố cáo',    title: 'Đăng bài tố cáo lên trang cộng đồng' },
-                            { k: 'send_legal',    icon: ShieldAlert, label: 'Pháp lý',  title: 'Gửi email cảnh báo vi phạm hợp đồng' },
-                        ] as const).map(({ k, icon: Icon, label, title }) => (
-                            <button key={k} onClick={() => setConfirm(k)} title={title}
-                                className="flex-1 h-8 rounded-lg border border-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center gap-1 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all active:scale-95">
-                                <Icon className="h-3.5 w-3.5" /> {label}
+                {/* Hàng 2 — Công cụ quản lý */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {(() => {
+                        const isLocked = rec.campaignStatus?.toUpperCase() === 'DISABLED' || rec.campaignStatus?.toUpperCase() === 'LOCKED';
+                        return (
+                            <button onClick={handleLockCampaign} disabled={loading}
+                                className={`flex items-center gap-1.5 h-8 px-3 border rounded-lg text-[10px] font-black uppercase transition-all shadow-sm ${
+                                    isLocked
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
+                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}>
+                                {isLocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                                {isLocked ? 'Mở khóa chiến dịch' : 'Khóa chiến dịch'}
                             </button>
-                        ))}
-                    </div>
+                        );
+                    })()}
+                    
+                    <button onClick={handleLockAccount} disabled={loading}
+                        className={`flex items-center gap-1.5 h-8 px-3 border rounded-lg text-[10px] font-black uppercase transition-all shadow-sm ${
+                            !rec.ownerIsActive 
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
+                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}>
+                        {!rec.ownerIsActive ? <CheckCircle className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
+                        {!rec.ownerIsActive ? 'Ngừng đình chỉ TK' : 'Đình chỉ tài khoản'}
+                    </button>
+
+                    <button onClick={() => !hasPostedFraud && setConfirm('post_fraud')} title={hasPostedFraud ? 'Đã đăng bài thông báo rủi ro' : 'Tố cáo sai phạm'}
+                        disabled={loading || hasPostedFraud}
+                        className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center justify-center gap-1 transition-all active:scale-95 ${
+                            hasPostedFraud 
+                                ? 'bg-amber-50 border-amber-200 text-amber-700' 
+                                : 'border-gray-200 text-gray-700 hover:bg-red-50 hover:border-red-200 hover:text-red-700'
+                        }`}>
+                        {hasPostedFraud ? <CheckCircle className="h-3.5 w-3.5" /> : <Megaphone className="h-3.5 w-3.5" />} 
+                        {hasPostedFraud ? 'Đã đăng tố cáo' : 'Tố cáo'}
+                    </button>
+
+                    <button onClick={() => setConfirm('send_legal')} title="Cảnh báo pháp lý"
+                        className="h-8 px-3 rounded-lg border border-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center gap-1 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all active:scale-95">
+                        <ShieldAlert className="h-3.5 w-3.5" /> Pháp lý
+                    </button>
+
+                    <button onClick={() => setShowSchedule(true)} 
+                        title={rec.hasAppointment ? `Đã có lịch hẹn vào ${fmtDate(rec.appointmentDate)}` : "Tạo lịch hẹn làm việc"}
+                        className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center justify-center gap-1 transition-all active:scale-95 ${
+                            rec.hasAppointment 
+                                ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                                : 'border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
+                        }`}>
+                        <Calendar className="h-3.5 w-3.5" /> {rec.hasAppointment ? 'Đã đặt lịch' : 'Lịch hẹn'}
+                    </button>
+                </div>
+
+                {showSchedule && (
+                    <CreateAppointmentModal 
+                        isOpen={showSchedule} 
+                        staffId={user?.id ? Number(user.id) : 0}
+                        onClose={() => setShowSchedule(false)} 
+                        onCreated={() => { onRefresh(); setShowSchedule(false); }}
+                        initialCampaignId={rec.campaignId}
+                        initialDonorId={rec.ownerId}
+                    />
                 )}
             </div>
         </div>
@@ -321,7 +513,11 @@ export default function EvidenceTab() {
         if (!user) return;
         setLoading(true);
         try {
-            const tasks = await campaignService.getTasksByStaff(user.id);
+            const [tasks, allAppointments] = await Promise.all([
+                campaignService.getTasksByStaff(user.id),
+                appointmentService.getByStaff(user.id).catch(() => [])
+            ]);
+
             const et = tasks.filter((t: any) => t.type === 'EVIDENCE' && t.status !== 'COMPLETED');
             const rows = await Promise.all(et.map(async (task: any) => {
                 try {
@@ -342,6 +538,24 @@ export default function EvidenceTab() {
                     const allMedia = [...mediaParent, ...mediaItems];
                     const uniqueMedia = Array.from(new Map(allMedia.map(m => [m.id, m])).values());
 
+                    // Check for existing fraud report
+                    let hasReport = false;
+                    try {
+                        const cache = JSON.parse(localStorage.getItem('reported_campaigns') || '[]');
+                        if (cache.includes(camp.id)) {
+                            hasReport = true;
+                        } else {
+                            const posts = await feedPostService.getByTarget(camp.id, 'CAMPAIGN');
+                            hasReport = posts.some((p: any) => 
+                                (p.type === 'ANNOUNCEMENT' || p.type === 'TEXT') && 
+                                (p.title?.toUpperCase().includes('CẢNH BÁO') || (p as any).category === 'Cảnh báo' || p.content?.includes('HỆ THỐNG CẢNH BÁO'))
+                            );
+                        }
+                    } catch { hasReport = false; }
+
+                    // Check for existing appointment
+                    const appt = allAppointments.find((a: any) => a.donorId === camp.fundOwnerId && a.status !== 'CANCELLED');
+
                     return { 
                         taskId: task.id.toString(), 
                         expenditureId: exp.id, 
@@ -358,14 +572,25 @@ export default function EvidenceTab() {
                         createdAt: exp.createdAt || new Date().toISOString(), 
                         evidencePhotos: uniqueMedia.map((m: any) => m.url), 
                         expenditureItems: items, 
-                        purpose: (exp as any).purpose || '' 
+                        purpose: (exp as any).purpose || '',
+                        ownerIsActive: (owner as any)?.isActive ?? (owner as any)?.is_active ?? true,
+                        campaignStatus: camp.status || 'APPROVED',
+                        hasFraudReport: hasReport,
+                        hasAppointment: !!appt,
+                        appointmentDate: appt?.startTime
                     } as EvidenceRecord;
                 } catch { return null; }
             }));
             const valid = rows.filter((r): r is EvidenceRecord => r !== null);
             const sorted = [...valid].sort((a, b) => (daysLeft(a.evidenceDueAt) ?? 9999) - (daysLeft(b.evidenceDueAt) ?? 9999));
-            setRecords(sorted); setFiltered(sorted);
-            // Không tự chọn — người dùng click mới mở
+            setRecords(sorted); 
+            setFiltered(sorted);
+            
+            // Sync selected record with new data if detail panel is open
+            setSelected(prev => {
+                if (!prev) return null;
+                return sorted.find(r => r.taskId === prev.taskId) || null;
+            });
         } catch { toast.error('Lỗi tải danh sách minh chứng'); }
         finally { setLoading(false); }
     }, [user]);
