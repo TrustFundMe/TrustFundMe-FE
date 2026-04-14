@@ -1,3 +1,4 @@
+import { api } from "@/config/axios";
 import axios from "axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { PaginatedResponse } from "@/types/pagination";
@@ -11,6 +12,8 @@ export interface UserInfo {
     role: string;
     verified: boolean;
     isActive: boolean;
+    trustScore?: number;
+    createdAt?: string;
 }
 
 export const userService = {
@@ -187,23 +190,8 @@ export const userService = {
         error?: string;
     }> {
         try {
-            const response = await fetch(`http://localhost:8080/api/users`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
-                },
-                body: JSON.stringify(userData),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                return {
-                    success: false,
-                    error: data?.message || "Lỗi khi tạo người dùng",
-                };
-            }
+            const response = await api.post(`/api/users`, userData);
+            const data = response.data;
 
             return {
                 success: true,
@@ -361,13 +349,13 @@ export const userService = {
 
             // Call backend directly with localStorage token (same pattern as baseFe)
             const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-            const response = await axios.post(
-                `http://localhost:8080/api/users/import`,
+            // Call backend via proxy
+            const response = await api.post(
+                `/api/users/import`,
                 formData,
                 {
                     headers: {
                         "Content-Type": "multipart/form-data",
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     },
                 }
             );

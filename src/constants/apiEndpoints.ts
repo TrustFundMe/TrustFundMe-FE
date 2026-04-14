@@ -12,6 +12,7 @@ export const API_ENDPOINTS = {
     UPDATE_BALANCE: (id: number | string) => `/api/campaigns/${id}/update-balance`,
     PAUSE: (id: number | string) => `/api/campaigns/${id}/pause`,
     CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
+    COUNT: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/count`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",
@@ -89,6 +90,7 @@ export const API_ENDPOINTS = {
     ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
     UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
     TRANSACTIONS_PAGINATED: (type: string, status: string) => `/api/expenditures/transactions/type/${type}/status/${status}/paginated`,
+    PAYOUT_SUM: (fundOwnerId: number | string) => `/api/expenditures/transactions/fund-owner/${fundOwnerId}/payout-sum`,
   },
   APPOINTMENTS: {
     BASE: "/api/appointments",
