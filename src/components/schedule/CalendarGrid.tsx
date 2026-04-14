@@ -14,6 +14,7 @@ interface CalendarGridProps {
     onDateChange: (date: Date) => void;
     view: 'Month' | 'Week';
     setView: (v: 'Month' | 'Week') => void;
+    onRefresh?: () => void;
 }
 
 const DAYS_ORDERED = ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN'];
@@ -55,6 +56,7 @@ export const CalendarGrid = ({
     onDateChange,
     view,
     setView,
+    onRefresh,
 }: CalendarGridProps) => {
     const [now, setNow] = useState(new Date());
     const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
@@ -283,7 +285,11 @@ export const CalendarGrid = ({
             setIsModalOpen(false);
             setFormData({ purpose: '', location: '', date: '', startTime: '', endTime: '', staffId: '' });
             // Refresh list
-            onDateChange(new Date(currentDate));
+            if (onRefresh) {
+                onRefresh();
+            } else {
+                onDateChange(new Date(currentDate));
+            }
         } catch (err: any) {
             setError(err?.response?.data?.message || err?.message || 'Không thể tạo lịch hẹn. Vui lòng thử lại.');
             toast.error('Lỗi khi tạo lịch hẹn.');
@@ -473,7 +479,7 @@ export const CalendarGrid = ({
                 </div>
             </div>
 
-            {view === 'Week' ? <WeeklyView /> : (
+            {view === 'Week' ? WeeklyView() : (
                 <>
                     <div className="grid grid-cols-7 shrink-0 mx-8">
                         {DAYS_ORDERED.map((day) => <div key={day} className="py-2 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">{day}</div>)}

@@ -63,8 +63,7 @@ function AccountSidebar() {
             {/* Navigation tabs */}
             <nav className="flex-1 flex flex-col justify-start gap-1">
                 {NAV_ITEMS.map((item) => {
-                    // Match current path
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                    const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
                     return (
                         <div key={item.href} className="relative">

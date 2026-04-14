@@ -71,6 +71,7 @@ export default function SchedulePage() {
                 onDateChange={setCurrentDate}
                 view={view}
                 setView={setView}
+                onRefresh={fetchAppointments}
             />
         </div>
     );
