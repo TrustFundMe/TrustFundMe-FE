@@ -1,4 +1,5 @@
 import axios from "axios";
+import { api as axiosInstance } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
 import { PaginatedResponse } from "@/types/pagination";
 
@@ -10,6 +11,7 @@ export interface UserInfo {
     avatarUrl: string;
     role: string;
     verified: boolean;
+    kycVerified: boolean;
     isActive: boolean;
 }
 
@@ -405,5 +407,13 @@ export const userService = {
             responseType: "blob",
         });
         return response.data;
+    },
+
+    /**
+     * Get KYC data for a user (internal API)
+     */
+    async getUserKYC(userId: number): Promise<any> {
+        const res = await axiosInstance.get(`/api/internal/users/${userId}/kyc`);
+        return res.data;
     },
 };

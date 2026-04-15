@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -43,6 +43,8 @@ export default function StaffRequestPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
   const [selectedCampaignDetail, setSelectedCampaignDetail] = useState<any | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [sentCommitmentIds, setSentCommitmentIds] = useState<Set<number>>(new Set());
+  const [signedCommitmentIds, setSignedCommitmentIds] = useState<Set<number>>(new Set());
   const targetCampaignId = searchParams.get('campaignId');
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -92,10 +94,10 @@ export default function StaffRequestPage() {
               campaignId: c.id,
               campaignTitle: c.title,
               requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
-              description: c.description || '',
+               description: c.description || '',
               category: c.categoryName || '',
               rejectionReason: c.rejectionReason || undefined,
-              kycVerified: c.kycVerified,
+              kycVerified: !!owner?.kycVerified,
               bankVerified: c.bankVerified,
               fundOwnerId: c.fundOwnerId,
             };
@@ -140,8 +142,26 @@ export default function StaffRequestPage() {
     setSelectedCampaignDetail(null); // clear stale data
     setIsLoadingDetail(true);
     try {
-      const detail = await campaignService.getCampaignById(campaignRequest.campaignId);
+      const detail = await campaignService.getById(campaignRequest.campaignId);
       setSelectedCampaignDetail(detail);
+
+      // Kiểm tra trạng thái ký cam kết thực tế từ DB
+      const isSigned = await campaignService.isCommitmentSigned(campaignRequest.campaignId);
+      if (isSigned) {
+        setSignedCommitmentIds(prev => new Set(prev).add(campaignRequest.campaignId));
+      } else {
+        // Áp dụng luật: Quá 48h mà chưa ký -> tự động khóa thành DISABLED
+        if (detail.status === 'PENDING' && detail.updatedAt) {
+          const startTime = new Date(detail.updatedAt).getTime();
+          const deadline = startTime + (48 * 60 * 60 * 1000);
+          if (new Date().getTime() > deadline) {
+             toast.error('Chiến dịch đã quá hạn 48 giờ ký cam kết. Hệ thống sẽ tự động khóa!', { duration: 6000 });
+             await campaignService.disableCampaign(detail.id, 'Quá thời hạn 48 giờ ký cam kết (tự động khóa)');
+             detail.status = 'DISABLED';
+             setCampaignRows(prev => prev.map(r => r.campaignId === detail.id ? { ...r, status: 'DISABLED' as any } : r));
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load campaign detail:', err);
       toast.error('Không thể tải chi tiết chiến dịch.');
@@ -225,6 +245,24 @@ export default function StaffRequestPage() {
     if (activeTab === 'CAMPAIGN') fetchCampaigns();
     // Add other tab refreshes if needed, for now mostly campaigns
     toast.success('Đã tải lại dữ liệu');
+  };
+
+  const handleSendCommitmentEmail = async (campaignRequest: CampaignRequest) => {
+    const loadingToast = toast.loading('Đang gửi yêu cầu ký cam kết...');
+    try {
+      await campaignService.sendCommitmentEmail(campaignRequest.campaignId);
+      setSentCommitmentIds(prev => new Set(prev).add(campaignRequest.campaignId));
+      toast.success(`Đã gửi mail yêu cầu ký cam kết cho chiến dịch "${campaignRequest.campaignTitle}"`, {
+        id: loadingToast,
+        duration: 4000
+      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data || 'Gửi mail thất bại. Vui lòng thử lại sau.';
+      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Gửi mail thất bại', { 
+        id: loadingToast,
+        duration: 5000 
+      });
+    }
   };
 
 
@@ -326,10 +364,35 @@ export default function StaffRequestPage() {
                       rows={filteredCampaigns}
                       selectedId={selectedCampaignId}
                       onSelect={(r) => handleSelectCampaign(r)}
+                      actionColumn={{
+                        key: 'actions',
+                        title: 'THAO TÁC',
+                        className: 'text-center',
+                        render: (r: CampaignRequest) => {
+                          const isSelected = selectedCampaignId === r.id;
+                          return (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectCampaign(r);
+                                }}
+                                className={`p-1.5 rounded-lg transition-all shadow-sm ${
+                                  isSelected ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-[#446b5f] hover:text-white'
+                                }`}
+                                title={r.status === 'PENDING' ? 'Xử lý yêu cầu' : 'Xem chi tiết'}
+                              >
+                                {r.status === 'PENDING' ? <Plus className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          );
+                        },
+                      }}
                       columns={[
                         {
                           key: 'campaign',
                           title: 'CHIẾN DỊCH',
+                          className: 'min-w-[180px]',
                           render: (r: CampaignRequest) => (
                             <div>
                               <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.campaignTitle}</div>
@@ -339,11 +402,13 @@ export default function StaffRequestPage() {
                         {
                           key: 'category',
                           title: 'LĨNH VỰC',
+                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : '',
                           render: (r: CampaignRequest) => <span className="text-[10px] font-black text-gray-700 uppercase">{r.category || '-'}</span>,
                         },
                         {
                           key: 'requester',
                           title: 'NGƯỜI TẠO',
+                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : '',
                           render: (r: CampaignRequest) => <span className="text-xs font-bold text-gray-700">{r.requesterName}</span>,
                         },
                         {
@@ -352,7 +417,7 @@ export default function StaffRequestPage() {
                           className: 'text-center',
                           render: (r: CampaignRequest) => (
                             r.kycVerified ? (
-                              <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-[10px] font-black text-green-700 uppercase tracking-wider ring-1 ring-inset ring-green-600/20 shadow-sm border border-white">
+                              <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-[8px] font-black text-emerald-700 uppercase tracking-widest ring-1 ring-inset ring-emerald-600/20 shadow-sm border border-white">
                                 Đã xác thực
                               </span>
                             ) : (
@@ -361,79 +426,14 @@ export default function StaffRequestPage() {
                                   e.stopPropagation();
                                   handleNavigateToKYC(r.fundOwnerId);
                                 }}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 transition-all shadow-sm"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100 transition-all shadow-sm"
                               >
                                 <XCircle className="h-3 w-3" />
                                 CHƯA KYC
                               </button>
                             )
                           ),
-                        },
-                        {
-                          key: 'actions',
-                          title: 'THAO TÁC',
-                          className: 'text-center',
-                          render: (r: CampaignRequest) => (
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedCampaignId(r.id);
-                                }}
-                                className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
-                                title="Xem chi tiết"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-
-                              {r.status === 'PENDING' && (
-                                <>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleReviewCampaign(true, undefined, r.campaignId);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all border border-green-100"
-                                    title="Duyệt nhanh"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedCampaignId(r.id);
-                                      toast('Vui lòng nhập lý do từ chối ở bảng bên phải', {
-                                        icon: 'ℹ️',
-                                        duration: 3000
-                                      });
-                                    }}
-                                    className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
-                                    title="Từ chối (Yêu cầu nhập lý do)"
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-
-                              {r.status === 'APPROVED' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedCampaignId(r.id);
-                                    toast('Cuộn xuống dưới cùng ở bảng bên phải để vô hiệu hóa', {
-                                      icon: '⚠️',
-                                      duration: 4000
-                                    });
-                                  }}
-                                  className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
-                                  title="Vô hiệu hóa"
-                                >
-                                  <Ban className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          ),
-                        },
+                        }
                       ]}
                     />
                     )}
@@ -494,6 +494,10 @@ export default function StaffRequestPage() {
                       onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
                       onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
                       onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
+                      onSendCommitmentEmail={() => selectedCampaign && handleSendCommitmentEmail(selectedCampaign)}
+                      commitmentSent={selectedCampaign ? sentCommitmentIds.has(selectedCampaign.campaignId) : false}
+                      commitmentSigned={selectedCampaign ? signedCommitmentIds.has(selectedCampaign.campaignId) : false}
+                      kycVerified={selectedCampaign?.kycVerified}
                     />
                     )}
                   </div>

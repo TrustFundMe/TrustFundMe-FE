@@ -190,4 +190,24 @@ export const campaignService = {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.CLOSE(id));
     return res.data;
   },
+
+  // Commitment methods
+  async signCommitment(payload: any): Promise<any> {
+    const res = await api.post('/api/campaigns/commitments', payload);
+    return res.data;
+  },
+
+  async getCommitment(campaignId: number | string): Promise<any> {
+    const res = await api.get(`/api/campaigns/commitments/${campaignId}`);
+    return res.data;
+  },
+
+  async isCommitmentSigned(campaignId: number | string): Promise<boolean> {
+    const res = await api.get(`/api/campaigns/commitments/check/${campaignId}`);
+    return res.data;
+  },
+
+  async sendCommitmentEmail(campaignId: number): Promise<void> {
+    await api.post(`/api/campaigns/commitments/send-email/${campaignId}`);
+  },
 };
