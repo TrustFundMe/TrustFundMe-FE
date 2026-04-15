@@ -364,6 +364,7 @@ export default function StaffRequestPage() {
                       rows={filteredCampaigns}
                       selectedId={selectedCampaignId}
                       onSelect={(r) => handleSelectCampaign(r)}
+                      statusClassName={selectedCampaignId ? 'hidden 2xl:table-cell' : ''}
                       actionColumn={{
                         key: 'actions',
                         title: 'THAO TÁC',
@@ -402,13 +403,13 @@ export default function StaffRequestPage() {
                         {
                           key: 'category',
                           title: 'LĨNH VỰC',
-                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : '',
+                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                           render: (r: CampaignRequest) => <span className="text-[10px] font-black text-gray-700 uppercase">{r.category || '-'}</span>,
                         },
                         {
                           key: 'requester',
                           title: 'NGƯỜI TẠO',
-                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : '',
+                          className: selectedCampaignId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                           render: (r: CampaignRequest) => <span className="text-xs font-bold text-gray-700">{r.requesterName}</span>,
                         },
                         {

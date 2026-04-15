@@ -32,32 +32,37 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
         images?: string;
     }>({});
 
-    // ── Form state — includes all OCR fields ──
-    const [formData, setFormData] = useState({
+    const initialFormState = {
         userId: userId ? String(userId) : '',
-        // OCR / document fields
-        fullName: '',        // ← họ tên trên CCCD (từ AI OCR)
-        address: '',        // ← địa chỉ thường trú
-        workplace: '',      // ← nơi làm việc
-        taxId: '',          // ← mã số thuế cá nhân
-        // ID fields
+        fullName: '',
+        address: '',
+        workplace: '',
+        taxId: '',
         idType: 'CCCD',
         idNumber: '',
         issueDate: null as Date | null,
         expiryDate: null as Date | null,
         issuePlace: '',
-        // Image URLs
         idImageFront: '',
         idImageBack: '',
         selfieImage: ''
-    });
+    };
+
+    // ── Form state — includes all OCR fields ──
+    const [formData, setFormData] = useState(initialFormState);
 
     useEffect(() => {
         if (userId) {
-            setFormData(prev => ({ ...prev, userId: String(userId) }));
+            // Reset to clean state for new user
+            setFormData({
+                ...initialFormState,
+                userId: String(userId),
+                fullName: userName || ''
+            });
+            setErrors({});
             checkExistingKYC(String(userId));
         }
-    }, [userId]);
+    }, [userId, userName]);
 
     const checkExistingKYC = async (uid: string) => {
         setFetching(true);
@@ -80,15 +85,13 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     selfieImage: data.selfieImage || ''
                 });
                 setIsUpdate(true);
+            } else {
+                setIsUpdate(false);
             }
         } catch (error: any) {
-            if (error.response?.status !== 404) {
-                console.error('Error fetching KYC:', error);
-                if (error.response?.status === 500) {
-                    toast.error('Lỗi máy chủ khi kiểm tra KYC. Vui lòng thử lại sau.');
-                }
-            }
+            console.log('No existing KYC or error:', error.response?.status);
             setIsUpdate(false);
+            // If error, ensure we keep the clean state set in useEffect
         } finally {
             setFetching(false);
         }
