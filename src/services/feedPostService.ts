@@ -62,10 +62,17 @@ export const feedPostService = {
     return res.data;
   },
 
-  async getByAuthor(authorId: number): Promise<FeedPostDto[]> {
-    const res = await api.get<FeedPostDto[]>(
-      API_ENDPOINTS.FEED_POSTS.BY_AUTHOR(authorId)
+  async getByAuthor(
+    authorId: number,
+    params?: { page?: number; size?: number }
+  ): Promise<{ content: FeedPostDto[]; totalElements: number; totalPages: number }> {
+    const res = await api.get<{ content: FeedPostDto[]; totalElements: number; totalPages: number }>(
+      API_ENDPOINTS.FEED_POSTS.BY_AUTHOR(authorId),
+      { params: { page: params?.page ?? 0, size: params?.size ?? 10 } }
     );
+    if (Array.isArray(res.data)) {
+      return { content: res.data, totalElements: res.data.length, totalPages: 1 };
+    }
     return res.data;
   },
 

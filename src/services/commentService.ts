@@ -13,6 +13,15 @@ export interface CommentDto {
   authorAvatar: string | null;
   createdAt: string;
   updatedAt: string | null;
+  postTitle?: string | null;
+  postType?: string | null;
+  postTargetName?: string | null;
+  postCreatedAt?: string | null;
+  postAuthorName?: string | null;
+  postAuthorAvatar?: string | null;
+  parentContent?: string | null;
+  parentAuthorName?: string | null;
+  parentAuthorAvatar?: string | null;
   replies?: CommentDto[];
 }
 
@@ -91,5 +100,15 @@ export const commentService = {
     const res = await api.post<CommentDto>(API_ENDPOINTS.FEED_POSTS.COMMENT_LIKE(commentId));
     const data = res.data;
     return { likeCount: data.likeCount ?? 0, isLiked: data.isLiked ?? false };
+  },
+  async getByUser(
+    userId: number | string,
+    page = 0,
+    size = 10
+  ): Promise<CommentPageResponse> {
+    const res = await api.get<CommentPageResponse>(API_ENDPOINTS.FEED_POSTS.COMMENTS_BY_USER(userId), {
+      params: { page, size },
+    });
+    return res.data;
   },
 };

@@ -36,6 +36,7 @@ export const API_ENDPOINTS = {
     COMMENTS: (postId: number | string) => `/api/feed-posts/${postId}/comments`,
     COMMENT_BY_ID: (commentId: number | string) => `/api/feed-posts/comments/${commentId}`,
     COMMENT_LIKE: (commentId: number | string) => `/api/feed-posts/comments/${commentId}/like`,
+    COMMENTS_BY_USER: (userId: number | string) => `/api/feed-posts/comments/user/${userId}`,
     ADMIN_ALL: "/api/feed-posts/admin",
     ADMIN_DELETE: (id: number | string) => `/api/feed-posts/admin/${id}`,
     ADMIN_PIN: (id: number | string) => `/api/feed-posts/admin/${id}/pin`,
@@ -117,6 +118,7 @@ export const API_ENDPOINTS = {
     DONATION_SUMMARY: "/api/payments/donations/summary",
     STATUS_PAGINATED: (status: string) => `/api/payments/status/${status}/paginated`,
     MY_DONATIONS: "/api/payments/my-donations",
+    USER_DONATION_COUNT: (userId: number | string) => `/api/payments/user/${userId}/donation-count`,
   },
   TASKS: {
     BASE: "/api/admin/tasks",

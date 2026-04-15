@@ -28,7 +28,7 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
 
   const tabs = [
     { id: 'Campaigns', label: 'Chiến dịch', count: campaignCount },
-    { id: 'Activity Feed', label: 'Nhật ký hoạt động', count: 0 },
+    { id: 'Activity Feed', label: 'Nhật ký hoạt động' },
     { id: 'Expenditure', label: 'Minh bạch chi tiêu' },
     { id: 'Interaction', label: 'Phản hồi cộng đồng' }
   ];
