@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import SignaturePad from '@/components/common/SignaturePad';
 import Grainient from '@/components/common/Grainient';
 import { toast } from 'react-hot-toast';
+import html2pdf from 'html2pdf.js';
 
 interface KYCData {
   id: number;
@@ -161,6 +162,35 @@ export default function CommitmentPage() {
     </div>
   );
 
+  const handleExportPDF = () => {
+    const element = document.getElementById('legal-document');
+    if (!element) return;
+
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `commitment-TF-${id}-${new Date().getTime()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        letterRendering: true
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
+    
+    // Hide components that shouldn't be in PDF if any (handled by CSS no-print usually but html2pdf might need more care)
+    // Actually html2pdf uses html2canvas, so it sees what's on screen.
+    
+    html2pdf().from(element).set(opt).save().then(() => {
+      toast.success('Đã tải bản PDF thành công!', { id: loadingToast });
+    }).catch((err: any) => {
+      console.error('PDF Export Error:', err);
+      toast.error('Lỗi khi xuất PDF', { id: loadingToast });
+    });
+  };
+
   const today = new Date();
 
   return (
@@ -286,9 +316,14 @@ export default function CommitmentPage() {
             <button onClick={() => router.back()} className="text-[10px] font-bold uppercase tracking-[2px] text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Quay lại
             </button>
-            <button onClick={() => window.print()} className="bg-blue-600 px-8 py-3 rounded-2xl shadow-xl shadow-blue-600/20 text-[10px] font-bold uppercase tracking-[2px] text-white hover:bg-blue-700 transition-all flex items-center gap-2">
-              <Printer className="h-4 w-4" /> Export PDF
-            </button>
+            {signature && (
+              <button 
+                onClick={() => handleExportPDF()} 
+                className="bg-blue-600 px-8 py-3 rounded-2xl shadow-xl shadow-blue-600/20 text-[10px] font-bold uppercase tracking-[2px] text-white hover:bg-blue-700 transition-all flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-500"
+              >
+                <Printer className="h-4 w-4" /> Export PDF
+              </button>
+            )}
           </div>
 
           <div id="legal-document" className="bg-white w-full shadow-[0_40px_100px_rgba(30,58,138,0.1)] p-[80px] min-h-[1100px] flex flex-col font-serif text-slate-950 relative border-t-8 border-blue-900 rounded-sm">
@@ -318,6 +353,10 @@ export default function CommitmentPage() {
             </div>
 
             <div className="space-y-5 mb-14 text-[16px]">
+              <p className="flex border-b border-slate-100 pb-1">
+                <span className="w-52 shrink-0 text-slate-500">Chiến dịch đăng ký:</span>
+                <span className="font-bold uppercase text-[17px] text-blue-900">{campaign?.title || '...........................................'}</span>
+              </p>
               <p className="flex border-b border-slate-100 pb-1">
                 <span className="w-52 shrink-0 text-slate-500">Tên cá nhân/tổ chức:</span>
                 <span className="font-bold uppercase tracking-tight text-blue-900">{kycData?.fullName || ownerInfo?.fullName || '...........................................'}</span>

@@ -314,6 +314,10 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${commitmentSigned ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>3</div>
                    <span>Người dùng ký cam kết (E-sign) {commitmentSigned ? '✓' : '(Đang chờ)'}</span>
                 </div>
+                <div className={`flex items-center gap-2 text-[10px] font-bold ${(kycVerified && commitmentSigned) ? 'text-green-600' : 'text-gray-500'}`}>
+                   <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${(kycVerified && commitmentSigned) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>4</div>
+                   <span>Duyệt chiến dịch {(kycVerified && !isPending && commitmentSigned) ? '✓' : ''}</span>
+                </div>
               </div>
               
               {/* Nút hành động nhanh (Ví dụ: Chuyển sang KYC) */}
