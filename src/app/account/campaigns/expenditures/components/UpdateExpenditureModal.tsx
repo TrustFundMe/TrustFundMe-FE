@@ -63,7 +63,7 @@ export default function UpdateExpenditureModal({
                                 <thead className="bg-gray-50 sticky top-0 z-10">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-black text-gray-500 uppercase tracking-tighter">Vật phẩm</th>
-                                        <th className="px-4 py-3 text-right text-xs font-black text-gray-500 uppercase tracking-tighter bg-gray-50">
+                                        <th className="px-4 py-3 text-right text-xs font-black text-gray-900 uppercase tracking-tighter bg-gray-50">
                                             {campaign.type === 'ITEMIZED' ? 'Tổng giải ngân' : 'Kế hoạch'}
                                         </th>
                                         <th className="px-4 py-3 text-center text-xs font-black text-orange-600 uppercase tracking-tighter bg-orange-100">Thực tế (Nhập)</th>
@@ -83,15 +83,14 @@ export default function UpdateExpenditureModal({
                                                     <td className="px-4 py-2 text-right bg-gray-50/50 align-middle">
                                                         {campaign.type === 'ITEMIZED' ? (
                                                             <div className="flex items-center justify-end gap-3">
-                                                                <div className="flex items-center gap-1 text-emerald-600">
-                                                                    <span className="text-[8px] font-black uppercase tracking-tighter">Tổng quyên góp:</span>
-                                                                    <span className="text-xs font-black">{(donationSummary[item.id] || 0)}</span>
+                                                                <div className="flex items-center gap-1 text-gray-900">
+                                                                    <span className="text-xs font-normal">{(donationSummary[item.id] || 0)}</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-1 text-black/40 border-l border-gray-200 pl-3">
                                                                     <span className="text-[8px] font-black uppercase tracking-tighter">ĐG:</span>
                                                                     <span className="text-xs font-bold">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(item.expectedPrice || 0)}</span>
                                                                 </div>
-                                                                <div className="ml-2 pl-3 border-l-2 border-emerald-300 font-black text-emerald-600 text-sm">
+                                                                <div className="ml-2 pl-3 border-l-2 border-gray-300 font-black text-gray-900 text-sm">
                                                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format((donationSummary[item.id] || 0) * (item.expectedPrice || 0))}
                                                                 </div>
                                                             </div>
@@ -99,7 +98,7 @@ export default function UpdateExpenditureModal({
                                                             <div className="flex items-center justify-end gap-3">
                                                                 <div className="flex items-center gap-1 text-black/40">
                                                                     <span className="text-[8px] font-black uppercase tracking-tighter">SL:</span>
-                                                                    <span className="text-xs font-bold">{item.quantity}</span>
+                                                                    <span className="text-xs font-normal">{item.quantity}</span>
                                                                 </div>
                                                                 <div className="flex items-center gap-1 text-black/40 border-l border-gray-200 pl-3">
                                                                     <span className="text-[8px] font-black uppercase tracking-tighter">ĐG:</span>
@@ -189,10 +188,10 @@ export default function UpdateExpenditureModal({
                                                             {isItemized ? 'Tổng giải ngân' : 'Tổng Kế hoạch'}
                                                         </div>
                                                         {isItemized ? (
-                                                            <div className="text-xl lg:text-2xl font-black text-emerald-600 leading-tight">
-                                                                <div>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDonated)}</div>
-                                                                <div className="text-[10px] font-bold text-gray-400">+ Số dư kỳ trước: {new Intl.NumberFormat('vi-VN').format(previousBalance)}</div>
-                                                                <div className="text-2xl lg:text-3xl font-black text-emerald-800 mt-1">= {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceived)}</div>
+                                                            <div className="text-gray-900 leading-tight">
+                                                                <div className="text-2xl lg:text-3xl font-black">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalDonated)}</div>
+                                                                <div className="text-[10px] font-bold text-gray-400">+ Rút thêm: {new Intl.NumberFormat('vi-VN').format(previousBalance)}</div>
+                                                                <div className="text-2xl lg:text-3xl font-black mt-1">= {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalReceived)}</div>
                                                             </div>
                                                         ) : (
                                                             <div className={`text-3xl lg:text-4xl font-black text-orange-600`}>

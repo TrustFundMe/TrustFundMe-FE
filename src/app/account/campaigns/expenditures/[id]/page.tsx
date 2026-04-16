@@ -19,6 +19,7 @@ export default function ExpenditureDetailPage() {
         expenditure, campaign, items, loading, error, posts,
         itemMedia, galleryModalItemId, setGalleryModalItemId,
         donationSummary, handleExportItems, loadItemMedia,
+        handleItemMediaUpload, handleDeleteItemMedia, handleItemFileChange, itemUploadState
     } = useExpenditureDetailLogic(id, isAuthenticated, authLoading);
 
     const totalActual = useMemo(() => items.reduce((sum, item) => sum + ((item.actualQuantity || 0) * (item.price || 0)), 0), [items]);
@@ -61,37 +62,34 @@ export default function ExpenditureDetailPage() {
                     </Link>
                 </div>
 
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4 px-2">
-                    <div className="flex items-center gap-4">
-                        <div className="w-20 h-20 shrink-0">
-                            <img src="/assets/img/logo/white-logo.png" alt="TrustFundMe" className="w-full h-full object-contain scale-110" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h1 className="text-2xl font-black text-[#1E293B] uppercase tracking-tighter leading-none mb-2">
-                                {campaign?.title || campaign?.name || 'Chiến dịch'}
-                            </h1>
-                            <div className="flex items-center gap-4 text-[11px] font-black uppercase tracking-wider">
-                                <span className="text-[#64748B] flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    Tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString('vi-VN') : '--'}
-                                </span>
-                                <span className="text-[#10B981] flex items-center gap-1.5">
-                                    <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.3)]"></div>
-                                    HOÀN THÀNH {Math.round((totalActual / (expenditure.totalExpectedAmount || 1)) * 100)}%
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-4">
+                    {/* Header Left: Logo, Title, Description */}
+                    <div className="flex flex-col lg:max-w-[400px]">
+                        <h1 className="text-lg font-black text-[#1E293B] uppercase tracking-tighter leading-tight mb-1 line-clamp-1">
+                            {campaign?.title || campaign?.name || 'Chiến dịch'}
+                        </h1>
+                        <div className="flex flex-col gap-0.5">
+                            <p className="text-[11px] font-black text-[#3B82F6] uppercase tracking-widest">{expenditure?.title || 'Chi tiết đợt'}</p>
+                            <p className="text-[10px] font-bold text-[#64748B] italic leading-tight line-clamp-2">{expenditure?.plan || 'Khoản chi tiêu đợt 1 | Hoàn tất các hạng mục đã đề ra.'}</p>
+                            <div className="mt-1 flex items-center gap-3 text-[9px] font-black tracking-wider uppercase opacity-50">
+                                <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString('vi-VN') : '--'}
                                 </span>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Stats */}
-                <ExpenditureDetailStats 
-                    expenditure={expenditure}
-                    totalReceived={totalReceived}
-                    totalActual={totalActual}
-                    totalBalance={totalBalance}
-                />
+                    {/* Header Right: Stats Cards */}
+                    <div className="flex-1">
+                        <ExpenditureDetailStats 
+                            expenditure={expenditure}
+                            totalReceived={totalReceived}
+                            totalActual={totalActual}
+                            totalBalance={totalBalance}
+                        />
+                    </div>
+                </div>
 
                 {/* Main Table */}
                 <ExpenditureDetailItemsTable 
@@ -156,8 +154,12 @@ export default function ExpenditureDetailPage() {
                 <ExpenditureGalleryModal
                     isOpen={!!galleryModalItemId}
                     onClose={() => setGalleryModalItemId(null)}
-                    images={activeItemMedia.map(m => ({ url: m.url, alt: 'Minh chứng vật phẩm' }))}
-                    initialIndex={0}
+                    itemName={items.find(i => i.id === galleryModalItemId)?.category || 'Vật phẩm'}
+                    media={itemMedia[galleryModalItemId] || []}
+                    onFileChange={(files) => handleItemFileChange(galleryModalItemId, files)}
+                    onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId)}
+                    uploadState={itemUploadState[galleryModalItemId] || { uploading: false, files: [], previews: [] }}
+                    onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId, mediaId)}
                 />
             )}
         </div>

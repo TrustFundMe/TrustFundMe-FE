@@ -100,13 +100,12 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                 }
             }
 
-            const disbursedExps = exps.filter((e: any) => e.status === 'DISBURSED');
-            const postPromises = disbursedExps.map((e: any) =>
+            const postPromises = exps.map((e: any) =>
                 feedPostService.getByTarget(e.id, 'EXPENDITURE').catch(() => [])
             );
             const postResults = await Promise.all(postPromises);
             const postsMap: Record<number, any[]> = {};
-            disbursedExps.forEach((e: any, i: number) => {
+            exps.forEach((e: any, i: number) => {
                 postsMap[e.id] = (postResults[i] || []).filter((p: any) => 
                     p.targetName === 'evidence' || (p.targetName && p.targetName.toString().startsWith('evidence|'))
                 );
@@ -256,10 +255,6 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         if (!updateExpenditure) return;
         try {
             setUpdating(true);
-            if (pendingDeleteMediaIds.length > 0) {
-                await Promise.all(pendingDeleteMediaIds.map(id => mediaService.deleteMedia(id)));
-                setPendingDeleteMediaIds([]);
-            }
             await expenditureService.updateActuals(updateExpenditure.id, updateItems);
             toast.success('Cập nhật thành công!');
             setIsUpdateModalOpen(false);
@@ -271,11 +266,65 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         }
     };
 
+    const handleGalleryFileChange = (itemId: number, files: FileList | null) => {
+        if (!files) return;
+        const fileList = Array.from(files);
+        const previews = fileList.map(file => URL.createObjectURL(file));
+        setItemUploadState(prev => ({
+            ...prev,
+            [itemId]: { uploading: false, files: fileList, previews }
+        }));
+    };
+
+    const handleGalleryUploadSubmit = async (itemId: number) => {
+        const state = itemUploadState[itemId];
+        if (!state || state.files.length === 0) return;
+
+        try {
+            setItemUploadState(prev => ({
+                ...prev,
+                [itemId]: { ...state, uploading: true }
+            }));
+
+            const results = await Promise.all(
+                state.files.map(file => mediaService.uploadMedia(file, undefined, undefined, undefined, undefined, 'PHOTO', undefined, itemId))
+            );
+
+            setItemMedia(prev => ({
+                ...prev,
+                [itemId]: [...(prev[itemId] || []), ...results]
+            }));
+
+            setItemUploadState(prev => ({
+                ...prev,
+                [itemId]: { uploading: false, files: [], previews: [] }
+            }));
+            
+            toast.success(`Đã tải lên ${results.length} ảnh thành công!`);
+        } catch (err) {
+            toast.error('Tải ảnh lên thất bại.');
+        }
+    };
+
+    const handleGalleryDeleteMedia = async (itemId: number, mediaId: number) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
+        try {
+            await mediaService.deleteMedia(mediaId);
+            setItemMedia(prev => ({
+                ...prev,
+                [itemId]: (prev[itemId] || []).filter(m => m.id !== mediaId)
+            }));
+            toast.success('Đã xóa ảnh.');
+        } catch {
+            toast.error('Xóa ảnh thất bại.');
+        }
+    };
+
     const totalSpent = useMemo(() => expenditures.reduce((sum, exp) => sum + exp.totalAmount, 0), [expenditures]);
 
     const { canCreate, blockReason, isDisabled } = useMemo(() => {
         if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
-        if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chién dịch đã bị vô hiệu hóa.', isDisabled: true };
+        if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chiến dịch đã bị vô hiệu hóa.', isDisabled: true };
         if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
         const last = expenditures[0];
         const isReady = last.status === 'DISBURSED' || last.status === 'REJECTED';
@@ -300,7 +349,8 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         showRefundModal, setShowRefundModal, refundExpenditure, setRefundExpenditure,
         refundAmount, setRefundAmount, userBankAccounts,
         totalSpent, canCreate, blockReason, isDisabled,
-        setUserBankAccounts, setExpenditures
+        setUserBankAccounts, setExpenditures,
+        handleGalleryFileChange, handleGalleryUploadSubmit, handleGalleryDeleteMedia
     };
 }
 

@@ -2,7 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle, X, HelpCircle } from 'lucide-react';
+import { useState } from 'react';
 import CreateOrEditPostModal from '@/components/feed-post/CreateOrEditPostModal';
 
 import ExpenditureStats from './components/ExpenditureStats';
@@ -12,6 +13,7 @@ import AccountCampaignTabbar from './components/AccountCampaignTabbar';
 import UpdateExpenditureModal from './components/UpdateExpenditureModal';
 import RefundExpenditureModal from './components/RefundExpenditureModal';
 import WithdrawalModal from '@/components/campaign/WithdrawalModal';
+import ExpenditureGalleryModal from '@/components/campaign/ExpenditureGalleryModal';
 
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useExpenditureLogic } from './hooks/useExpenditureLogic';
@@ -34,8 +36,11 @@ export default function CampaignExpendituresPage() {
         currentDraftPost, setCurrentDraftPost, handleOpenUpdateModal,
         showRefundModal, setShowRefundModal, refundExpenditure, setRefundExpenditure,
         refundAmount, setRefundAmount, userBankAccounts,
-        totalSpent, canCreate, blockReason, isDisabled, setGalleryModalItemId
+        totalSpent, canCreate, blockReason, isDisabled, setGalleryModalItemId,
+        handleGalleryFileChange, handleGalleryUploadSubmit, handleGalleryDeleteMedia,
+        itemUploadState, galleryModalItemId
     } = useExpenditureLogic(campaignId, user, isAuthenticated, authLoading);
+    const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
 
     if (loading) {
         return (
@@ -61,11 +66,11 @@ export default function CampaignExpendituresPage() {
     const isRefundDone = updateExpenditure?.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');
 
     return (
-        <div className="min-h-screen bg-white py-12">
+        <div className="min-h-screen bg-white pt-4 pb-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
-                <div className="mb-8">
-                    <Link href="/account/campaigns" className="inline-flex items-center text-black/40 hover:text-black mb-6 transition-colors text-[10px] font-black uppercase tracking-[2px]">
+                <div className="mb-2">
+                    <Link href="/account/campaigns" className="inline-flex items-center text-black/40 hover:text-black mb-1 transition-colors text-[10px] font-black uppercase tracking-[2px]">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch của tôi
                     </Link>
 
@@ -88,16 +93,24 @@ export default function CampaignExpendituresPage() {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <AccountCampaignTabbar campaignId={campaign.id} />
-                            <h1 className="text-4xl font-black text-black tracking-tighter leading-none mt-4">{campaign.title}</h1>
-                            <p className="mt-3 text-sm font-bold text-black/40 flex items-center">
-                                Quản lý chi tiêu cho chiến dịch
-                                <span className={`ml-4 text-[9px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest ${campaign.type === 'AUTHORIZED'
+                            <div className="flex items-center gap-4 mt-1">
+                                <h1 className="text-2xl font-black text-black tracking-tighter leading-none">
+                                    {campaign.type === 'AUTHORIZED' ? campaign.title : `Chiến dịch: ${campaign.title}`}
+                                </h1>
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest ${campaign.type === 'AUTHORIZED'
                                     ? 'bg-blue-50 text-blue-600 border-blue-100'
                                     : 'bg-red-50 text-[#dc2626] border-red-100'
                                     }`}>
-                                    {campaign.type === 'AUTHORIZED' ? 'Ủy quyền' : 'Tự lập'}
+                                    {campaign.type === 'AUTHORIZED' ? 'Quỹ ủy quyền' : 'Quỹ vật phẩm'}
                                 </span>
-                            </p>
+                                <button 
+                                    onClick={() => setIsProcessModalOpen(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[#1b4332] text-[9px] font-black uppercase tracking-wider hover:bg-slate-100 transition-all"
+                                >
+                                    <HelpCircle className="w-3 h-3" />
+                                    Quy trình giải ngân
+                                </button>
+                            </div>
                         </div>
 
                         {/* Nút Tạo khoản chi mới */}
@@ -133,9 +146,6 @@ export default function CampaignExpendituresPage() {
                     expendituresCount={expenditures.length} 
                     totalSpent={totalSpent} 
                 />
-
-                {/* Process Flow */}
-                <ExpenditureProcessFlow campaignType={campaign.type as any} />
 
                 {/* Expenditure List */}
                 <ExpenditureTable 
@@ -203,9 +213,7 @@ export default function CampaignExpendituresPage() {
                         campaignTitlesMap={{ [campaign.id]: campaign.title }}
                         initialData={currentDraftPost ? {
                             ...currentDraftPost,
-                            attachments: (currentDraftPost.attachments && currentDraftPost.attachments.length > 0)
-                                ? currentDraftPost.attachments
-                                : (postExpenditure?.items || []).flatMap(item => itemMedia[item.id] || []).map(m => ({ url: m.url, id: m.id, type: 'image' })),
+                            attachments: currentDraftPost.attachments || [],
                             author: { id: String(currentDraftPost.authorId || ''), name: '', avatar: '' },
                             liked: false,
                             comments: [],
@@ -236,7 +244,7 @@ export default function CampaignExpendituresPage() {
                             targetId: postExpenditure.id,
                             targetType: 'EXPENDITURE',
                             targetName: 'evidence',
-                            attachments: (postExpenditure?.items || []).flatMap(item => itemMedia[item.id] || []).map(m => ({ url: m.url, id: m.id, type: 'image' })),
+                            attachments: [],
                         }}
                         draftMode={true}
                         onPostCreated={() => {
@@ -263,6 +271,44 @@ export default function CampaignExpendituresPage() {
                         userBankAccounts={userBankAccounts}
                         onSuccess={() => { setShowRefundModal(false); fetchData(); }}
                     />
+                )}
+
+                {galleryModalItemId && (
+                    <ExpenditureGalleryModal
+                        isOpen={!!galleryModalItemId}
+                        onClose={() => setGalleryModalItemId(null)}
+                        itemName={
+                            updateItemsData.find(i => i.id === galleryModalItemId)?.category ||
+                            expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.category || 
+                            'Vật phẩm'
+                        }
+                        media={itemMedia[galleryModalItemId] || []}
+                        onFileChange={(files) => handleGalleryFileChange(galleryModalItemId, files)}
+                        onUploadSubmit={() => handleGalleryUploadSubmit(galleryModalItemId)}
+                        uploadState={itemUploadState[galleryModalItemId] || { uploading: false, files: [], previews: [] }}
+                        onDelete={(mediaId) => handleGalleryDeleteMedia(galleryModalItemId, mediaId)}
+                    />
+                )}
+
+                {/* Process Flow Modal */}
+                {isProcessModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div 
+                            className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button 
+                                onClick={() => setIsProcessModalOpen(false)}
+                                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 transition-all z-30"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                <ExpenditureProcessFlow campaignType={campaign.type as any} />
+                            </div>
+                        </div>
+                        <div className="absolute inset-0 -z-10" onClick={() => setIsProcessModalOpen(false)}></div>
+                    </div>
                 )}
             </div>
         </div>
