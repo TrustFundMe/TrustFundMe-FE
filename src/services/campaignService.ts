@@ -190,4 +190,9 @@ export const campaignService = {
     const res = await api.get<number>(API_ENDPOINTS.CAMPAIGNS.COUNT(fundOwnerId));
     return res.data;
   },
+
+  async getStatistics(fundOwnerId: number | string): Promise<any> {
+    const res = await api.get<any>(API_ENDPOINTS.CAMPAIGNS.STATISTICS(fundOwnerId));
+    return res.data;
+  },
 };

@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
     PAUSE: (id: number | string) => `/api/campaigns/${id}/pause`,
     CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
     COUNT: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/count`,
+    STATISTICS: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/statistics`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",
