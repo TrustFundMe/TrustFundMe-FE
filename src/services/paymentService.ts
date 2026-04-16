@@ -49,6 +49,7 @@ export interface RecentDonor {
     donorName: string;
     donorAvatar: string | null;
     amount: number;
+    quantity?: number;
     createdAt: string;
     anonymous: boolean;
 }
@@ -168,6 +169,16 @@ export const paymentService = {
             return res.data;
         } catch (err: any) {
             console.error("❌ [Payment] Donation Summary Error:", err);
+            return [];
+        }
+    },
+    async getDonorsByItem(itemId: number): Promise<RecentDonor[]> {
+        console.log(`📋 [Payment] Fetching donors for item:`, itemId);
+        try {
+            const res = await api.get<RecentDonor[]>(API_ENDPOINTS.PAYMENTS.DONORS_BY_ITEM(itemId));
+            return res.data;
+        } catch (err: any) {
+            console.error(`❌ [Payment] Donors By Item Error for ${itemId}:`, err);
             return [];
         }
     },

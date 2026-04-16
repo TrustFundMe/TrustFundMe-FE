@@ -13,6 +13,7 @@ import { bankAccountService } from '@/services/bankAccountService';
 import { mediaService } from '@/services/mediaService';
 import { campaignCategoryService } from '@/services/campaignCategoryService';
 import FormSectionCard from '@/components/campaign/FormSectionCard';
+import AccountCampaignTabbar from '../expenditures/components/AccountCampaignTabbar';
 import { CampaignCategory, CampaignDto } from '@/types/campaign';
 import { withFallbackImage } from '@/lib/image';
 
@@ -288,6 +289,7 @@ function EditCampaignForm() {
             <div className="h-14 w-full" /> {/* Header Spacer */}
 
             <main className="max-w-6xl mx-auto px-4 pb-20 pt-6">
+                <AccountCampaignTabbar campaignId={campaign.id} />
                 {campaign.status === 'REJECTED' && (
                     <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 mb-6">
                         <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />

@@ -1,0 +1,306 @@
+'use client';
+
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
+import { expenditureService } from '@/services/expenditureService';
+import { campaignService } from '@/services/campaignService';
+import { mediaService, MediaUploadResponse } from '@/services/mediaService';
+import { feedPostService } from '@/services/feedPostService';
+import { paymentService } from '@/services/paymentService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { chatService } from '@/services/chatService';
+import { api } from '@/config/axios';
+import { Expenditure, ExpenditureItem } from '@/types/expenditure';
+import { CampaignDto } from '@/types/campaign';
+import { BankAccountDto } from '@/types/bankAccount';
+
+export function useExpenditureLogic(campaignId: string | null | undefined, user: any, isAuthenticated: boolean, authLoading: boolean) {
+    const router = useRouter();
+
+    const [campaign, setCampaign] = useState<CampaignDto | null>(null);
+    const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Withdrawal Modal States
+    const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+    const [selectedExpId, setSelectedExpId] = useState<number | null>(null);
+    const [evidenceDate, setEvidenceDate] = useState('');
+    const [modalError, setModalError] = useState<string | null>(null);
+    const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+    const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
+    const [loadingDonationSummary, setLoadingDonationSummary] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState<string>('');
+
+    // Item Media State
+    const [itemMedia, setItemMedia] = useState<Record<number, MediaUploadResponse[]>>({});
+    const [itemMediaLoading, setItemMediaLoading] = useState<Record<number, boolean>>({});
+    const [itemUploadState, setItemUploadState] = useState<Record<number, { uploading: boolean; files: File[]; previews: string[] }>>({});
+    const [galleryModalItemId, setGalleryModalItemId] = useState<number | null>(null);
+
+    // Update Modal States
+    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+    const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number }[]>([]);
+    const [updateItemsData, setUpdateItemsData] = useState<ExpenditureItem[]>([]);
+    const [updating, setUpdating] = useState(false);
+    const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
+
+    // Staff state
+    const [staffNameMap, setStaffNameMap] = useState<Record<number, string>>({});
+    const [staffIdMap, setStaffIdMap] = useState<Record<number, number>>({});
+
+    // Post modal state
+    const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+    const [postExpenditure, setPostExpenditure] = useState<Expenditure | null>(null);
+    const [currentDraftPost, setCurrentDraftPost] = useState<any>(null);
+    const [expenditurePosts, setExpenditurePosts] = useState<Record<number, any[]>>({});
+
+    // Refund Modal State
+    const [showRefundModal, setShowRefundModal] = useState(false);
+    const [refundExpenditure, setRefundExpenditure] = useState<Expenditure | null>(null);
+    const [refundAmount, setRefundAmount] = useState('');
+    const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
+
+    const loadItemMedia = useCallback(async (itemId: number) => {
+        if (itemMedia[itemId]) return;
+        setItemMediaLoading(prev => ({ ...prev, [itemId]: true }));
+        try {
+            const media = await mediaService.getMediaByExpenditureItemId(itemId);
+            setItemMedia(prev => ({ ...prev, [itemId]: media }));
+        } catch (err) {
+            console.error('Failed to load item media:', err);
+        } finally {
+            setItemMediaLoading(prev => ({ ...prev, [itemId]: false }));
+        }
+    }, [itemMedia]);
+
+    const fetchData = useCallback(async (isSilent = false) => {
+        if (!campaignId) return;
+        try {
+            if (!isSilent) setLoading(true);
+            const campaignData = await campaignService.getById(Number(campaignId));
+            setCampaign(campaignData);
+
+            const expendituresData = await expenditureService.getByCampaignId(Number(campaignId));
+            let exps: any[] = Array.isArray(expendituresData) ? expendituresData : [];
+
+            if (exps.length > 0) {
+                try {
+                    const allItems = await expenditureService.getItemsByCampaignId(Number(campaignId));
+                    const itemsByExp: Record<number, any[]> = {};
+                    (allItems || []).forEach((item: any) => {
+                        if (!itemsByExp[item.expenditureId]) itemsByExp[item.expenditureId] = [];
+                        itemsByExp[item.expenditureId].push(item);
+                    });
+                    exps = exps.map((exp: any) => ({ ...exp, items: itemsByExp[exp.id] || [] }));
+                } catch {
+                    exps = exps.map((exp: any) => ({ ...exp, items: [] }));
+                }
+            }
+
+            const disbursedExps = exps.filter((e: any) => e.status === 'DISBURSED');
+            const postPromises = disbursedExps.map((e: any) =>
+                feedPostService.getByTarget(e.id, 'EXPENDITURE').catch(() => [])
+            );
+            const postResults = await Promise.all(postPromises);
+            const postsMap: Record<number, any[]> = {};
+            disbursedExps.forEach((e: any, i: number) => {
+                postsMap[e.id] = (postResults[i] || []).filter((p: any) => 
+                    p.targetName === 'evidence' || (p.targetName && p.targetName.toString().startsWith('evidence|'))
+                );
+            });
+            setExpenditurePosts(postsMap);
+            setExpenditures(exps);
+        } catch (err) {
+            setError('Không thể tải dữ liệu chiến dịch hoặc khoản chi.');
+        } finally {
+            setLoading(false);
+        }
+    }, [campaignId]);
+
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push('/sign-in');
+            return;
+        }
+        fetchData();
+    }, [fetchData, isAuthenticated, authLoading, router]);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        bankAccountService.getMyBankAccounts()
+            .then(setUserBankAccounts)
+            .catch(() => setUserBankAccounts([]));
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        expenditures.forEach(exp => {
+            exp.items?.forEach(item => {
+                loadItemMedia(item.id);
+            });
+        });
+    }, [expenditures, loadItemMedia]);
+
+    useEffect(() => {
+        if (!expenditures || expenditures.length === 0) return;
+        expenditures.forEach(async (exp) => {
+            if (staffNameMap[exp.id] !== undefined) return;
+            try {
+                const res = await api.get(`/api/admin/tasks/type/EXPENDITURE/target/${exp.id}`);
+                const name = res.data?.staffName;
+                const staffId = res.data?.staffId;
+                if (name) {
+                    setStaffNameMap(prev => ({ ...prev, [exp.id]: name }));
+                    if (staffId) setStaffIdMap(prev => ({ ...prev, [exp.id]: staffId }));
+                } else if (staffId) {
+                    setStaffNameMap(prev => ({ ...prev, [exp.id]: `Nhân viên #${staffId}` }));
+                    setStaffIdMap(prev => ({ ...prev, [exp.id]: staffId }));
+                } else {
+                    setStaffNameMap(prev => ({ ...prev, [exp.id]: '' }));
+                }
+            } catch {
+                setStaffNameMap(prev => ({ ...prev, [exp.id]: '' }));
+            }
+        });
+    }, [expenditures, staffNameMap]);
+
+    const handleChatWithStaff = async (expId: number, staffId: number, staffName: string) => {
+        if (!user?.id || !campaignId) return;
+        try {
+            const result = await chatService.createConversation(user.id, Number(campaignId), staffId);
+            if (result.success && result.data?.id) {
+                router.push(`/account/chat?conversationId=${result.data.id}`);
+            } else {
+                toast.error(result.error || 'Không thể mở cuộc trò chuyện.');
+            }
+        } catch {
+            toast.error('Lỗi khi mở cuộc trò chuyện với nhân viên.');
+        }
+    };
+
+    const handleRequestWithdrawal = async (id: number) => {
+        setSelectedExpId(id);
+        setShowWithdrawalModal(true);
+        const exp = expenditures.find(e => e.id === id);
+        if (exp?.items && exp.items.length > 0 && campaign?.type === 'ITEMIZED') {
+            const itemIds = exp.items.map(item => item.id);
+            setLoadingDonationSummary(true);
+            try {
+                const summary = await paymentService.getDonationSummary(itemIds);
+                const map: Record<number, number> = {};
+                summary.forEach(s => { map[s.expenditureItemId] = s.donatedQuantity; });
+                setDonationSummary(map);
+            } finally {
+                setLoadingDonationSummary(false);
+            }
+        }
+    };
+
+    const submitWithdrawal = async () => {
+        if (!selectedExpId || !evidenceDate) {
+            setModalError('Vui lòng chọn hạn nộp minh chứng.');
+            return;
+        }
+        try {
+            setSubmittingWithdrawal(true);
+            const amountNum = parseFloat(withdrawAmount.replace(/[.,]/g, '')) || 0;
+            const updated = await expenditureService.requestWithdrawal(selectedExpId, new Date(evidenceDate).toISOString(), amountNum);
+            setExpenditures(prev => prev.map(exp => exp.id === selectedExpId ? updated : exp));
+            setShowWithdrawalModal(false);
+            toast.success('Yêu cầu rút tiền đã được gửi thành công.');
+        } catch (err: any) {
+            setModalError(err.response?.data?.message || 'Yêu cầu rút tiền thất bại.');
+        } finally {
+            setSubmittingWithdrawal(false);
+        }
+    };
+
+    const handleOpenUpdateModal = async (exp: Expenditure) => {
+        try {
+            const itemsData = await expenditureService.getItems(exp.id);
+            if (campaign?.type === 'ITEMIZED') {
+                setLoadingDonationSummary(true);
+                try {
+                    const summaries = await paymentService.getDonationSummary(itemsData.map(i => i.id));
+                    const map: Record<number, number> = {};
+                    summaries.forEach(s => { map[s.expenditureItemId] = s.donatedQuantity; });
+                    setDonationSummary(map);
+                } finally {
+                    setLoadingDonationSummary(false);
+                }
+            }
+            setUpdateItemsData(itemsData);
+            setUpdateExpenditure(exp);
+            setUpdateItems(itemsData.map(item => ({
+                id: item.id,
+                actualQuantity: item.actualQuantity ?? 0,
+                price: item.price ?? 0
+            })));
+            setPendingDeleteMediaIds([]);
+            itemsData.forEach(item => loadItemMedia(item.id));
+            setIsUpdateModalOpen(true);
+        } catch {
+            toast.error('Không thể tải danh sách vật phẩm.');
+        }
+    };
+
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price', value: string) => {
+        const newItems = [...updateItems];
+        newItems[index] = { ...newItems[index], [field]: Number(value) };
+        setUpdateItems(newItems);
+    };
+
+    const handleUpdateSubmit = async () => {
+        if (!updateExpenditure) return;
+        try {
+            setUpdating(true);
+            if (pendingDeleteMediaIds.length > 0) {
+                await Promise.all(pendingDeleteMediaIds.map(id => mediaService.deleteMedia(id)));
+                setPendingDeleteMediaIds([]);
+            }
+            await expenditureService.updateActuals(updateExpenditure.id, updateItems);
+            toast.success('Cập nhật thành công!');
+            setIsUpdateModalOpen(false);
+            fetchData();
+        } catch {
+            toast.error('Cập nhật thất bại.');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const totalSpent = useMemo(() => expenditures.reduce((sum, exp) => sum + exp.totalAmount, 0), [expenditures]);
+
+    const { canCreate, blockReason, isDisabled } = useMemo(() => {
+        if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
+        if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chién dịch đã bị vô hiệu hóa.', isDisabled: true };
+        if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
+        const last = expenditures[0];
+        const isReady = last.status === 'DISBURSED' || last.status === 'REJECTED';
+        const hasEvidence = last.evidenceStatus === 'SUBMITTED' || last.evidenceStatus === 'APPROVED';
+        if (!isReady) return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa được giải ngân.' };
+        if (last.status === 'DISBURSED' && !hasEvidence) return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa nộp minh chứng.' };
+        return { canCreate: true, blockReason: null, isDisabled: false };
+    }, [campaign, expenditures]);
+
+    return {
+        campaign, expenditures, loading, error, fetchData,
+        showWithdrawalModal, setShowWithdrawalModal, selectedExpId, setSelectedExpId,
+        evidenceDate, setEvidenceDate, modalError, setModalError, submittingWithdrawal,
+        donationSummary, loadingDonationSummary, withdrawAmount, setWithdrawAmount,
+        itemMedia, itemMediaLoading, itemUploadState, setItemUploadState, galleryModalItemId, setGalleryModalItemId,
+        isUpdateModalOpen, setIsUpdateModalOpen, updateExpenditure, setUpdateExpenditure,
+        updateItems, setUpdateItems, updateItemsData, updating,
+        handleUpdateItemChange, handleUpdateSubmit, handleRequestWithdrawal, submitWithdrawal,
+        staffNameMap, staffIdMap, handleChatWithStaff,
+        expenditurePosts, isPostModalOpen, setIsPostModalOpen, postExpenditure, setPostExpenditure,
+        currentDraftPost, setCurrentDraftPost, handleOpenUpdateModal,
+        showRefundModal, setShowRefundModal, refundExpenditure, setRefundExpenditure,
+        refundAmount, setRefundAmount, userBankAccounts,
+        totalSpent, canCreate, blockReason, isDisabled,
+        setUserBankAccounts, setExpenditures
+    };
+}
+
