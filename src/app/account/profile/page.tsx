@@ -211,7 +211,7 @@ function TrustScoreLogsModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+        className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         style={{ maxHeight: '90vh', animation: 'apptSlideUp .25s cubic-bezier(.34,1.56,.64,1)' }}
       >
         {/* Header */}
@@ -249,8 +249,8 @@ function TrustScoreLogsModal({
             </div>
           ) : (
             <>
-              <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 220px)' }}>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(90vh - 220px)' }}>
+              <table className="w-full min-w-[700px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 sticky top-0">
                     <th className="text-left py-3 px-5 font-semibold text-gray-500 text-xs">Quy tắc</th>

@@ -68,14 +68,11 @@ export default function ExpenditureDetailPage() {
                         <h1 className="text-lg font-black text-[#1E293B] uppercase tracking-tighter leading-tight mb-1 line-clamp-1">
                             {campaign?.title || campaign?.name || 'Chiến dịch'}
                         </h1>
-                        <div className="flex flex-col gap-0.5">
-                            <p className="text-[11px] font-black text-[#3B82F6] uppercase tracking-widest">{expenditure?.title || 'Chi tiết đợt'}</p>
-                            <p className="text-[10px] font-bold text-[#64748B] italic leading-tight line-clamp-2">{expenditure?.plan || 'Khoản chi tiêu đợt 1 | Hoàn tất các hạng mục đã đề ra.'}</p>
-                            <div className="mt-1 flex items-center gap-3 text-[9px] font-black tracking-wider uppercase opacity-50">
-                                <span className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleDateString('vi-VN') : '--'}
-                                </span>
+                        <div className="flex flex-col gap-1">
+                            <p className="text-sm font-bold text-[#1E293B] leading-snug line-clamp-3">{expenditure?.plan || 'Khoản chi tiêu đợt 1'}</p>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#64748B]">
+                                <Clock className="w-3 h-3 flex-shrink-0" />
+                                <span>Thời gian tạo: {expenditure.createdAt ? new Date(expenditure.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '--'}</span>
                             </div>
                         </div>
                     </div>
@@ -87,6 +84,7 @@ export default function ExpenditureDetailPage() {
                             totalReceived={totalReceived}
                             totalActual={totalActual}
                             totalBalance={totalBalance}
+                            posts={posts}
                         />
                     </div>
                 </div>
@@ -106,47 +104,7 @@ export default function ExpenditureDetailPage() {
                     expenditure={expenditure}
                 />
 
-                {/* Link to Evidence Post */}
-                <div className="mt-6">
-                    {(expenditure.evidenceStatus === 'SUBMITTED' || expenditure.evidenceStatus === 'APPROVED' || expenditure.evidenceStatus === 'ALLOWED_EDIT') && (
-                        <div className="bg-white rounded-xl p-6 border border-[#E2E8F0] shadow-sm">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-emerald-50 text-[#10B981] border border-emerald-100">
-                                        <CheckCircle className="w-7 h-7" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-[#10B981]">Minh chứng đã xác thực</h3>
-                                        <p className="text-[11px] font-bold text-[#64748B]">Bao gồm các bài đăng công khai minh bạch tài chính.</p>
-                                    </div>
-                                </div>
-                            </div>
 
-                            {posts.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {posts.map(p => (
-                                        <Link
-                                            key={p.id}
-                                            href={`/post/${p.id}`}
-                                            target="_blank"
-                                            className="flex items-center justify-between p-4 rounded-xl border border-[#E2E8F0] bg-white text-[#1E293B] hover:text-[#3B82F6] hover:border-[#3B82F6]/30 hover:shadow-md transition-all group"
-                                        >
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-black uppercase tracking-tighter mb-1">Xem bài đăng</span>
-                                                <span className="text-[10px] text-[#64748B] font-bold truncate max-w-[200px]">{p.title || 'Chi tiết minh chứng đợt chi'}</span>
-                                            </div>
-                                            <ArrowLeft className="w-4 h-4 rotate-180 opacity-40 group-hover:opacity-100" />
-                                        </Link>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-4 bg-slate-50 rounded-lg text-center text-xs font-bold text-[#64748B]">
-                                    Đã nộp minh chứng tại quầy
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Gallery Modal */}

@@ -150,15 +150,9 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                                                     setGalleryModalItemId(item.id);
                                                     loadItemMedia(item.id);
                                                 }}
-                                                className="w-10 h-10 rounded-lg border border-[#E2E8F0] overflow-hidden hover:ring-2 hover:ring-blue-500/50 transition-all bg-white"
+                                                className="px-2.5 py-1 rounded-lg border border-[#E2E8F0] hover:border-[#065F46]/40 hover:bg-[#065F46]/5 transition-all bg-white text-[10px] font-black text-[#065F46] uppercase tracking-wider whitespace-nowrap"
                                             >
-                                                {media.length > 0 ? (
-                                                    <img src={media[0].url} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <ImageIcon className="w-4 h-4 text-slate-300" />
-                                                    </div>
-                                                )}
+                                                {media.length > 0 ? `Xem (${media.length})` : 'Xem'}
                                             </button>
                                         </td>
                                         {campaign?.type === 'AUTHORIZED' ? (

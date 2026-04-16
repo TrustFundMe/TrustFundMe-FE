@@ -100,15 +100,22 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                 }
             }
 
-            const postPromises = exps.map((e: any) =>
-                feedPostService.getByTarget(e.id, 'EXPENDITURE').catch(() => [])
-            );
-            const postResults = await Promise.all(postPromises);
+            // Dùng getMyPage để lấy cả bài DRAFT và PUBLISHED
+            let myPosts: any[] = [];
+            try {
+                const myPage = await feedPostService.getMyPage({ status: 'ALL', size: 200 });
+                myPosts = myPage.content || [];
+            } catch { myPosts = []; }
+            
             const postsMap: Record<number, any[]> = {};
-            exps.forEach((e: any, i: number) => {
-                postsMap[e.id] = (postResults[i] || []).filter((p: any) => 
-                    p.targetName === 'evidence' || (p.targetName && p.targetName.toString().startsWith('evidence|'))
-                );
+            exps.forEach((e: any) => {
+                postsMap[e.id] = myPosts.filter((p: any) => {
+                    const tName = p.targetName || p.target_name || '';
+                    const tType = p.targetType || p.target_type;
+                    const tid = p.targetId || p.target_id || p.expenditureId || p.expenditure_id;
+                    const isEvidence = tName === 'evidence' || tName.startsWith('evidence|');
+                    return isEvidence && tType === 'EXPENDITURE' && Number(tid) === Number(e.id);
+                });
             });
             setExpenditurePosts(postsMap);
             setExpenditures(exps);

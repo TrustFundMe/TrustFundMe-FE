@@ -1,17 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { LayoutGrid, CornerUpRight, ShoppingBag, Wallet, CheckCircle, Download } from 'lucide-react';
+import Link from 'next/link';
+import { LayoutGrid, CornerUpRight, ShoppingBag, Wallet, CheckCircle, Download, ExternalLink, FileText } from 'lucide-react';
 
 interface ExpenditureDetailStatsProps {
     expenditure: any;
     totalReceived: number;
     totalActual: number;
     totalBalance: number;
+    posts?: any[];
 }
 
 const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
-    expenditure, totalReceived, totalActual, totalBalance
+    expenditure, totalReceived, totalActual, totalBalance, posts = []
 }) => {
     const v1 = expenditure?.totalExpectedAmount || 0;
     const v2 = totalReceived;
@@ -129,19 +131,68 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
             </div>
 
             {/* Card 3: Evidence Status (col-span-3) */}
-            <div className="lg:col-span-3 bg-white rounded-2xl p-4 border border-[#E2E8F0] shadow-sm min-h-[140px] h-[160px] flex flex-col justify-center gap-2">
+            <div className="lg:col-span-3 bg-white rounded-2xl p-4 border border-[#E2E8F0] shadow-sm min-h-[140px] h-[160px] flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                     <h2 className="text-sm font-black text-[#1E293B] uppercase tracking-widest">Minh Chứng</h2>
-                    <span className="text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest shadow-sm text-[#065F46] bg-[#F8FAFC] border-black/5">
-                        {isEvidenceSubmitted ? 'Đã nộp' : 'Chưa nộp'}
-                    </span>
+                    {isEvidenceSubmitted ? (() => {
+                        const dueAt = expenditure?.evidenceDueAt ? new Date(expenditure.evidenceDueAt) : null;
+                        const submittedAt = expenditure?.evidenceSubmittedAt ? new Date(expenditure.evidenceSubmittedAt) : null;
+                        const isLate = dueAt && submittedAt && submittedAt > dueAt;
+                        return (
+                            <span className={`text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest shadow-sm ${isLate ? 'text-rose-600 bg-rose-50 border-rose-100' : 'text-[#065F46] bg-[#F8FAFC] border-black/5'}`}>
+                                {isLate ? 'Trễ hạn' : 'Đúng hạn'}
+                            </span>
+                        );
+                    })() : (
+                        <span className="text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest shadow-sm text-amber-600 bg-amber-50 border-amber-100">
+                            Chưa nộp
+                        </span>
+                    )}
                 </div>
-                <div className="flex flex-col mt-1">
-                    <span className="text-[9px] font-black text-[#64748B] uppercase tracking-tighter mb-0.5">Hạn nộp</span>
-                    <span className="text-xl font-black text-[#1E293B] leading-none">
-                        {expenditure?.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : '--'}
-                    </span>
-                </div>
+
+                {isEvidenceSubmitted ? (
+                    <div className="flex flex-col gap-1 flex-1 mt-1.5 overflow-hidden">
+                        {/* Submission time */}
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-tighter whitespace-nowrap">Nộp lúc:</span>
+                            <span className="text-[10px] font-black text-[#1E293B]">
+                                {expenditure?.evidenceSubmittedAt
+                                    ? new Date(expenditure.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                    : '--'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black text-[#64748B] uppercase tracking-tighter whitespace-nowrap">Hạn:</span>
+                            <span className="text-[10px] font-black text-[#1E293B]">
+                                {expenditure?.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : '--'}
+                            </span>
+                        </div>
+                        {/* Post links */}
+                        {posts.length > 0 && (
+                            <div className="flex flex-col gap-1 mt-0.5 overflow-y-auto">
+                                {posts.slice(0, 2).map((p: any) => (
+                                    <Link
+                                        key={p.id}
+                                        href={`/post/${p.id}`}
+                                        target="_blank"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#065F46]/10 border border-[#065F46]/20 hover:bg-[#065F46]/20 transition-all group"
+                                    >
+                                        <FileText className="w-3 h-3 text-[#065F46] flex-shrink-0" />
+                                        <span className="text-[9px] font-black text-[#065F46] flex-1 uppercase tracking-wider">Xem bài đăng minh chứng</span>
+                                        <ExternalLink className="w-2.5 h-2.5 text-[#065F46] opacity-50 group-hover:opacity-100 flex-shrink-0" />
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="flex flex-col mt-1">
+                        <span className="text-[9px] font-black text-[#64748B] uppercase tracking-tighter mb-0.5">Hạn nộp</span>
+                        <span className="text-xl font-black text-[#1E293B] leading-none">
+                            {expenditure?.evidenceDueAt ? new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN') : '--'}
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );

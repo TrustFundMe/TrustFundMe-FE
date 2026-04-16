@@ -211,19 +211,29 @@ export default function CampaignExpendituresPage() {
                         onClose={() => { setIsPostModalOpen(false); setPostExpenditure(null); setCurrentDraftPost(null); }}
                         campaignsList={[{ id: campaign.id, title: campaign.title }]}
                         campaignTitlesMap={{ [campaign.id]: campaign.title }}
-                        initialData={currentDraftPost ? {
-                            ...currentDraftPost,
-                            attachments: currentDraftPost.attachments || [],
-                            author: { id: String(currentDraftPost.authorId || ''), name: '', avatar: '' },
-                            liked: false,
-                            comments: [],
-                            likeCount: currentDraftPost.likeCount || 0,
-                            replyCount: currentDraftPost.replyCount || 0,
-                            viewCount: currentDraftPost.viewCount || 0,
-                            isPinned: currentDraftPost.isPinned || false,
-                            isLocked: currentDraftPost.isLocked || false,
-                            flagged: false,
-                        } : {
+                        initialData={currentDraftPost ? (() => {
+                            // Normalize keys from snake_case to camelCase just in case
+                            const p = currentDraftPost;
+                            const normalized = {
+                                ...p,
+                                targetId: p.targetId ?? p.target_id ?? p.expenditureId ?? p.expenditure_id,
+                                targetType: p.targetType ?? p.target_type,
+                                targetName: p.targetName ?? p.target_name,
+                                authorId: p.authorId ?? p.author_id,
+                                likeCount: p.likeCount ?? p.like_count,
+                                replyCount: p.replyCount ?? p.reply_count,
+                                viewCount: p.viewCount ?? p.view_count,
+                                isPinned: p.isPinned ?? p.is_pinned,
+                                isLocked: p.isLocked ?? p.is_locked,
+                            };
+                            return {
+                                ...normalized,
+                                attachments: normalized.attachments || [],
+                                author: { id: String(normalized.authorId || ''), name: '', avatar: '' },
+                                liked: false,
+                                comments: [],
+                            };
+                        })() : {
                             id: undefined as unknown as string,
                             author: { id: '', name: '', avatar: '' },
                             liked: false,
