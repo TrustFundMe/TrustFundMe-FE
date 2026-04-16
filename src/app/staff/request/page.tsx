@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -43,6 +43,8 @@ export default function StaffRequestPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | undefined>();
   const [selectedCampaignDetail, setSelectedCampaignDetail] = useState<any | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [sentCommitmentIds, setSentCommitmentIds] = useState<Set<number>>(new Set());
+  const [signedCommitmentIds, setSignedCommitmentIds] = useState<Set<number>>(new Set());
   const targetCampaignId = searchParams.get('campaignId');
 
   const [currentPage, setCurrentPage] = useState(0);
@@ -95,7 +97,7 @@ export default function StaffRequestPage() {
               description: c.description || '',
               category: c.categoryName || '',
               rejectionReason: c.rejectionReason || undefined,
-              kycVerified: c.kycVerified,
+              kycVerified: !!owner?.kycVerified,
               bankVerified: c.bankVerified,
               fundOwnerId: c.fundOwnerId,
             };
@@ -140,8 +142,26 @@ export default function StaffRequestPage() {
     setSelectedCampaignDetail(null); // clear stale data
     setIsLoadingDetail(true);
     try {
-      const detail = await campaignService.getCampaignById(campaignRequest.campaignId);
+      const detail = await campaignService.getById(campaignRequest.campaignId);
       setSelectedCampaignDetail(detail);
+
+      // Kiểm tra trạng thái ký cam kết thực tế từ DB
+      const isSigned = await campaignService.isCommitmentSigned(campaignRequest.campaignId);
+      if (isSigned) {
+        setSignedCommitmentIds(prev => new Set(prev).add(campaignRequest.campaignId));
+      } else {
+        // Áp dụng luật: Quá 48h mà chưa ký -> tự động khóa thành DISABLED
+        if (detail.status === 'PENDING' && detail.updatedAt) {
+          const startTime = new Date(detail.updatedAt).getTime();
+          const deadline = startTime + (48 * 60 * 60 * 1000);
+          if (new Date().getTime() > deadline) {
+            toast.error('Chiến dịch đã quá hạn 48 giờ ký cam kết. Hệ thống sẽ tự động khóa!', { duration: 6000 });
+            await campaignService.disableCampaign(detail.id, 'Quá thời hạn 48 giờ ký cam kết (tự động khóa)');
+            detail.status = 'DISABLED';
+            setCampaignRows(prev => prev.map(r => r.campaignId === detail.id ? { ...r, status: 'DISABLED' as any } : r));
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load campaign detail:', err);
       toast.error('Không thể tải chi tiết chiến dịch.');
@@ -225,6 +245,24 @@ export default function StaffRequestPage() {
     if (activeTab === 'CAMPAIGN') fetchCampaigns();
     // Add other tab refreshes if needed, for now mostly campaigns
     toast.success('Đã tải lại dữ liệu');
+  };
+
+  const handleSendCommitmentEmail = async (campaignRequest: CampaignRequest) => {
+    const loadingToast = toast.loading('Đang gửi yêu cầu ký cam kết...');
+    try {
+      await campaignService.sendCommitmentEmail(campaignRequest.campaignId);
+      setSentCommitmentIds(prev => new Set(prev).add(campaignRequest.campaignId));
+      toast.success(`Đã gửi mail yêu cầu ký cam kết cho chiến dịch "${campaignRequest.campaignTitle}"`, {
+        id: loadingToast,
+        duration: 4000
+      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data || 'Gửi mail thất bại. Vui lòng thử lại sau.';
+      toast.error(typeof errorMessage === 'string' ? errorMessage : 'Gửi mail thất bại', {
+        id: loadingToast,
+        duration: 5000
+      });
+    }
   };
 
 
@@ -326,6 +364,7 @@ export default function StaffRequestPage() {
                         rows={filteredCampaigns}
                         selectedId={selectedCampaignId}
                         onSelect={(r) => handleSelectCampaign(r)}
+                        statusClassName={selectedCampaignId ? 'hidden 2xl:table-cell' : ''}
                         columns={[
                           {
                             key: 'campaign',
@@ -339,11 +378,13 @@ export default function StaffRequestPage() {
                           {
                             key: 'category',
                             title: 'LĨNH VỰC',
+                            className: selectedCampaignId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                             render: (r: CampaignRequest) => <span className="text-[10px] font-black text-gray-700 uppercase">{r.category || '-'}</span>,
                           },
                           {
                             key: 'requester',
                             title: 'NGƯỜI TẠO',
+                            className: selectedCampaignId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                             render: (r: CampaignRequest) => <span className="text-xs font-bold text-gray-700">{r.requesterName}</span>,
                           },
                           {
@@ -378,7 +419,7 @@ export default function StaffRequestPage() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setSelectedCampaignId(r.id);
+                                    handleSelectCampaign(r);
                                   }}
                                   className="p-1.5 rounded-lg bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-all"
                                   title="Xem chi tiết"
@@ -494,6 +535,10 @@ export default function StaffRequestPage() {
                         onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
                         onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
                         onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
+                        onSendCommitmentEmail={() => selectedCampaign && handleSendCommitmentEmail(selectedCampaign)}
+                        commitmentSent={selectedCampaign ? sentCommitmentIds.has(selectedCampaign.campaignId) : false}
+                        commitmentSigned={selectedCampaign ? signedCommitmentIds.has(selectedCampaign.campaignId) : false}
+                        kycVerified={selectedCampaign?.kycVerified}
                       />
                     )}
                   </div>

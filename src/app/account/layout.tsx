@@ -1,21 +1,13 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, FolderOpen, Heart, CalendarClock, ArrowLeft, MessageCircle } from 'lucide-react';
+import { User, FolderOpen, Heart, CalendarClock, ArrowLeft, MessageCircle, FileCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-
-const NAV_ITEMS = [
-    { href: '/account/profile', label: 'Hồ sơ', icon: User },
-    { href: '/account/campaigns', label: 'Chiến dịch', icon: FolderOpen },
-    { href: '/account/impact', label: 'Lịch sử quyên góp', icon: Heart },
-    { href: '/account/schedule', label: 'Lịch hẹn', icon: CalendarClock },
-    { href: '/account/chat', label: 'Trò chuyện', icon: MessageCircle },
-];
 
 // Lighter red for the sidebar
 const SIDEBAR_COLOR = '#2d3a30';
@@ -45,6 +37,21 @@ const ConcaveCorner = ({ position }: { position: 'top' | 'bottom' }) => (
 function AccountSidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { user } = useAuth();
+
+    const navItems = useMemo(() => {
+        const items = [
+            { href: '/account/profile', label: 'Hồ sơ', icon: User },
+            { href: '/account/campaigns', label: 'Chiến dịch', icon: FolderOpen },
+            { href: '/account/impact', label: 'Lịch sử quyên góp', icon: Heart },
+            { href: '/account/schedule', label: 'Lịch hẹn', icon: CalendarClock },
+            { href: '/account/chat', label: 'Trò chuyện', icon: MessageCircle },
+        ];
+        if (user?.role === 'FUND_OWNER') {
+            items.push({ href: '/account/commitments', label: 'Biên bản cam kết', icon: FileCheck });
+        }
+        return items;
+    }, [user?.role]);
 
     return (
         <aside className="relative flex flex-col h-full w-[200px] shrink-0"
@@ -62,7 +69,7 @@ function AccountSidebar() {
 
             {/* Navigation tabs */}
             <nav className="flex-1 flex flex-col justify-start gap-1">
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                     const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
                     return (

@@ -486,7 +486,6 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
 
                 {showSchedule && (
                     <CreateAppointmentModal 
-                        isOpen={showSchedule} 
                         staffId={user?.id ? Number(user.id) : 0}
                         onClose={() => setShowSchedule(false)} 
                         onCreated={() => { onRefresh(); setShowSchedule(false); }}

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { ShieldCheck, Upload, ExternalLink, Loader2, X, Megaphone, XCircle } from 'lucide-react';
+import { ShieldCheck, Upload, ExternalLink, Loader2, X, Megaphone, XCircle, Mail } from 'lucide-react';
 import type { RequestStatus, StaffRequestBase } from './RequestTypes';
 import RequestStatusPill from './RequestStatusPill';
 
@@ -24,6 +24,10 @@ interface RequestDetailPanelProps<T extends StaffRequestBase> {
   uploading?: boolean;
   onVerifyKYC?: () => void;
   onClose?: () => void;
+  onSendCommitmentEmail?: () => void;
+  commitmentSent?: boolean;
+  commitmentSigned?: boolean;
+  kycVerified?: boolean;
   readOnly?: boolean;
   hideActions?: boolean;
 }
@@ -46,6 +50,10 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   onVerifyKYC,
   onDisable,
   onClose,
+  onSendCommitmentEmail,
+  commitmentSent,
+  commitmentSigned,
+  kycVerified,
   readOnly,
   hideActions,
 }: RequestDetailPanelProps<T>) {
@@ -238,6 +246,25 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
             />
           </div>
 
+          {onSendCommitmentEmail && (request as any).type === 'APPROVE_CAMPAIGN' && !hideActions && (
+            <div className="space-y-1 mb-2">
+              <button
+                onClick={onSendCommitmentEmail}
+                disabled={!kycVerified || commitmentSigned}
+                title={commitmentSigned ? "Người dùng đã ký cam kết, không cần gửi lại" : (!kycVerified ? "Cần xác minh KYC người dùng trước khi gửi mail cam kết" : "Gửi yêu cầu ký cam kết qua email")}
+                className="w-full rounded-xl border-2 border-dashed border-[#446b5f]/30 py-2.5 text-[11px] font-black uppercase tracking-widest text-[#446b5f] hover:border-[#446b5f] hover:bg-[#446b5f]/5 disabled:opacity-40 disabled:bg-gray-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                <Mail className="h-4 w-4" />
+                Gửi mail yêu cầu ký cam kết
+              </button>
+              {commitmentSigned && (
+                <p className="text-[10px] text-center font-bold text-emerald-600 italic">
+                   (Người dùng đã ký bản cam kết này)
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-2.5">
             {onReject && (
               <button
@@ -258,22 +285,52 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
             {onApprove && (
               <button
                 onClick={() => onApprove(note)}
-                disabled={approveDisabled}
-                title={approveDisabledReason}
-                className="flex-[1.5] rounded-xl bg-[#446b5f] py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#355249] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-100 transition-all active:scale-95"
+                disabled={approveDisabled || !commitmentSigned}
+                title={!kycVerified ? "Cần xác minh KYC trước" : !commitmentSigned ? "Chờ người dùng ký cam kết" : approveDisabledReason}
+                className="flex-[1.5] rounded-xl bg-[#446b5f] py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#355249] disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg shadow-green-100 transition-all active:scale-95"
               >
-                DUYỆT YÊU CẦU
+                {(!kycVerified || !commitmentSigned) ? "CHƯA ĐỦ ĐIỀU KIỆN" : "DUYỆT YÊU CẦU"}
               </button>
             )}
           </div>
-          
-          {actionLabel && onActionClick && (
-            <button
-              onClick={onActionClick}
-              className="w-full rounded-xl border-2 border-dashed border-gray-200 py-3 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:border-[#446b5f] hover:text-[#446b5f] transition-all"
-            >
-              {actionLabel}
-            </button>
+
+          {/* Workflow Guide */}
+          {isPending && (request as any).type === 'APPROVE_CAMPAIGN' && (
+            <div className="mt-4 rounded-xl bg-blue-50/50 border border-blue-100 p-3 space-y-2">
+              <p className="text-[10px] font-black text-blue-800 uppercase tracking-widest flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Hướng dẫn quy trình duyệt:
+              </p>
+              <div className="space-y-1.5">
+                <div className={`flex items-center gap-2 text-[10px] font-bold ${kycVerified ? 'text-green-600' : 'text-gray-500'}`}>
+                   <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${kycVerified ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>1</div>
+                   <span>Xác thực KYC người dùng {kycVerified && '✓'}</span>
+                </div>
+                <div className={`flex items-center gap-2 text-[10px] font-bold ${(commitmentSent || commitmentSigned) ? 'text-green-600' : 'text-gray-500'}`}>
+                   <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${(commitmentSent || commitmentSigned) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>2</div>
+                   <span>Gửi mail yêu cầu ký cam kết {(commitmentSent || commitmentSigned) && '✓'}</span>
+                </div>
+                <div className={`flex items-center gap-2 text-[10px] font-bold ${commitmentSigned ? 'text-green-600' : 'text-gray-500'}`}>
+                   <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${commitmentSigned ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>3</div>
+                   <span>Người dùng ký cam kết (E-sign) {commitmentSigned ? '✓' : '(Đang chờ)'}</span>
+                </div>
+                <div className={`flex items-center gap-2 text-[10px] font-bold ${(kycVerified && commitmentSigned) ? 'text-green-600' : 'text-gray-500'}`}>
+                   <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${(kycVerified && commitmentSigned) ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>4</div>
+                   <span>Duyệt chiến dịch {(kycVerified && !isPending && commitmentSigned) ? '✓' : ''}</span>
+                </div>
+              </div>
+              
+              {/* Nút hành động nhanh (Ví dụ: Chuyển sang KYC) */}
+              {actionLabel && onActionClick && (
+                <button
+                  onClick={onActionClick}
+                  className="w-full mt-3 py-2.5 bg-blue-600 rounded-xl text-[11px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:scale-95 animate-in zoom-in-95 duration-300"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  {actionLabel}
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

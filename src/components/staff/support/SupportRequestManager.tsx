@@ -83,7 +83,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
                             key={s}
                             onClick={() => setStatusFilter(s)}
                             className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                                ? 'border-[#db5945]/30 bg-[#db5945]/10 text-[#db5945] shadow-sm'
+                                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
                                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
@@ -94,7 +94,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
 
                 <button
                     onClick={openModal}
-                    className="flex items-center gap-2 bg-[#db5945] text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#c44d3a] transition-all shadow-md shadow-[#db5945]/20 active:scale-95 whitespace-nowrap mr-1"
+                    className="flex items-center gap-2 bg-[#446b5f] text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#38594e] transition-all shadow-md shadow-[#446b5f]/20 active:scale-95 whitespace-nowrap mr-1"
                 >
                     <Plus className="h-4 w-4" />
                     Tạo yêu cầu hỗ trợ
@@ -257,7 +257,7 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                 <div className="px-6 pt-4 pb-2 border-b border-gray-50 flex items-center justify-between bg-gray-50/20">
                     <div>
                         <h2 className="text-sm font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                            <HandCoins className="h-4 w-4 text-[#db5945]" />
+                            <HandCoins className="h-4 w-4 text-[#446b5f]" />
                             Tạo yêu cầu hỗ trợ quỹ
                         </h2>
                         <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Gửi đề xuất trích tiền từ Quỹ chung cho chiến dịch</p>
@@ -294,7 +294,7 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                             value={amountDisplay}
                             onChange={handleAmountChange}
                             placeholder="Nhập số tiền..."
-                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
+                            className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 text-xs font-black text-gray-900 outline-none focus:ring-2 focus:ring-[#446b5f]/30 focus:border-[#446b5f] transition-all"
                         />
                     </div>
 
@@ -317,7 +317,7 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
                             }}
                             placeholder="Nhập nội dung/lý do cần hỗ trợ..."
                             rows={3}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all resize-none"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#446b5f]/30 focus:border-[#446b5f] transition-all resize-none"
                         />
                     </div>
 
@@ -368,7 +368,7 @@ function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: any[
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 flex items-center justify-between text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/30 focus:border-[#db5945] transition-all"
+                className="w-full h-11 bg-gray-50 border border-gray-100 rounded-2xl px-4 flex items-center justify-between text-xs font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#446b5f]/30 focus:border-[#446b5f] transition-all"
             >
                 <span className={selectedCampaign ? "text-gray-900" : "text-gray-400"}>
                     {selectedCampaign ? selectedCampaign.title : "-- Chọn chiến dịch --"}
@@ -394,7 +394,7 @@ function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: any[
                                         placeholder="Tìm tên chiến dịch hoặc chủ quỹ..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full h-9 pl-9 pr-3 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#db5945]/20 focus:border-[#db5945] transition-all"
+                                        className="w-full h-9 pl-9 pr-3 bg-white border border-gray-200 rounded-xl text-[11px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#446b5f]/20 focus:border-[#446b5f] transition-all"
                                         autoFocus
                                         onClick={(e) => e.stopPropagation()}
                                     />
@@ -416,9 +416,9 @@ function CampaignSelector({ campaigns, selectedId, onSelect }: { campaigns: any[
                                                 setIsOpen(false);
                                                 setSearchTerm('');
                                             }}
-                                            className={`w-full px-4 py-2.5 text-left border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-all flex flex-col gap-0.5 ${String(c.id) === String(selectedId) ? 'bg-[#db5945]/5' : ''}`}
+                                            className={`w-full px-4 py-2.5 text-left border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-all flex flex-col gap-0.5 ${String(c.id) === String(selectedId) ? 'bg-[#446b5f]/5' : ''}`}
                                         >
-                                            <span className={`text-[11px] font-black line-clamp-1 ${String(c.id) === String(selectedId) ? 'text-[#db5945]' : 'text-gray-900'}`}>
+                                            <span className={`text-[11px] font-black line-clamp-1 ${String(c.id) === String(selectedId) ? 'text-[#446b5f]' : 'text-gray-900'}`}>
                                                 {c.title}
                                             </span>
                                             <span className="text-[10px] font-bold text-gray-400">

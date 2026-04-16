@@ -143,11 +143,12 @@ export default function HistoryTab() {
             rows={filteredTasks}
             selectedId={selectedTaskId}
             onSelect={(r) => setSelectedTaskId(r.id)}
-            statusClassName={selectedTaskId ? 'hidden xl:table-cell' : ''}
+            statusClassName={selectedTaskId ? 'hidden 2xl:table-cell' : ''}
             columns={[
               {
                 key: 'type',
                 title: 'Loại',
+                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                 render: (r) => {
                   const Icon = TASK_TYPE_ICON[r.type] || FileText;
                   return (
@@ -171,13 +172,13 @@ export default function HistoryTab() {
               {
                 key: 'requester',
                 title: 'Người yêu cầu',
-                className: selectedTaskId ? 'hidden 2xl:table-cell' : '',
+                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                 render: (r) => <span className="text-xs font-bold text-gray-700">{r.requester}</span>,
               },
               {
                 key: 'date',
                 title: 'Hoàn thành lúc',
-                className: selectedTaskId ? 'hidden xl:table-cell' : '',
+                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
                 render: (r) => <span className="text-[10px] font-black text-gray-400 uppercase">{new Date(r.processedAt).toLocaleString('vi-VN')}</span>,
               },
             ]}
