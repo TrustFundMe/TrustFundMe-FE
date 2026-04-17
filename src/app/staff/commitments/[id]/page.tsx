@@ -29,7 +29,7 @@ export default function StaffCommitmentReviewPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  
+
   const [campaign, setCampaign] = useState<any>(null);
   const [ownerInfo, setOwnerInfo] = useState<UserInfo | null>(null);
   const [kycData, setKycData] = useState<KYCData | null>(null);
@@ -72,7 +72,7 @@ export default function StaffCommitmentReviewPage() {
         try {
           const kycRes = await userService.getUserKYC(campaignData.fundOwnerId);
           if (kycRes && kycRes.id) setKycData(kycRes);
-        } catch (e) {}
+        } catch (e) { }
 
         try {
           const commitmentData = await campaignService.getCommitment(Number(id));
@@ -81,7 +81,7 @@ export default function StaffCommitmentReviewPage() {
             setIsSavedData(true);
             if (commitmentData.fullName) setSavedFullName(commitmentData.fullName);
           }
-        } catch (e) {}
+        } catch (e) { }
 
         if (campaignData.updatedAt) setTimeLeft(calculateTimeLeft(campaignData.updatedAt));
 
@@ -103,7 +103,7 @@ export default function StaffCommitmentReviewPage() {
 
   const handleExportPDF = async () => {
     // Dynamic import to avoid "self is not defined" SSR error
-    const html2pdf = (await import('html2pdf.js' as any)).default;
+    const html2pdf = (await import('html2pdf.js')).default;
 
     const element = document.getElementById('legal-document');
     if (!element) return;
@@ -134,25 +134,25 @@ export default function StaffCommitmentReviewPage() {
 
   return (
     <div className="h-screen relative flex justify-center py-12 px-6 bg-slate-50 overflow-y-auto custom-scrollbar">
-      
+
       <div className="fixed inset-0 z-0 opacity-40">
         <Grainient
-          color1="#ffffff" color2="#f8fafc" color3="#e2e8f0" 
+          color1="#ffffff" color2="#f8fafc" color3="#e2e8f0"
           timeSpeed={0.8} warpSpeed={2.5} zoom={1.5} grainAmount={0.04} warpAmplitude={80}
         />
       </div>
 
       <div className="relative z-10 w-full max-w-[1440px] flex gap-10 items-start justify-center pb-20">
-        
+
         {/* SIDEBAR BÊN TRÁI - STICKY BLUE THEME (SYNCED WITH USER) */}
         <div className="hidden xl:flex flex-col w-[310px] space-y-6 flex-shrink-0 sticky top-0 no-print">
-          
+
           <div className="bg-[#1e3a8a] rounded-[24px] p-6 shadow-xl text-white">
-             <div className="flex items-center gap-2 mb-2">
-                <ShieldCheck className="h-5 w-5" />
-                <h3 className="font-bold text-xs uppercase tracking-widest">Chế độ Kiểm duyệt</h3>
-             </div>
-             <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight leading-relaxed">Staff có quyền xem và xuất PDF biên bản này nhưng không được phép thương lượng hoặc ký thay.</p>
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="h-5 w-5" />
+              <h3 className="font-bold text-xs uppercase tracking-widest">Chế độ Kiểm duyệt</h3>
+            </div>
+            <p className="text-[10px] font-medium opacity-80 uppercase tracking-tight leading-relaxed">Staff có quyền xem và xuất PDF biên bản này nhưng không được phép thương lượng hoặc ký thay.</p>
           </div>
 
           {/* Card Trạng thái */}
@@ -191,11 +191,11 @@ export default function StaffCommitmentReviewPage() {
             </div>
             <p className="text-[11px] text-gray-600 font-medium mb-3">Đã ký xác nhận và đóng mộc điện tử bởi ban quản trị.</p>
             <div className="flex items-center gap-3 p-2 bg-blue-800 rounded-xl">
-               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-               <div className="text-[10px]">
-                  <p className="font-bold text-white uppercase tracking-tight">Ban Quản Trị TrustFundMe</p>
-                  <p className="text-blue-200 uppercase tracking-widest text-[8px]">Đơn Vị Đã Xác Thực</p>
-               </div>
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">A</div>
+              <div className="text-[10px]">
+                <p className="font-bold text-white uppercase tracking-tight">Ban Quản Trị TrustFundMe</p>
+                <p className="text-blue-200 uppercase tracking-widest text-[8px]">Đơn Vị Đã Xác Thực</p>
+              </div>
             </div>
           </div>
 
@@ -208,18 +208,18 @@ export default function StaffCommitmentReviewPage() {
               <h3 className="font-bold text-gray-800 text-sm uppercase">BÊN B (Chủ quỹ)</h3>
             </div>
             <div className="space-y-3 text-[11px]">
-               <div>
-                  <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Họ và tên (CCCD):</p>
-                  <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Số CCCD/CMND:</p>
-                  <p className="font-bold text-blue-950">{kycData?.idNumber || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Điện thoại:</p>
-                  <p className="font-bold text-blue-950">{kycData?.phoneNumber || ownerInfo?.phoneNumber || '—'}</p>
-               </div>
+              <div>
+                <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Họ và tên (CCCD):</p>
+                <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Số CCCD/CMND:</p>
+                <p className="font-bold text-blue-950">{kycData?.idNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5 font-bold uppercase text-[9px]">Điện thoại:</p>
+                <p className="font-bold text-blue-950">{kycData?.phoneNumber || ownerInfo?.phoneNumber || '—'}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -230,8 +230,8 @@ export default function StaffCommitmentReviewPage() {
             <button onClick={() => router.back()} className="text-[10px] font-bold uppercase tracking-[2px] text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Quay lại
             </button>
-            <button 
-              onClick={() => handleExportPDF()} 
+            <button
+              onClick={() => handleExportPDF()}
               className="bg-[#1e3a8a] px-8 py-3 rounded-2xl shadow-xl shadow-blue-900/20 text-[10px] font-bold uppercase tracking-[2px] text-white hover:bg-blue-800 transition-all flex items-center gap-2"
             >
               <Printer className="h-4 w-4" /> Xuất bản PDF
@@ -239,10 +239,10 @@ export default function StaffCommitmentReviewPage() {
           </div>
 
           <div id="legal-document" className="bg-white w-full shadow-[0_40px_100px_rgba(30,58,138,0.1)] p-[80px] min-h-[1100px] flex flex-col font-serif text-slate-950 relative border-t-8 border-blue-900 rounded-sm">
-            
+
             {(isExpired && !signature) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] rotate-[-45deg] z-50">
-                 <h1 className="text-[140px] font-black border-[25px] border-rose-600 px-12 text-rose-600 uppercase">HẾT HẠN</h1>
+                <h1 className="text-[140px] font-black border-[25px] border-rose-600 px-12 text-rose-600 uppercase">HẾT HẠN</h1>
               </div>
             )}
 
@@ -291,7 +291,7 @@ export default function StaffCommitmentReviewPage() {
 
             <div className="space-y-6 text-justify text-[15.5px] mb-16 leading-relaxed">
               <p className="italic font-bold text-blue-900">Tôi xin cam kết và chịu trách nhiệm hoàn toàn trước Ban quản trị TrustFundMe, các nhà hảo tâm và pháp luật về các nội dung thực hiện chiến dịch như sau:</p>
-              
+
               <section>
                 <h4 className="font-bold uppercase text-[14px] mb-1.5 underline text-[#1e3a8a]">Điều 1: Mục đích sử dụng nguồn quỹ quyên góp</h4>
                 <p className="pl-4">Tôi cam kết toàn bộ số tiền quyên góp được từ cộng đồng thông qua nền tảng TrustFundMe sẽ chỉ được sử dụng cho các mục tiêu đã đăng ký trong hồ sơ chiến dịch ban đầu. Tuyệt đối không sử dụng quỹ vào các mục đích cá nhân, đầu tư sinh lời, hoặc bất kỳ mục đích nào khác ngoài phạm vi cứu trợ/từ thiện đã công bố.</p>
@@ -334,45 +334,45 @@ export default function StaffCommitmentReviewPage() {
             </div>
 
             <div className="mt-auto grid grid-cols-2 gap-16 pt-12 border-t border-slate-100">
-               <div className="flex flex-col items-center">
-                  <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN A</h3>
-                  <p className="italic text-[12px] mb-4 text-slate-400">(Hệ thống đã xác thực)</p>
-                  <div className="relative w-36 h-36 flex items-center justify-center">
-                    <div className="absolute w-32 h-32 border-2 border-rose-600/50 rounded-full flex items-center justify-center rotate-[-15deg]">
-                        <div className="text-rose-600/60 text-[9px] font-bold text-center leading-tight uppercase">
-                            TRUSTFUNDME <br /> XÁC THỰC CHÍNH THỨC
-                        </div>
+              <div className="flex flex-col items-center">
+                <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN A</h3>
+                <p className="italic text-[12px] mb-4 text-slate-400">(Hệ thống đã xác thực)</p>
+                <div className="relative w-36 h-36 flex items-center justify-center">
+                  <div className="absolute w-32 h-32 border-2 border-rose-600/50 rounded-full flex items-center justify-center rotate-[-15deg]">
+                    <div className="text-rose-600/60 text-[9px] font-bold text-center leading-tight uppercase">
+                      TRUSTFUNDME <br /> XÁC THỰC CHÍNH THỨC
                     </div>
-                    <div className="relative z-10 font-[cursive] text-slate-400 text-3xl rotate-[-10deg] opacity-50">TrustAdmin</div>
                   </div>
-                  <p className="mt-4 font-bold text-rose-600 uppercase text-[10px] tracking-widest">ĐÃ ĐÓNG DẤU</p>
-               </div>
+                  <div className="relative z-10 font-[cursive] text-slate-400 text-3xl rotate-[-10deg] opacity-50">TrustAdmin</div>
+                </div>
+                <p className="mt-4 font-bold text-rose-600 uppercase text-[10px] tracking-widest">ĐÃ ĐÓNG DẤU</p>
+              </div>
 
-               <div className="flex flex-col items-center text-center">
-                  <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN B</h3>
-                  <p className="italic text-[12px] mb-4 text-slate-400">(Đã ký xác nhận điện tử)</p>
-                  
-                  <div className="w-full h-[180px] flex items-center justify-center bg-blue-50/30 rounded-2xl border border-blue-100/50 relative">
-                    {signature ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <img src={signature} alt="Chữ ký" className="max-h-[120px] object-contain" />
-                        <div className="flex flex-col items-center text-emerald-600 gap-0.5 font-bold italic border-t border-emerald-200 pt-2 px-4">
-                           <span className="text-[10px]">Chữ Ký Số Đã Xác Minh</span>
-                           <span className="text-[8px] uppercase tracking-widest opacity-60">Chữ Ký Điện Tử Đã Xác Thực</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                         <Clock className="h-6 w-6 opacity-30" />
-                         <span className="text-[10px] font-black uppercase tracking-widest italic">Chưa thực hiện ký kết</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="flex flex-col items-center text-center">
+                <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN B</h3>
+                <p className="italic text-[12px] mb-4 text-slate-400">(Đã ký xác nhận điện tử)</p>
 
-                  <div className="mt-12 font-bold text-[20px] uppercase border-t border-slate-100 w-full text-center pt-4 tracking-tighter text-blue-950">
-                    {isSavedData ? (savedFullName || '—') : (kycData?.fullName || ownerInfo?.fullName || '—')}
-                  </div>
-               </div>
+                <div className="w-full h-[180px] flex items-center justify-center bg-blue-50/30 rounded-2xl border border-blue-100/50 relative">
+                  {signature ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <img src={signature} alt="Chữ ký" className="max-h-[120px] object-contain" />
+                      <div className="flex flex-col items-center text-emerald-600 gap-0.5 font-bold italic border-t border-emerald-200 pt-2 px-4">
+                        <span className="text-[10px]">Chữ Ký Số Đã Xác Minh</span>
+                        <span className="text-[8px] uppercase tracking-widest opacity-60">Chữ Ký Điện Tử Đã Xác Thực</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <Clock className="h-6 w-6 opacity-30" />
+                      <span className="text-[10px] font-black uppercase tracking-widest italic">Chưa thực hiện ký kết</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-12 font-bold text-[20px] uppercase border-t border-slate-100 w-full text-center pt-4 tracking-tighter text-blue-950">
+                  {isSavedData ? (savedFullName || '—') : (kycData?.fullName || ownerInfo?.fullName || '—')}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -380,18 +380,18 @@ export default function StaffCommitmentReviewPage() {
         {/* SIDEBAR PHẢI (SYNCED) */}
         <div className="hidden xl:flex flex-col w-[310px] space-y-6 flex-shrink-0 sticky top-0 no-print">
           <div className="bg-white/90 backdrop-blur-xl rounded-[24px] p-8 shadow-xl shadow-blue-900/10 border border-blue-50">
-             <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-600 rounded-xl">
-                  <Timer className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="font-bold text-[11px] uppercase tracking-wider text-blue-900">Thời hạn ký kết</h3>
-             </div>
-             <div className={`text-4xl font-mono font-black text-center py-6 rounded-2xl ${isExpired ? 'text-rose-600 bg-rose-50' : 'text-blue-600 bg-blue-50'}`}>
-                {signature ? 'HOÀN TẤT' : timeLeft}
-             </div>
-             <p className="mt-6 text-[11px] text-blue-900/60 leading-relaxed font-bold italic">
-               {signature ? 'Bản cam kết đã có hiệu lực pháp lý và được mã hóa lưu trữ trên TrustFundMe e-Contract.' : 'Văn bản đang trong thời gian chờ chủ quỹ hoàn tất thủ tục ký điện tử.'}
-             </p>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-600 rounded-xl">
+                <Timer className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="font-bold text-[11px] uppercase tracking-wider text-blue-900">Thời hạn ký kết</h3>
+            </div>
+            <div className={`text-4xl font-mono font-black text-center py-6 rounded-2xl ${isExpired ? 'text-rose-600 bg-rose-50' : 'text-blue-600 bg-blue-50'}`}>
+              {signature ? 'HOÀN TẤT' : timeLeft}
+            </div>
+            <p className="mt-6 text-[11px] text-blue-900/60 leading-relaxed font-bold italic">
+              {signature ? 'Bản cam kết đã có hiệu lực pháp lý và được mã hóa lưu trữ trên TrustFundMe e-Contract.' : 'Văn bản đang trong thời gian chờ chủ quỹ hoàn tất thủ tục ký điện tử.'}
+            </p>
           </div>
         </div>
       </div>

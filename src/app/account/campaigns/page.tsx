@@ -3,21 +3,38 @@
 
 import { ChevronLeft, ChevronRight, Heart, LayoutGrid, Loader2, Search } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
 import MyCampaignCard from '@/components/account/MyCampaignCard';
 import { chatService } from '@/services/chatService';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 import { userService, UserInfo } from '@/services/userService';
 import AccountCampaignTabbar from './expenditures/components/AccountCampaignTabbar';
 
 export default function CampaignsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-5" />
+          <p className="text-gray-600 font-bold text-lg">Đang tải chiến dịch...</p>
+        </div>
+      </div>
+    }>
+      <CampaignsContent />
+    </Suspense>
+  );
+}
+
+function CampaignsContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetId = searchParams.get('id');
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -25,10 +42,6 @@ export default function CampaignsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const { toast } = useToast();
-
-
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const targetId = searchParams?.get('id');
 
   // Fetch ALL campaigns once (client-side pagination)
   useEffect(() => {
@@ -274,7 +287,7 @@ export default function CampaignsPage() {
                     {displayCampaigns.map((campaign) => {
                       const staffId = campaign.approvedByStaff || (campaign.id ? campaignRawStaffIdMap[campaign.id] : undefined);
                       const staffName = staffId ? (staffNameMap[staffId] || `Đang chờ phân bổ...`) : undefined;
-                      
+
                       return (
                         <MyCampaignCard
                           key={campaign.id}
