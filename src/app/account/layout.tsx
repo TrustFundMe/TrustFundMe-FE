@@ -61,7 +61,7 @@ function AccountSidebar() {
             <div className="pt-8 pb-10 flex justify-center">
                 <button
                     onClick={() => router.push('/')}
-                    className="p-1 text-white/80 hover:text-white transition-colors"
+                    className="bg-[#F8FAFC] text-[#1E293B]/80 hover:text-[#1E293B] transition-colors p-2 rounded-full"
                 >
                     <ArrowLeft className="h-6 w-6" />
                 </button>
@@ -80,13 +80,13 @@ function AccountSidebar() {
                             <Link
                                 href={item.href}
                                 className={`relative flex items-center gap-3 pl-8 pr-4 py-3 text-sm font-bold transition-all duration-200 ${isActive
-                                    ? 'text-[#2d3a30] rounded-l-[2rem] shadow-[-4px_0_12px_rgba(0,0,0,0.05)]'
+                                    ? 'bg-white text-[#1E293B] rounded-l-[2rem] shadow-sm border-[#E2E8F0]'
                                     : 'text-white/80 hover:text-white hover:bg-white/10 rounded-l-[1.5rem] ml-2'
                                     }`}
                                 style={isActive ? { backgroundColor: '#ffffff' } : {}}
                             >
-                                <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#2d3a30]' : 'text-white/60'}`} />
-                                <span className={isActive ? 'text-[#2d3a30]' : 'text-white'}>{item.label}</span>
+                                <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#1E293B]' : 'text-white/60'}`} />
+                                <span className={isActive ? 'text-[#1E293B]' : 'text-white'}>{item.label}</span>
                             </Link>
 
                             {/* Concave bridge BELOW active tab */}
@@ -109,17 +109,16 @@ function AccountSidebar() {
 }
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
+    // Hide sidebar on expenditure detail page
+    const hideSidebar = pathname?.includes('/account/campaigns/expenditures/') && pathname.split('/').length > 4;
+
     return (
         <ProtectedRoute requireVerified={true}>
             {/* The main container background matches the sidebar */}
-            <div className="flex h-screen w-full overflow-hidden" style={{ backgroundColor: SIDEBAR_COLOR }}>
-                <AccountSidebar />
-
-                {/* Main content area - pure white rectangle that meets the sidebar */}
-                <main
-                    className="flex-1 overflow-y-auto shadow-[-10px_0_30px_rgba(0,0,0,0.05)] relative z-0"
-                    style={{ backgroundColor: '#ffffff' }}
-                >
+            <div className="flex h-screen w-full overflow-hidden bg-[#F8FAFC]">
+                {!hideSidebar && <AccountSidebar />}
+                <main className="flex-1 overflow-y-auto relative z-0">
                     <Toaster position="top-right" reverseOrder={false} />
                     {children}
                 </main>

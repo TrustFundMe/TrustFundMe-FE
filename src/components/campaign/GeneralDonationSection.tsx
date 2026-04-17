@@ -38,8 +38,8 @@ export const GeneralDonationSection = () => {
             try {
                 const data = await campaignService.getById(1);
                 setCampaign(data);
-            } catch (error) {
-                console.error("Error fetching general fund:", error);
+            } catch (error: any) {
+                console.warn("Error fetching general fund:", error?.message || error);
                 toast.error("Không thể tải thông tin quỹ chung");
             } finally {
                 setLoading(false);

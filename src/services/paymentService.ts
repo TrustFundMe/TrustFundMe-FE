@@ -41,6 +41,7 @@ export interface CampaignProgress {
     raisedAmount: number;
     goalAmount: number;
     progressPercentage: number;
+    donorCount: number;
 }
 
 export interface RecentDonor {
@@ -49,6 +50,7 @@ export interface RecentDonor {
     donorName: string;
     donorAvatar: string | null;
     amount: number;
+    quantity?: number;
     createdAt: string;
     anonymous: boolean;
 }
@@ -171,6 +173,16 @@ export const paymentService = {
             return [];
         }
     },
+    async getDonorsByItem(itemId: number): Promise<RecentDonor[]> {
+        console.log(`📋 [Payment] Fetching donors for item:`, itemId);
+        try {
+            const res = await api.get<RecentDonor[]>(API_ENDPOINTS.PAYMENTS.DONORS_BY_ITEM(itemId));
+            return res.data;
+        } catch (err: any) {
+            console.error(`❌ [Payment] Donors By Item Error for ${itemId}:`, err);
+            return [];
+        }
+    },
     async getMyPaidDonations(limit: number = 50): Promise<MyDonationImpactResponse[]> {
         console.log(`🔍 [Payment] Fetching my paid donations with limit:`, limit);
         try {
@@ -181,6 +193,16 @@ export const paymentService = {
         } catch (err: any) {
             console.error("❌ [Payment] My Paid Donations Error:", err);
             throw err;
+        }
+    },
+    async getUserDonationCount(userId: number | string): Promise<number> {
+        console.log(`🔍 [Payment] Fetching donation count for User ID: ${userId}`);
+        try {
+            const res = await api.get<number>(API_ENDPOINTS.PAYMENTS.USER_DONATION_COUNT(userId));
+            return res.data;
+        } catch (err: any) {
+            console.error("❌ [Payment] User Donation Count Error:", err);
+            return 0;
         }
     }
 };

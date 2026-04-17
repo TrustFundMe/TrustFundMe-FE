@@ -135,24 +135,7 @@ export default function Step2Setup({ data, onChange, errors, showErrors, onPrev,
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const getCategoryIcon = (name: string) => {
-        const n = name.toLowerCase();
-        if (n.includes('y tế') || n.includes('sức khỏe') || n.includes('bệnh')) return <HeartPulse className="h-4 w-4" />;
-        if (n.includes('giáo dục') || n.includes('học')) return <BookOpen className="h-4 w-4" />;
-        if (n.includes('môi trường') || n.includes('thiên nhiên')) return <Leaf className="h-4 w-4" />;
-        if (n.includes('khẩn cấp') || n.includes('thiên tai') || n.includes('lũ')) return <Flame className="h-4 w-4" />;
-        if (n.includes('nhà') || n.includes('nơi ở') || n.includes('chỗ ở')) return <Home className="h-4 w-4" />;
-        if (n.includes('cộng đồng') || n.includes('xã hội')) return <Users className="h-4 w-4" />;
-        if (n.includes('trẻ em') || n.includes('trẻ') || n.includes('nhi')) return <Baby className="h-4 w-4" />;
-        if (n.includes('động vật') || n.includes('thú cưng')) return <Dog className="h-4 w-4" />;
-        if (n.includes('quốc tế') || n.includes('toàn cầu')) return <Globe className="h-4 w-4" />;
-        if (n.includes('thực phẩm') || n.includes('lương thực') || n.includes('ăn')) return <Utensils className="h-4 w-4" />;
-        if (n.includes('xây dựng') || n.includes('cơ sở hạ tầng')) return <Hammer className="h-4 w-4" />;
-        if (n.includes('nghệ thuật') || n.includes('văn hóa') || n.includes('âm nhạc')) return <Music className="h-4 w-4" />;
-        if (n.includes('năng lượng') || n.includes('điện')) return <Zap className="h-4 w-4" />;
-        if (n.includes('an toàn') || n.includes('bảo vệ')) return <ShieldCheck className="h-4 w-4" />;
-        return <AlertCircle className="h-4 w-4" />;
-    };
+
 
     const selectedCategory = categories.find(c => c.id === data.categoryId);
 
@@ -205,14 +188,16 @@ export default function Step2Setup({ data, onChange, errors, showErrors, onPrev,
                                 <button
                                     type="button"
                                     onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                                    className={`w-full h-14 px-6 rounded-full flex items-center justify-between transition-all shadow-lg ${selectedCategory ? 'bg-[#ff5a4d] text-white shadow-[#ff5a4d]/20' : 'bg-gray-100 text-gray-400'
+                                    className={`w-full h-14 px-6 rounded-full flex items-center justify-between transition-all border-2 outline-none ${selectedCategory
+                                        ? 'bg-white border-[#dc2626] text-black shadow-sm'
+                                        : 'bg-gray-50/50 border-transparent text-gray-400 hover:bg-white hover:border-gray-200'
                                         }`}
                                 >
-                                    <span className="font-bold text-sm tracking-wide">
+                                    <span className={`font-bold text-sm tracking-wide ${selectedCategory ? 'text-black' : 'text-black/20'}`}>
                                         {selectedCategory ? selectedCategory.name : 'Chọn danh mục'}
                                     </span>
                                     <svg
-                                        className={`w-5 h-5 transition-transform duration-300 ${isCategoryOpen ? 'rotate-180' : ''}`}
+                                        className={`w-5 h-5 transition-transform duration-300 ${isCategoryOpen ? 'rotate-180 text-[#dc2626]' : 'text-gray-300'}`}
                                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     >
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -243,11 +228,15 @@ export default function Step2Setup({ data, onChange, errors, showErrors, onPrev,
                                                         `}
                                                     >
                                                         <span className={`font-bold text-sm ${isSelected ? 'text-[#ff5a4d]' : ''}`}>{cat.name}</span>
-                                                        <div className={`p-1.5 rounded-full transition-all duration-200 ${isSelected
+                                                        <div className={`h-8 w-8 rounded-full transition-all duration-200 flex items-center justify-center ${isSelected
                                                             ? 'bg-[#ff5a4d] text-white scale-110'
-                                                            : 'bg-gray-100 text-gray-400 group-hover:bg-[#ff5a4d]/20 group-hover:text-[#ff5a4d]'
+                                                            : 'bg-gray-100 text-gray-400'
                                                             }`}>
-                                                            {getCategoryIcon(cat.name)}
+                                                            {cat.iconUrl ? (
+                                                                <img src={cat.iconUrl} alt="" className={`h-5 w-5 object-contain`} />
+                                                            ) : (
+                                                                <ImageIcon className="h-4 w-4" />
+                                                            )}
                                                         </div>
                                                     </button>
                                                 );

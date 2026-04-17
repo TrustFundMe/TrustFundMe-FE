@@ -16,18 +16,13 @@ export const campaignService = {
     return res.data;
   },
 
-  async getByFundOwner(fundOwnerId: number): Promise<CampaignDto[]> {
+  async getByFundOwner(fundOwnerId: number | string): Promise<CampaignDto[]> {
     const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER(fundOwnerId));
     return res.data;
   },
 
-  async getUserCampaignsPaginated(userId: number, page: number = 0, size: number = 6): Promise<{
-    content: CampaignDto[];
-    totalPages: number;
-    totalElements: number;
-    number: number;
-  }> {
-    const res = await api.get(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER_PAGINATED(userId), {
+  async getUserCampaignsPaginated(userId: number | string, page: number = 0, size: number = 6): Promise<PaginatedResponse<CampaignDto>> {
+    const res = await api.get<PaginatedResponse<CampaignDto>>(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER_PAGINATED(userId), {
       params: { page, size }
     });
     return res.data;
@@ -188,6 +183,16 @@ export const campaignService = {
 
   async closeCampaign(id: number): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.CLOSE(id));
+    return res.data;
+  },
+
+  async getCampaignCount(fundOwnerId: number | string): Promise<number> {
+    const res = await api.get<number>(API_ENDPOINTS.CAMPAIGNS.COUNT(fundOwnerId));
+    return res.data;
+  },
+
+  async getStatistics(fundOwnerId: number | string): Promise<any> {
+    const res = await api.get<any>(API_ENDPOINTS.CAMPAIGNS.STATISTICS(fundOwnerId));
     return res.data;
   },
 

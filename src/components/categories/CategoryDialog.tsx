@@ -18,7 +18,7 @@ import { mediaService } from '@/services/mediaService';
 import { campaignCategoryService } from '@/services/campaignCategoryService';
 import { toast } from 'react-hot-toast';
 import { Loader2, Upload, X, ImageIcon } from 'lucide-react';
-import axios from 'axios';
+import { api } from '@/config/axios';
 
 interface CategoryDialogProps {
     category: CampaignCategory | null;
@@ -95,13 +95,13 @@ export function CategoryDialog({
 
         if (existingIconId) {
             // Use PATCH for update
-            const response = await axios.patch(`http://localhost:8080/api/media/upload/png/${existingIconId}`, formData, {
+            const response = await api.patch(`/api/media/upload/png/${existingIconId}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return response.data;
         } else {
             // Use POST for create
-            const response = await axios.post('http://localhost:8080/api/media/upload/png', formData, {
+            const response = await api.post('/api/media/upload/png', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             return response.data;

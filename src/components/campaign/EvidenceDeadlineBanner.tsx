@@ -46,14 +46,8 @@ export default function EvidenceDeadlineBanner({ dueAt }: Props) {
   const isUrgent = deadline.getTime() - now.getTime() <= 24 * 60 * 60 * 1000; // within 24h
 
   return (
-    <div className={`rounded-[1.5rem] border-2 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 ${
-      isOverdue
-        ? 'bg-rose-50 border-rose-300 animate-pulse'
-        : isUrgent
-        ? 'bg-red-50 border-red-300 animate-pulse'
-        : 'bg-amber-50 border-amber-200'
-    }`}>
-      <div className={`flex items-center gap-3 ${isOverdue ? 'text-rose-600' : 'text-red-600'}`}>
+    <div className="rounded-[1.5rem] border-2 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gray-50 border-gray-200">
+      <div className="flex items-center gap-3 text-black">
         <div className="w-14 h-14 rounded-2xl bg-white/80 flex items-center justify-center shadow-sm">
           {isOverdue ? (
             <AlertTriangle className="w-7 h-7" />
@@ -65,7 +59,7 @@ export default function EvidenceDeadlineBanner({ dueAt }: Props) {
           <p className="text-[9px] font-black uppercase tracking-[2px] opacity-70 mb-0.5">
             {isOverdue ? 'Đã quá hạn nộp' : 'Thời gian còn lại'}
           </p>
-          <p className="text-2xl font-black leading-none">{timeLeft}</p>
+          <p className="text-2xl font-black leading-none text-black">{timeLeft}</p>
         </div>
       </div>
       <div className="sm:ml-auto text-right">
