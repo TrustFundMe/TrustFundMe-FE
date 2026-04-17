@@ -545,7 +545,7 @@ export default function FlagsManagementPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white p-4 lg:p-6 overflow-hidden gap-4">
+    <div className="flex flex-col flex-1 bg-white p-4 lg:p-6 overflow-hidden gap-4">
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2 flex-wrap">

@@ -15,6 +15,10 @@ interface BEUserInfo {
   isActive?: boolean;
   banReason?: string;
   reason?: string;
+  createdAt?: string | Date;
+  gender?: string;
+  dob?: string;
+  address?: string;
 }
 
 interface AuthContextType {

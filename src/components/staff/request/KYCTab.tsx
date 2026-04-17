@@ -134,7 +134,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 flex-1">
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">

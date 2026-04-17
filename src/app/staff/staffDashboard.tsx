@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Settings,
@@ -31,7 +31,6 @@ import {
   ChevronDown,
   ArrowUpRight,
   BarChart2,
-  PieChart as PieChartIcon,
   Activity,
   Clock3,
   FileCheck,
@@ -44,8 +43,30 @@ import {
   BarChart,
   Plus,
   RefreshCw,
+  Mail,
+  Phone,
+  Landmark,
+  Pencil,
+  Loader2,
+  Save,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextProxy';
+import { useRouter } from 'next/navigation';
+import { api } from '@/config/axios';
+import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { bankAccountService } from '@/services/bankAccountService';
+import { BankAccountDto } from '@/types/bankAccount';
+import { useToast } from '@/components/ui/Toast';
+import { AvatarUploader } from '@/components/ui/avatar-uploader';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalBody,
+  ModalFooter,
+} from '@/components/ui/modal';
 
 // =====================================================================
 // MOCK DATA – Staff Work Dashboard
@@ -542,23 +563,182 @@ const StackedBar = ({ segments, totalWidth = 100 }: { segments: { label: string;
 };
 
 // =====================================================================
+// PROFILE MODAL COMPONENT
+// =====================================================================
+
+const StaffProfileModal = ({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) => {
+  const { user, updateUser } = useAuth();
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Form state
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+
+  useEffect(() => {
+    if (user && open) {
+      setFullName(user.fullName || '');
+      setPhone(user.phoneNumber || '');
+      setAvatarPreview(user.avatarUrl || null);
+    }
+  }, [user, open]);
+
+
+
+
+
+  const handleAvatarUpload = async (file: File): Promise<{ success: boolean }> => {
+    if (!user) throw new Error('Bạn chưa đăng nhập');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('userId', String(user.id));
+      const upRes = await fetch('/api/upload/avatar', { method: 'POST', credentials: 'include', body: fd });
+      const upJson = await upRes.json();
+      if (!upRes.ok) throw new Error(upJson.error || 'Tải ảnh lên thất bại');
+      const avatarUrl = upJson.avatarUrl as string;
+      updateUser({ avatarUrl });
+      setAvatarPreview(avatarUrl);
+      await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), { avatarUrl });
+      toast('Cập nhật ảnh đại diện thành công', 'success');
+      return { success: true };
+    } catch (err: any) {
+      toast('Cập nhật ảnh đại diện thất bại', 'error');
+      throw err;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim()) {
+      toast('Vui lòng nhập Họ & Tên', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (!user?.id) throw new Error('Session expired');
+      await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), { 
+        fullName: fullName.trim(), 
+        phoneNumber: phone.trim() || undefined 
+      });
+      updateUser({ fullName: fullName.trim(), phoneNumber: phone.trim() });
+      toast('Cập nhật hồ sơ thành công', 'success');
+      onClose();
+    } catch (err: any) {
+      toast(err.response?.data?.message || 'Lỗi khi lưu thông tin', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onOpenChange={onClose}>
+      <ModalContent className="max-w-5xl min-w-[850px] p-0 overflow-hidden bg-white rounded-[32px] border-none shadow-2xl">
+        <div className="flex flex-col md:flex-row overflow-hidden">
+          {/* Slimmed Sidebar */}
+          <div className="md:w-[220px] bg-gray-50/60 p-8 flex flex-col items-center text-center border-r border-gray-100 shrink-0">
+            <AvatarUploader onUpload={handleAvatarUpload} onError={m => toast(m, 'error')}>
+              <div className="relative group cursor-pointer mb-5">
+                <Avatar className="h-24 w-24 ring-8 ring-white shadow-xl group-hover:scale-105 transition-transform duration-300">
+                  <AvatarImage src={avatarPreview ?? undefined} />
+                  <AvatarFallback className="bg-white text-3xl font-black text-gray-400">
+                    {(user?.fullName?.[0] || 'S').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-0 right-0 bg-emerald-500 p-2 rounded-xl shadow-lg border-2 border-white group-hover:bg-emerald-600 transition-colors">
+                  <Pencil className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </AvatarUploader>
+            <h2 className="text-base font-black text-gray-900 mb-1 leading-tight line-clamp-2">{user?.fullName}</h2>
+            <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mb-6 whitespace-nowrap">Thành viên hệ thống</p>
+            <div className="w-full space-y-2 text-left">
+              <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Email liên kết</div>
+                <div className="text-[10px] font-bold text-gray-600 truncate">{user?.email}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Wider Form Area */}
+          <div className="flex-1 px-12 py-10 bg-white">
+            <ModalHeader className="mb-8 p-0">
+              <ModalTitle className="text-xl font-black text-gray-900 uppercase tracking-tight">Cập nhật tài khoản</ModalTitle>
+            </ModalHeader>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-black text-gray-400 ml-1 tracking-widest">Họ & Tên nhân viên</label>
+                <input 
+                  type="text" 
+                  value={fullName} 
+                  onChange={e => setFullName(e.target.value)} 
+                  placeholder="Nhập đầy đủ Họ và Tên"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4.5 text-base font-bold shadow-sm outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/30 transition-all" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-black text-gray-400 ml-1 tracking-widest">Số điện thoại liên lạc</label>
+                <input 
+                  type="tel" 
+                  value={phone} 
+                  onChange={e => setPhone(e.target.value)} 
+                  placeholder="09xx xxx xxx"
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4.5 text-base font-bold shadow-sm outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/30 transition-all" 
+                />
+              </div>
+
+              <div className="flex items-center gap-6 pt-10">
+                <button 
+                  type="submit" 
+                  disabled={saving} 
+                  className="flex-1 h-14 bg-emerald-600 text-white rounded-[20px] text-[11px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Lưu thay đổi
+                </button>
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="flex-1 h-14 bg-gray-50 text-gray-400 rounded-[20px] text-[11px] font-black uppercase tracking-widest hover:bg-gray-100 hover:-translate-y-0.5 transition-all border border-gray-100 whitespace-nowrap"
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+// =====================================================================
 // MAIN COMPONENT
 // =====================================================================
 
 export default function StaffDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedTab, setSelectedTab] = useState('Tác vụ');
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   // AI skill data (radar)
   const radarData = [
-    { label: 'KYC', value: 92 },
-    { label: 'Flag', value: 78 },
-    { label: 'Campaign', value: 85 },
-    { label: 'Expend', value: 80 },
-    { label: 'Feed', value: 88 },
-    { label: 'Lịch', value: 95 },
+    { label: 'Định danh', value: 92 },
+    { label: 'Báo cáo', value: 78 },
+    { label: 'Chiến dịch', value: 85 },
+    { label: 'Khoản chi', value: 80 },
+    { label: 'Tin tức', value: 88 },
+    { label: 'Lịch hẹn', value: 95 },
   ];
 
   const today = new Date();
@@ -605,10 +785,10 @@ export default function StaffDashboard() {
           <div className="h-10 w-px bg-gray-200" />
           <div className="flex items-center gap-3">
             <div className="text-right">
-              <p className="text-[11px] font-black text-gray-900 uppercase leading-none">{STAFF_PROFILE.name}</p>
-              <p className="text-[8px] font-black text-emerald-600 uppercase mt-1 tracking-widest">Staff Account</p>
+              <p className="text-[11px] font-black text-gray-900 uppercase leading-none">{user?.fullName || STAFF_PROFILE.name}</p>
+              <p className="text-[8px] font-black text-emerald-600 uppercase mt-1 tracking-widest">Tài khoản {user?.role === 'ADMIN' ? 'Quản trị' : 'Nhân viên'}</p>
             </div>
-            <img src={STAFF_PROFILE.avatar} alt="Avatar" className="h-11 w-11 rounded-2xl object-cover ring-2 ring-emerald-100 shadow-md" />
+            <img src={user?.avatarUrl || STAFF_PROFILE.avatar} alt="Avatar" className="h-11 w-11 rounded-2xl object-cover ring-2 ring-emerald-100 shadow-md" />
           </div>
         </div>
       </div>
@@ -623,48 +803,52 @@ export default function StaffDashboard() {
           <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col items-center">
             <div className="relative mb-5">
               <div className="h-28 w-28 rounded-[36px] bg-emerald-50 p-1 shadow-inner border-2 border-gray-100 overflow-hidden flex items-center justify-center">
-                <img src={STAFF_PROFILE.avatar} alt="Avatar" className="h-full w-full object-cover rounded-[30px]" />
+                <img src={user?.avatarUrl || STAFF_PROFILE.avatar} alt="Avatar" className="h-full w-full object-cover rounded-[30px]" />
               </div>
               <div className="absolute bottom-1 right-1 h-7 w-7 bg-emerald-500 rounded-xl border-4 border-white shadow-md flex items-center justify-center">
                 <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
               </div>
             </div>
-            <h3 className="text-lg font-black text-gray-900 tracking-tight">{STAFF_PROFILE.name}</h3>
+            <h3 className="text-lg font-black text-gray-900 tracking-tight">{user?.fullName || STAFF_PROFILE.name}</h3>
             <p className="px-3 py-1 bg-emerald-50 rounded-lg text-[9px] font-black text-emerald-700 uppercase tracking-widest mt-2 mb-6 border border-emerald-100">
-              {STAFF_PROFILE.role}
+              {user?.role === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên kiểm duyệt'}
             </p>
 
-            <div className="w-full space-y-4 pt-6 border-t border-gray-100">
+            <div className="w-full space-y-2 pt-4 border-t border-gray-100">
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-gray-400 font-bold uppercase tracking-wide">Phòng ban</span>
-                <span className="font-black text-gray-800">KYC & Kiểm duyệt</span>
+                <span className="font-black text-gray-800 text-right">Kiểm duyệt & Vận hành</span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-gray-400 font-bold uppercase tracking-wide">Mã NV</span>
-                <span className="font-black text-gray-800">{STAFF_PROFILE.employeeId}</span>
+                <span className="font-black text-gray-800" title="Mã định danh hệ thống TrustFundMe Staff">TFMSTAFF{user?.id || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-gray-400 font-bold uppercase tracking-wide">Điện thoại</span>
+                <span className="font-black text-gray-800">{user?.phoneNumber || '—'}</span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-gray-400 font-bold uppercase tracking-wide">Ngày vào</span>
-                <span className="font-black text-gray-800">{STAFF_PROFILE.joinDate}</span>
-              </div>
-              <div className="flex justify-between items-center text-[11px]">
-                <span className="text-gray-400 font-bold uppercase tracking-wide">Người quản lý</span>
-                <span className="font-black text-gray-800">{STAFF_PROFILE.lineManager}</span>
+                <span className="font-black text-gray-800">
+                  {user?.createdAt 
+                    ? new Date(user.createdAt as any).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    : STAFF_PROFILE.joinDate}
+                </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-gray-400 font-bold uppercase tracking-wide">Trạng thái</span>
-                <span className="px-2 py-0.5 bg-emerald-50 rounded-full text-[9px] font-black text-emerald-600 uppercase">Đang hoạt động</span>
+                <span className="px-2 py-0.5 bg-emerald-50 rounded-full text-[8px] font-black text-emerald-600 uppercase">
+                  {user?.isActive !== false ? 'Đang hoạt động' : 'Tạm khóa'}
+                </span>
               </div>
             </div>
 
-            <div className="w-full pt-5 mt-4 space-y-3">
-              <button className="w-full py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2">
-                <ShieldCheck className="w-4 h-4" /> Kiểm duyệt KYC
-              </button>
-              <button className="w-full py-3 bg-gray-50 text-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-700 transition-all">
-                Xem hồ sơ chi tiết
-              </button>
-            </div>
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="w-full mt-4 py-3 bg-gray-50 text-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-700 transition-all border border-gray-100 shadow-sm"
+            >
+              Xem hồ sơ chi tiết
+            </button>
           </div>
 
           {/* Personal Info Card */}
@@ -675,11 +859,11 @@ export default function StaffDashboard() {
             </h3>
             <div className="space-y-4">
               {[
-                { label: 'Giới tính', value: STAFF_PROFILE.gender },
-                { label: 'Ngày sinh', value: STAFF_PROFILE.dob },
-                { label: 'Email', value: STAFF_PROFILE.email },
-                { label: 'Điện thoại', value: STAFF_PROFILE.phone },
-                { label: 'Địa chỉ', value: STAFF_PROFILE.address },
+                { label: 'Giới tính', value: user?.gender || STAFF_PROFILE.gender },
+                { label: 'Ngày sinh', value: user?.dob || STAFF_PROFILE.dob },
+                { label: 'Email', value: user?.email || STAFF_PROFILE.email },
+                { label: 'Điện thoại', value: user?.phoneNumber || STAFF_PROFILE.phone },
+                { label: 'Địa chỉ', value: user?.address || STAFF_PROFILE.address },
               ].map((item, i) => (
                 <div key={i} className="flex flex-col gap-1">
                   <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{item.label}</span>
@@ -726,9 +910,9 @@ export default function StaffDashboard() {
                 <div className="h-7 w-7 rounded-lg bg-violet-50 flex items-center justify-center">
                   <BarChart2 className="w-4 h-4 text-violet-600" />
                 </div>
-                <h3 className="text-xs font-black text-gray-700 uppercase tracking-widest">AI Phân tích</h3>
+                <h3 className="text-xs font-black text-gray-700 uppercase tracking-widest"><span title="Trí tuệ nhân tạo (Artificial Intelligence)">AI</span> Phân tích</h3>
               </div>
-              <span className="px-2 py-0.5 bg-emerald-50 rounded-full text-[8px] font-black text-emerald-600 uppercase tracking-widest">Live</span>
+              <span className="px-2 py-0.5 bg-emerald-50 rounded-full text-[8px] font-black text-emerald-600 uppercase tracking-widest">Trực tiếp</span>
             </div>
 
             <div className="flex items-center gap-3 mb-6">
@@ -769,6 +953,80 @@ export default function StaffDashboard() {
                   <p className="text-[10px] text-gray-600 font-medium leading-relaxed">{s}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Team Overview */}
+          <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Tổng quan đội ngũ</h3>
+              <div className="h-7 w-7 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {TEAM_STATS.map((stat, i) => (
+                <div key={i} className="p-4 bg-gray-50 rounded-2xl flex flex-col items-center gap-2">
+                  <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.color + '15' }}>
+                    <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
+                  </div>
+                  <span className="text-xl font-black text-gray-900">{stat.value}</span>
+                  <span className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-tight leading-tight">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Monthly Stats */}
+          <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Tiến độ tháng</h3>
+              <div className="h-7 w-7 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="space-y-4">
+              {MONTHLY_STATS.map((stat, i) => {
+                const pct = Math.round((stat.value / stat.target) * 100);
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">{stat.label}</span>
+                      <span className="text-[10px] font-black" style={{ color: stat.color }}>{stat.value}/{stat.target}</span>
+                    </div>
+                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 1, delay: i * 0.1, ease: 'easeOut' }}
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: stat.color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ghi chú & Giá thị trường - Moved to Left for Balance */}
+          <div className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
+            <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              Giá thị trường & Ghi chú
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                {[{l:'Gạo',p:'18k'},{l:'Thịt',p:'145k'}].map((m,i)=>(
+                  <div key={i} className="p-2 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+                    <span className="text-[9px] font-bold text-gray-400">{m.l}</span>
+                    <span className="text-[9px] font-black text-gray-700">{m.p}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                <p className="text-[9px] text-emerald-700 font-bold leading-tight">AI Note: 3 Campaign khẩn cần duyệt trước 18h. KYC Trần Văn A đang chờ ảnh.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -840,14 +1098,14 @@ export default function StaffDashboard() {
             </ChartCard>
           </div>
 
-          {/* Bar Chart: Weekly Workload */}
+          {/* Weekly Workload Chart */}
           <ChartCard title="Khối lượng công việc tuần" subtitle="Biểu đồ cột theo ngày & loại tác vụ" badge="So sánh tuần">
             <div className="flex justify-between items-end mb-4">
               <div className="flex gap-4">
-                {['KYC', 'Flag', 'Campaign', 'Lịch'].map((label, i) => (
+                {['KYC', 'Flag', 'Chiến dịch', 'Lịch'].map((label, i) => (
                   <div key={i} className="flex items-center gap-1.5">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: ['#10b981', '#f59e0b', '#6366f1', '#14b8a6'][i] }} />
-                    <span className="text-[9px] font-bold text-gray-500">{label}</span>
+                    <span className="text-[9px] font-bold text-gray-500" title={label === 'KYC' ? 'Xác minh danh tính khách hàng' : label === 'Flag' ? 'Báo cáo vi phạm' : ''}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -955,13 +1213,13 @@ export default function StaffDashboard() {
           </ChartCard>
 
           {/* Campaign Pending List */}
-          <ChartCard title="Campaign chờ duyệt" subtitle="Danh sách chiến dịch cần kiểm tra" badge="2 mới hôm nay" badgeColor="bg-indigo-50 text-indigo-600">
+          <ChartCard title="Chiến dịch chờ duyệt" subtitle="Danh sách chiến dịch cần kiểm tra" badge="2 mới hôm nay" badgeColor="bg-indigo-50 text-indigo-600">
             <div className="space-y-3">
               {[
-                { title: 'Chiến dịch cứu trợ miền Trung', owner: 'Trần Văn A', amount: '50,000,000đ', date: '16/04/2026', status: 'Chờ KYC' },
-                { title: 'Quỹ học bổng cho trẻ em nghèo', owner: 'Nguyễn Thị B', amount: '30,000,000đ', date: '15/04/2026', status: 'Chờ Expenditure' },
-                { title: 'Hỗ trợ y tế người già', owner: 'Lê Văn C', amount: '80,000,000đ', date: '14/04/2026', status: 'Chờ Evidence' },
-                { title: 'Dự án nhà ở cho người cơ nhỡ', owner: 'Phạm Thị D', amount: '120,000,000đ', date: '13/04/2026', status: 'Chờ Campaign' },
+                { title: 'Chiến dịch cứu trợ miền Trung', owner: 'Trần Văn A', amount: '50,000,000đ', date: '16/04/2026', status: 'Chờ <span title="Xác minh danh tính">KYC</span>' },
+                { title: 'Quỹ học bổng cho trẻ em nghèo', owner: 'Nguyễn Thị B', amount: '30,000,000đ', date: '15/04/2026', status: 'Chờ Khoản chi' },
+                { title: 'Hỗ trợ y tế người già', owner: 'Lê Văn C', amount: '80,000,000đ', date: '14/04/2026', status: 'Chờ Minh chứng' },
+                { title: 'Dự án nhà ở cho người cơ nhỡ', owner: 'Phạm Thị D', amount: '120,000,000đ', date: '13/04/2026', status: 'Chờ Xét duyệt' },
               ].map((camp, i) => (
                 <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-emerald-50/30 transition-colors cursor-pointer group">
                   <div className="h-10 w-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
@@ -976,7 +1234,7 @@ export default function StaffDashboard() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
-                    <span className="text-[8px] font-black text-gray-400 uppercase">{camp.status}</span>
+                    <span className="text-[8px] font-black text-gray-400 uppercase" dangerouslySetInnerHTML={{ __html: camp.status }} />
                     <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button className="h-7 w-7 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
                         <Check className="w-3.5 h-3.5" />
@@ -991,59 +1249,51 @@ export default function StaffDashboard() {
             </div>
           </ChartCard>
 
-          {/* Internal Notes (AI Auto-generated) */}
-          <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-5 flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-emerald-600" />
-              Ghi chú nội bộ & Nhật ký AI
+
+        </div>
+
+        {/* ===== RIGHT SIDEBAR ===== */}
+         <div className="col-span-12 lg:col-span-3 flex flex-col gap-5">
+          {/* Notifications - Moved from Center */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-[24px] p-5 shadow-sm border border-amber-100">
+            <h3 className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Bell className="w-3.5 h-3.5" />
+              Thông báo khẩn
             </h3>
-            <div className="grid grid-cols-2 gap-5">
-              {[
-                {
-                  title: 'Nhật ký hôm nay',
-                  content: 'Đã duyệt 8 hồ sơ KYC, 3 campaign và kiểm tra 5 expenditure. Flag FL-001 chưa xử lý do thiếu hình ảnh gốc từ chủ quỹ.',
-                  tag: 'Nhật ký',
-                  tagColor: 'bg-indigo-50 text-indigo-600',
-                },
-                {
-                  title: 'Lưu ý từ hệ thống AI',
-                  content: 'Có 2 campaign mới cần ưu tiên xử lý trước 18h hôm nay. KYC của Trần Văn A cần bổ sung giấy tờ CCCD hai mặt.',
-                  tag: 'AI cảnh báo',
-                  tagColor: 'bg-amber-50 text-amber-600',
-                },
-              ].map((note, i) => (
-                <div key={i} className="p-5 bg-gray-50 rounded-2xl border border-gray-100 hover:border-emerald-200 transition-all">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-[11px] font-black text-gray-800 uppercase tracking-wide">{note.title}</h4>
-                    <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${note.tagColor}`}>{note.tag}</span>
+            <div className="space-y-2.5">
+              {NOTIFICATIONS.slice(0, 3).map((notif, i) => (
+                <div key={i} className="flex items-start gap-2.5 p-2 bg-white rounded-xl border border-amber-100/50">
+                  <div className={`h-1.5 w-1.5 rounded-full mt-1.5 shrink-0 ${notif.type === 'error' ? 'bg-rose-500' : 'bg-amber-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-black text-gray-800 truncate">{notif.text}</div>
+                    <div className="text-[8px] font-bold text-gray-400">{notif.time}</div>
                   </div>
-                  <p className="text-[11px] text-gray-600 leading-relaxed font-medium">{note.content}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* ===== RIGHT SIDEBAR ===== */}
-        <div className="col-span-12 lg:col-span-3 flex flex-col gap-5">
-
-          {/* Mini Top Stats */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'KYC tuần này', value: '47', icon: ShieldCheck, color: '#10b981' },
-              { label: 'Flag mới', value: '8', icon: Flag, color: '#ef4444' },
-              { label: 'Campaign duyệt', value: '15', icon: FileCheck, color: '#6366f1' },
-              { label: 'Expenditure', value: '23', icon: Receipt, color: '#14b8a6' },
-            ].map((s, i) => (
-              <div key={i} className="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex flex-col items-center gap-2">
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: s.color + '15' }}>
-                  <s.icon className="w-4 h-4" style={{ color: s.color }} />
+          {/* Recent Activity - Moved from Center */}
+          <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Hoạt động</h3>
+              <Activity className="w-3.5 h-3.5 text-indigo-600" />
+            </div>
+            <div className="space-y-2">
+              {RECENT_ACTIVITY.slice(0, 5).map((act, i) => (
+                <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl border border-gray-100/50 group">
+                  <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: act.color + '15' }}>
+                    <act.icon className="w-3.5 h-3.5" style={{ color: act.color }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-black text-gray-900 group-hover:text-emerald-700 transition-colors truncate">{act.user}</div>
+                    <div className="text-[8px] font-bold text-gray-400 truncate">{act.action}</div>
+                  </div>
                 </div>
-                <span className="text-lg font-black text-gray-900">{s.value}</span>
-                <span className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-tight">{s.label}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+
 
           {/* Calendar */}
           <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
@@ -1227,187 +1477,12 @@ export default function StaffDashboard() {
             </div>
           </div>
         </div>
-
-        {/* ===== BOTTOM ROW: Fill empty bottom spaces ===== */}
-        <div className="col-span-12 grid grid-cols-12 gap-5">
-
-          {/* Left: Team Overview + Monthly Stats Progress */}
-          <div className="lg:col-span-3 flex flex-col gap-5">
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Team Overview</h3>
-                <div className="h-7 w-7 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {TEAM_STATS.map((stat, i) => (
-                  <div key={i} className="p-4 bg-gray-50 rounded-2xl flex flex-col items-center gap-2">
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: stat.color + '15' }}>
-                      <stat.icon className="w-4 h-4" style={{ color: stat.color }} />
-                    </div>
-                    <span className="text-xl font-black text-gray-900">{stat.value}</span>
-                    <span className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-tight leading-tight">{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Tiến độ tháng</h3>
-                <div className="h-7 w-7 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="space-y-4">
-                {MONTHLY_STATS.map((stat, i) => {
-                  const pct = Math.round((stat.value / stat.target) * 100);
-                  return (
-                    <div key={i}>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wide">{stat.label}</span>
-                        <span className="text-[10px] font-black" style={{ color: stat.color }}>{stat.value}/{stat.target}</span>
-                      </div>
-                      <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{ duration: 1, delay: i * 0.1, ease: 'easeOut' }}
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: stat.color }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Center: Activity Feed + Notifications */}
-          <div className="lg:col-span-6 flex flex-col gap-5">
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Hoạt động gần đây</h3>
-                <div className="h-7 w-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                  <Activity className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="space-y-3">
-                {RECENT_ACTIVITY.map((act, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group">
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: act.color + '15' }}>
-                      <act.icon className="w-4 h-4" style={{ color: act.color }} />
-                    </div>
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-black text-gray-900">{act.user}</span>
-                        <span className="text-[9px] font-bold text-gray-400">đã</span>
-                        <span className="text-[11px] font-bold" style={{ color: act.color }}>{act.action}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-gray-400 mt-0.5">→ {act.target}</span>
-                    </div>
-                    <span className="text-[9px] font-bold text-gray-400 shrink-0">{act.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-[24px] p-6 shadow-sm border border-amber-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-amber-700 uppercase tracking-widest">Thông báo khẩn</h3>
-                <div className="h-7 w-7 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                  <Bell className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="space-y-3">
-                {NOTIFICATIONS.map((notif, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-amber-100 shadow-sm">
-                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${notif.type === 'warning' ? 'bg-amber-400' : notif.type === 'error' ? 'bg-rose-500' : 'bg-indigo-400'}`} />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-[11px] font-bold text-gray-800 leading-relaxed">{notif.text}</span>
-                      <span className="text-[9px] font-bold text-gray-400 mt-1">{notif.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Income Summary + Quick Links */}
-          <div className="lg:col-span-3 flex flex-col gap-5">
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Thu nhập tháng</h3>
-                <div className="h-7 w-7 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <DollarSign className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="space-y-4">
-                {INCOME_DATA.map((item, i) => (
-                  <div key={i} className={`flex justify-between items-center py-2.5 border-b border-gray-100 ${i === INCOME_DATA.length - 1 ? 'border-b-0' : ''}`}>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide ${i === INCOME_DATA.length - 1 ? 'text-emerald-600' : 'text-gray-500'}`}>{item.label}</span>
-                    <span className="text-[11px] font-black" style={{ color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-[24px] p-6 shadow-lg text-white relative overflow-hidden">
-              <div className="absolute -right-6 -bottom-6 w-28 h-28 bg-white/5 rounded-full blur-[40px]" />
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Inbox className="w-5 h-5 text-slate-300" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Truy cập nhanh</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: 'Trung tâm xử lý', href: '/staff/request', icon: ClipboardList },
-                    { label: 'Lịch hẹn', href: '/staff/schedule', icon: Calendar },
-                    { label: 'Báo cáo Flag', href: '/staff/flags', icon: Flag },
-                    { label: 'Chat', href: '/staff/chat', icon: MessageSquare },
-                  ].map((link, i) => (
-                    <button key={i} className="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-all flex flex-col items-center gap-2 text-center">
-                      <link.icon className="w-5 h-5 text-emerald-300" />
-                      <span className="text-[9px] font-black uppercase tracking-tight">{link.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Đánh giá hiệu suất</h3>
-              <div className="flex flex-col items-center gap-3">
-                <div className="text-4xl font-black text-emerald-600">92%</div>
-                <div className="flex gap-2">
-                  {[1,2,3,4,5].map(n => (
-                    <Star key={n} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" />
-                  <span className="text-[10px] font-black text-emerald-600">+12% so tháng trước</span>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-gray-100 space-y-2">
-                {[
-                  { label: 'KPI tháng', value: 87 },
-                  { label: 'Chất lượng công việc', value: 95 },
-                  { label: 'Phản hồi nhanh', value: 91 },
-                ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase">{item.label}</span>
-                    <span className="text-[11px] font-black text-gray-800">{item.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
       </div>
+
+      <StaffProfileModal
+        open={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
 
       {/* ===== FOOTER ===== */}
       <div className="border-t border-gray-100 px-8 py-4 flex items-center justify-between flex-shrink-0 relative z-10 bg-white">

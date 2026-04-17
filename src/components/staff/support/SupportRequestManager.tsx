@@ -74,7 +74,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
     }, [history, statusFilter]);
 
     return (
-        <div className="flex flex-col h-full gap-6">
+        <div className="flex flex-col flex-1 gap-6 min-h-0">
             {/* Header / Filter Bar */}
             <div className="flex items-center justify-between gap-4 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">

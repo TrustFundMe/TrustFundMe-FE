@@ -269,7 +269,7 @@ export default function StaffRequestPage() {
 
 
   return (
-    <div className="flex flex-col h-full bg-[#f1f5f9]">
+    <div className="flex flex-col flex-1 bg-[#f1f5f9]">
       {/* Folder Tabs Headers */}
       {!isModalOpen && (
         <div className="flex items-end justify-between px-6 h-14">

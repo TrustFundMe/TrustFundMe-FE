@@ -610,7 +610,7 @@ export default function EvidenceTab() {
     if (loading) return <div className="flex h-40 items-center justify-center text-[10px] font-black text-gray-300 tracking-[0.2em] uppercase animate-pulse">Đang tải...</div>;
 
     return (
-        <div className="flex-1 flex gap-4 h-full overflow-hidden">
+        <div className="flex-1 flex gap-4 overflow-hidden">
             {/* ── Sidebar ── */}
             <div className={`${selected ? 'w-80 flex-shrink-0' : 'flex-1'} flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white`}>
                 <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>

@@ -295,8 +295,8 @@ export default function ExpenditureRequestTab() {
     if (loading && !grouped.length) return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gray-200" /></div>;
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-full overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 overflow-hidden">
                 <div className={`flex flex-col border-r border-gray-100 ${selected ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
                     <div className="p-4 border-b border-gray-50 flex flex-col gap-3">
                         <div className="flex items-center justify-between">

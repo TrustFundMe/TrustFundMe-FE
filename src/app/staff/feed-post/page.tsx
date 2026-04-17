@@ -208,7 +208,7 @@ export default function StaffFeedPostPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full p-4 lg:p-6 bg-white overflow-hidden">
+    <div className="flex flex-col gap-4 flex-1 p-4 lg:p-6 bg-white overflow-hidden">
       {/* Search & Filter Top Bar */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">
