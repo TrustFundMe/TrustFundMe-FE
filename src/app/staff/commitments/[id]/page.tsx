@@ -7,7 +7,7 @@ import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import Grainient from '@/components/common/Grainient';
 import { toast } from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
+
 
 interface KYCData {
   id: number;
@@ -101,13 +101,16 @@ export default function StaffCommitmentReviewPage() {
     return () => clearInterval(timer);
   }, [campaign?.updatedAt, calculateTimeLeft, isExpired, isSavedData]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    // Dynamic import to avoid "self is not defined" SSR error
+    const html2pdf = (await import('html2pdf.js' as any)).default;
+
     const element = document.getElementById('legal-document');
     if (!element) return;
 
     const opt = {
       margin: [10, 10, 10, 10],
-      filename: `commitment-review-TF-${id}.pdf`,
+      filename: `bien-ban-cam-ket-TF-${id}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -190,8 +193,8 @@ export default function StaffCommitmentReviewPage() {
             <div className="flex items-center gap-3 p-2 bg-blue-800 rounded-xl">
                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">A</div>
                <div className="text-[10px]">
-                  <p className="font-bold text-white uppercase tracking-tight">TrustFundMe Mgmt</p>
-                  <p className="text-blue-200 uppercase tracking-widest text-[8px]">Verified Entity</p>
+                  <p className="font-bold text-white uppercase tracking-tight">Ban Quản Trị TrustFundMe</p>
+                  <p className="text-blue-200 uppercase tracking-widest text-[8px]">Đơn Vị Đã Xác Thực</p>
                </div>
             </div>
           </div>
@@ -337,7 +340,7 @@ export default function StaffCommitmentReviewPage() {
                   <div className="relative w-36 h-36 flex items-center justify-center">
                     <div className="absolute w-32 h-32 border-2 border-rose-600/50 rounded-full flex items-center justify-center rotate-[-15deg]">
                         <div className="text-rose-600/60 text-[9px] font-bold text-center leading-tight uppercase">
-                            TRUSTFUNDME <br /> VERIFIED OFFICIAL
+                            TRUSTFUNDME <br /> XÁC THỰC CHÍNH THỨC
                         </div>
                     </div>
                     <div className="relative z-10 font-[cursive] text-slate-400 text-3xl rotate-[-10deg] opacity-50">TrustAdmin</div>
@@ -354,8 +357,8 @@ export default function StaffCommitmentReviewPage() {
                       <div className="flex flex-col items-center gap-3">
                         <img src={signature} alt="Chữ ký" className="max-h-[120px] object-contain" />
                         <div className="flex flex-col items-center text-emerald-600 gap-0.5 font-bold italic border-t border-emerald-200 pt-2 px-4">
-                           <span className="text-[10px]">Digital Signature Verified</span>
-                           <span className="text-[8px] uppercase tracking-widest opacity-60">Verified e-Signature</span>
+                           <span className="text-[10px]">Chữ Ký Số Đã Xác Minh</span>
+                           <span className="text-[8px] uppercase tracking-widest opacity-60">Chữ Ký Điện Tử Đã Xác Thực</span>
                         </div>
                       </div>
                     ) : (

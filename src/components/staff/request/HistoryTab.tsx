@@ -34,41 +34,74 @@ export default function HistoryTab() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
   const { user } = useAuth();
 
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 15;
+
   const loadHistory = async () => {
     if (!user) return;
     setLoading(true);
     try {
       const allTasks = await campaignService.getTasksByStaff(user.id);
-      // Filter for COMPLETED tasks
-      const completedTasks = allTasks.filter(t => t.status === 'COMPLETED');
+      // Filter for COMPLETED tasks and sort by date desc
+      const completedTasks = allTasks
+        .filter(t => t.status === 'COMPLETED')
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
       
-      // Enrich tasks with basic target info
+      // Paginate the tasks before enriching them
+      const paginatedTasks = completedTasks.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+      // Cache to avoid redundant requests for the same target/owner
+      const campCache = new Map<number, any>();
+      const userCache = new Map<number, any>();
+      const expCache = new Map<number, any>();
+
       const enriched = await Promise.all(
-        completedTasks.map(async (task) => {
+        paginatedTasks.map(async (task) => {
           try {
             let targetTitle = `Mã #${task.targetId}`;
             let requester = 'N/A';
             let amount = 0;
 
             if (task.type === 'CAMPAIGN') {
-              const camp = await campaignService.getById(task.targetId);
+              let camp = campCache.get(task.targetId);
+              if (!camp) {
+                camp = await campaignService.getById(task.targetId);
+                campCache.set(task.targetId, camp);
+              }
               targetTitle = camp.title;
-              const owner = await userService.getUserById(camp.fundOwnerId);
-              requester = owner.data?.fullName || `Owner #${camp.fundOwnerId}`;
-            } else if (task.type === 'EXPENDITURE') {
-              const exp = await expenditureService.getById(task.targetId);
-              targetTitle = exp.plan || `Kế hoạch #${exp.id}`;
+
+              let owner = userCache.get(camp.fundOwnerId);
+              if (!owner) {
+                const ownerRes = await userService.getUserById(camp.fundOwnerId);
+                owner = ownerRes.data;
+                userCache.set(camp.fundOwnerId, owner);
+              }
+              requester = owner?.fullName || `Owner #${camp.fundOwnerId}`;
+
+            } else if (task.type === 'EXPENDITURE' || task.type === 'EVIDENCE') {
+              let exp = expCache.get(task.targetId);
+              if (!exp) {
+                exp = await expenditureService.getById(task.targetId);
+                expCache.set(task.targetId, exp);
+              }
+              targetTitle = task.type === 'EXPENDITURE' 
+                ? (exp.plan || `Chi tiêu #${exp.id}`)
+                : `Minh chứng: ${exp.plan || exp.id}`;
               amount = exp.totalAmount;
-              const camp = await campaignService.getById(exp.campaignId);
-              const owner = await userService.getUserById(camp.fundOwnerId);
-              requester = owner.data?.fullName || `Owner #${camp.fundOwnerId}`;
-            } else if (task.type === 'EVIDENCE') {
-              const exp = await expenditureService.getById(task.targetId);
-              targetTitle = `Minh chứng: ${exp.plan || exp.id}`;
-              amount = exp.totalAmount;
-              const camp = await campaignService.getById(exp.campaignId);
-              const owner = await userService.getUserById(camp.fundOwnerId);
-              requester = owner.data?.fullName || `Owner #${camp.fundOwnerId}`;
+
+              let camp = campCache.get(exp.campaignId);
+              if (!camp) {
+                camp = await campaignService.getById(exp.campaignId);
+                campCache.set(exp.campaignId, camp);
+              }
+
+              let owner = userCache.get(camp.fundOwnerId);
+              if (!owner) {
+                const ownerRes = await userService.getUserById(camp.fundOwnerId);
+                owner = ownerRes.data;
+                userCache.set(camp.fundOwnerId, owner);
+              }
+              requester = owner?.fullName || `Owner #${camp.fundOwnerId}`;
             }
 
             return {
@@ -93,10 +126,12 @@ export default function HistoryTab() {
         })
       );
 
-      // Sort by processedAt desc
-      const sorted = enriched.sort((a, b) => new Date(b.processedAt).getTime() - new Date(a.processedAt).getTime());
-      setTasks(sorted);
-      if (sorted.length > 0) setSelectedTaskId(sorted[0].id);
+      setTasks(enriched);
+      // We still want total count for pagination logic
+      const totalCount = completedTasks.length;
+      (window as any)._totalHistoryTasks = totalCount; // Simple way to pass it to render
+
+      if (enriched.length > 0 && !selectedTaskId) setSelectedTaskId(enriched[0].id);
     } catch (err) {
       toast.error('Lỗi tải lịch sử nhiệm vụ');
     } finally {
@@ -104,7 +139,7 @@ export default function HistoryTab() {
     }
   };
 
-  useEffect(() => { loadHistory(); }, [user]);
+  useEffect(() => { loadHistory(); }, [user, currentPage]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => 
@@ -138,74 +173,99 @@ export default function HistoryTab() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white">
-          <RequestTable
-            rows={filteredTasks}
-            selectedId={selectedTaskId}
-            onSelect={(r) => setSelectedTaskId(r.id)}
-            statusClassName={selectedTaskId ? 'hidden 2xl:table-cell' : ''}
-            columns={[
-              {
-                key: 'type',
-                title: 'Loại',
-                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
-                render: (r) => {
-                  const Icon = TASK_TYPE_ICON[r.type] || FileText;
-                  return (
-                    <div className="flex items-center gap-2">
-                       <Icon className="h-3.5 w-3.5 text-gray-400" />
-                       <span className="text-[10px] font-black text-gray-500 uppercase">{TASK_TYPE_MAP[r.type] || r.type}</span>
+        <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white flex flex-col">
+          <div className="flex-1 overflow-auto">
+            <RequestTable
+              rows={filteredTasks}
+              selectedId={selectedTaskId}
+              onSelect={(r) => setSelectedTaskId(r.id)}
+              statusClassName={selectedTaskId ? 'hidden 2xl:table-cell' : ''}
+              columns={[
+                {
+                  key: 'type',
+                  title: 'Loại',
+                  className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
+                  render: (r) => {
+                    const Icon = TASK_TYPE_ICON[r.type] || FileText;
+                    return (
+                      <div className="flex items-center gap-2">
+                        <Icon className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="text-[10px] font-black text-gray-500 uppercase">{TASK_TYPE_MAP[r.type] || r.type}</span>
+                      </div>
+                    );
+                  }
+                },
+                {
+                  key: 'target',
+                  title: 'Nội dung',
+                  render: (r) => (
+                    <div>
+                      <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.targetTitle}</div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã gốc: #{r.targetId}</div>
                     </div>
-                  );
-                }
-              },
-              {
-                key: 'target',
-                title: 'Nội dung',
+                  ),
+                },
+                {
+                  key: 'requester',
+                  title: 'Người yêu cầu',
+                  className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
+                  render: (r) => <span className="text-xs font-bold text-gray-700">{r.requester}</span>,
+                },
+                {
+                  key: 'date',
+                  title: 'Hoàn thành lúc',
+                  className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
+                  render: (r) => <span className="text-[10px] font-black text-gray-400 uppercase">{new Date(r.processedAt).toLocaleString('vi-VN')}</span>,
+                },
+              ]}
+              actionColumn={{
+                key: 'actions',
+                title: 'THAO TÁC',
+                className: 'text-center w-[80px]',
                 render: (r) => (
-                  <div>
-                    <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.targetTitle}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mã gốc: #{r.targetId}</div>
+                  <div className="flex items-center justify-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTaskId(r.id);
+                      }}
+                      className={`p-1.5 rounded-lg transition-all border shadow-sm ${
+                        selectedTaskId === r.id 
+                          ? 'bg-[#446b5f] text-white border-transparent' 
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-[#446b5f]/30 hover:bg-[#446b5f]/5 hover:text-[#446b5f]'
+                      }`}
+                      title="Xem chi tiết"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                   </div>
                 ),
-              },
-              {
-                key: 'requester',
-                title: 'Người yêu cầu',
-                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
-                render: (r) => <span className="text-xs font-bold text-gray-700">{r.requester}</span>,
-              },
-              {
-                key: 'date',
-                title: 'Hoàn thành lúc',
-                className: selectedTaskId ? 'hidden 2xl:table-cell' : 'whitespace-nowrap',
-                render: (r) => <span className="text-[10px] font-black text-gray-400 uppercase">{new Date(r.processedAt).toLocaleString('vi-VN')}</span>,
-              },
-            ]}
-            actionColumn={{
-              key: 'actions',
-              title: 'THAO TÁC',
-              className: 'text-center w-[80px]',
-              render: (r) => (
-                <div className="flex items-center justify-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedTaskId(r.id);
-                    }}
-                    className={`p-1.5 rounded-lg transition-all border shadow-sm ${
-                      selectedTaskId === r.id 
-                        ? 'bg-[#446b5f] text-white border-transparent' 
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-[#446b5f]/30 hover:bg-[#446b5f]/5 hover:text-[#446b5f]'
-                    }`}
-                    title="Xem chi tiết"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                </div>
-              ),
-            }}
-          />
+              }}
+            />
+          </div>
+          
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-50 mt-auto flex-shrink-0">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Trang {currentPage + 1} / {Math.ceil(((window as any)._totalHistoryTasks || 0) / pageSize) || 1}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Trước
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={filteredTasks.length < pageSize}
+                className="px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-[10px] font-black text-gray-600 uppercase hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

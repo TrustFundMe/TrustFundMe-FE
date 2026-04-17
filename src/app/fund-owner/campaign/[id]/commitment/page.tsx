@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import SignaturePad from '@/components/common/SignaturePad';
 import Grainient from '@/components/common/Grainient';
 import { toast } from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
+
 
 interface KYCData {
   id: number;
@@ -138,7 +138,7 @@ export default function CommitmentPage() {
         taxId: kycData?.taxId || '',
         idNumber: kycData?.idNumber || 'Đã xác thực KYC',
         issuePlace: kycData?.issuePlace || '',
-        issueDate: kycData?.issueDate ? new Date(kycData.issueDate) : null,
+        issueDate: kycData?.issueDate ? new Date(kycData.issueDate).toISOString().split('T')[0] : null,
         phoneNumber: kycData?.phoneNumber || ownerInfo?.phoneNumber || 'N/A',
         content: `Bản cam kết trách nhiệm cho chiến dịch "${campaign?.title}"`,
         signatureUrl: signature,
@@ -149,8 +149,9 @@ export default function CommitmentPage() {
       setIsSavedData(true);
       setSavedFullName(resolvedFullName);
       setShowSuccessModal(true);
-    } catch (error) {
-      toast.error('Lỗi khi nộp bản cam kết');
+    } catch (error: any) {
+      console.error('SUBMIT_COMMITMENT_FAILED:', error);
+      toast.error('Lỗi khi nộp bản cam kết: ' + (error.response?.data?.message || error.message || 'Lỗi không xác định'));
     } finally {
       setSubmitting(false);
     }
@@ -162,7 +163,10 @@ export default function CommitmentPage() {
     </div>
   );
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    // Dynamic import to avoid "self is not defined" SSR error
+    const html2pdf = (await import('html2pdf.js' as any)).default;
+    
     const element = document.getElementById('legal-document');
     if (!element) return;
 

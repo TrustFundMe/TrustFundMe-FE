@@ -47,9 +47,12 @@ export const expenditureService = {
         const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items });
         return response.data;
     },
-    requestWithdrawal: async (id: string | number, evidenceDueAt?: string): Promise<Expenditure> => {
+    requestWithdrawal: async (id: string | number, evidenceDueAt?: string, withdrawAmount?: number): Promise<Expenditure> => {
         const response = await axiosInstance.post(`/api/expenditures/${id}/request-withdrawal`, null, {
-            params: evidenceDueAt ? { evidenceDueAt } : {}
+            params: {
+                ...(evidenceDueAt ? { evidenceDueAt } : {}),
+                ...(withdrawAmount != null ? { withdrawAmount } : {})
+            }
         });
         return response.data;
     },

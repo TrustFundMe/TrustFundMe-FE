@@ -47,5 +47,9 @@ export const kycService = {
       }
       throw error;
     }
+  },
+  async getStats() {
+    const res = await api.get<{ total: number; approved: number; pending: number; rejected: number }>('/api/kyc/stats');
+    return res.data;
   }
 };

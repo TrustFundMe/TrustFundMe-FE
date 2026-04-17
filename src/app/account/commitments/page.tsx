@@ -7,7 +7,7 @@ import { Loader2, FileCheck, FileSignature, ArrowRight, ShieldCheck, AlertCircle
 import Link from 'next/link';
 import AnimatedList from '@/components/common/AnimatedList';
 import { useRouter } from 'next/navigation';
-import html2pdf from 'html2pdf.js';
+
 import { toast } from 'react-hot-toast';
 
 export default function CommitmentsPage() {
@@ -58,6 +58,9 @@ export default function CommitmentsPage() {
     }, [user?.id]);
 
     const handleExportPDF = async (campId: number, campTitle: string) => {
+        // Dynamic import to avoid "self is not defined" SSR error
+        const html2pdf = (await import('html2pdf.js' as any)).default;
+
         setExportingId(campId);
         const loadingToast = toast.loading(`Đang khởi tạo bản PDF cho chiến dịch...`);
         try {

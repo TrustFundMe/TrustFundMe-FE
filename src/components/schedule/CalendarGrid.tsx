@@ -186,6 +186,19 @@ export const CalendarGrid = ({
     const handleCreateClick = () => {
         setError(null);
         setModalMode('CREATE_EVENT');
+        
+        // If a date was selected in the calendar, pre-fill the form
+        if (selectedDate) {
+            const pad = (num: number) => String(num).padStart(2, '0');
+            const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`;
+            setFormData(prev => ({
+                ...prev,
+                date: dateStr,
+                startTime: '09:00',
+                endTime: '10:00'
+            }));
+        }
+        
         setIsModalOpen(true);
     };
 
@@ -693,7 +706,19 @@ export const CalendarGrid = ({
                                                 required
                                                 type="time"
                                                 value={formData.startTime}
-                                                onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                                                onChange={(e) => {
+                                                    const newStart = e.target.value;
+                                                    setFormData(prev => {
+                                                        const updated = { ...prev, startTime: newStart };
+                                                        // Auto-set end time to start + 1h if end is empty or before start
+                                                        if (newStart && (!prev.endTime || prev.endTime <= newStart)) {
+                                                            const [h, m] = newStart.split(':').map(Number);
+                                                            const nextH = (h + 1) % 24;
+                                                            updated.endTime = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                                                        }
+                                                        return updated;
+                                                    });
+                                                }}
                                                 className={`w-full bg-gray-50 border ${error && !formData.startTime ? 'border-rose-400 ring-2 ring-rose-100' : 'border-none'} rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 outline-none`}
                                             />
                                         </div>
@@ -703,6 +728,7 @@ export const CalendarGrid = ({
                                                 required
                                                 type="time"
                                                 value={formData.endTime}
+                                                min={formData.startTime}
                                                 onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
                                                 className={`w-full bg-gray-50 border ${error && !formData.endTime ? 'border-rose-400 ring-2 ring-rose-100' : 'border-none'} rounded-2xl px-6 py-4 text-sm font-bold text-gray-900 outline-none`}
                                             />

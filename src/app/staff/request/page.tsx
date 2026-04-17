@@ -56,72 +56,74 @@ export default function StaffRequestPage() {
     if (!currentUser) return;
     setIsLoading(true);
     try {
-      const [tasks, campaignsPage, allUsersResult] = await Promise.all([
-        campaignService.getTasksByStaff(currentUser.id),
-        campaignService.getAll(0, pageSize),
-        userService.getAllUsers(0, 1000),
-      ]);
+      // 1. Get tasks assigned to this staff first
+      const tasks = await campaignService.getTasksByStaff(currentUser.id);
+      
+      const campaignTaskIds = tasks
+        .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED')
+        .map(t => t.targetId);
 
-      const campaignTaskIds = new Set(
-        tasks.filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED').map(t => t.targetId)
+      if (campaignTaskIds.length === 0) {
+        setCampaignRows([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fetch only the campaigns needed for these tasks in parallel
+      // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
+      const campaigns = await Promise.all(
+        campaignTaskIds.slice(0, 100).map(id => 
+          campaignService.getById(id).catch(err => {
+            console.error(`Failed to fetch campaign ${id}`, err);
+            return null;
+          })
+        )
       );
-      const total = campaignsPage.totalPages || 1;
-      setTotalPages(total);
+      const validCampaigns = campaigns.filter(c => c !== null);
+
+      // 3. Fetch users for these campaigns only
+      const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
+      const userInfos = await Promise.all(
+        uniqueOwnerIds.map(id => 
+          userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
+        )
+      );
 
       const userMap = new Map<number, UserInfo>();
-      if (allUsersResult.success && allUsersResult.data?.content) {
-        allUsersResult.data.content.forEach(user => userMap.set(user.id, user));
-      }
+      userInfos.forEach(u => {
+        if (u) userMap.set(u.id, u);
+      });
       setUsers(userMap);
 
       const buildCampaignRows = (campaigns: any[]): CampaignRequest[] =>
-        (campaigns || [])
-          .filter(c => campaignTaskIds.has(c.id))
-          .map(c => {
-            let status: RequestStatus = 'PENDING';
-            if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
-            else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
-            else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
-            else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
-            else status = c.status as RequestStatus;
+        campaigns.map(c => {
+          let status: RequestStatus = 'PENDING';
+          if (c.status === 'ACTIVE' || c.status === 'APPROVED') status = 'APPROVED';
+          else if (c.status === 'CANCELLED' || c.status === 'REJECTED' || c.status === 'DELETED') status = 'REJECTED';
+          else if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL' || c.status === 'PENDING') status = 'PENDING';
+          else if (c.status === 'DISABLED' || c.status === 'SUSPENDED') status = 'DISABLED' as RequestStatus;
+          else status = c.status as RequestStatus;
 
-            const owner = userMap.get(c.fundOwnerId);
-            return {
-              id: `CAMP_${c.id}`,
-              createdAt: c.createdAt || new Date().toISOString(),
-              status,
-              type: 'APPROVE_CAMPAIGN' as const,
-              campaignId: c.id,
-              campaignTitle: c.title,
-              requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
-              description: c.description || '',
-              category: c.categoryName || '',
-              rejectionReason: c.rejectionReason || undefined,
-              kycVerified: !!owner?.kycVerified,
-              bankVerified: c.bankVerified,
-              fundOwnerId: c.fundOwnerId,
-            };
-          })
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const owner = userMap.get(c.fundOwnerId);
+          return {
+            id: `CAMP_${c.id}`,
+            createdAt: c.createdAt || new Date().toISOString(),
+            status,
+            type: 'APPROVE_CAMPAIGN' as const,
+            campaignId: c.id,
+            campaignTitle: c.title,
+            requesterName: owner?.fullName || `Chủ quỹ #${c.fundOwnerId}`,
+            description: c.description || '',
+            category: c.categoryName || '',
+            rejectionReason: c.rejectionReason || undefined,
+            kycVerified: !!owner?.kycVerified,
+            bankVerified: c.bankVerified,
+            fundOwnerId: c.fundOwnerId,
+          };
+        }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      // Hiển thị page 0 ngay, không cần chờ
-      setCampaignRows(buildCampaignRows(campaignsPage.content));
-
-      // Fetch remaining pages in background
-      if (total > 1) {
-        const remaining = await Promise.all(
-          Array.from({ length: total - 1 }, (_, i) => campaignService.getAll(i + 1, pageSize))
-        );
-        const allCampaigns = remaining.flatMap(p => p.content || []);
-        setCampaignRows(prev => {
-          const page0 = buildCampaignRows(campaignsPage.content);
-          const rest = buildCampaignRows(allCampaigns);
-          // merge + dedupe
-          const map = new Map<string, CampaignRequest>();
-          [...page0, ...rest].forEach(c => map.set(c.id, c));
-          return Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        });
-      }
+      setCampaignRows(buildCampaignRows(validCampaigns));
+      setTotalPages(1); // Task-based view usually doesn't need pagination for now
 
       // Auto-select from URL
       if (targetCampaignId) {

@@ -8,7 +8,7 @@ import { chatService } from '@/services/chatService';
 import { userService } from '@/services/userService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextProxy';
-import html2pdf from 'html2pdf.js';
+
 
 const FALLBACK_IMAGE = '/assets/img/commitment.jpg';
 
@@ -24,46 +24,76 @@ export default function StaffCommitmentsPage() {
     const { user: staffUser } = useAuth();
 
     useEffect(() => {
-        fetchData(page);
-    }, [page]);
+        if (staffUser) {
+            fetchData();
+        }
+    }, [staffUser]);
 
-    const fetchData = async (pageNum: number) => {
+    const fetchData = async () => {
+        if (!staffUser) return;
         try {
             setLoading(true);
-            const res = await campaignService.getAll(pageNum, 20); // Get 20 campaigns per page
-            const content = res.content || [];
+            // 1. Get staff tasks to know which campaigns this staff is handling
+            const tasks = await campaignService.getTasksByStaff(staffUser.id);
             
-            // Filter locally for now based on status requirements
-            const validDrafts = content.filter(c => !['DRAFT', 'REJECTED'].includes(c.status));
+            // Filters for campaigns that are assigned to the staff
+            // We include those that might be completed too if we want to show signed ones
+            const relevantCampaignIds = tasks
+                .filter(t => t.type === 'CAMPAIGN')
+                .map(t => t.targetId);
 
-            // Enhance with signing status and author names
-            const enhanced = await Promise.all(validDrafts.map(async (c) => {
-                const isSigned = await campaignService.isCommitmentSigned(c.id);
-                const ownerId = c.fundOwnerId || (c as any).userId;
-                
-                let fullName = '';
-                if (ownerId) {
-                    try {
-                        const userRes = await userService.getUserById(ownerId);
-                        if (userRes.success && userRes.data) {
-                            const u = userRes.data as any;
-                            fullName = u.fullName || u.data?.fullName || u.fullname || u.name;
-                        }
-                    } catch {}
-                }
-                
-                return { 
-                    ...c, 
-                    isSigned, 
-                    authorName: fullName || c.authorName || c.fundOwnerName || `Chủ quỹ #${ownerId || '?'}` 
-                };
+            if (relevantCampaignIds.length === 0) {
+                setCampaigns([]);
+                setLoading(false);
+                return;
+            }
+
+            // 2. Fetch those specific campaigns in parallel (Fast!)
+            const targetIds = [...new Set(relevantCampaignIds)];
+            const campaignData = await Promise.all(
+                targetIds.slice(0, 100).map(id => campaignService.getById(id).catch(() => null))
+            );
+            const validCampaigns = campaignData.filter(c => c !== null);
+
+            // 3. Initial render with basic info (Instant!)
+            const initialList = validCampaigns.map(c => ({
+                ...c,
+                isSigned: undefined,
+                authorName: c.authorName || c.fundOwnerName || `Chủ quỹ #${c.fundOwnerId || '?'}`
             }));
+            
+            setCampaigns(initialList);
+            setLoading(false); 
+            setTotalPages(1);
 
-            setCampaigns(enhanced);
-            setTotalPages(res.totalPages || 0);
-        } catch {
-            toast.error('Không thể tải danh sách cam kết');
-        } finally {
+            // 4. Background enrichment (Owner name + Signature)
+            const userCache = new Map<number, string>();
+            validCampaigns.forEach(async (c) => {
+                try {
+                    const ownerId = c.fundOwnerId;
+                    const [isSigned, fullName] = await Promise.all([
+                        campaignService.isCommitmentSigned(c.id).catch(() => false),
+                        (async () => {
+                            if (!ownerId) return '';
+                            if (userCache.has(ownerId)) return userCache.get(ownerId);
+                            const res = await userService.getUserById(ownerId);
+                            const u = res.data;
+                            const name = u?.fullName || u?.data?.fullName || u?.name || '';
+                            if (name) userCache.set(ownerId, name);
+                            return name;
+                        })()
+                    ]);
+
+                    setCampaigns(prev => prev.map(item => 
+                        item.id === c.id 
+                            ? { ...item, isSigned, authorName: fullName || item.authorName } 
+                            : item
+                    ));
+                } catch {}
+            });
+
+        } catch (error) {
+            console.error('Failed to load commitments:', error);
             setLoading(false);
         }
     };
@@ -78,6 +108,9 @@ export default function StaffCommitmentsPage() {
     }, [campaigns, searchTerm, filter]);
 
     const handleExportPDF = async (camp: any) => {
+        // Dynamic import to avoid "self is not defined" SSR error
+        const html2pdf = (await import('html2pdf.js' as any)).default;
+        
         setExportingId(camp.id);
         const loadingToast = toast.loading(`Đang tải bản PDF...`);
         try {
@@ -163,7 +196,7 @@ export default function StaffCommitmentsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white p-4 lg:p-6 overflow-hidden">
+        <div className="flex flex-col flex-1 bg-white p-4 lg:p-6 overflow-hidden">
             {/* Standard Staff Header Bar */}
             <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -206,15 +239,15 @@ export default function StaffCommitmentsPage() {
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 <div className="">
 
-                    {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-50 py-20">
-                            <Loader2 className="h-10 w-10 animate-spin text-[#446b5f]" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#446b5f]">Đang đồng bộ dữ liệu...</p>
+                    {loading && campaigns.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-40">
+                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#446b5f] border-t-transparent mb-4" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#446b5f]">Khởi tạo danh sách...</p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center space-y-3 opacity-30 py-20">
                             <AlertCircle className="h-12 w-12 text-gray-300" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Không thấy dữ liệu</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Không có chiến dịch nào cần cam kết</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 pb-6">
@@ -241,11 +274,13 @@ export default function StaffCommitmentsPage() {
                                                     {camp.title}
                                                 </h3>
                                                 <div className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                                                    camp.isSigned 
+                                                    camp.isSigned === undefined 
+                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'
+                                                    : camp.isSigned 
                                                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
                                                     : 'bg-rose-50 text-rose-600 border border-rose-100'
                                                 }`}>
-                                                    {camp.isSigned ? 'Đã ký' : 'Chờ ký'}
+                                                    {camp.isSigned === undefined ? 'Đang kiểm tra...' : camp.isSigned ? 'Đã ký' : 'Chờ ký'}
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between border-t border-gray-50 pt-3 pb-1">

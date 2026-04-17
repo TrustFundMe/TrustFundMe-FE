@@ -117,6 +117,7 @@ export const API_ENDPOINTS = {
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,
     CAMPAIGN_ANALYTICS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/analytics`,
     DONATION_SUMMARY: "/api/payments/donations/summary",
+    DONORS_BY_ITEM: (itemId: number | string) => `/api/payments/expenditure-item/${itemId}/donors`,
     STATUS_PAGINATED: (status: string) => `/api/payments/status/${status}/paginated`,
     MY_DONATIONS: "/api/payments/my-donations",
     USER_DONATION_COUNT: (userId: number | string) => `/api/payments/user/${userId}/donation-count`,
