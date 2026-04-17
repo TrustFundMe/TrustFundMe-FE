@@ -20,38 +20,55 @@ import {
 } from "lucide-react";
 import { CommunityFeedPostCard, FEED_CAT_COLORS } from "@/components/feed-post/CommunityFeedPostCard";
 import Aurora from "@/components/ui/Aurora";
+import { Suspense } from "react";
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Wrapper to handle Suspense for useSearchParams ───────────────────────────
 
 export default function ForumPage() {
-  const router        = useRouter();
-  const searchParams  = useSearchParams();
-  const { user }      = useAuth();
-  const campaignIdParam   = searchParams.get("campaignId");
-  const filterCampaignId  = campaignIdParam ? Number(campaignIdParam) : null;
+  return (
+    <Suspense fallback={
+      <DanboxLayout header={4} footer={0}>
+        <div className="min-h-screen flex justify-center items-center bg-zinc-50 dark:bg-zinc-950">
+          <div className="w-7 h-7 rounded-full border-2 border-zinc-200 dark:border-zinc-700 border-t-[#ff5e14] animate-spin" />
+        </div>
+      </DanboxLayout>
+    }>
+      <ForumContent />
+    </Suspense>
+  );
+}
 
-  const [posts, setPosts]                   = useState<FeedPost[]>([]);
-  const [postMedia, setPostMedia]           = useState<Record<string, { type: "image" | "file"; url: string; name?: string }[]>>({});
+// ─── Page Content ─────────────────────────────────────────────────────────────
+
+function ForumContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const campaignIdParam = searchParams.get("campaignId");
+  const filterCampaignId = campaignIdParam ? Number(campaignIdParam) : null;
+
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [postMedia, setPostMedia] = useState<Record<string, { type: "image" | "file"; url: string; name?: string }[]>>({});
   const [enrichingPosts, setEnrichingPosts] = useState<Set<string>>(new Set());
-  const [categories, setCategories]         = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [campaignTitles, setCampaignTitles]  = useState<Record<string, string>>({});
-  const [campaignsList, setCampaignsList]   = useState<{ id: number; title: string }[]>([]);
-  const [loading, setLoading]               = useState(true);
-  const [modal, setModal]                   = useState(false);
-  const [search, setSearch]                 = useState("");
-  const [seenIds, setSeenIds]               = useState<Set<string>>(new Set()); // live — written to localStorage
+  const [campaignTitles, setCampaignTitles] = useState<Record<string, string>>({});
+  const [campaignsList, setCampaignsList] = useState<{ id: number; title: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [search, setSearch] = useState("");
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set()); // live — written to localStorage
   const [initialSeenIds, setInitialSeenIds] = useState<Set<string>>(new Set()); // snapshot at mount — used for filtering
-  const [seenIdsLoaded, setSeenIdsLoaded]   = useState(false); // guard: don't trigger observer until seenIds are fetched from DB
-  const [quickFilter, setQuickFilter]       = useState<"all" | "unseen" | "seen" | "pinned">("all");
+  const [seenIdsLoaded, setSeenIdsLoaded] = useState(false); // guard: don't trigger observer until seenIds are fetched from DB
+  const [quickFilter, setQuickFilter] = useState<"all" | "unseen" | "seen" | "pinned">("all");
   const [followedCampaignMap, setFollowedCampaignMap] = useState<Record<number, boolean>>({});
   // Scroll-based seen tracking
   const seenTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map()); // postId → timer
   // Infinite scroll
-  const [currentPage, setCurrentPage]       = useState(0);
-  const [hasMore, setHasMore]              = useState(true);
-  const [isLoadingMore, setIsLoadingMore]   = useState(false);
-  const loadMoreRef                        = useRef<HTMLDivElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const PAGE_SIZE = 5;
 
@@ -208,7 +225,7 @@ export default function ForumPage() {
         });
       });
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts]);
 
   // Titles map: dùng cho banner lọc theo campaignId (?campaignId=)
@@ -374,11 +391,11 @@ export default function ForumPage() {
   const q = search.trim().toLowerCase();
   const filtered = q
     ? base.filter(p => {
-        const t = (p.title ?? "").toLowerCase();
-        const c = p.content.replace(/<[^>]*>/g, "").toLowerCase();
-        const a = (p.author?.name ?? "").toLowerCase();
-        return t.includes(q) || c.includes(q) || a.includes(q);
-      })
+      const t = (p.title ?? "").toLowerCase();
+      const c = p.content.replace(/<[^>]*>/g, "").toLowerCase();
+      const a = (p.author?.name ?? "").toLowerCase();
+      return t.includes(q) || c.includes(q) || a.includes(q);
+    })
     : base;
 
   // Prioritize unread posts first (using initialSeenIds snapshot so positions don't jump)

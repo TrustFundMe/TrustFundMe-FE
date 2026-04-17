@@ -31,7 +31,7 @@ export default function CommitmentPage() {
   const id = params?.id as string;
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  
+
   const [campaign, setCampaign] = useState<any>(null);
   const [ownerInfo, setOwnerInfo] = useState<UserInfo | null>(null);
   const [kycData, setKycData] = useState<KYCData | null>(null);
@@ -78,7 +78,7 @@ export default function CommitmentPage() {
         try {
           const kycRes = await userService.getUserKYC(campaignData.fundOwnerId);
           if (kycRes && kycRes.id) setKycData(kycRes);
-        } catch (e) {}
+        } catch (e) { }
 
         try {
           const commitmentData = await campaignService.getCommitment(Number(id));
@@ -87,7 +87,7 @@ export default function CommitmentPage() {
             setIsSavedData(true);
             if (commitmentData.fullName) setSavedFullName(commitmentData.fullName);
           }
-        } catch (e) {}
+        } catch (e) { }
 
         if (campaignData.updatedAt) setTimeLeft(calculateTimeLeft(campaignData.updatedAt));
 
@@ -137,7 +137,7 @@ export default function CommitmentPage() {
         taxId: kycData?.taxId || '',
         idNumber: kycData?.idNumber || 'Đã xác thực KYC',
         issuePlace: kycData?.issuePlace || '',
-        issueDate: kycData?.issueDate ? new Date(kycData.issueDate) : null,
+        issueDate: kycData?.issueDate ? new Date(kycData.issueDate).toISOString().split('T')[0] : null,
         phoneNumber: kycData?.phoneNumber || ownerInfo?.phoneNumber || 'N/A',
         content: `Bản cam kết trách nhiệm cho chiến dịch "${campaign?.title}"`,
         signatureUrl: signature,
@@ -148,8 +148,9 @@ export default function CommitmentPage() {
       setIsSavedData(true);
       setSavedFullName(resolvedFullName);
       setShowSuccessModal(true);
-    } catch (error) {
-      toast.error('Lỗi khi nộp bản cam kết');
+    } catch (error: any) {
+      console.error('SUBMIT_COMMITMENT_FAILED:', error);
+      toast.error('Lỗi khi nộp bản cam kết: ' + (error.response?.data?.message || error.message || 'Lỗi không xác định'));
     } finally {
       setSubmitting(false);
     }
@@ -162,25 +163,26 @@ export default function CommitmentPage() {
   );
 
   const handleExportPDF = async () => {
+    // Dynamic import to avoid "self is not defined" SSR error
+    const html2pdf = (await import('html2pdf.js')).default;
+
     const element = document.getElementById('legal-document');
     if (!element) return;
 
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `commitment-TF-${id}-${new Date().getTime()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        letterRendering: true
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
     try {
       const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
-      const html2pdf = (await import('html2pdf.js')).default;
-      
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `commitment-TF-${id}-${new Date().getTime()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true,
-          letterRendering: true
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
       await html2pdf().from(element).set(opt).save();
       toast.success('Đã tải bản PDF thành công!', { id: loadingToast });
     } catch (err: any) {
@@ -194,13 +196,13 @@ export default function CommitmentPage() {
 
   return (
     <div className="min-h-screen relative flex justify-center py-12 px-6 bg-slate-50 overflow-x-hidden">
-      
+
       {/* BACKGROUND EFFECT - LIGHTER & SUBTLE */}
       <div className="fixed inset-0 z-0 opacity-40">
         <Grainient
-          color1="#ffffff" 
-          color2="#f8fafc" 
-          color3="#e2e8f0" 
+          color1="#ffffff"
+          color2="#f8fafc"
+          color3="#e2e8f0"
           timeSpeed={0.8}
           warpSpeed={2.5}
           zoom={1.5}
@@ -210,10 +212,10 @@ export default function CommitmentPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-[1440px] flex gap-10 items-start justify-center">
-        
+
         {/* SIDEBAR BÊN TRÁI - STICKY BLUE THEME */}
         <div className="hidden xl:flex flex-col w-[310px] space-y-6 flex-shrink-0 sticky top-10 no-print">
-          
+
           {/* Card Trạng thái */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[24px] p-6 shadow-xl shadow-blue-900/10 border border-blue-50">
             <div className="flex items-center gap-2 mb-4">
@@ -252,11 +254,11 @@ export default function CommitmentPage() {
             </div>
             <p className="text-[11px] text-gray-600 font-medium mb-3">Đã ký xác nhận và đóng mộc điện tử bởi ban quản trị.</p>
             <div className="flex items-center gap-3 p-2 bg-blue-800 rounded-xl">
-               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-               <div className="text-[10px]">
-                  <p className="font-bold text-white uppercase tracking-tight">TrustFundMe Mgmt</p>
-                  <p className="text-blue-200 uppercase tracking-widest text-[8px]">Verified Entity</p>
-               </div>
+              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold">A</div>
+              <div className="text-[10px]">
+                <p className="font-bold text-white uppercase tracking-tight">TrustFundMe Mgmt</p>
+                <p className="text-blue-200 uppercase tracking-widest text-[8px]">Verified Entity</p>
+              </div>
             </div>
           </div>
 
@@ -269,55 +271,55 @@ export default function CommitmentPage() {
               <h3 className="font-bold text-gray-800 text-sm uppercase">BÊN B (Chủ quỹ)</h3>
             </div>
             <div className="space-y-3 text-[11px]">
-               <div>
-                  <p className="text-gray-400 mb-0.5">Họ và tên (CCCD):</p>
-                  <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Địa chỉ thường trú:</p>
-                  <p className="font-bold text-blue-950">{kycData?.address || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Nơi làm việc:</p>
-                  <p className="font-bold text-blue-950">{kycData?.workplace || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Mã số thuế:</p>
-                  <p className="font-bold text-blue-950">{kycData?.taxId || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Số CCCD/CMND:</p>
-                  <p className="font-bold text-blue-950">{kycData?.idNumber || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Ngày cấp / Nơi cấp:</p>
-                  <p className="font-bold text-blue-950">
-                    {kycData?.issueDate ? new Date(kycData.issueDate).toLocaleDateString('vi-VN') : '—'}
-                    {' '}/ {kycData?.issuePlace || '—'}
-                  </p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Điện thoại:</p>
-                  <p className="font-bold text-blue-950">{kycData?.phoneNumber || ownerInfo?.phoneNumber || '—'}</p>
-               </div>
-               <div>
-                  <p className="text-gray-400 mb-0.5">Email:</p>
-                  <p className="font-bold text-blue-950 truncate max-w-[200px]">{ownerInfo?.email || '—'}</p>
-               </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Họ và tên (CCCD):</p>
+                <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Địa chỉ thường trú:</p>
+                <p className="font-bold text-blue-950">{kycData?.address || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Nơi làm việc:</p>
+                <p className="font-bold text-blue-950">{kycData?.workplace || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Mã số thuế:</p>
+                <p className="font-bold text-blue-950">{kycData?.taxId || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Số CCCD/CMND:</p>
+                <p className="font-bold text-blue-950">{kycData?.idNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Ngày cấp / Nơi cấp:</p>
+                <p className="font-bold text-blue-950">
+                  {kycData?.issueDate ? new Date(kycData.issueDate).toLocaleDateString('vi-VN') : '—'}
+                  {' '}/ {kycData?.issuePlace || '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Điện thoại:</p>
+                <p className="font-bold text-blue-950">{kycData?.phoneNumber || ownerInfo?.phoneNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 mb-0.5">Email:</p>
+                <p className="font-bold text-blue-950 truncate max-w-[200px]">{ownerInfo?.email || '—'}</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* VÙNG CHÍNH TỜ A4 */}
         <div className="flex flex-col items-center w-full max-w-[840px] flex-shrink-0">
-          
+
           <div className="w-full flex justify-between items-center mb-10 no-print">
             <button onClick={() => router.back()} className="text-[10px] font-bold uppercase tracking-[2px] text-slate-400 hover:text-blue-600 transition-colors flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" /> Quay lại
             </button>
             {signature && (
-              <button 
-                onClick={() => handleExportPDF()} 
+              <button
+                onClick={() => handleExportPDF()}
                 className="bg-blue-600 px-8 py-3 rounded-2xl shadow-xl shadow-blue-600/20 text-[10px] font-bold uppercase tracking-[2px] text-white hover:bg-blue-700 transition-all flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-500"
               >
                 <Printer className="h-4 w-4" /> Export PDF
@@ -326,10 +328,10 @@ export default function CommitmentPage() {
           </div>
 
           <div id="legal-document" className="bg-white w-full shadow-[0_40px_100px_rgba(30,58,138,0.1)] p-[80px] min-h-[1100px] flex flex-col font-serif text-slate-950 relative border-t-8 border-blue-900 rounded-sm">
-            
+
             {isExpired && !signature && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] rotate-[-45deg] z-50">
-                 <h1 className="text-[140px] font-black border-[25px] border-rose-600 px-12 text-rose-600 uppercase">HẾT HẠN</h1>
+                <h1 className="text-[140px] font-black border-[25px] border-rose-600 px-12 text-rose-600 uppercase">HẾT HẠN</h1>
               </div>
             )}
 
@@ -394,7 +396,7 @@ export default function CommitmentPage() {
 
             <div className="space-y-6 text-justify text-[15.5px] mb-16 leading-relaxed">
               <p className="italic font-bold text-blue-900">Tôi xin cam kết và chịu trách nhiệm hoàn toàn trước Ban quản trị TrustFundMe, các nhà hảo tâm và pháp luật về các nội dung thực hiện chiến dịch như sau:</p>
-              
+
               <section>
                 <h4 className="font-bold uppercase text-[14px] mb-1.5 underline text-blue-800">Điều 1: Mục đích sử dụng nguồn quỹ quyên góp</h4>
                 <p className="pl-4">Tôi cam kết toàn bộ số tiền quyên góp được từ cộng đồng thông qua nền tảng TrustFundMe sẽ chỉ được sử dụng cho các mục tiêu đã đăng ký trong hồ sơ chiến dịch ban đầu. Tuyệt đối không sử dụng quỹ vào các mục đích cá nhân, đầu tư sinh lời, hoặc bất kỳ mục đích nào khác ngoài phạm vi cứu trợ/từ thiện đã công bố.</p>
@@ -441,14 +443,14 @@ export default function CommitmentPage() {
                 <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN A</h3>
                 <p className="italic text-[12px] mb-4 text-slate-400">(Hệ thống đã xác thực)</p>
                 <div className="relative w-36 h-36 flex items-center justify-center">
-                   <div className="absolute w-32 h-32 border-2 border-rose-600/50 rounded-full flex items-center justify-center rotate-[-15deg]">
-                      <div className="text-rose-600/60 text-[9px] font-bold text-center leading-tight">
-                         TRUSTFUNDME <br />
-                         VERIFIED <br />
-                         OFFICIAL
-                      </div>
-                   </div>
-                   <div className="relative z-10 font-[cursive] text-slate-400 text-3xl rotate-[-10deg] opacity-50">TrustAdmin</div>
+                  <div className="absolute w-32 h-32 border-2 border-rose-600/50 rounded-full flex items-center justify-center rotate-[-15deg]">
+                    <div className="text-rose-600/60 text-[9px] font-bold text-center leading-tight">
+                      TRUSTFUNDME <br />
+                      VERIFIED <br />
+                      OFFICIAL
+                    </div>
+                  </div>
+                  <div className="relative z-10 font-[cursive] text-slate-400 text-3xl rotate-[-10deg] opacity-50">TrustAdmin</div>
                 </div>
                 <p className="mt-4 font-bold text-rose-600 uppercase text-[10px] tracking-widest">ĐÃ ĐÓNG DẤU</p>
               </div>
@@ -456,10 +458,10 @@ export default function CommitmentPage() {
               <div className="flex flex-col items-center">
                 <h3 className="font-bold uppercase text-[15px] mb-1">ĐẠI DIỆN BÊN B</h3>
                 <p className="italic text-[12px] mb-4 text-slate-400">(Ký và ghi rõ họ tên)</p>
-                
+
                 {/* VÙNG KÝ TÊN BÊN B - CLICK ĐỂ PHÓNG TO */}
                 {!signature || signature === '' ? (
-                  <button 
+                  <button
                     onClick={() => !isExpired && setShowSignModal(true)}
                     disabled={isExpired}
                     className={`w-full h-[180px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all no-print
@@ -479,9 +481,9 @@ export default function CommitmentPage() {
                 ) : (
                   <div className="relative group w-full h-[180px] flex flex-col items-center justify-center">
                     <img src={signature} alt="Chữ ký" className="max-h-[140px] max-w-full object-contain" />
-                    
+
                     {!isSavedData && (
-                      <button 
+                      <button
                         onClick={clearFinalSignature}
                         className="absolute top-0 right-0 p-2 bg-rose-50 text-rose-600 rounded-full opacity-0 group-hover:opacity-100 transition-all no-print"
                         title="Xóa để ký lại"
@@ -492,8 +494,8 @@ export default function CommitmentPage() {
 
                     {isSavedData && (
                       <div className="absolute -bottom-6 w-[120%] flex flex-col items-center text-emerald-600 gap-1 font-bold italic pt-4 border-t-2 border-emerald-600">
-                         <p>Digital Signature Verified</p>
-                         <p className="text-[9px] uppercase tracking-widest">Bản ghi đã được lưu trữ</p>
+                        <p>Digital Signature Verified</p>
+                        <p className="text-[9px] uppercase tracking-widest">Bản ghi đã được lưu trữ</p>
                       </div>
                     )}
                   </div>
@@ -509,12 +511,12 @@ export default function CommitmentPage() {
           {/* NÚT NỘP ĐƠN - CHỈ RA KHI ĐÃ CÓ CHỮ KÝ */}
           {!isExpired && !isSavedData && (
             <div className="w-full mt-12 mb-24 flex justify-center no-print text-center px-4">
-              <button 
-                onClick={handleSubmit} 
-                disabled={submitting || !signature} 
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !signature}
                 className={`group flex items-center gap-4 px-16 py-6 rounded-[30px] font-black uppercase tracking-[3px] shadow-2xl transition-all
-                  ${!signature 
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                  ${!signature
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     : 'bg-blue-700 text-white hover:bg-blue-800 hover:scale-105 active:scale-95 shadow-blue-600/20'}`}
               >
                 {submitting ? <Loader2 className="animate-spin h-6 w-6" /> : <FileCheck className="h-6 w-6 group-hover:scale-110 transition-transform" />}
@@ -537,25 +539,25 @@ export default function CommitmentPage() {
               <div className={`text-4xl font-mono font-black tracking-tighter text-center py-6 rounded-2xl ${isExpired ? 'text-rose-600 bg-rose-200/20' : 'text-blue-600 bg-blue-50'}`}>
                 {timeLeft}
               </div>
-              
+
               <div className="mt-8 space-y-4">
-                 <div className="flex items-center gap-2 text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
-                    <Clock className="h-4 w-4" /> Quy định 48 Giờ
-                 </div>
-                 <p className="text-[11px] text-blue-900/60 leading-relaxed font-bold">
-                  {isExpired 
+                <div className="flex items-center gap-2 text-[10px] font-bold text-blue-900/40 uppercase tracking-widest">
+                  <Clock className="h-4 w-4" /> Quy định 48 Giờ
+                </div>
+                <p className="text-[11px] text-blue-900/60 leading-relaxed font-bold">
+                  {isExpired
                     ? '⚠️ Đã quá thời hạn ký kết quy định. Văn bản đã bị khóa và không còn giá trị pháp lý để nộp đơn.'
                     : 'Người dung có tối đa 48 giờ để hoàn tất ký kết điện tử. Sau thời gian này, hệ thống sẽ tự động đóng form.'}
-                 </p>
+                </p>
               </div>
             </div>
           ) : (
             <div className="bg-blue-900 rounded-[24px] p-8 shadow-xl border border-blue-800 text-center">
-               <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileCheck className="h-8 w-8 text-white" />
-               </div>
-               <h3 className="font-bold text-white uppercase text-[11px] tracking-widest mb-3">KÝ KẾT THÀNH CÔNG</h3>
-               <p className="text-[11px] text-blue-100/60 leading-relaxed">Đã mã hóa và lưu trữ.</p>
+              <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <FileCheck className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="font-bold text-white uppercase text-[11px] tracking-widest mb-3">KÝ KẾT THÀNH CÔNG</h3>
+              <p className="text-[11px] text-blue-100/60 leading-relaxed">Đã mã hóa và lưu trữ.</p>
             </div>
           )}
         </div>
@@ -570,30 +572,30 @@ export default function CommitmentPage() {
                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Vùng ký tên điện tử</h2>
                 <p className="text-sm text-slate-500">Vui lòng ký vào khung bên dưới và bấm Hoàn tất</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowSignModal(false)}
                 className="p-3 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X className="h-6 w-6 text-slate-400" />
               </button>
             </div>
-            
+
             <div className="p-8">
-              <SignaturePad 
-                onSave={(dataUrl) => setTempSignature(dataUrl)} 
-                width={600} 
-                height={300} 
+              <SignaturePad
+                onSave={(dataUrl) => setTempSignature(dataUrl)}
+                width={600}
+                height={300}
               />
             </div>
 
             <div className="p-8 bg-slate-50/80 flex justify-end gap-4">
-              <button 
+              <button
                 onClick={() => setShowSignModal(false)}
                 className="px-8 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-colors"
               >
                 HỦY BỎ
               </button>
-              <button 
+              <button
                 onClick={handleFinalizeSignature}
                 disabled={!tempSignature}
                 className="flex items-center gap-3 bg-blue-600 text-white px-10 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-600/20 hover:bg-blue-700 disabled:opacity-30 transition-all"
@@ -610,9 +612,9 @@ export default function CommitmentPage() {
       {showSuccessModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300 no-print">
           <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 delay-100 flex flex-col items-center text-center p-10 relative">
-            
+
             <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50/20 opacity-50 pointer-events-none" />
-            
+
             <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 relative">
               <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-20" />
               <FileCheck className="h-12 w-12 text-green-600" />
@@ -623,7 +625,7 @@ export default function CommitmentPage() {
               Bản cam kết trách nhiệm điện tử của bạn đã được mã hóa bảo mật và kích hoạt thành công trên hệ thống TrustFundMe e-Contract.
             </p>
 
-            <button 
+            <button
               onClick={() => {
                 setShowSuccessModal(false);
                 router.push(`/campaign/${id}`);
@@ -632,7 +634,7 @@ export default function CommitmentPage() {
             >
               VỀ TRANG CHIẾN DỊCH
             </button>
-            <button 
+            <button
               onClick={() => setShowSuccessModal(false)}
               className="w-full mt-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
             >

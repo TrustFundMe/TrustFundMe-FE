@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -18,6 +18,18 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { vi } from 'date-fns/locale';
 
 export default function CreateExpenditurePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex justify-center items-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+            </div>
+        }>
+            <CreateExpenditureContent />
+        </Suspense>
+    );
+}
+
+function CreateExpenditureContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const campaignId = searchParams.get('campaignId');
@@ -66,7 +78,7 @@ export default function CreateExpenditurePage() {
                 }
 
                 setCampaign(campaignData);
-                
+
                 // Set default plan name based on count
                 const nextNumber = (existingExpenditures?.length || 0) + 1;
                 setPlan(`Chi tiêu đợt ${nextNumber}`);
