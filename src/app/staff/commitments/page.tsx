@@ -35,7 +35,7 @@ export default function StaffCommitmentsPage() {
             setLoading(true);
             // 1. Get staff tasks to know which campaigns this staff is handling
             const tasks = await campaignService.getTasksByStaff(staffUser.id);
-            
+
             // Filters for campaigns that are assigned to the staff
             // We include those that might be completed too if we want to show signed ones
             const relevantCampaignIds = tasks
@@ -61,9 +61,9 @@ export default function StaffCommitmentsPage() {
                 isSigned: undefined,
                 authorName: c.authorName || c.fundOwnerName || `Chủ quỹ #${c.fundOwnerId || '?'}`
             }));
-            
+
             setCampaigns(initialList);
-            setLoading(false); 
+            setLoading(false);
             setTotalPages(1);
 
             // 4. Background enrichment (Owner name + Signature)
@@ -84,12 +84,12 @@ export default function StaffCommitmentsPage() {
                         })()
                     ]);
 
-                    setCampaigns(prev => prev.map(item => 
-                        item.id === c.id 
-                            ? { ...item, isSigned, authorName: fullName || item.authorName } 
+                    setCampaigns(prev => prev.map(item =>
+                        item.id === c.id
+                            ? { ...item, isSigned, authorName: fullName || item.authorName }
                             : item
                     ));
-                } catch {}
+                } catch { }
             });
 
         } catch (error) {
@@ -100,8 +100,8 @@ export default function StaffCommitmentsPage() {
 
     const filtered = useMemo(() => {
         return campaigns.filter(c => {
-            const matchSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                (c.authorName || '').toLowerCase().includes(searchTerm.toLowerCase());
+            const matchSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (c.authorName || '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchFilter = filter === 'ALL' || (filter === 'SIGNED' ? c.isSigned : !c.isSigned);
             return matchSearch && matchFilter;
         });
@@ -109,8 +109,8 @@ export default function StaffCommitmentsPage() {
 
     const handleExportPDF = async (camp: any) => {
         // Dynamic import to avoid "self is not defined" SSR error
-        const html2pdf = (await import('html2pdf.js' as any)).default;
-        
+        const html2pdf = (await import('html2pdf.js')).default;
+
         setExportingId(camp.id);
         const loadingToast = toast.loading(`Đang tải bản PDF...`);
         try {
@@ -121,7 +121,7 @@ export default function StaffCommitmentsPage() {
             container.style.position = 'absolute'; container.style.left = '-9999px';
             container.style.width = '800px'; container.style.padding = '60px';
             container.style.fontFamily = 'serif'; container.style.backgroundColor = 'white';
-            
+
             const today = new Date();
             container.innerHTML = `
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -175,7 +175,7 @@ export default function StaffCommitmentsPage() {
         try {
             // First check if an existing conversation exists for this campaign
             const checkRes = await chatService.getConversationByCampaignId(campaignId);
-            
+
             if (checkRes.success && checkRes.data) {
                 // If found, redirect to existing conversation
                 router.push(`/staff/chat?conversationId=${checkRes.data.id}`);
@@ -208,11 +208,10 @@ export default function StaffCommitmentsPage() {
                         <button
                             key={b.val}
                             onClick={() => setFilter(b.val)}
-                            className={`inline-flex h-9 items-center rounded-full border px-5 text-xs font-bold uppercase tracking-widest transition-all ${
-                                filter === b.val 
-                                ? 'border-[#446b5f]/40 bg-[#446b5f]/10 text-[#446b5f] shadow-sm' 
-                                : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                            }`}
+                            className={`inline-flex h-9 items-center rounded-full border px-5 text-xs font-bold uppercase tracking-widest transition-all ${filter === b.val
+                                    ? 'border-[#446b5f]/40 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                                }`}
                         >
                             {b.label}
                         </button>
@@ -220,9 +219,9 @@ export default function StaffCommitmentsPage() {
                 </div>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="Tìm theo tên chiến dịch hoặc chủ quỹ..." 
+                    <input
+                        type="text"
+                        placeholder="Tìm theo tên chiến dịch hoặc chủ quỹ..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 bg-white w-[350px]"
@@ -252,15 +251,15 @@ export default function StaffCommitmentsPage() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 pb-6">
                             {filtered.map(camp => (
-                                <div 
-                                    key={camp.id} 
+                                <div
+                                    key={camp.id}
                                     className="group bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:border-[#446b5f] hover:shadow-lg"
                                 >
                                     {/* Photo Container */}
                                     <div className="aspect-[16/10] relative overflow-hidden bg-gray-100 flex-shrink-0">
-                                        <img 
-                                            src={camp.coverImageUrl || FALLBACK_IMAGE} 
-                                            alt={camp.title} 
+                                        <img
+                                            src={camp.coverImageUrl || FALLBACK_IMAGE}
+                                            alt={camp.title}
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                             onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                                         />
@@ -273,13 +272,12 @@ export default function StaffCommitmentsPage() {
                                                 <h3 className="text-gray-900 font-bold text-[12px] uppercase tracking-tight leading-[1.3] line-clamp-2 min-h-[2.6em]">
                                                     {camp.title}
                                                 </h3>
-                                                <div className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                                                    camp.isSigned === undefined 
-                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'
-                                                    : camp.isSigned 
-                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-                                                    : 'bg-rose-50 text-rose-600 border border-rose-100'
-                                                }`}>
+                                                <div className={`flex-shrink-0 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${camp.isSigned === undefined
+                                                        ? 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse'
+                                                        : camp.isSigned
+                                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                            : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                                    }`}>
                                                     {camp.isSigned === undefined ? 'Đang kiểm tra...' : camp.isSigned ? 'Đã ký' : 'Chờ ký'}
                                                 </div>
                                             </div>
@@ -298,19 +296,18 @@ export default function StaffCommitmentsPage() {
                                         {/* Nút Hành động */}
                                         <div className="flex flex-col gap-1.5 pt-2">
                                             <div className="flex gap-1.5">
-                                                <button 
+                                                <button
                                                     disabled={!camp.isSigned}
                                                     onClick={() => window.open(`/campaigns-details?id=${camp.id}`, '_blank')}
-                                                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${
-                                                        camp.isSigned 
-                                                        ? 'border-gray-100 text-gray-400 hover:bg-gray-50 bg-white' 
-                                                        : 'border-gray-50 text-gray-200 bg-gray-50/50 cursor-not-allowed'
-                                                    }`}
+                                                    className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all ${camp.isSigned
+                                                            ? 'border-gray-100 text-gray-400 hover:bg-gray-50 bg-white'
+                                                            : 'border-gray-50 text-gray-200 bg-gray-50/50 cursor-not-allowed'
+                                                        }`}
                                                     title={camp.isSigned ? "Xem chiến dịch" : "Chưa thể xem (Người dùng chưa ký cam kết)"}
                                                 >
                                                     <ExternalLink className="h-3.5 w-3.5" />
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => router.push(`/staff/commitments/${camp.id}`)}
                                                     className="flex-1 h-8 rounded-lg border border-blue-100 text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide bg-white"
                                                     title="Xem biên bản cam kết"
@@ -318,29 +315,29 @@ export default function StaffCommitmentsPage() {
                                                     <FileText className="h-3.5 w-3.5" /> Biên bản
                                                 </button>
                                             </div>
-                                            
+
                                             <div className="flex gap-1.5">
-                                                <button 
+                                                <button
                                                     onClick={() => handleChat(camp.fundOwnerId, camp.id)}
                                                     className="flex-1 h-8 rounded-lg border border-gray-100 text-gray-500 hover:bg-gray-50 transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide bg-white"
                                                 >
                                                     <MessageSquare className="h-4 w-4" /> Liên hệ
                                                 </button>
-                                                
+
                                                 {camp.isSigned ? (
-                                                        <button 
-                                                            onClick={() => handleExportPDF(camp)}
-                                                            disabled={exportingId === camp.id}
-                                                            className="flex-1 h-8 rounded-lg bg-[#446b5f] text-white hover:bg-[#3a5c51] transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide shadow-sm shadow-green-900/10"
-                                                        >
-                                                            {exportingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
-                                                            Xuất PDF
-                                                        </button>
-                                                    ) : (
-                                                        <div className="flex-1 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide border border-gray-100 italic">
-                                                            Khóa
-                                                        </div>
-                                                    )}
+                                                    <button
+                                                        onClick={() => handleExportPDF(camp)}
+                                                        disabled={exportingId === camp.id}
+                                                        className="flex-1 h-8 rounded-lg bg-[#446b5f] text-white hover:bg-[#3a5c51] transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide shadow-sm shadow-green-900/10"
+                                                    >
+                                                        {exportingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                                                        Xuất PDF
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex-1 h-8 rounded-lg bg-gray-50 text-gray-400 flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide border border-gray-100 italic">
+                                                        Khóa
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -365,11 +362,10 @@ export default function StaffCommitmentsPage() {
                         <button
                             key={i}
                             onClick={() => setPage(i)}
-                            className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all ${
-                                page === i 
-                                ? 'bg-[#446b5f] text-white shadow-lg shadow-green-900/10' 
-                                : 'text-gray-400 hover:bg-gray-50'
-                            }`}
+                            className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all ${page === i
+                                    ? 'bg-[#446b5f] text-white shadow-lg shadow-green-900/10'
+                                    : 'text-gray-400 hover:bg-gray-50'
+                                }`}
                         >
                             {i + 1}
                         </button>

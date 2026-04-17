@@ -18,7 +18,7 @@ export default function CommitmentsPage() {
     const [exportingId, setExportingId] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredCampaigns = campaigns.filter(camp => 
+    const filteredCampaigns = campaigns.filter(camp =>
         camp.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -28,9 +28,9 @@ export default function CommitmentsPage() {
             try {
                 // Fetch all campaigns owned by the user
                 const userCampaigns = await campaignService.getByFundOwner(user.id);
-                
+
                 // Filter out DRAFT and REJECTED because they don't reach the commitment stage yet
-                const validCampaigns = userCampaigns.filter(c => 
+                const validCampaigns = userCampaigns.filter(c =>
                     !['DRAFT', 'REJECTED'].includes(c.status)
                 );
 
@@ -59,7 +59,7 @@ export default function CommitmentsPage() {
 
     const handleExportPDF = async (campId: number, campTitle: string) => {
         // Dynamic import to avoid "self is not defined" SSR error
-        const html2pdf = (await import('html2pdf.js' as any)).default;
+        const html2pdf = (await import('html2pdf.js')).default;
 
         setExportingId(campId);
         const loadingToast = toast.loading(`Đang khởi tạo bản PDF cho chiến dịch...`);
@@ -75,7 +75,7 @@ export default function CommitmentsPage() {
             container.style.padding = '60px';
             container.style.fontFamily = 'serif';
             container.style.backgroundColor = 'white';
-            
+
             const today = new Date();
             container.innerHTML = `
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -164,15 +164,15 @@ export default function CommitmentsPage() {
                     <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none transition-colors group-focus-within:text-[#446b5f]">
                         <Search className="h-4 w-4 text-slate-400" />
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder="Tìm dự án..." 
+                    <input
+                        type="text"
+                        placeholder="Tìm dự án..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[20px] text-sm focus:outline-none focus:border-[#446b5f]/50 focus:bg-white transition-all font-semibold placeholder:text-slate-300 shadow-sm shadow-slate-100/50"
                     />
                     {searchTerm && (
-                        <button 
+                        <button
                             onClick={() => setSearchTerm('')}
                             className="absolute inset-y-0 right-4 flex items-center group/x"
                         >
@@ -200,19 +200,19 @@ export default function CommitmentsPage() {
                 </div>
             ) : (
                 <div className="w-full">
-                    <AnimatedList 
+                    <AnimatedList
                         items={filteredCampaigns}
                         className="!w-full px-0"
                         renderItem={(camp, index, isSelected) => (
                             <div className={`group bg-white border rounded-[24px] transition-all flex items-stretch overflow-hidden h-[120px]
                                 ${isSelected ? 'border-[#446b5f]/40 bg-green-50/10' : 'border-gray-100'}`}>
-                                
+
                                 {/* Campaign Image - ĐẢM BẢO TRÀN KHUNG TỪ TRÊN XUỐNG DƯỚI */}
                                 <div className="w-[180px] shrink-0 relative overflow-hidden bg-slate-50">
-                                    <img 
-                                        src={camp.coverImageUrl || '/assets/img/commitment.jpg'} 
-                                        alt={camp.title} 
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                                    <img
+                                        src={camp.coverImageUrl || '/assets/img/commitment.jpg'}
+                                        alt={camp.title}
+                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src = '/assets/img/commitment.jpg';
                                         }}
@@ -223,11 +223,10 @@ export default function CommitmentsPage() {
                                     <div className="flex flex-col gap-1.5 min-w-0">
                                         <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#446b5f] transition-all line-clamp-1 pr-4">{camp.title}</h3>
                                         <div className="flex items-center gap-3">
-                                            <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-black uppercase tracking-widest ${
-                                                camp.isSigned 
-                                                    ? 'bg-emerald-50 text-emerald-700' 
+                                            <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-black uppercase tracking-widest ${camp.isSigned
+                                                    ? 'bg-emerald-50 text-emerald-700'
                                                     : 'bg-rose-50 text-rose-700'
-                                            }`}>
+                                                }`}>
                                                 {camp.isSigned ? 'ĐÃ KÝ' : 'CHỜ KÝ'}
                                             </span>
                                             <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">
@@ -235,10 +234,10 @@ export default function CommitmentsPage() {
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center gap-2">
                                         {camp.isSigned && (
-                                            <button 
+                                            <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleExportPDF(camp.id, camp.title);
@@ -251,15 +250,14 @@ export default function CommitmentsPage() {
                                                 <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Tải PDF</span>
                                             </button>
                                         )}
-                                        <Link 
-                                           href={`/fund-owner/campaign/${camp.id}/commitment`}
-                                           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                                               camp.isSigned 
-                                                   ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                                   : 'bg-[#446b5f] text-white hover:bg-[#355249]'
-                                           }`}>
-                                           {camp.isSigned ? 'Xem' : 'Ký ngay'}
-                                           <ArrowRight className="h-4 w-4" />
+                                        <Link
+                                            href={`/fund-owner/campaign/${camp.id}/commitment`}
+                                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${camp.isSigned
+                                                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                    : 'bg-[#446b5f] text-white hover:bg-[#355249]'
+                                                }`}>
+                                            {camp.isSigned ? 'Xem' : 'Ký ngay'}
+                                            <ArrowRight className="h-4 w-4" />
                                         </Link>
                                     </div>
                                 </div>

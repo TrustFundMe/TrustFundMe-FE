@@ -29,7 +29,7 @@ const nextConfig = {
     return [
       {
         source: '/api-backend/:path*',
-        destination: 'http://localhost:8080/:path*',
+        destination: `${process.env.BE_API_GATEWAY_URL || 'http://localhost:8080'}/:path*`,
       },
     ];
   },

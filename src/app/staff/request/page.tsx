@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,21 @@ import type {
 
 
 export default function StaffRequestPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center bg-[#f1f5f9] min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#446b5f] mx-auto mb-4"></div>
+          <p className="text-gray-500 font-bold uppercase tracking-widest">Đang tải yêu cầu...</p>
+        </div>
+      </div>
+    }>
+      <StaffRequestContent />
+    </Suspense>
+  );
+}
+
+function StaffRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
@@ -58,7 +73,7 @@ export default function StaffRequestPage() {
     try {
       // 1. Get tasks assigned to this staff first
       const tasks = await campaignService.getTasksByStaff(currentUser.id);
-      
+
       const campaignTaskIds = tasks
         .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED')
         .map(t => t.targetId);
@@ -72,7 +87,7 @@ export default function StaffRequestPage() {
       // 2. Fetch only the campaigns needed for these tasks in parallel
       // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
       const campaigns = await Promise.all(
-        campaignTaskIds.slice(0, 100).map(id => 
+        campaignTaskIds.slice(0, 100).map(id =>
           campaignService.getById(id).catch(err => {
             console.error(`Failed to fetch campaign ${id}`, err);
             return null;
@@ -84,7 +99,7 @@ export default function StaffRequestPage() {
       // 3. Fetch users for these campaigns only
       const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
       const userInfos = await Promise.all(
-        uniqueOwnerIds.map(id => 
+        uniqueOwnerIds.map(id =>
           userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
         )
       );

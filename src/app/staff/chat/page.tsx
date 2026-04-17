@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatMessages from '@/components/chat/ChatMessages';
 import ChatDetails from '@/components/chat/ChatDetails';
@@ -23,6 +23,21 @@ const mockAppointments: Appointment[] = [];
 const mockMediaItems: MediaItem[] = [];
 
 export default function ChatWithDonorPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-full flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-500 font-bold uppercase tracking-widest">Đang tải cuộc trò chuyện...</p>
+        </div>
+      </div>
+    }>
+      <ChatWithDonorContent />
+    </Suspense>
+  );
+}
+
+function ChatWithDonorContent() {
   const [activeId, setActiveId] = useState<string>('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
