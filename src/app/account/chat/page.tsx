@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ChatSidebar from '@/components/chat/ChatSidebar';
 import ChatMessages from '@/components/chat/ChatMessages';
@@ -21,6 +21,21 @@ import { appointmentService } from '@/services/appointmentService';
 const mockAppointments: Appointment[] = [];
 
 export default function AccountChatPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-full flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest">Đang tải cuộc trò chuyện...</p>
+                </div>
+            </div>
+        }>
+            <AccountChatContent />
+        </Suspense>
+    );
+}
+
+function AccountChatContent() {
     const [activeId, setActiveId] = useState<string>('');
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);

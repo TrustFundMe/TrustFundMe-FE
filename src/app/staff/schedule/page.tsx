@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { Calendar, Plus, X, Clock, MapPin, User, CheckCircle, XCircle, RefreshCw, ChevronRight, Search, Filter, LayoutList, ChevronLeft, Grid3X3, ChevronDown, ShieldCheck, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
@@ -157,13 +157,12 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                                         key={s}
                                         onClick={() => !isDisabled && handleStatus(s)}
                                         disabled={updating !== null || isDisabled}
-                                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                                            isDisabled
+                                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isDisabled
                                             ? 'bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed'
                                             : isAction
-                                              ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10'
-                                              : 'text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200'
-                                        } disabled:opacity-60`}
+                                                ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10'
+                                                : 'text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200'
+                                            } disabled:opacity-60`}
                                     >
                                         {updating === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : s === 'CONFIRMED' ? 'Duyệt lịch' : s === 'CANCELLED' ? 'Hủy lịch' : 'Hoàn thành'}
                                     </button>
@@ -375,28 +374,27 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
             <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100 pr-3">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     {(['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
-                        <button 
-                            key={s} 
-                            onClick={() => setStatusFilter(s)} 
-                            className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${
-                                statusFilter === s 
-                                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm' 
+                        <button
+                            key={s}
+                            onClick={() => setStatusFilter(s)}
+                            className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
                                 : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
-                            }`}
+                                }`}
                         >
                             {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s as AppointmentStatus].label}
                         </button>
                     ))}
                 </div>
-                
+
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input 
-                        type="text" 
-                        value={searchQuery} 
-                        onChange={e => setSearchQuery(e.target.value)} 
-                        placeholder="Tìm nội dung lý do, người tham gia..." 
-                        className="w-full pl-11 pr-4 py-2 rounded-xl border border-gray-100 text-[11px] font-bold focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 bg-white transition-all placeholder:text-gray-300" 
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Tìm nội dung lý do, người tham gia..."
+                        className="w-full pl-11 pr-4 py-2 rounded-xl border border-gray-100 text-[11px] font-bold focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 bg-white transition-all placeholder:text-gray-300"
                     />
                 </div>
             </div>
@@ -406,11 +404,11 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                 <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedAppointment ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
                     <div className="flex items-center justify-between flex-shrink-0 px-2">
                         <div className="flex items-center gap-3">
-                             <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">Danh sách nhiệm vụ lịch hẹn</h2>
-                             <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black">{filtered.length} kết quả</span>
+                            <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">Danh sách nhiệm vụ lịch hẹn</h2>
+                            <span className="px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-black">{filtered.length} kết quả</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button 
+                            <button
                                 onClick={onRefresh}
                                 disabled={isLoading || isRefreshing}
                                 className="h-9 w-9 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95 disabled:opacity-50"
@@ -418,7 +416,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                             >
                                 <RefreshCw className={`h-4 w-4 transition-transform group-hover:rotate-180 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
                             </button>
-                            <button 
+                            <button
                                 onClick={onOpenCreate}
                                 className="flex items-center gap-2 px-6 py-2 rounded-2xl bg-gradient-to-r from-[#446b5f] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition shadow-lg shadow-green-100 active:scale-95"
                             >
@@ -450,9 +448,9 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                         const cfg = STATUS_CONFIG[appt.status];
                                         const isSelected = selectedId === appt.id;
                                         return (
-                                            <tr 
-                                                key={appt.id} 
-                                                onClick={() => setSelectedId(appt.id)} 
+                                            <tr
+                                                key={appt.id}
+                                                onClick={() => setSelectedId(appt.id)}
                                                 className={`cursor-pointer transition-all duration-200 group relative z-10 ${isSelected ? 'bg-orange-50/60' : 'hover:bg-gray-50/80'}`}
                                             >
                                                 <td className="px-4 py-1 text-[11px] font-black text-gray-400 border-r border-gray-50/50">
@@ -466,8 +464,8 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                                 </td>
                                                 <td className="px-4 py-1 border-r border-gray-50/50 whitespace-nowrap">
                                                     <div className="flex items-center gap-2">
-                                                         <span className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{s.date}</span>
-                                                         <span className="text-[10px] font-bold text-red-500/70 italic">{s.time}</span>
+                                                        <span className="text-[11px] font-black text-gray-700 uppercase tracking-tight">{s.date}</span>
+                                                        <span className="text-[10px] font-bold text-red-500/70 italic">{s.time}</span>
                                                     </div>
                                                 </td>
                                                 {!selectedId && (
@@ -479,14 +477,14 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                                 )}
                                                 <td className="px-4 py-1 border-r border-gray-50/50">
                                                     <div className="flex justify-center">
-                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')} whitespace-nowrap`}>
-                                                              {cfg.label}
-                                                         </span>
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')} whitespace-nowrap`}>
+                                                            {cfg.label}
+                                                        </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-1">
                                                     <div className="flex justify-center">
-                                                         <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#446b5f] translate-x-1' : 'text-gray-300'}`} />
+                                                        <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#446b5f] translate-x-1' : 'text-gray-300'}`} />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -499,12 +497,12 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                 </div>
                 {selectedAppointment && (
                     <div className="lg:col-span-4 overflow-hidden pt-[21px] animate-in slide-in-from-right duration-300">
-                         <div className="flex items-center justify-between px-1 mb-2">
-                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
-                             <button onClick={() => setSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
-                                 <X className="h-3.5 w-3.5 text-gray-400" />
-                             </button>
-                         </div>
+                        <div className="flex items-center justify-between px-1 mb-2">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
+                            <button onClick={() => setSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
+                                <X className="h-3.5 w-3.5 text-gray-400" />
+                            </button>
+                        </div>
                         <AppointmentDetailPanel appointment={selectedAppointment} onStatusChange={onStatusChange} />
                     </div>
                 )}
@@ -517,6 +515,21 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
 
 type TabType = 'list' | 'calendar';
 export default function StaffSchedulePage() {
+    return (
+        <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center bg-white min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#446b5f] mx-auto mb-4"></div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Đang tải lịch hẹn...</p>
+                </div>
+            </div>
+        }>
+            <StaffScheduleContent />
+        </Suspense>
+    );
+}
+
+function StaffScheduleContent() {
     const { user } = useAuth();
 
     const searchParams = useSearchParams();
@@ -586,13 +599,12 @@ export default function StaffSchedulePage() {
                         {tab.icon}
                         <span className="whitespace-nowrap">{tab.label}</span>
                         {tab.id === 'list' && (
-                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all ${
-                                 activeTab === 'list'
-                                 ? 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20'
-                                 : 'bg-gray-200 text-gray-400 border-gray-300'
-                             }`}>
-                                 {displayedAppointments.length}
-                             </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all ${activeTab === 'list'
+                                ? 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20'
+                                : 'bg-gray-200 text-gray-400 border-gray-300'
+                                }`}>
+                                {displayedAppointments.length}
+                            </span>
                         )}
                         {activeTab === tab.id && <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />}
                     </button>
@@ -605,9 +617,9 @@ export default function StaffSchedulePage() {
 
                     {/* Tab content */}
                     {activeTab === 'list' && (
-                        <ListView 
-                            appointments={displayedAppointments} 
-                            isLoading={isLoading} 
+                        <ListView
+                            appointments={displayedAppointments}
+                            isLoading={isLoading}
                             onStatusChange={handleStatusChange}
                             onOpenCreate={() => setShowCreateModal(true)}
                             onRefresh={fetchAppointments}
@@ -629,15 +641,15 @@ export default function StaffSchedulePage() {
                             {/* Detail panel — fixed width, always visible */}
                             {calendarSelectedId && (
                                 <div className="w-[340px] flex-shrink-0 overflow-auto animate-in slide-in-from-right duration-300">
-                                     <div className="flex items-center justify-between px-1 mb-2">
-                                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
-                                         <button onClick={() => setCalendarSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
-                                             <X className="h-3.5 w-3.5 text-gray-400" />
-                                         </button>
-                                     </div>
-                                    <AppointmentDetailPanel 
-                                        appointment={displayedAppointments.find(a => a.id === calendarSelectedId) || null} 
-                                        onStatusChange={handleStatusChange} 
+                                    <div className="flex items-center justify-between px-1 mb-2">
+                                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
+                                        <button onClick={() => setCalendarSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
+                                            <X className="h-3.5 w-3.5 text-gray-400" />
+                                        </button>
+                                    </div>
+                                    <AppointmentDetailPanel
+                                        appointment={displayedAppointments.find(a => a.id === calendarSelectedId) || null}
+                                        onStatusChange={handleStatusChange}
                                     />
                                 </div>
                             )}
