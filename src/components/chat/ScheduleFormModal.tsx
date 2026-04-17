@@ -208,9 +208,25 @@ export default function ScheduleFormModal({
                                     hour={startHour}
                                     minute={startMinute}
                                     minDate={minDate}
-                                    onDateChange={setStartDate}
-                                    onHourChange={setStartHour}
-                                    onMinuteChange={setStartMinute}
+                                    onDateChange={(d) => {
+                                        setStartDate(d);
+                                        // If endDate is before new startDate, sync them
+                                        if (d && (!endDate || endDate < d)) setEndDate(d);
+                                    }}
+                                    onHourChange={(h) => {
+                                        setStartHour(h);
+                                        // If same day and endHour <= new startHour, bump endHour
+                                        if (startDate === endDate && endHour <= h) {
+                                            setEndHour((h + 1) % 24);
+                                        }
+                                    }}
+                                    onMinuteChange={(m) => {
+                                        setStartMinute(m);
+                                        if (startDate === endDate && startHour === endHour && endMinute <= m) {
+                                            setEndMinute((m + 15) % 60);
+                                            if (m + 15 >= 60) setEndHour(prev => (prev + 1) % 24);
+                                        }
+                                    }}
                                 />
                                 {/* Kết thúc */}
                                 <DateTimeBlock

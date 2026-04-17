@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, X, RefreshCw, Plus, ChevronDown } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -107,12 +107,23 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
         setSearchTerm('');
     };
 
+    const formatToLocalISO = (date: Date) => {
+        const pad = (num: number) => String(num).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        const seconds = pad(date.getSeconds());
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Convert Date objects to ISO strings for API
-        const startTimeISO = (form.startTime as any) instanceof Date ? (form.startTime as any).toISOString() : form.startTime;
-        const endTimeISO = (form.endTime as any) instanceof Date ? (form.endTime as any).toISOString() : form.endTime;
+        // Convert Date objects to local ISO strings for BE (LocalDateTime)
+        const startTimeISO = (form.startTime as any) instanceof Date ? formatToLocalISO(form.startTime as any) : form.startTime;
+        const endTimeISO = (form.endTime as any) instanceof Date ? formatToLocalISO(form.endTime as any) : form.endTime;
 
         if (!form.donorId || !startTimeISO || !endTimeISO) {
             toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
@@ -227,7 +238,17 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#446b5f]">*</span></label>
                             <DatePicker
                                 selected={form.startTime ? new Date(form.startTime) : null}
-                                onChange={(date: Date | null) => setForm(f => ({ ...f, startTime: date ? date.toISOString() : '' }))}
+                                onChange={(date: Date | null) => {
+                                    const newStartTime = date ? formatToLocalISO(date) : '';
+                                    setForm(f => {
+                                        const updated = { ...f, startTime: newStartTime };
+                                        // If startTime is now after endTime, reset endTime
+                                        if (newStartTime && f.endTime && new Date(f.endTime) <= new Date(newStartTime)) {
+                                            updated.endTime = '';
+                                        }
+                                        return updated;
+                                    });
+                                }}
                                 showTimeSelect
                                 timeFormat="HH:mm"
                                 timeIntervals={15}
@@ -235,7 +256,14 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                                 placeholderText="Ngày & giờ bắt đầu"
                                 className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm"
                                 minDate={new Date(Date.now() + 24 * 3600000)}
-                                minTime={form.startTime && new Date(form.startTime).toDateString() === new Date(Date.now() + 24 * 3600000).toDateString() ? new Date(Date.now() + 24 * 3600000) : new Date(new Date().setHours(0, 0, 0, 0))}
+                                minTime={(() => {
+                                    const threshold = new Date(Date.now() + 24 * 3600000);
+                                    if (form.startTime && new Date(form.startTime).toDateString() === threshold.toDateString()) {
+                                        return threshold;
+                                    }
+                                    // If no start time yet, but picker is on the threshold day, we should still restrict
+                                    return new Date(new Date().setHours(0, 0, 0, 0));
+                                })()}
                                 maxTime={new Date(new Date().setHours(23, 59, 59, 999))}
                                 required
                             />
@@ -244,7 +272,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#446b5f]">*</span></label>
                             <DatePicker
                                 selected={form.endTime ? new Date(form.endTime) : null}
-                                onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? date.toISOString() : '' }))}
+                                onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? formatToLocalISO(date) : '' }))}
                                 showTimeSelect
                                 timeFormat="HH:mm"
                                 timeIntervals={15}
@@ -252,7 +280,18 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                                 placeholderText="Ngày & giờ kết thúc"
                                 className="w-full px-4 py-2.5 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-4 focus:ring-[#db5945]/5 focus:border-[#db5945]/30 transition bg-white shadow-sm"
                                 minDate={form.startTime ? new Date(form.startTime) : new Date(Date.now() + 24 * 3600000)}
-                                minTime={form.endTime && form.startTime && new Date(form.endTime).toDateString() === new Date(form.startTime).toDateString() ? new Date(form.startTime) : new Date(new Date().setHours(0, 0, 0, 0))}
+                                minTime={(() => {
+                                    if (form.startTime && form.endTime && new Date(form.endTime).toDateString() === new Date(form.startTime).toDateString()) {
+                                        const min = new Date(form.startTime);
+                                        min.setMinutes(min.getMinutes() + 15); // End must be at least 15m after start
+                                        return min;
+                                    }
+                                    if (form.startTime && !form.endTime) {
+                                         // If end time is not yet selected, we can't reliably set minTime without knowing which day is hovered,
+                                         // but react-datepicker minTime usually applies to the 'selected' day.
+                                    }
+                                    return new Date(new Date().setHours(0, 0, 0, 0));
+                                })()}
                                 maxTime={new Date(new Date().setHours(23, 59, 59, 999))}
                                 required
                             />

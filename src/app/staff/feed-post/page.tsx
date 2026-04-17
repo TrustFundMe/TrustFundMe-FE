@@ -35,6 +35,7 @@ export default function StaffFeedPostPage() {
   const [filter, setFilter] = useState('ALL');
   
   const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const PAGE_SIZE = 20;
 
   const [selectedPost, setSelectedPost] = useState<PostWithFlags | null>(null);
@@ -50,23 +51,36 @@ export default function StaffFeedPostPage() {
     setLoading(true);
     setError(null);
     try {
-      let dtos: Parameters<typeof dtoToFeedPost>[0][];
-      try {
-        const res = await api.get(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL + '?page=0&size=200');
-        const data = res.data;
-        dtos = Array.isArray(data) ? data : (data.content ?? []);
-      } catch {
-        dtos = await feedPostService.getAll();
-      }
-      setPosts(dtos.map((d) => dtoToFeedPost(d) as PostWithFlags).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      // Use proper server-side pagination (assuming the backend supports it)
+      const res = await api.get(API_ENDPOINTS.FEED_POSTS.ADMIN_ALL, {
+        params: {
+          page: currentPage,
+          size: PAGE_SIZE,
+          // If searching or filtering is done on server, add them here. 
+          // Otherwise keep them for client filter but load a sane amount.
+        }
+      });
+      
+      const data = res.data;
+      const dtos = Array.isArray(data) ? data : (data.content ?? []);
+      const total = Array.isArray(data) ? data.length : (data.totalPages ?? 1);
+      
+      const mappedPosts = dtos.map((d: any) => dtoToFeedPost(d) as PostWithFlags);
+      setPosts(mappedPosts.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setTotalPages(total);
     } catch (e: unknown) {
+      console.error('Failed to load posts:', e);
       setError('Không thể tải bài viết. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadPosts(); }, []);
+  useEffect(() => { 
+    if (user) {
+      loadPosts(); 
+    }
+  }, [currentPage, user]); 
 
   useEffect(() => {
     if (selectedPost) {
@@ -98,6 +112,8 @@ export default function StaffFeedPostPage() {
   }, [selectedPost?.id]);
 
   const filteredPosts = useMemo(() => {
+    // Keep local filtering for search/filter for instant feedback, 
+    // though ideally these should be server-side too.
     return posts.filter((p) => {
       const matchSearch = !search ||
         p.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,8 +124,8 @@ export default function StaffFeedPostPage() {
     });
   }, [posts, search, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE));
-  const pagePosts = filteredPosts.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  // Use the server-provided posts for the current view
+  const pagePosts = filteredPosts; 
 
   const handleOpenDetail = (post: PostWithFlags) => {
     setSelectedPost(post);
@@ -243,16 +259,31 @@ export default function StaffFeedPostPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {loading ? (
+                {loading && pagePosts.length === 0 ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="animate-pulse border-b border-gray-50">
+                      <td className="px-4 py-3"><div className="h-2 w-4 bg-gray-100 rounded" /></td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-2">
+                          <div className="h-3 w-48 bg-gray-100 rounded" />
+                          <div className="h-2 w-32 bg-gray-50 rounded" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><div className="h-3 w-20 bg-gray-100 rounded" /></td>
+                      <td className="px-4 py-3"><div className="h-2 w-24 bg-gray-50 rounded" /></td>
+                      <td className="px-4 py-3 text-center"><div className="h-2 w-16 bg-gray-50 rounded mx-auto" /></td>
+                      <td className="px-4 py-3 text-center"><div className="h-4 w-12 bg-gray-100 rounded-full mx-auto" /></td>
+                      <td className="px-4 py-3 px-4 py-3 text-center"><div className="h-8 w-8 bg-gray-100 rounded-lg mx-auto" /></td>
+                    </tr>
+                  ))
+                ) : filteredPosts.length === 0 ? (
                    <tr>
-                     <td colSpan={7} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase animate-pulse">
-                       Đang tải dữ liệu...
-                     </td>
-                   </tr>
-                ) : pagePosts.length === 0 ? (
-                   <tr>
-                     <td colSpan={7} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase">
-                       Không có bài viết nào
+                     <td colSpan={7} className="px-6 py-32 text-center text-xs font-black text-gray-400 tracking-widest uppercase flex flex-col items-center justify-center gap-4">
+                       <AlertCircle className="h-10 w-10 opacity-20" />
+                       <div className="flex flex-col gap-1">
+                          <p>Hệ thống không tìm thấy bài viết nào</p>
+                          <p className="text-[8px] font-bold opacity-50 underline cursor-pointer" onClick={() => {setSearch(''); setFilter('ALL');}}>Thiết lập lại bộ lọc</p>
+                       </div>
                      </td>
                    </tr>
                 ) : (

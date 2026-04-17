@@ -58,7 +58,7 @@ function Sidebar() {
         {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
 
-      {/* Top Section - Logout/Menu */}
+      {/* Top Section - Logo */}
       <div className={`pt-6 flex flex-col gap-4 ${isExpanded ? 'px-4' : 'items-center'}`}>
         <div className={`flex items-center transition-all duration-300 ${isExpanded ? 'justify-start gap-3 px-2' : 'justify-center'}`}>
             <div className={`flex-shrink-0 transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-xl overflow-hidden`}>
@@ -74,19 +74,6 @@ function Sidebar() {
               </div>
             )}
         </div>
-
-        <button
-          onClick={() => logout()}
-          className={`h-11 rounded-xl flex items-center transition-all ${
-            isExpanded 
-            ? 'w-full px-4 gap-3 bg-gray-50 text-gray-600 hover:bg-rose-50 hover:text-rose-600' 
-            : 'w-11 justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-600'
-          }`}
-          title="Logout"
-        >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          {isExpanded && <span className="text-[11px] font-bold uppercase tracking-wider">Đăng xuất</span>}
-        </button>
       </div>
 
       <div className="h-[1px] bg-gray-50 mx-4 my-6 opacity-50" />
@@ -119,7 +106,7 @@ function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom Section - User Info */}
+      {/* Bottom Section - User Info & Logout */}
       <div className={`pb-6 flex flex-col items-center gap-3 ${isExpanded ? 'px-4' : ''}`}>
         <div className={`flex items-center cursor-pointer p-2 rounded-2xl hover:bg-gray-50 transition-colors ${isExpanded ? 'w-full gap-3' : 'justify-center'}`}>
             {user?.avatarUrl ? (
@@ -140,6 +127,19 @@ function Sidebar() {
                 </div>
             )}
         </div>
+
+        <button
+          onClick={() => logout()}
+          className={`h-11 rounded-xl flex items-center transition-all ${
+            isExpanded 
+            ? 'w-full px-4 gap-3 bg-gray-50 text-gray-600 hover:bg-rose-50 hover:text-rose-600' 
+            : 'w-11 justify-center text-gray-400 hover:bg-rose-50 hover:text-rose-600'
+          }`}
+          title="Logout"
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          {isExpanded && <span className="text-[11px] font-bold uppercase tracking-wider">Đăng xuất</span>}
+        </button>
       </div>
     </aside>
   );
@@ -151,8 +151,8 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     <RequireRole allowedRoles={['STAFF', 'ADMIN']}>
       <div className="h-screen flex overflow-hidden bg-white">
         <Sidebar />
-        <main className="flex-1 h-screen overflow-hidden bg-white relative">
-          <div className="h-full relative flex flex-col">
+        <main className="flex-1 min-h-screen overflow-y-auto bg-white relative">
+          <div className="relative flex flex-col min-h-full">
             <Toaster position="top-right" reverseOrder={false} />
             {children}
           </div>

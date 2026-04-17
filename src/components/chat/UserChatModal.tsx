@@ -230,6 +230,17 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
         }
     };
 
+    const formatToLocalISO = (date: Date) => {
+        const pad = (num: number) => String(num).padStart(2, '0');
+        const year = date.getFullYear();
+        const month = pad(date.getMonth() + 1);
+        const day = pad(date.getDate());
+        const hours = pad(date.getHours());
+        const minutes = pad(date.getMinutes());
+        const seconds = pad(date.getSeconds());
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    };
+
     const handleScheduleConfirm = async () => {
         if (!user || !campaign || !staffId) return;
 
@@ -246,8 +257,8 @@ export default function UserChatModal({ isOpen, onClose, campaign, initialConver
             const res = await appointmentService.create({
                 donorId: Number(user.id),
                 staffId: Number(staffId),
-                startTime: tomorrow.toISOString(),
-                endTime: endHour.toISOString(),
+                startTime: formatToLocalISO(tomorrow),
+                endTime: formatToLocalISO(endHour),
                 location: 'Trao đổi qua chat / Online',
                 purpose: `Hẹn gặp thảo luận về: ${campaign.title}. Nội dung gợi ý: "${detectedScheduleText}"`
             });

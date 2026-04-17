@@ -218,29 +218,68 @@ export default function ExpenditureRequestTab() {
         if (!user) return;
         setLoading(true);
         try {
+            // 1. Get staff tasks
             const tasks = await campaignService.getTasksByStaff(user.id);
-            const expTaskIds = new Set(tasks.filter((t: any) => t.type === 'EXPENDITURE').map((t: any) => t.targetId));
-            const resp = await campaignService.getAll(0, 500);
-            const approved = (resp.content || []).filter((c: any) => c.status === 'APPROVED');
-            const groups = [];
-            for (const c of approved) {
-                try {
-                    const exps = await expenditureService.getByCampaignId(c.id);
-                    const assigned = exps.filter((e: any) => expTaskIds.has(e.id));
-                    if (!assigned.length) continue;
-                    groups.push({
-                        key: `EXP-${c.id}`, campaignId: c.id, campaignTitle: c.title ?? '', campaignType: c.type,
-                        campaignBalance: c.balance ?? 0, campaignRaised: (c as any).raisedAmount ?? 0, 
-                        campaignProgress: ((c as any).goalAmount > 0) ? (((c as any).raisedAmount ?? 0) / (c as any).goalAmount) * 100 : 0,
-                        campaignEnd: c.endDate || '', campaignImageUrl: (c as any).coverImageUrl,
-                        expenditures: assigned,
-                        needsAttention: assigned.some((e: any) => e.status === 'PENDING' || e.status === 'PENDING_REVIEW' || e.evidenceStatus === 'SUBMITTED')
-                    });
-                } catch { }
+            const expTasks = tasks.filter((t: any) => t.type === 'EXPENDITURE' && t.status !== 'COMPLETED');
+            
+            if (expTasks.length === 0) {
+                setGrouped([]);
+                setFiltered([]);
+                return;
             }
-            const sorted = groups.sort((a, b) => (a.needsAttention ? -1 : 1));
-            setGrouped(sorted); setFiltered(sorted);
-        } finally { setLoading(false); }
+
+            // 2. Fetch specific expenditures for these tasks
+            const expenditures = await Promise.all(
+                expTasks.map(t => expenditureService.getById(t.targetId).catch(() => null))
+            );
+            const validExps = expenditures.filter(e => e !== null) as Expenditure[];
+
+            // 3. Group them by campaign and fetch needed campaigns
+            const campaignIds = [...new Set(validExps.map(e => e.campaignId))];
+            const campaigns = await Promise.all(
+                campaignIds.map(id => campaignService.getById(id).catch(() => null))
+            );
+            const validCampaigns = campaigns.filter(c => c !== null);
+            const campaignMap = new Map<number, any>();
+            validCampaigns.forEach(c => campaignMap.set(c.id, c));
+
+            const groupsMap = new Map<number, any>();
+            validExps.forEach(exp => {
+                const campaign = campaignMap.get(exp.campaignId);
+                if (!campaign) return;
+
+                if (!groupsMap.has(exp.campaignId)) {
+                    groupsMap.set(exp.campaignId, {
+                        key: `EXP-${campaign.id}`,
+                        campaignId: campaign.id,
+                        campaignTitle: campaign.title ?? '',
+                        campaignType: campaign.type,
+                        campaignBalance: campaign.balance ?? 0,
+                        campaignRaised: campaign.raisedAmount ?? 0,
+                        campaignProgress: (campaign.goalAmount > 0) ? ((campaign.raisedAmount ?? 0) / campaign.goalAmount) * 100 : 0,
+                        campaignEnd: campaign.endDate || '',
+                        campaignImageUrl: campaign.coverImageUrl,
+                        expenditures: [],
+                        needsAttention: false
+                    });
+                }
+
+                const group = groupsMap.get(exp.campaignId);
+                group.expenditures.push(exp);
+                if (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW' || exp.evidenceStatus === 'SUBMITTED') {
+                    group.needsAttention = true;
+                }
+            });
+
+            const sorted = Array.from(groupsMap.values()).sort((a, b) => (a.needsAttention ? -1 : 1));
+            setGrouped(sorted);
+            setFiltered(sorted);
+        } catch (error) {
+            console.error('Failed to load expenditure requests:', error);
+            toast.error('Lỗi khi tải dữ liệu chi tiêu');
+        } finally {
+            setLoading(false);
+        }
     }, [user]);
 
     useEffect(() => { loadData(); }, [loadData]);
