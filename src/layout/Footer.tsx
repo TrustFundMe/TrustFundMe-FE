@@ -190,8 +190,8 @@ const Footer2 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          FPT University, Long Thạnh Mỹ <br />
-                          Thủ Đức, TP. Hồ Chí Minh
+                          Lô E2a-7, Đường D1, Khu Công nghệ cao <br />
+                          P.Tăng Nhơn Phú, TP. Hồ Chí Minh
                         </h6>
                       </div>
                     </div>
@@ -263,8 +263,8 @@ const Footer3 = () => {
                       </div>
                       <div className="content">
                         <h6>
-                          FPT University, Long Thạnh Mỹ <br />
-                          Thủ Đức, Hồ Chí Minh, Vietnam
+                          Lô E2a-7, Đường D1, Khu Công nghệ cao <br />
+                          P.Tăng Nhơn Phú, Hồ Chí Minh, Vietnam
                         </h6>
                       </div>
                     </div>
@@ -502,7 +502,7 @@ const Footer4 = () => {
           <div className="container">
             <div className="footer-wrapper">
               <p className="wow fadeInUp text-center" data-wow-delay=".3s">
-                © <Link href="/">Danbox</Link> Charity Trust - 2024. All rights
+                © <Link href="/">TrustFundMe</Link> Charity Trust - 2026. All rights
                 reserved.
               </p>
             </div>

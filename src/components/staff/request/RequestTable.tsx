@@ -61,7 +61,7 @@ export default function RequestTable<T extends StaffRequestBase>({
                     {String(index + 1).padStart(2, '0')}
                   </td>
                   {columns.map((c) => (
-                    <td key={c.key} className={`px-4 py-2 text-xs font-bold text-gray-600 border-r border-gray-50/50 last:border-r-0 whitespace-nowrap ${c.className || ''}`}>
+                    <td key={c.key} className={`px-4 py-2 text-xs font-bold text-gray-600 border-r border-gray-50/50 last:border-r-0 ${c.className || ''}`}>
                       {c.render(r) || <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>}
                     </td>
                   ))}

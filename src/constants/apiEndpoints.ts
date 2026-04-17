@@ -12,6 +12,8 @@ export const API_ENDPOINTS = {
     UPDATE_BALANCE: (id: number | string) => `/api/campaigns/${id}/update-balance`,
     PAUSE: (id: number | string) => `/api/campaigns/${id}/pause`,
     CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
+    COUNT: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/count`,
+    STATISTICS: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/statistics`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",
@@ -35,6 +37,7 @@ export const API_ENDPOINTS = {
     COMMENTS: (postId: number | string) => `/api/feed-posts/${postId}/comments`,
     COMMENT_BY_ID: (commentId: number | string) => `/api/feed-posts/comments/${commentId}`,
     COMMENT_LIKE: (commentId: number | string) => `/api/feed-posts/comments/${commentId}/like`,
+    COMMENTS_BY_USER: (userId: number | string) => `/api/feed-posts/comments/user/${userId}`,
     ADMIN_ALL: "/api/feed-posts/admin",
     ADMIN_DELETE: (id: number | string) => `/api/feed-posts/admin/${id}`,
     ADMIN_PIN: (id: number | string) => `/api/feed-posts/admin/${id}/pin`,
@@ -89,6 +92,7 @@ export const API_ENDPOINTS = {
     ITEMS: (id: number | string) => `/api/expenditures/${id}/items`,
     UPDATE_STATUS: (id: number | string) => `/api/expenditures/${id}/status`,
     TRANSACTIONS_PAGINATED: (type: string, status: string) => `/api/expenditures/transactions/type/${type}/status/${status}/paginated`,
+    PAYOUT_SUM: (fundOwnerId: number | string) => `/api/expenditures/transactions/fund-owner/${fundOwnerId}/payout-sum`,
   },
   APPOINTMENTS: {
     BASE: "/api/appointments",
@@ -116,6 +120,7 @@ export const API_ENDPOINTS = {
     DONORS_BY_ITEM: (itemId: number | string) => `/api/payments/expenditure-item/${itemId}/donors`,
     STATUS_PAGINATED: (status: string) => `/api/payments/status/${status}/paginated`,
     MY_DONATIONS: "/api/payments/my-donations",
+    USER_DONATION_COUNT: (userId: number | string) => `/api/payments/user/${userId}/donation-count`,
   },
   TASKS: {
     BASE: "/api/admin/tasks",

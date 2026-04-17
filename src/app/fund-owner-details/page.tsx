@@ -1,67 +1,66 @@
 'use client';
 
-import React, { useState } from 'react';
-import OwnerProfileHeader from '@/components/fund-owner-details/OwnerProfileHeader';
-import CampaignsTab from '@/components/fund-owner-details/CampaignsTab';
-import ActivityFeedTab from '@/components/fund-owner-details/ActivityFeedTab';
-import ExpenditureTab from '@/components/fund-owner-details/ExpenditureTab';
-import InteractionTab from '@/components/fund-owner-details/InteractionTab';
+import React, { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import ProfileHeader from '@/components/fund-owner-details/ProfileHeader';
+import DocumentSection from '@/components/fund-owner-details/DocumentSection';
 
-export type TabId = 'campaigns' | 'feed' | 'expenditure' | 'interaction';
+function FundOwnerDetailsContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
 
-export default function FundOwnerDetailsPage() {
-    const [activeTab, setActiveTab] = useState<TabId>('campaigns');
+  return (
+    <div className="page-wrapper">
+      <div className="header-container">
+        <ProfileHeader id={id} />
+      </div>
+      <div className="list-container">
+        <DocumentSection id={id} />
+      </div>
 
-    const renderTabContent = () => {
-        switch (activeTab) {
-            case 'campaigns':
-                return <CampaignsTab />;
-            case 'feed':
-                return <ActivityFeedTab />;
-            case 'expenditure':
-                return <ExpenditureTab />;
-            case 'interaction':
-                return <InteractionTab />;
-            default:
-                return <CampaignsTab />;
-        }
-    };
-
-    return (
-        <div className="page-wrapper">
-            <OwnerProfileHeader activeTab={activeTab} onTabChange={setActiveTab} />
-
-            <div className="tab-content-container">
-                <div className="tab-content-area">
-                    {renderTabContent()}
-                </div>
-            </div>
-
-            <style jsx>{`
+      <style jsx>{`
         .page-wrapper {
-          min-height: 100vh;
-          background-color: #f9fafb;
+          height: 100vh;
+          background-color: #fffafb;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
+          gap: 0;
         }
-        .tab-content-container {
+        .header-container {
           width: 100%;
-          padding: 32px 24px;
+          flex-shrink: 0;
+        }
+        .list-container {
+          width: 100%;
+          flex: 1;
           display: flex;
-          justify-content: flex-start; /* Left aligned content */
-        }
-        .tab-content-area {
-          width: 100%;
-          max-width: 1200px;
-          /* Removed margin: 0 auto; to align left */
+          justify-content: center;
+          padding: 24px 24px 32px 24px; /* Added 32px bottom margin to detach from edge */
+          overflow: hidden;
         }
 
         :global(body) {
           margin: 0;
           padding: 0;
-          background-color: #f9fafb;
+          height: 100vh;
+          overflow: hidden;
+          background-color: #fffafb;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
+        
+        :global(.text-red-600) { color: #dc2626 !important; }
+        :global(.bg-red-600) { background-color: #dc2626 !important; }
+        :global(.border-red-600) { border-color: #dc2626 !important; }
       `}</style>
-        </div>
-    );
+    </div>
+  );
+}
+
+export default function FundOwnerDetailsPage() {
+  return (
+    <Suspense fallback={<div>Đang tải trang...</div>}>
+      <FundOwnerDetailsContent />
+    </Suspense>
+  );
 }

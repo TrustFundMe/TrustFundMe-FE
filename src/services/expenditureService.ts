@@ -1,6 +1,7 @@
 import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest, ExpenditureTransaction } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
 import axios from 'axios';
+import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 
 export const expenditureService = {
     getByCampaignId: async (campaignId: string | number): Promise<Expenditure[]> => {
@@ -102,10 +103,9 @@ export const expenditureService = {
 
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         try {
-            const response = await axios.post(`http://localhost:8080/api/expenditures/import`, formData, {
+            const response = await axiosInstance.post(`/api/expenditures/import`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
             });
             return {
@@ -146,6 +146,11 @@ export const expenditureService = {
     /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
     getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
         const response = await axiosInstance.get('/api/expenditures/transactions');
+        return response.data;
+    },
+
+    getTotalDisbursed: async (fundOwnerId: string | number): Promise<number> => {
+        const response = await axiosInstance.get(API_ENDPOINTS.EXPENDITURES.PAYOUT_SUM(fundOwnerId));
         return response.data;
     },
 };

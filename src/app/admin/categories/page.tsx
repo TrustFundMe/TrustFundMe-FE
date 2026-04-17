@@ -167,9 +167,9 @@ export default function AdminCategoriesPage() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onClick={() => handleDelete(category.id)}
-                                    className="flex items-center gap-2 font-bold text-xs py-2.5 px-3 text-rose-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer rounded-xl"
+                                    className="flex items-center gap-2 font-bold text-xs py-2.5 px-3 text-slate-700 hover:text-rose-600 hover:bg-rose-50/50 cursor-pointer rounded-xl group"
                                 >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-rose-500" />
                                     Xóa danh mục
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

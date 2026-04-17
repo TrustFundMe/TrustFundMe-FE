@@ -16,18 +16,13 @@ export const campaignService = {
     return res.data;
   },
 
-  async getByFundOwner(fundOwnerId: number): Promise<CampaignDto[]> {
+  async getByFundOwner(fundOwnerId: number | string): Promise<CampaignDto[]> {
     const res = await api.get<CampaignDto[]>(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER(fundOwnerId));
     return res.data;
   },
 
-  async getUserCampaignsPaginated(userId: number, page: number = 0, size: number = 6): Promise<{
-    content: CampaignDto[];
-    totalPages: number;
-    totalElements: number;
-    number: number;
-  }> {
-    const res = await api.get(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER_PAGINATED(userId), {
+  async getUserCampaignsPaginated(userId: number | string, page: number = 0, size: number = 6): Promise<PaginatedResponse<CampaignDto>> {
+    const res = await api.get<PaginatedResponse<CampaignDto>>(API_ENDPOINTS.CAMPAIGNS.BY_FUND_OWNER_PAGINATED(userId), {
       params: { page, size }
     });
     return res.data;
@@ -189,5 +184,35 @@ export const campaignService = {
   async closeCampaign(id: number): Promise<CampaignDto> {
     const res = await api.put<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.CLOSE(id));
     return res.data;
+  },
+
+  async getCampaignCount(fundOwnerId: number | string): Promise<number> {
+    const res = await api.get<number>(API_ENDPOINTS.CAMPAIGNS.COUNT(fundOwnerId));
+    return res.data;
+  },
+
+  async getStatistics(fundOwnerId: number | string): Promise<any> {
+    const res = await api.get<any>(API_ENDPOINTS.CAMPAIGNS.STATISTICS(fundOwnerId));
+    return res.data;
+  },
+
+  // Commitment methods
+  async signCommitment(payload: any): Promise<any> {
+    const res = await api.post('/api/campaigns/commitments', payload);
+    return res.data;
+  },
+
+  async getCommitment(campaignId: number | string): Promise<any> {
+    const res = await api.get(`/api/campaigns/commitments/${campaignId}`);
+    return res.data;
+  },
+
+  async isCommitmentSigned(campaignId: number | string): Promise<boolean> {
+    const res = await api.get(`/api/campaigns/commitments/check/${campaignId}`);
+    return res.data;
+  },
+
+  async sendCommitmentEmail(campaignId: number): Promise<void> {
+    await api.post(`/api/campaigns/commitments/send-email/${campaignId}`);
   },
 };
