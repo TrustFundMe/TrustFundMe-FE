@@ -142,6 +142,7 @@ export default function CampaignExpendituresPage() {
 
                 {/* Stats */}
                 <ExpenditureStats 
+                    campaignId={campaign.id}
                     balance={campaign.balance} 
                     expendituresCount={expenditures.length} 
                     totalSpent={totalSpent} 

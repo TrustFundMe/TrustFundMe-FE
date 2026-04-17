@@ -1,7 +1,9 @@
+import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 
 interface ExpenditureStatsProps {
+    campaignId: string | number;
     balance: number;
     expendituresCount: number;
     totalSpent: number;
@@ -11,21 +13,28 @@ const planeImg = '/assets/img/campaign/5.png';
 const blocksImg = '/assets/img/campaign/6.png';
 const infinityImg = '/assets/img/campaign/7.png';
 
-export default function ExpenditureStats({ balance, expendituresCount, totalSpent }: ExpenditureStatsProps) {
+export default function ExpenditureStats({ campaignId, balance, expendituresCount, totalSpent }: ExpenditureStatsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Card 1: Balance */}
-            <div className="relative h-[100px] bg-[#2d3a30] rounded-2xl p-4 flex flex-col justify-center group overflow-hidden transition-all duration-500 hover:shadow-lg">
+            <Link href={`/account/campaigns/transactions?campaignId=${campaignId}`} className="relative h-[100px] bg-[#2d3a30] rounded-2xl p-4 flex flex-col justify-center group overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer">
                 <div className="absolute top-[-40%] right-[-15%] w-[180px] h-[180px] pointer-events-none opacity-80 transition-transform group-hover:scale-110">
                     <Image src={planeImg} alt="Balance" width={180} height={180} className="w-full h-full object-contain" />
+                </div>
+                <div className="absolute bottom-2 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="bg-white/20 p-1.5 rounded-full backdrop-blur-sm">
+                        <ArrowLeftRight className="w-4 h-4 text-white" />
+                    </div>
                 </div>
                 <div className="relative z-10">
                     <h3 className="text-xl font-black text-white tracking-tighter leading-none mb-1">
                         {new Intl.NumberFormat('vi-VN').format(balance)} <span className="text-[10px] align-top opacity-60">VNĐ</span>
                     </h3>
-                    <p className="text-[10px] font-black text-white/50 uppercase tracking-[1px]">Số dư hiện tại</p>
+                    <p className="text-[10px] font-black text-white/50 uppercase tracking-[1px] flex items-center gap-1 group-hover:text-white transition-colors">
+                        SỐ DƯ HIỆN TẠI (XEM BIẾN ĐỘNG)
+                    </p>
                 </div>
-            </div>
+            </Link>
 
             {/* Card 2: Count */}
             <div className="relative h-[100px] bg-[#a8ba9a] rounded-2xl p-4 flex flex-col justify-center group overflow-hidden transition-all duration-500 hover:shadow-lg border border-[#a8ba9a]/50">

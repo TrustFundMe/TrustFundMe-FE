@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import SignaturePad from '@/components/common/SignaturePad';
 import Grainient from '@/components/common/Grainient';
 import { toast } from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
 
 interface KYCData {
   id: number;
@@ -162,33 +161,33 @@ export default function CommitmentPage() {
     </div>
   );
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const element = document.getElementById('legal-document');
     if (!element) return;
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `commitment-TF-${id}-${new Date().getTime()}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true,
-        letterRendering: true
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    try {
+      const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
+      const html2pdf = (await import('html2pdf.js')).default;
+      
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `commitment-TF-${id}-${new Date().getTime()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-    const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
-    
-    // Hide components that shouldn't be in PDF if any (handled by CSS no-print usually but html2pdf might need more care)
-    // Actually html2pdf uses html2canvas, so it sees what's on screen.
-    
-    html2pdf().from(element).set(opt).save().then(() => {
+      await html2pdf().from(element).set(opt).save();
       toast.success('Đã tải bản PDF thành công!', { id: loadingToast });
-    }).catch((err: any) => {
+    } catch (err: any) {
       console.error('PDF Export Error:', err);
-      toast.error('Lỗi khi xuất PDF', { id: loadingToast });
-    });
+      toast.dismiss();
+      toast.error('Lỗi khi xuất PDF');
+    }
   };
 
   const today = new Date();

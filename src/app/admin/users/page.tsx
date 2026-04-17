@@ -58,6 +58,9 @@ export default function AdminUsersPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [showImportErrorsModal, setShowImportErrorsModal] = useState(false);
 
   const handleExport = async () => {
     try {
@@ -100,13 +103,8 @@ export default function AdminUsersPage() {
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[handleImport] triggered, files:', e.target.files);
     const file = e.target.files?.[0];
-    if (!file) {
-      console.log('[handleImport] no file selected');
-      return;
-    }
-    console.log('[handleImport] file:', file.name, file.size);
+    if (!file) return;
 
     try {
       setIsImporting(true);
@@ -115,27 +113,21 @@ export default function AdminUsersPage() {
       toast.dismiss(loadingToast);
 
       if (res.success) {
-        console.log('[handleImport] success:', res.message);
         if (res.imported === 0 && res.skipped && res.skipped > 0) {
-          // All rows skipped
-          toast(res.message || 'Tất cả dòng bị bỏ qua', {
-            icon: '⚠️',
-            style: { maxWidth: '500px', whiteSpace: 'pre-line' },
-          });
+          // Reject entire file and show error modal
+          setImportErrors(res.skippedReasons || []);
+          setShowImportErrorsModal(true);
         } else {
           toast.success(res.message || 'Nhập dữ liệu thành công');
         }
         refetch();
       } else {
-        console.log('[handleImport] failed:', res.error);
         toast.error(res.error || 'Lỗi khi nhập dữ liệu');
       }
     } catch (error: any) {
-      console.error('[handleImport] catch error:', error);
       toast.error('Lỗi khi nhập dữ liệu: ' + (error?.message || ''));
     } finally {
       setIsImporting(false);
-      // Reset input value to allow selecting the same file again
       e.target.value = '';
     }
   };
@@ -448,6 +440,12 @@ export default function AdminUsersPage() {
           refetch();
           setIsCreateOpen(false);
         }}
+      />
+
+      <ImportErrorModal
+        isOpen={showImportErrorsModal}
+        onClose={() => setShowImportErrorsModal(false)}
+        errors={importErrors}
       />
 
       {error && (
@@ -955,6 +953,52 @@ function CreateUserModal({ isOpen, onClose, onSuccess }: {
             className="flex-1 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black uppercase tracking-widest shadow-sm transition-all disabled:opacity-50"
           >
             {isSubmitting ? 'Đang tạo...' : 'Tạo người dùng'}
+          </button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+}
+
+function ImportErrorModal({ isOpen, onClose, errors }: {
+  isOpen: boolean;
+  onClose: () => void;
+  errors: string[];
+}) {
+  return (
+    <Modal open={isOpen} onOpenChange={onClose}>
+      <ModalContent className="max-w-xl">
+        <ModalHeader>
+          <ModalTitle className="text-red-600 flex items-center gap-2">
+            <ShieldAlert className="h-5 w-5" />
+            Lỗi nhập dữ liệu từ Excel
+          </ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <div className="space-y-4">
+            <div className="rounded-xl bg-red-50 border border-red-100 p-4">
+              <p className="text-sm font-bold text-red-600 leading-relaxed mb-3">
+                Phát hiện <span className="text-xl underline decoration-wavy underline-offset-4 mx-1">{errors.length}</span> lỗi trong quá trình phân tích file Excel. Toàn bộ file đã bị loại bỏ, vui lòng sửa và thử lại!
+              </p>
+              <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-red-200 scrollbar-track-transparent">
+                {errors.map((err, i) => {
+                  return (
+                    <div key={i} className="text-xs flex items-start gap-2 font-bold text-slate-700 bg-white p-3 rounded-lg border border-red-100 shadow-sm">
+                      <span className="text-red-500 font-black mt-[1px]">⚡</span>
+                      <span>{err}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-sm"
+          >
+            Đóng bảng lỗi
           </button>
         </ModalFooter>
       </ModalContent>
