@@ -198,8 +198,13 @@ export const campaignService = {
 
   // Commitment methods
   async signCommitment(payload: any): Promise<any> {
-    const res = await api.post('/api/campaigns/commitments', payload);
-    return res.data;
+    try {
+      const res = await api.post('/api/campaigns/commitments', payload);
+      return res.data;
+    } catch (error: any) {
+      console.error("API_ERROR_SIGN_COMMITMENT:", error.response?.data || error.message);
+      throw error;
+    }
   },
 
   async getCommitment(campaignId: number | string): Promise<any> {

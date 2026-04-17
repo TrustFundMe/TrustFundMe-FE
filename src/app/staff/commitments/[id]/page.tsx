@@ -7,7 +7,7 @@ import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import Grainient from '@/components/common/Grainient';
 import { toast } from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
+
 
 interface KYCData {
   id: number;
@@ -101,7 +101,10 @@ export default function StaffCommitmentReviewPage() {
     return () => clearInterval(timer);
   }, [campaign?.updatedAt, calculateTimeLeft, isExpired, isSavedData]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    // Dynamic import to avoid "self is not defined" SSR error
+    const html2pdf = (await import('html2pdf.js' as any)).default;
+
     const element = document.getElementById('legal-document');
     if (!element) return;
 

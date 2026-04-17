@@ -8,7 +8,7 @@ import { chatService } from '@/services/chatService';
 import { userService } from '@/services/userService';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContextProxy';
-import html2pdf from 'html2pdf.js';
+
 
 const FALLBACK_IMAGE = '/assets/img/commitment.jpg';
 
@@ -108,6 +108,9 @@ export default function StaffCommitmentsPage() {
     }, [campaigns, searchTerm, filter]);
 
     const handleExportPDF = async (camp: any) => {
+        // Dynamic import to avoid "self is not defined" SSR error
+        const html2pdf = (await import('html2pdf.js' as any)).default;
+        
         setExportingId(camp.id);
         const loadingToast = toast.loading(`Đang tải bản PDF...`);
         try {
@@ -193,7 +196,7 @@ export default function StaffCommitmentsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-white p-4 lg:p-6 overflow-hidden">
+        <div className="flex flex-col flex-1 bg-white p-4 lg:p-6 overflow-hidden">
             {/* Standard Staff Header Bar */}
             <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
                 <div className="flex items-center gap-2 flex-wrap">
