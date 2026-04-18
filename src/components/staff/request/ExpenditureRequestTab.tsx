@@ -205,7 +205,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
 
 /* ══════════════════════════════ MAIN COMPONENT ══════════════════════════════ */
 
-export default function ExpenditureRequestTab() {
+export default function ExpenditureRequestTab({ initialCampaignId }: { initialCampaignId?: number | null }) {
     const { user } = useAuth();
     const [grouped, setGrouped] = useState<any[]>([]);
     const [filtered, setFiltered] = useState<any[]>([]);
@@ -274,6 +274,12 @@ export default function ExpenditureRequestTab() {
             const sorted = Array.from(groupsMap.values()).sort((a, b) => (a.needsAttention ? -1 : 1));
             setGrouped(sorted);
             setFiltered(sorted);
+
+            // Auto-select initial campaign
+            if (initialCampaignId) {
+                const match = sorted.find(g => g.campaignId === Number(initialCampaignId));
+                if (match) setSelected(match);
+            }
         } catch (error) {
             console.error('Failed to load expenditure requests:', error);
             toast.error('Lỗi khi tải dữ liệu chi tiêu');

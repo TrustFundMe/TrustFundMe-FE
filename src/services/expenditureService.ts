@@ -153,4 +153,20 @@ export const expenditureService = {
         const response = await axiosInstance.get(API_ENDPOINTS.EXPENDITURES.PAYOUT_SUM(fundOwnerId));
         return response.data;
     },
+
+    getByStatus: async (status: string): Promise<Expenditure[]> => {
+        try {
+            const response = await axiosInstance.get(`/api/expenditures/status/${status}`);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to fetch expenditures by status:', error);
+            // Fallback to query param if path variable fails (legacy/diff environments)
+            try {
+                const response = await axiosInstance.get(`/api/expenditures/status`, { params: { status } });
+                return response.data;
+            } catch (innerError) {
+                return [];
+            }
+        }
+    },
 };

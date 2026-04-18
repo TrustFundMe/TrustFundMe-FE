@@ -102,26 +102,37 @@ export default function StaffCommitmentReviewPage() {
   }, [campaign?.updatedAt, calculateTimeLeft, isExpired, isSavedData]);
 
   const handleExportPDF = async () => {
-    // Dynamic import to avoid "self is not defined" SSR error
-    const html2pdf = (await import('html2pdf.js')).default;
+    try {
+      // Dynamic import to avoid "self is not defined" SSR error
+      const html2pdfModule = await import('html2pdf.js');
+      const exporter = html2pdfModule.default || html2pdfModule;
 
-    const element = document.getElementById('legal-document');
-    if (!element) return;
+      const element = document.getElementById('legal-document');
+      if (!element) return;
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `bien-ban-cam-ket-TF-${id}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `bien-ban-cam-ket-TF-${id}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
 
-    const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
-    html2pdf().from(element).set(opt).save().then(() => {
-      toast.success('Đã tải bản PDF thành công!', { id: loadingToast });
-    }).catch(() => {
-      toast.error('Lỗi khi xuất PDF', { id: loadingToast });
-    });
+      const loadingToast = toast.loading('Đang khởi tạo bản PDF...');
+      
+      // Call with proper fallback handling
+      const pdfWorker = typeof exporter === 'function' ? exporter() : (exporter as any)();
+      
+      pdfWorker.from(element).set(opt).save().then(() => {
+        toast.success('Đã tải bản PDF thành công!', { id: loadingToast });
+      }).catch((err: any) => {
+        console.error('PDF_EXPORT_ERROR:', err);
+        toast.error('Lỗi khi xuất PDF', { id: loadingToast });
+      });
+    } catch (err) {
+      console.error('HTML2PDF_LOAD_ERROR:', err);
+      toast.error('Không thể tải thư viện xuất PDF');
+    }
   };
 
   if (loading) return (

@@ -45,8 +45,9 @@ function StaffRequestContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { user: currentUser } = useAuth();
+  const targetId = searchParams.get('targetId');
   const [selectedUserIdForKyc, setSelectedUserIdForKyc] = useState<number | null>(
-    searchParams.get('userId') ? Number(searchParams.get('userId')) : null
+    searchParams.get('userId') ? Number(searchParams.get('userId')) : (activeTab === 'KYC' && targetId ? Number(targetId) : null)
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -60,7 +61,7 @@ function StaffRequestContent() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [sentCommitmentIds, setSentCommitmentIds] = useState<Set<number>>(new Set());
   const [signedCommitmentIds, setSignedCommitmentIds] = useState<Set<number>>(new Set());
-  const targetCampaignId = searchParams.get('campaignId');
+  const targetCampaignId = activeTab === 'CAMPAIGN' ? (targetId || searchParams.get('campaignId')) : searchParams.get('campaignId');
 
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -75,7 +76,7 @@ function StaffRequestContent() {
       const tasks = await campaignService.getTasksByStaff(currentUser.id);
 
       const campaignTaskIds = tasks
-        .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED')
+        .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED' && t.targetId)
         .map(t => t.targetId);
 
       if (campaignTaskIds.length === 0) {
@@ -85,24 +86,28 @@ function StaffRequestContent() {
       }
 
       // 2. Fetch only the campaigns needed for these tasks in parallel
-      // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
-      const campaigns = await Promise.all(
-        campaignTaskIds.slice(0, 100).map(id =>
-          campaignService.getById(id).catch(err => {
-            console.error(`Failed to fetch campaign ${id}`, err);
-            return null;
-          })
-        )
+      // Use allSettled to be extremely resilient against individual 500 errors
+      const validTaskIds = campaignTaskIds.filter(id => id != null && id !== 'undefined');
+      
+      const results = await Promise.allSettled(
+        validTaskIds.slice(0, 100).map(id => campaignService.getById(id))
       );
-      const validCampaigns = campaigns.filter(c => c !== null);
+      
+      const validCampaigns = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value)
+        .filter(c => c !== null);
 
       // 3. Fetch users for these campaigns only
-      const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
-      const userInfos = await Promise.all(
-        uniqueOwnerIds.map(id =>
-          userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
-        )
+      const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId).filter(id => id != null))];
+      const userResults = await Promise.allSettled(
+        uniqueOwnerIds.map(id => userService.getUserById(id))
       );
+      
+      const userInfos = userResults
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value?.success ? r.value.data : null)
+        .filter(u => u != null);
 
       const userMap = new Map<number, UserInfo>();
       userInfos.forEach(u => {
@@ -563,7 +568,7 @@ function StaffRequestContent() {
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
-            <ExpenditureRequestTab />
+            <ExpenditureRequestTab initialCampaignId={targetId ? Number(targetId) : null} />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
           ) : activeTab === 'KYC' ? (
