@@ -154,6 +154,17 @@ function CampaignTransactionsContent() {
                     <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch
                 </Link>
 
+                {/* Decorative Image */}
+                <div className="absolute top-[0px] left-[58%] -translate-x-1/2 pointer-events-none hidden lg:block z-0 opacity-100 animate-in fade-in zoom-in duration-1000">
+                    <Image 
+                        src="/assets/img/campaign/9.png" 
+                        alt="Piggy Bank" 
+                        width={350} 
+                        height={350} 
+                        className="object-contain drop-shadow-2xl"
+                    />
+                </div>
+
                 {/* Top Section - Reduced height approximation */}
                 <div className="flex flex-col lg:flex-row justify-between mb-2 lg:h-[240px]">
                     {/* Left side: Title and Chart */}
@@ -168,9 +179,10 @@ function CampaignTransactionsContent() {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData}>
                                         <defs>
-                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#418d72" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#418d72" stopOpacity={0} />
+                                            <linearGradient id="colorValue" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.12} />
+                                                <stop offset="50%" stopColor="#418d72" stopOpacity={0.08} />
+                                                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.12} />
                                             </linearGradient>
                                         </defs>
                                         <XAxis 
