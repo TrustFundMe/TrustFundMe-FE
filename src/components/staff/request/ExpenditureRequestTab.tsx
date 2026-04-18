@@ -306,7 +306,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                 <div className={`flex flex-col border-r border-gray-100 ${selected ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
                     <div className="p-4 border-b border-gray-50 flex flex-col gap-3">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kiểm soát chi phí</h2>
+                            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kiểm soát chi tiêu</h2>
                             <span className="text-[9px] font-bold text-gray-300">{filtered.length} chiến dịch</span>
                         </div>
                         <div className="relative">

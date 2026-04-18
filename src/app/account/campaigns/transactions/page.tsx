@@ -19,7 +19,30 @@ interface TransactionItem {
     amount: number;
     date: string;
     balanceAfter: number;
+    relatedCampaignId?: number;
 }
+
+const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-emerald-100 flex flex-col gap-1 min-w-[220px]">
+                <div className="flex justify-between items-center gap-4">
+                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">
+                        {new Date(data.timestamp).toLocaleString('vi-VN', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        })}
+                    </span>
+                </div>
+                <div className="text-lg font-black text-[#1a2e2a] leading-tight mt-1">
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.balance)}
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
 
 function CampaignTransactionsContent() {
     const searchParams = useSearchParams();
@@ -41,12 +64,12 @@ function CampaignTransactionsContent() {
 
                 const CAMPAIGN_URL = process.env.NEXT_PUBLIC_CAMPAIGN_API_URL || 'http://localhost:8082';
                 const response = await fetch(`${CAMPAIGN_URL}/api/campaigns/${campaignId}/transactions-history`);
-                
+
                 if (response.ok) {
                     const history = await response.json();
                     setTransactions(history);
                 } else {
-                    console.error('Failed to fetch aggregated history');
+                    console.error('Failed to fetch transactions history');
                     setTransactions([]);
                 }
             } catch (error) {
@@ -92,11 +115,15 @@ function CampaignTransactionsContent() {
         );
     }
 
-    // Calculate chart data from transactions
-    const chartData = [...transactions].reverse().map((t, idx) => ({
-        name: new Date(t.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-        value: t.balanceAfter
-    }));
+    // Calculate chart data from transactions - Sorted by time
+    const chartData = [...transactions]
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((t) => ({
+            timestamp: new Date(t.date).getTime(),
+            balance: t.balanceAfter,
+            amount: t.amount,
+            description: t.description
+        }));
 
     const totalPlus = transactions.filter(t => t.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
     const totalMinus = transactions.filter(t => t.amount < 0).reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
@@ -127,32 +154,58 @@ function CampaignTransactionsContent() {
                     <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch
                 </Link>
 
+                {/* Decorative Image */}
+                <div className="absolute top-[0px] left-[58%] -translate-x-1/2 pointer-events-none hidden lg:block z-0 opacity-100 animate-in fade-in zoom-in duration-1000">
+                    <Image 
+                        src="/assets/img/campaign/9.png" 
+                        alt="Piggy Bank" 
+                        width={350} 
+                        height={350} 
+                        className="object-contain drop-shadow-2xl"
+                    />
+                </div>
+
                 {/* Top Section - Reduced height approximation */}
                 <div className="flex flex-col lg:flex-row justify-between mb-2 lg:h-[240px]">
                     {/* Left side: Title and Chart */}
                     <div className="flex-1 flex flex-col justify-between">
                         <div className="mb-4">
-                            <h1 className="text-4xl md:text-5xl font-black text-[#1a2e2a] tracking-tight mb-1 mt-2" style={{ fontFamily: 'var(--font-playfair-display), serif' }}>Trang Biến động Số dư</h1>
+                            <h1 className="text-4xl md:text-5xl font-black text-[#1a2e2a] tracking-tight mb-1 mt-2" style={{ fontFamily: 'var(--font-playfair-display), serif' }}>Biến động Số dư</h1>
                             <p className="text-black text-lg italic font-medium">Chiến dịch: {campaign.title}</p>
                         </div>
                         
                         <div className="flex-1 min-h-[150px] relative">
-                            <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest absolute top-0 left-2 z-10">Net Change</p>
                             <div className="h-full w-[95%] bottom-0 absolute ml-[-20px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData}>
                                         <defs>
-                                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#418d72" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#418d72" stopOpacity={0} />
+                                            <linearGradient id="colorValue" x1="0" y1="0" x2="1" y2="0">
+                                                <stop offset="0%" stopColor="#10b981" stopOpacity={0.12} />
+                                                <stop offset="50%" stopColor="#418d72" stopOpacity={0.08} />
+                                                <stop offset="100%" stopColor="#fbbf24" stopOpacity={0.12} />
                                             </linearGradient>
                                         </defs>
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1a2e2a', opacity: 0.6 }} dy={10} />
-                                        <Tooltip 
-                                            formatter={(value: any) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0)}
-                                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', fontWeight: 'bold' }} 
+                                        <XAxis 
+                                            dataKey="timestamp" 
+                                            type="number"
+                                            domain={['dataMin', 'dataMax']}
+                                            axisLine={false} 
+                                            tickLine={false} 
+                                            tick={{ fontSize: 9, fill: '#1a2e2a', opacity: 0.5, fontWeight: 700 }} 
+                                            dy={10}
+                                            tickFormatter={(ts) => new Date(ts).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                                         />
-                                        <Area type="monotone" dataKey="value" stroke="#377a62" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="balance" 
+                                            stroke="#377a62" 
+                                            strokeWidth={3} 
+                                            fillOpacity={1} 
+                                            fill="url(#colorValue)"
+                                            dot={{ r: 3, fill: '#377a62', strokeWidth: 2, stroke: '#fff' }}
+                                            activeDot={{ r: 5, fill: '#1a2e2a', strokeWidth: 0 }}
+                                        />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
@@ -223,7 +276,20 @@ function CampaignTransactionsContent() {
                                         <tr key={t.id} className="border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors group">
                                             <td className="py-3 px-6 text-sm font-bold text-slate-400">{index + 1}</td>
                                             <td className="py-3 px-4">{getTypeBlock(t.type)}</td>
-                                            <td className="py-3 px-4 text-sm font-semibold text-[#1a2e2a]">{t.description}</td>
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-[#1a2e2a]">{t.description}</span>
+                                                    {t.type === 'INTERNAL_TRANSFER' && t.relatedCampaignId && (
+                                                        <Link
+                                                            href={`/campaigns-details?id=${t.relatedCampaignId}`}
+                                                            target="_blank"
+                                                            className="text-xs font-bold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 decoration-emerald-200 transition-all shrink-0"
+                                                        >
+                                                            Xem
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="py-3 px-4 text-right">
                                                 <span className={`text-sm font-black ${t.amount > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                                                     {t.amount > 0 ? '+' : ''}{new Intl.NumberFormat('vi-VN').format(t.amount)}

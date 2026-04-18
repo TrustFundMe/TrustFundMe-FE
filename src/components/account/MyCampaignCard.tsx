@@ -101,10 +101,7 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                             <span className="text-sm font-medium text-orange-600 uppercase tracking-wider">
                                 {campaign.categoryName || campaign.category || 'Campaign'}
                             </span>
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded border ${campaign.type === 'AUTHORIZED'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-purple-50 text-purple-700 border-purple-200'
-                                }`}>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded border bg-orange-50 text-orange-700 border-orange-200">
                                 {campaign.type === 'AUTHORIZED' ? 'Quỹ ủy quyền' : campaign.type === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Chiến dịch'}
                             </span>
                         </div>
@@ -206,11 +203,11 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                                             className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
                                         >
                                             <BarChart className="w-4 h-4" />
-                                            Chi phí
+                                            Đợt chi tiêu
                                         </Link>
                                         <Link
                                             href={`/account/campaigns/transactions?campaignId=${campaign.id}`}
-                                            className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+                                            className="flex items-center gap-2 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
                                         >
                                             <BarChart className="w-4 h-4 rotate-90" />
                                             Biến động số dư

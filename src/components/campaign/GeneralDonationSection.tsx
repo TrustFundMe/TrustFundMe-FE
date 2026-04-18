@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Phone, Mail, Loader2 } from "lucide-react";
+import { MapPin, Phone, Mail, Loader2, BarChart } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { campaignService } from "@/services/campaignService";
 import { paymentService, CreatePaymentRequest } from "@/services/paymentService";
@@ -134,6 +135,13 @@ export const GeneralDonationSection = () => {
                             <p className="text-[#F84D43] text-[12px] font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
                                 <span className="w-6 h-[2px] bg-[#F84D43]"></span>
                                 Trao gửi yêu thương
+                                <Link
+                                    href="/account/campaigns/transactions?campaignId=1"
+                                    className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#F84D43] text-white hover:bg-red-600 transition-all shadow-md shadow-red-100 group"
+                                >
+                                    <BarChart className="w-3.5 h-3.5 text-white" />
+                                    <span className="text-[10px] font-black uppercase tracking-wider">Xem biến động số dư</span>
+                                </Link>
                             </p>
                             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-6 leading-tight tracking-tight">
                                 {campaign?.title || "Chung tay vì một cộng đồng tốt đẹp hơn"}
