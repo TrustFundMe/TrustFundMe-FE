@@ -54,7 +54,7 @@ export default function ExpenditureTable({
                 
                         <div className="bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.03)] rounded-[3rem] border border-black/5 overflow-hidden">        
                             <div className="px-10 py-3 border-b border-black/5 bg-white flex justify-between items-center">        
-                                <h2 className="text-[10px] font-black text-black uppercase tracking-[3px]">Danh sách các khoản chi</h2>        
+                                <h2 className="text-[10px] font-black text-black uppercase tracking-[3px]">Danh sách các đợt chi tiêu</h2>        
                             </div>        
                 
                             {expenditures.length === 0 ? (        
@@ -62,15 +62,15 @@ export default function ExpenditureTable({
                                     <div className="mx-auto h-20 w-20 flex items-center justify-center rounded-[2rem] bg-gray-50 text-black/10 mb-6">        
                                         <FileText className="h-10 w-10" />        
                                     </div>        
-                                    <h3 className="text-xl font-black text-black tracking-tight">Chưa có khoản chi nào</h3>        
-                                    <p className="mt-2 text-sm font-bold text-black/30">Bắt đầu bằng cách tạo một khoản chi mới cho chiến dịch này.</p>        
+                                    <h3 className="text-xl font-black text-black tracking-tight">Chưa có đợt chi tiêu nào</h3>        
+                                    <p className="mt-2 text-sm font-bold text-black/30">Bắt đầu bằng cách tạo một đợt chi tiêu mới cho chiến dịch này.</p>        
                                     <div className="mt-10">        
                                         <Link        
                                             href={`/account/campaigns/expenditures/create?campaignId=${campaign.id}`}        
                                             className="inline-flex items-center px-8 py-3 rounded-full shadow-xl shadow-red-900/5 text-[10px] font-black uppercase tracking-widest text-white bg-red-800 hover:bg-red-900 transition-all hover:scale-[1.02] active:scale-[0.98]"        
                                         >        
                                             <Plus className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />        
-                                            Tạo khoản chi đầu tiên        
+                                            Tạo đợt chi tiêu đầu tiên        
                                         </Link>        
                                     </div>        
                                 </div>        
@@ -127,7 +127,7 @@ export default function ExpenditureTable({
                                                             </td>        
                                                             <td className="px-10 py-2">        
                                                                 <div className={`text-sm font-black transition-colors ${isExpanded ? 'text-black' : 'text-black/80 group-hover:text-black'}`}>        
-                                                                    {exp.plan || 'Chi tiêu không tên'}        
+                                                                    {exp.plan || 'Đợt chi tiêu không tên'}        
                                                                 </div>        
                                                             </td>        
                                                             <td className="px-6 py-2 whitespace-nowrap text-black font-black">        
@@ -207,7 +207,7 @@ export default function ExpenditureTable({
                                                                                                 <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 bg-emerald-500 ring-4 ring-emerald-50`}></div>        
                                                                                                 <div className="flex flex-col">        
                                                                                                     <span className={`text-sm font-black block leading-none mb-1 ${selectedLogStep === 1 ? 'text-emerald-900' : 'text-emerald-700'}`}>        
-                                                                                                        1. Khởi tạo khoản chi        
+                                                                                                        1. Khởi tạo đợt chi tiêu        
                                                                                                      </span>        
                                                                                                      <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">        
                                                                                                          Đã khởi tạo        
@@ -349,7 +349,7 @@ export default function ExpenditureTable({
                                                                                                                         {exp.status === 'PENDING_REVIEW' ? <Clock className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}        
                                                                                                                     </div>        
                                                                                                                     <div>        
-                                                                                                                        <p className={`text-sm font-black ${exp.status === 'PENDING_REVIEW' ? 'text-amber-900' : 'text-emerald-900'}`}>{exp.status === 'PENDING_REVIEW' ? 'Đang được xét duyệt' : 'Khoản chi đã được xét duyệt'}</p>        
+                                                                                                                        <p className={`text-sm font-black ${exp.status === 'PENDING_REVIEW' ? 'text-amber-900' : 'text-emerald-900'}`}>{exp.status === 'PENDING_REVIEW' ? 'Đang được xét duyệt' : 'Đợt chi tiêu đã được xét duyệt'}</p>        
                                                                                                                     </div>        
                                                                                                                 </div>)}        
                                                                                                                 {campaign.type === 'AUTHORIZED' && exp.staffReviewId && (        
@@ -379,7 +379,7 @@ export default function ExpenditureTable({
                                                                                                         ) : (        
                                                                                                             <div className="text-center py-10 space-y-4">        
                                                                                                                 <Clock className="w-12 h-12 text-black/10 mx-auto" />        
-                                                                                                                <p className="text-sm font-bold text-black/40">Khoản chi này chưa đóng hoặc chưa gửi yêu cầu rút tiền.</p>        
+                                                                                                                <p className="text-sm font-bold text-black/40">Đợt chi tiêu này chưa đóng hoặc chưa gửi yêu cầu rút tiền.</p>        
                                                                                                             </div>        
                                                                                                         )}        
                                                                                                     </div>        
