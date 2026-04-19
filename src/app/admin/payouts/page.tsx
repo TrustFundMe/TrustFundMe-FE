@@ -64,7 +64,7 @@ function formatVnd(value: number) {
 function getMediaUrl(url: string | null | undefined): string {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    if (url.startsWith('/api/')) return `/api-backend${url}`;
+    if (url.startsWith('/api/')) return `${process.env.NEXT_PUBLIC_BE_API_URL || ''}${url}`;
     return url;
 }
 

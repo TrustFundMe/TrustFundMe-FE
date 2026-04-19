@@ -7,7 +7,7 @@ import { CashFlowTable, TransactionDetailModal, Transaction } from '@/components
 import { api as axiosInstance } from '@/config/axios';
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_URL = process.env.NEXT_PUBLIC_BE_API_URL ?? 'http://localhost:8080';
 
 // Filter label map
 const filterLabels: FilterLabels = {

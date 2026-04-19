@@ -253,7 +253,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
         if (!hasPhotos) { toast.error('Chưa có ảnh minh chứng'); return; }
         setAnalyzing(true);
         try {
-            const res = await axios.post('http://localhost:7000/api/analyze-evidence', { 
+            const res = await axios.post(`${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/api/analyze-evidence`, { 
                 expenditureId: rec.expenditureId, 
                 plan: rec.plan, 
                 purpose: rec.purpose || '', 

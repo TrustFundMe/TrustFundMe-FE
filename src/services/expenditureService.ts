@@ -133,7 +133,7 @@ export const expenditureService = {
 
     /** Phân tích chi tiêu bằng AI */
     analyzeWithAI: async (campaign: any, expenditure: any, items: any[]): Promise<any> => {
-        const response = await axios.post('http://localhost:7000/api/analyze-expenditure', {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/api/analyze-expenditure`, {
             campaign,
             expenditure,
             items

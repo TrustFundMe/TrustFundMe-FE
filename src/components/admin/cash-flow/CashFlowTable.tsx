@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api as axiosInstance } from '@/config/axios';
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
+const API_URL = process.env.NEXT_PUBLIC_BE_API_URL ?? 'http://localhost:8080';
 
 export interface Transaction {
     id: string;
