@@ -246,8 +246,9 @@ function RequestDetailsModal({ request, campaign, onClose, onUpdateStatus }: { r
             await onUpdateStatus(request.id, 'APPROVED');
             toast.success('Đã duyệt và lưu minh chứng');
             onClose();
-        } catch (error) {
-            toast.error('Có lỗi xảy ra khi duyệt');
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || error.message || 'Có lỗi xảy ra khi duyệt';
+            toast.error(errorMessage);
         } finally {
             setUploading(false);
         }

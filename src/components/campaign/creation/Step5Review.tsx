@@ -13,7 +13,6 @@ interface Step5ReviewProps {
 
 export default function Step5Review({ data, onSubmit, isSubmitting, result, onPrev }: Step5ReviewProps) {
     const [showModal, setShowModal] = useState(false);
-    const [isAgreed, setIsAgreed] = useState(false);
     const isAuthorized = data.fundType === 'AUTHORIZED';
     const totalAmount = data.expenditureItems?.reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0) || 0;
 
@@ -106,38 +105,12 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result, onPr
                 </div>
             </div>
 
-            {/* Bottom Actions */}
             <div className="pt-6 border-t border-black/5 space-y-6">
-                <div className="p-6 rounded-[2rem] bg-[#dc2626]/5 border border-[#dc2626]/10 transition-all hover:bg-[#dc2626]/10">
-                    <label className="flex items-start gap-4 cursor-pointer">
-                        <div className="shrink-0 mt-1">
-                            <input
-                                type="checkbox"
-                                checked={isAgreed}
-                                onChange={(e) => setIsAgreed(e.target.checked)}
-                                className="h-4 w-4 rounded-full border-2 border-[#dc2626]/20 text-[#dc2626] focus:ring-[#dc2626] cursor-pointer"
-                                required
-                            />
-                        </div>
-                        <div className="text-[11px] font-bold leading-relaxed text-red-900/80">
-                            Tôi xác nhận đã đọc và đồng ý với các nội dung trong
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(true)}
-                                className="mx-1 text-[#dc2626] underline hover:text-red-700 transition-colors uppercase tracking-tight"
-                            >
-                                Bản cam kết trách nhiệm
-                            </button>
-                            đối với người tạo quỹ. Tôi sẽ chịu hoàn toàn trách nhiệm trước pháp luật về tính minh bạch của chiến dịch.
-                        </div>
-                    </label>
-                </div>
-
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     <button
                         type="button"
                         onClick={onSubmit}
-                        disabled={isSubmitting || !isAgreed}
+                        disabled={isSubmitting}
                         className="flex-1 flex items-center justify-center gap-3 rounded-[2rem] bg-[#dc2626] py-2.5 text-sm font-black text-white shadow-2xl shadow-red-200 transition-all hover:bg-red-700 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 disabled:grayscale-[0.5]"
                     >
                         {isSubmitting ? (

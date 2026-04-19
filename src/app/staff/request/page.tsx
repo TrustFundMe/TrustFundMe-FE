@@ -88,11 +88,11 @@ function StaffRequestContent() {
       // 2. Fetch only the campaigns needed for these tasks in parallel
       // Use allSettled to be extremely resilient against individual 500 errors
       const validTaskIds = campaignTaskIds.filter(id => id != null && id !== 'undefined');
-      
+
       const results = await Promise.allSettled(
         validTaskIds.slice(0, 100).map(id => campaignService.getById(id))
       );
-      
+
       const validCampaigns = results
         .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
         .map(r => r.value)
@@ -103,7 +103,7 @@ function StaffRequestContent() {
       const userResults = await Promise.allSettled(
         uniqueOwnerIds.map(id => userService.getUserById(id))
       );
-      
+
       const userInfos = userResults
         .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
         .map(r => r.value?.success ? r.value.data : null)
@@ -235,6 +235,11 @@ function StaffRequestContent() {
 
     if (!targetCampaign || targetCampaign.type !== 'APPROVE_CAMPAIGN') return;
 
+    if (isApprove && !targetCampaign.kycVerified) {
+      toast.error('Người dùng chưa xác thực KYC');
+      return;
+    }
+
     try {
       const status = isApprove ? 'APPROVED' : 'REJECTED';
       await campaignService.reviewCampaign(targetCampaign.campaignId, status, reason);
@@ -341,7 +346,7 @@ function StaffRequestContent() {
 
       {/* Folder Body Container */}
       <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative flex flex-col min-h-0 h-full">
-<div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white min-h-0 h-full">
+        <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white min-h-0 h-full">
           {activeTab === 'CAMPAIGN' ? (
             <>
 

@@ -111,11 +111,28 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
         return undefined;
     };
 
+    const validateTaxId = (value: string): string | undefined => {
+        if (!value) return undefined;
+        if (!/^\d{10}(-\d{3})?$/.test(value) && !/^\d{10}$/.test(value) && !/^\d{13}$/.test(value)) return 'Mã số thuế phải đúng định dạng 10 số hoặc 13 số';
+        return undefined;
+    };
+
     const validateDates = (issueDate: Date | null, expiryDate: Date | null): { issueDate?: string; expiryDate?: string } => {
         const errors: { issueDate?: string; expiryDate?: string } = {};
         if (!issueDate) errors.issueDate = 'Vui lòng chọn ngày cấp';
         if (!expiryDate) errors.expiryDate = 'Vui lòng chọn ngày hết hạn';
-        if (issueDate && expiryDate && issueDate >= expiryDate) errors.expiryDate = 'Ngày hết hạn phải sau ngày cấp';
+        if (issueDate && expiryDate) {
+            if (issueDate >= expiryDate) {
+                errors.expiryDate = 'Ngày hết hạn phải sau ngày cấp';
+            } else {
+                // Cách nhau ít nhất 1 năm để đúng thực tế các loại giấy tờ
+                const diffTime = expiryDate.getTime() - issueDate.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays < 365 && expiryDate.getFullYear() !== 2099) { // Bỏ qua nếu là vô thời hạn 2099
+                    errors.expiryDate = 'Ngày hết hạn phải cách ngày cấp ít nhất 1 năm';
+                }
+            }
+        }
         if (issueDate && issueDate > new Date()) errors.issueDate = 'Ngày cấp không được là ngày trong tương lai';
         return errors;
     };
@@ -146,6 +163,8 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             setErrors(prev => ({ ...prev, idNumber: validateIdNumber(formData.idNumber, value) }));
         } else if (name === 'issuePlace') {
             setErrors(prev => ({ ...prev, issuePlace: validateIssuePlace(value) }));
+        } else if (name === 'taxId') {
+            setErrors(prev => ({ ...prev, taxId: validateTaxId(value) as any }));
         }
     };
 
@@ -170,6 +189,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             idNumber: validateIdNumber(formData.idNumber, formData.idType),
             ...validateDates(formData.issueDate, formData.expiryDate),
             issuePlace: validateIssuePlace(formData.issuePlace),
+            taxId: validateTaxId(formData.taxId) as any,
         };
 
         const needsBackImage = formData.idType !== 'PASSPORT';
@@ -211,7 +231,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             if (kycRecord && kycRecord.id) {
                 await kycService.updateStatus(kycRecord.id, 'APPROVED');
             }
-            
+
             toast.success('Gửi và duyệt KYC thành công!');
             onSuccess();
         } catch (error: any) {
@@ -252,7 +272,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                 if (ocrResult.error) {
                                     throw new Error(ocrResult.error);
                                 }
-                                
+
                                 const isValidStr = (val: string | null | undefined) => {
                                     if (!val) return false;
                                     const lower = String(val).toLowerCase().trim();
@@ -265,7 +285,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                     if (lower.includes('không thời hạn') || lower.includes('vô thời hạn')) {
                                         return new Date('2099-12-31'); // Đại diện cho vô thời hạn
                                     }
-                                    
+
                                     let d = new Date(dateStr);
                                     if (isNaN(d.getTime())) {
                                         const parts = String(dateStr).split(/[-\/]/); // Handle DD/MM/YYYY or DD-MM-YYYY
@@ -337,49 +357,49 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             {formData.idType === 'PASSPORT' ? 'Trang ảnh Hộ chiếu'
                                 : formData.idType === 'DRIVER_LICENSE' ? 'Mặt trước Bằng lái xe' : 'Mặt trước CCCD'}
                         </p>
-                                <div className="space-y-3">
-                                    <input type="file" id="idImageFront" accept="image/*"
-                                        onChange={(e) => handleFileUpload(e, 'idImageFront')}
-                                        className="hidden"
-                                        disabled={uploading || readOnly} />
-                                    
-                                    {formData.idImageFront ? (
-                                        <div className="relative group">
-                                            <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.idImageFront)}>
-                                                <img 
-                                                    src={formData.idImageFront} 
-                                                    alt="Front ID" 
-                                                    className="h-28 w-full object-cover rounded-xl border border-gray-100 shadow-sm"
-                                                    onError={() => setFormData(prev => ({ ...prev, idImageFront: '' }))}
-                                                />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-all">
-                                                    <ZoomIn className="w-6 h-6 text-white" />
-                                                </div>
-                                            </div>
-                                            {/* Nút Xóa */}
-                                            {!readOnly && (
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setFormData(prev => ({ ...prev, idImageFront: '' }));
-                                                    }}
-                                                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
-                                                    title="Xóa ảnh"
-                                                >
-                                                    <span className="text-[12px] font-black">×</span>
-                                                </button>
-                                            )}
+                        <div className="space-y-3">
+                            <input type="file" id="idImageFront" accept="image/*"
+                                onChange={(e) => handleFileUpload(e, 'idImageFront')}
+                                className="hidden"
+                                disabled={uploading || readOnly} />
+
+                            {formData.idImageFront ? (
+                                <div className="relative group">
+                                    <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.idImageFront)}>
+                                        <img
+                                            src={formData.idImageFront}
+                                            alt="Front ID"
+                                            className="h-28 w-full object-cover rounded-xl border border-gray-100 shadow-sm"
+                                            onError={() => setFormData(prev => ({ ...prev, idImageFront: '' }))}
+                                        />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-all">
+                                            <ZoomIn className="w-6 h-6 text-white" />
                                         </div>
-                                    ) : (
-                                        <label htmlFor="idImageFront" className="h-28 w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-                                                <span className="text-gray-400 text-lg">+</span>
-                                            </div>
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase">Tải lên</span>
-                                        </label>
+                                    </div>
+                                    {/* Nút Xóa */}
+                                    {!readOnly && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setFormData(prev => ({ ...prev, idImageFront: '' }));
+                                            }}
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
+                                            title="Xóa ảnh"
+                                        >
+                                            <span className="text-[12px] font-black">×</span>
+                                        </button>
                                     )}
                                 </div>
+                            ) : (
+                                <label htmlFor="idImageFront" className="h-28 w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+                                        <span className="text-gray-400 text-lg">+</span>
+                                    </div>
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Tải lên</span>
+                                </label>
+                            )}
+                        </div>
                     </div>
 
                     {/* Back ID */}
@@ -393,13 +413,13 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                     onChange={(e) => handleFileUpload(e, 'idImageBack')}
                                     className="hidden"
                                     disabled={uploading || readOnly} />
-                                
+
                                 {formData.idImageBack ? (
                                     <div className="relative group">
                                         <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.idImageBack)}>
-                                            <img 
-                                                src={formData.idImageBack} 
-                                                alt="Back ID" 
+                                            <img
+                                                src={formData.idImageBack}
+                                                alt="Back ID"
                                                 className="h-28 w-full object-cover rounded-xl border border-gray-100 shadow-sm"
                                                 onError={() => setFormData(prev => ({ ...prev, idImageBack: '' }))}
                                             />
@@ -442,14 +462,14 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                 onChange={(e) => handleFileUpload(e, 'selfieImage')}
                                 className="hidden"
                                 disabled={uploading || readOnly} />
-                            
+
                             {formData.selfieImage ? (
                                 <div className="relative group mx-auto w-fit">
                                     <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.selfieImage)}>
-                                        <img 
-                                            src={formData.selfieImage} 
-                                            alt="Selfie" 
-                                            className="h-28 w-28 object-cover rounded-full border-2 border-white shadow-md ring-4 ring-gray-50" 
+                                        <img
+                                            src={formData.selfieImage}
+                                            alt="Selfie"
+                                            className="h-28 w-28 object-cover rounded-full border-2 border-white shadow-md ring-4 ring-gray-50"
                                             onError={() => setFormData(prev => ({ ...prev, selfieImage: '' }))}
                                         />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-full flex items-center justify-center transition-all">
@@ -541,11 +561,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             name="taxId"
                             value={formData.taxId}
                             onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.taxId ? 'border-red-500' : 'border-gray-300'}`}
                             placeholder="VD: 0123456789"
-                            maxLength={50}
+                            maxLength={15}
                             disabled={readOnly}
                         />
+                        {(errors as any).taxId && <p className="mt-1 text-xs text-red-600">{(errors as any).taxId}</p>}
                     </div>
                 </div>
 
