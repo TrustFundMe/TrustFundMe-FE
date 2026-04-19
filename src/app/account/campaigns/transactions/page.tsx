@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, PlusCircle, MinusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, MinusCircle } from 'lucide-react';
 import { useEffect, useState, Suspense } from 'react';
 import Image from 'next/image';
 import Aurora from '@/components/ui/Aurora';
@@ -20,6 +20,7 @@ interface TransactionItem {
     date: string;
     balanceAfter: number;
     relatedCampaignId?: number;
+    expenditureId?: number;
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -212,14 +213,9 @@ function CampaignTransactionsContent() {
                         </div>
                     </div>
 
-                    {/* Right side: Button and Stats */}
+                    {/* Right side: Stats */}
                     <div className="w-full lg:w-[450px] flex flex-col justify-between shrink-0">
-                        <div className="flex justify-end">
-                            <button className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1a2e2a] text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-900/20 hover:bg-[#0f1b18] transition-all hover:scale-105 active:scale-95">
-                                <Save className="w-4 h-4" />
-                                Xuất báo cáo
-                            </button>
-                        </div>
+                        <div></div>
                         
                         <div className="flex justify-between items-end pt-8 pr-4">
                             <div>
@@ -278,15 +274,32 @@ function CampaignTransactionsContent() {
                                             <td className="py-3 px-4">{getTypeBlock(t.type)}</td>
                                             <td className="py-3 px-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-semibold text-[#1a2e2a]">{t.description}</span>
-                                                    {t.type === 'INTERNAL_TRANSFER' && t.relatedCampaignId && (
-                                                        <Link
-                                                            href={`/campaigns-details?id=${t.relatedCampaignId}`}
-                                                            target="_blank"
-                                                            className="text-xs font-bold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 decoration-emerald-200 transition-all shrink-0"
-                                                        >
-                                                            Xem
-                                                        </Link>
+                                                    {t.type === 'EXPENDITURE' && t.expenditureId ? (
+                                                        <span className="text-sm font-semibold text-[#1a2e2a]">
+                                                            Giải ngân cho đợt chi tiêu <Link
+                                                                href={`/account/campaigns/expenditures/${t.expenditureId}`}
+                                                                target="_blank"
+                                                                className="text-gray-500 hover:text-gray-700 underline underline-offset-2 hover:no-underline transition-all"
+                                                            >này</Link>
+                                                        </span>
+                                                    ) : t.type === 'REFUND' && t.expenditureId ? (
+                                                        <span className="text-sm font-semibold text-[#1a2e2a]">
+                                                            Hoàn tiền dư cho đợt chi tiêu <Link
+                                                                href={`/account/campaigns/expenditures/${t.expenditureId}`}
+                                                                target="_blank"
+                                                                className="text-gray-500 hover:text-gray-700 underline underline-offset-2 hover:no-underline transition-all"
+                                                            >này</Link>
+                                                        </span>
+                                                    ) : t.type === 'INTERNAL_TRANSFER' && t.relatedCampaignId ? (
+                                                        <span className="text-sm font-semibold text-[#1a2e2a]">
+                                                            Nhận tiền hỗ trợ từ <Link
+                                                                href={`/campaigns-details?id=${t.relatedCampaignId}`}
+                                                                target="_blank"
+                                                                className="text-gray-500 hover:text-gray-700 underline underline-offset-2 hover:no-underline transition-all"
+                                                            >Quỹ chung</Link>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-sm font-semibold text-[#1a2e2a]">{t.description}</span>
                                                     )}
                                                 </div>
                                             </td>
