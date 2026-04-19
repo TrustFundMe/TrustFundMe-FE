@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const AI_BASE_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000';
+const AI_BASE_URL = '/api-ai';
 
 const aiApi = axios.create({
     baseURL: AI_BASE_URL,
