@@ -65,10 +65,8 @@ export const expenditureService = {
     deleteItem: async (itemId: string | number): Promise<void> => {
         await axiosInstance.delete(`/api/expenditures/items/${itemId}`);
     },
-    updateEvidenceStatus: async (id: string | number, status: string, reason?: string): Promise<Expenditure> => {
-        const response = await axiosInstance.patch(`/api/expenditures/${id}/evidence-status`, null, {
-            params: { status, reason }
-        });
+    updateEvidenceStatus: async (id: string | number, status: string): Promise<Expenditure> => {
+        const response = await axiosInstance.patch(`/api/expenditures/${id}/evidence-status?status=${status}`);
         return response.data;
     },
 
@@ -152,5 +150,21 @@ export const expenditureService = {
     getTotalDisbursed: async (fundOwnerId: string | number): Promise<number> => {
         const response = await axiosInstance.get(API_ENDPOINTS.EXPENDITURES.PAYOUT_SUM(fundOwnerId));
         return response.data;
+    },
+
+    getByStatus: async (status: string): Promise<Expenditure[]> => {
+        try {
+            const response = await axiosInstance.get(`/api/expenditures/status/${status}`);
+            return response.data;
+        } catch (error) {
+            console.error('Failed to fetch expenditures by status:', error);
+            // Fallback to query param if path variable fails (legacy/diff environments)
+            try {
+                const response = await axiosInstance.get(`/api/expenditures/status`, { params: { status } });
+                return response.data;
+            } catch (innerError) {
+                return [];
+            }
+        }
     },
 };

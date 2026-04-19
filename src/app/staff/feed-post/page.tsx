@@ -14,8 +14,17 @@ import { dtoToFeedPost } from '@/lib/feedPostUtils';
 import type { FeedPost } from '@/types/feedPost';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { useAuth } from '@/contexts/AuthContextProxy';
-import { toast } from 'react-hot-toast';
 import { api } from '@/config/axios';
+import { toast } from 'react-hot-toast';
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalBody,
+  ModalFooter,
+} from '@/components/ui/modal';
+import { Plus, Save, Send } from 'lucide-react';
 
 function formatDate(str: string) {
   return new Date(str).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -44,6 +53,11 @@ export default function StaffFeedPostPage() {
   
   const [comments, setComments] = useState<CommentDto[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const [targetDetails, setTargetDetails] = useState<{ campaignTitle?: string; expenditureTitle?: string; expenditureEvidenceStatus?: string } | null>(null);
 
@@ -191,6 +205,33 @@ export default function StaffFeedPostPage() {
     }
   };
 
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostContent.trim()) {
+      toast.error('Nội dung không được để trống');
+      return;
+    }
+    setCreating(true);
+    try {
+      await feedPostService.create({
+        title: newPostTitle.trim() || null,
+        content: newPostContent.trim(),
+        type: 'NEWS',
+        visibility: 'PUBLIC',
+        status: 'PUBLISHED'
+      });
+      toast.success('Đăng bài thành công');
+      setShowCreateModal(false);
+      setNewPostTitle('');
+      setNewPostContent('');
+      loadPosts();
+    } catch {
+      toast.error('Lỗi khi đăng bài');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleUpdateExpStatus = async (post: PostWithFlags, isCurrentlyAllowed: boolean) => {
     if (post.targetType !== 'EXPENDITURE' || !post.targetId) return;
     setProcessingAction('status');
@@ -208,7 +249,7 @@ export default function StaffFeedPostPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full p-4 lg:p-6 bg-white overflow-hidden">
+    <div className="flex flex-col gap-4 flex-1 p-4 lg:p-6 bg-white overflow-hidden">
       {/* Search & Filter Top Bar */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">
@@ -225,15 +266,24 @@ export default function StaffFeedPostPage() {
             </button>
           ))}
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Tìm theo tiêu đề, nội dung, tác giả..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(0); }}
-            className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 w-[400px] lg:w-[500px] bg-white transition-all focus:w-[550px]"
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm theo tiêu đề, nội dung, tác giả..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(0); }}
+              className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 w-[300px] lg:w-[400px] bg-white transition-all focus:w-[450px]"
+            />
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="h-10 px-6 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+          >
+            <Plus className="w-4 h-4" />
+            Đăng bài mới
+          </button>
         </div>
       </div>
 
@@ -558,6 +608,76 @@ export default function StaffFeedPostPage() {
           </div>
         )}
       </div>
+      {/* Create Post Modal */}
+      <Modal open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <ModalContent className="max-w-2xl bg-white rounded-[32px] p-0 overflow-hidden border-none shadow-2xl">
+          <div className="bg-emerald-600 px-8 py-6 flex items-center justify-between text-white">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <ModalTitle className="text-lg font-black uppercase tracking-tight leading-none mb-1 text-white">Tạo bài đăng mới</ModalTitle>
+                <p className="text-[9px] font-bold text-emerald-100 uppercase tracking-widest">Tiếp cận cộng đồng TrustFundMe</p>
+              </div>
+            </div>
+            <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleCreatePost}>
+            <ModalBody className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Tiêu đề bài viết (Không bắt buộc)</label>
+                <input 
+                  type="text"
+                  value={newPostTitle}
+                  onChange={e => setNewPostTitle(e.target.value)}
+                  placeholder="Nhập tiêu đề thu hút..."
+                  className="w-full h-14 px-6 rounded-2xl bg-gray-50 border border-gray-100 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all outline-none shadow-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nội dung bài đăng</label>
+                <textarea 
+                  required
+                  value={newPostContent}
+                  onChange={e => setNewPostContent(e.target.value)}
+                  placeholder="Hôm nay bạn muốn chia sẻ điều gì với cộng đồng?"
+                  className="w-full min-h-[150px] px-6 py-5 rounded-[24px] bg-gray-50 border border-gray-100 text-sm font-medium focus:bg-white focus:ring-4 focus:ring-emerald-50 focus:border-emerald-200 transition-all outline-none shadow-sm resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="flex gap-4 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
+                <AlertCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                <p className="text-[10px] font-bold text-emerald-800 leading-relaxed uppercase tracking-tight">
+                  Lưu ý: Bài đăng sẽ được hiển thị công khai ngay lập tức sau khi bạn nhấn nút "Đăng bài". Hãy đảm bảo nội dung tuân thủ quy tắc cộng đồng.
+                </p>
+              </div>
+            </ModalBody>
+
+            <ModalFooter className="p-8 bg-gray-50/50 border-t border-gray-100 flex items-center justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-6 py-3 rounded-xl text-[10px] font-black text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-all"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="h-12 px-8 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Đăng bài ngay
+              </button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

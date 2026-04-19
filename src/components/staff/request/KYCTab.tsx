@@ -134,7 +134,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="flex flex-col gap-4 flex-1">
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
             <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách người dùng</h2>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{filteredUsers.length} kết quả</span>
           </div>
-          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative">
+          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative custom-scrollbar">
             <table className="w-full text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">

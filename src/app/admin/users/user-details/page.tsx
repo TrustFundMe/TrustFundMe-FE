@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -53,6 +53,18 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 export default function AdminUserDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-4xl mx-auto flex items-center justify-center py-20">
+        <div className="h-10 w-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <AdminUserDetailContent />
+    </Suspense>
+  );
+}
+
+function AdminUserDetailContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get('id');
   const router = useRouter();

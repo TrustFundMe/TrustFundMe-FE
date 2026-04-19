@@ -144,12 +144,12 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                 <thead>
                                     <tr className="bg-white text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                         <th className="px-4 py-2.5 border-b border-slate-100">Sản phẩm phát hiện</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100 text-center">Cửa hàng</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100">SL</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100 text-right">Đơn giá</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100">Kế hoạch</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100 text-right">Dự kiến</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Số tiền hóa đơn</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Chênh lệch</th>
+                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Giá thị trường</th>
                                         <th className="px-4 py-2.5 border-b border-slate-100 text-center">Trạng thái</th>
                                     </tr>
                                 </thead>
@@ -162,6 +162,9 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                         return (
                                             <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
                                                 <td className="px-4 py-2 text-xs font-black text-slate-800">{item.name}</td>
+                                                <td className="px-4 py-2 text-center text-[10px] font-bold text-slate-400 italic">
+                                                    {item.vendor || '---'}
+                                                </td>
                                                 <td className="px-4 py-2 text-xs font-bold text-slate-600">{item.quantity}</td>
                                                 <td className="px-4 py-2 text-xs font-bold text-slate-600 text-right">{fmt(item.unitPrice)}</td>
                                                 <td className="px-4 py-2 text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">
@@ -170,14 +173,8 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                                 <td className="px-4 py-2 text-xs font-bold text-slate-500 text-right">
                                                     {planned > 0 ? fmt(planned) : '---'}
                                                 </td>
-                                                <td className="px-4 py-2 text-xs font-black text-slate-900 text-right">
-                                                    {fmt(actual)}
-                                                </td>
-                                                <td className={`px-4 py-2 text-xs font-black text-right ${
-                                                    diff > 0 ? 'text-rose-600' : 
-                                                    diff < 0 ? 'text-emerald-600' : 'text-slate-400'
-                                                }`}>
-                                                    {diff !== 0 ? (diff > 0 ? '+' : '') + fmt(diff) : '0 ₫'}
+                                                <td className="px-4 py-2 text-xs font-black text-slate-400 text-right italic">
+                                                    {item.marketUnitPrice ? `~ ${fmt(item.marketUnitPrice)}/${item.unit || 'đơn vị'}` : '---'}
                                                 </td>
                                                 <td className="px-4 py-2 text-center uppercase">
                                                     <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border inline-block min-w-[60px] ${
@@ -185,7 +182,7 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                                         item.matchStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                                         'bg-rose-50 text-rose-700 border-rose-100'
                                                     }`}>
-                                                        {item.matchStatus === 'MATCHED' ? 'Khớp' : item.matchStatus === 'PARTIAL' ? 'Một phần' : 'Không khớp'}
+                                                        {item.matchStatus === 'MATCHED' ? 'Hợp lý' : item.matchStatus === 'PARTIAL' ? 'Xem xét' : 'Không hợp lý'}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -193,7 +190,7 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                                     })}
                                     {(!result.detectedItems || result.detectedItems.length === 0) && (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-10 text-center text-[11px] font-medium text-slate-400 italic">Không có dữ liệu bóc tách chi tiết</td>
+                                            <td colSpan={8} className="px-4 py-10 text-center text-[11px] font-medium text-slate-400 italic">Không có dữ liệu bóc tách chi tiết</td>
                                         </tr>
                                     )}
                                 </tbody>

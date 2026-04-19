@@ -110,8 +110,10 @@ function AccountSidebar() {
 
 export default function AccountLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
-    // Hide sidebar on expenditure detail page
-    const hideSidebar = pathname?.includes('/account/campaigns/expenditures/') && pathname.split('/').length > 4;
+    // Hide sidebar on expenditure detail page or transactions page
+    const hideSidebar = 
+        (pathname?.includes('/account/campaigns/expenditures/') && pathname.split('/').length > 4) ||
+        pathname?.includes('/account/campaigns/transactions');
 
     return (
         <ProtectedRoute requireVerified={true}>

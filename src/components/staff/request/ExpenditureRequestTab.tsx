@@ -205,7 +205,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
 
 /* ══════════════════════════════ MAIN COMPONENT ══════════════════════════════ */
 
-export default function ExpenditureRequestTab() {
+export default function ExpenditureRequestTab({ initialCampaignId }: { initialCampaignId?: number | null }) {
     const { user } = useAuth();
     const [grouped, setGrouped] = useState<any[]>([]);
     const [filtered, setFiltered] = useState<any[]>([]);
@@ -274,6 +274,12 @@ export default function ExpenditureRequestTab() {
             const sorted = Array.from(groupsMap.values()).sort((a, b) => (a.needsAttention ? -1 : 1));
             setGrouped(sorted);
             setFiltered(sorted);
+
+            // Auto-select initial campaign
+            if (initialCampaignId) {
+                const match = sorted.find(g => g.campaignId === Number(initialCampaignId));
+                if (match) setSelected(match);
+            }
         } catch (error) {
             console.error('Failed to load expenditure requests:', error);
             toast.error('Lỗi khi tải dữ liệu chi tiêu');
@@ -295,12 +301,12 @@ export default function ExpenditureRequestTab() {
     if (loading && !grouped.length) return <div className="flex-1 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gray-200" /></div>;
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-full overflow-hidden">
+        <div className="flex-1 flex flex-col bg-white overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 flex-1 overflow-hidden">
                 <div className={`flex flex-col border-r border-gray-100 ${selected ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
                     <div className="p-4 border-b border-gray-50 flex flex-col gap-3">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kiểm soát chi phí</h2>
+                            <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Kiểm soát chi tiêu</h2>
                             <span className="text-[9px] font-bold text-gray-300">{filtered.length} chiến dịch</span>
                         </div>
                         <div className="relative">
@@ -315,7 +321,7 @@ export default function ExpenditureRequestTab() {
                             ))}
                         </div>
                     </div>
-                    <div className={`flex-1 overflow-y-auto p-4 ${!selected ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start' : 'space-y-2'}`}>
+                    <div className={`flex-1 overflow-y-auto p-4 custom-scrollbar ${!selected ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start' : 'space-y-2'}`}>
                         {filtered.map(g => (
                             <div key={g.key} onClick={() => setSelected(g)} className={`p-3.5 rounded-xl border transition-all cursor-pointer h-fit ${selected?.key === g.key ? 'border-[#446b5f] bg-emerald-50/10 shadow-sm shadow-emerald-500/5' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'}`}>
                                 <div className="flex items-center justify-between mb-2">
@@ -353,7 +359,7 @@ export default function ExpenditureRequestTab() {
                             <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Tiến độ</p><p className="text-[11px] font-bold text-gray-900">{Math.round(selected.campaignProgress)}%</p></div>
                             <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Trạng thái</p><span className="text-[9px] font-bold text-[#446b5f] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">Quản lý</span></div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             <div className="flex items-center gap-2 mb-2 opacity-30"><LayoutDashboard className="h-3 w-3" /><span className="text-[9px] font-bold uppercase tracking-widest">Danh sách đợt chi</span></div>
                             {selected.expenditures.map((e: any) => <ExpenditureCard key={e.id} exp={e} campaignData={selected} onUpdate={(u: any) => {
                                 setGrouped(prev => prev.map(g => g.campaignId === selected.campaignId ? { ...g, expenditures: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex), needsAttention: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex).some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW' || nx.evidenceStatus === 'SUBMITTED') } : g));

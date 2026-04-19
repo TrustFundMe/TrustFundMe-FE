@@ -151,8 +151,8 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
     <RequireRole allowedRoles={['STAFF', 'ADMIN']}>
       <div className="h-screen flex overflow-hidden bg-white">
         <Sidebar />
-        <main className="flex-1 min-h-screen overflow-y-auto bg-white relative">
-          <div className="relative flex flex-col min-h-full">
+        <main className="flex-1 flex flex-col min-w-0 bg-white h-full relative overflow-hidden">
+          <div className="flex-1 overflow-hidden relative flex flex-col">
             <Toaster position="top-right" reverseOrder={false} />
             {children}
           </div>

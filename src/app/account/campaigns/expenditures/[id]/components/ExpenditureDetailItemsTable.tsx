@@ -61,7 +61,7 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                 <div className="flex items-center justify-between">
                     <h2 className="text-[12px] font-bold text-[#1E293B] flex items-center">
                         <Receipt className="w-3.5 h-3.5 mr-1.5 text-[#64748B]" />
-                        Danh sách vật phẩm/chi phí ({items.length})
+                        Danh sách hạng mục chi tiêu ({items.length})
                     </h2>
                     <button
                         onClick={handleExportItems}

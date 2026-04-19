@@ -206,7 +206,7 @@ export default function UpdateExpenditureModal({
                                                         </div>
                                                         <div className={`mt-2 p-3 rounded-2xl border-2 ${totalVariance < 0 ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-gray-50 border-gray-200 text-gray-900'}`}>
                                                             <div className="text-[10px] uppercase font-black opacity-40 mb-1">
-                                                                {isItemized ? 'Số dư' : (totalVariance < 0 ? 'Vượt hạn mức chi phí' : 'Số dư cần hoàn')}
+                                                                {isItemized ? 'Số dư' : (totalVariance < 0 ? 'Vượt hạn mức đợt chi tiêu' : 'Số dư cần hoàn')}
                                                             </div>
                                                             <div className="text-xl font-black">
                                                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(isItemized ? (totalReceived - totalActual) : totalVariance)}

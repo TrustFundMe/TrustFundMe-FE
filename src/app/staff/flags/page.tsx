@@ -491,33 +491,26 @@ export default function FlagsManagementPage() {
 
     try {
       setLoading(true);
-      if (confirmAction.type === 'LOCK_POST') {
-        const post = selectedTarget?.flags[0]?.post;
-        const isCurrentlyLocked = post?.isLocked;
-        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
+      const { type, postId } = confirmAction;
+      const post = selectedTarget?.flags[0]?.post;
+      const isCurrentlyLocked = post?.isLocked;
+      
+      const updatedPost = await feedPostService.lockPost(postId);
 
-        // Manual update to local state for immediate feedback
-        setAllFlags(prev => prev.map(f => {
-          if (f.postId === confirmAction.postId) {
-            return { ...f, post: updatedPost };
-          }
-          return f;
-        }));
+      // Manual update to local state for immediate feedback
+      setAllFlags(prev => prev.map(f => {
+        if (f.postId === postId) {
+          return { ...f, post: updatedPost as any };
+        }
+        return f;
+      }));
 
+      if (type === 'LOCK_POST') {
         toast.success(`Đã ${isCurrentlyLocked ? 'mở khóa' : 'khóa'} bài viết thành công`);
       } else {
-        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
-        
-        // Manual update to local state for immediate feedback
-        setAllFlags(prev => prev.map(f => {
-          if (f.postId === confirmAction.postId) {
-            return { ...f, post: updatedPost };
-          }
-          return f;
-        }));
-
         toast.success(`Đã cập nhật chặn bình luận`);
       }
+      
       fetchData(); // Sync with server
     } catch (err) {
       toast.error('Thao tác thất bại');
@@ -545,7 +538,7 @@ export default function FlagsManagementPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white p-4 lg:p-6 overflow-hidden gap-4">
+    <div className="flex flex-col flex-1 bg-white p-4 lg:p-6 overflow-hidden gap-4">
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2 flex-wrap">

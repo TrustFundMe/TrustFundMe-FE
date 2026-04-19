@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -21,6 +21,21 @@ import type {
 
 
 export default function StaffRequestPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center bg-[#f1f5f9] min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#446b5f] mx-auto mb-4"></div>
+          <p className="text-gray-500 font-bold uppercase tracking-widest">Đang tải yêu cầu...</p>
+        </div>
+      </div>
+    }>
+      <StaffRequestContent />
+    </Suspense>
+  );
+}
+
+function StaffRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
@@ -30,8 +45,9 @@ export default function StaffRequestPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { user: currentUser } = useAuth();
+  const targetId = searchParams.get('targetId');
   const [selectedUserIdForKyc, setSelectedUserIdForKyc] = useState<number | null>(
-    searchParams.get('userId') ? Number(searchParams.get('userId')) : null
+    searchParams.get('userId') ? Number(searchParams.get('userId')) : (activeTab === 'KYC' && targetId ? Number(targetId) : null)
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -45,7 +61,7 @@ export default function StaffRequestPage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [sentCommitmentIds, setSentCommitmentIds] = useState<Set<number>>(new Set());
   const [signedCommitmentIds, setSignedCommitmentIds] = useState<Set<number>>(new Set());
-  const targetCampaignId = searchParams.get('campaignId');
+  const targetCampaignId = activeTab === 'CAMPAIGN' ? (targetId || searchParams.get('campaignId')) : searchParams.get('campaignId');
 
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -60,7 +76,7 @@ export default function StaffRequestPage() {
       const tasks = await campaignService.getTasksByStaff(currentUser.id);
 
       const campaignTaskIds = tasks
-        .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED')
+        .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED' && t.targetId)
         .map(t => t.targetId);
 
       if (campaignTaskIds.length === 0) {
@@ -70,6 +86,7 @@ export default function StaffRequestPage() {
       }
 
       // 2. Fetch only the campaigns needed for these tasks in parallel
+<<<<<<< HEAD
       // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
       const campaigns = await Promise.all(
         campaignTaskIds.slice(0, 100).map(id =>
@@ -78,16 +95,38 @@ export default function StaffRequestPage() {
             return null;
           })
         )
+=======
+      // Use allSettled to be extremely resilient against individual 500 errors
+      const validTaskIds = campaignTaskIds.filter(id => id != null && id !== 'undefined');
+      
+      const results = await Promise.allSettled(
+        validTaskIds.slice(0, 100).map(id => campaignService.getById(id))
+>>>>>>> main
       );
-      const validCampaigns = campaigns.filter(c => c !== null);
+      
+      const validCampaigns = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value)
+        .filter(c => c !== null);
 
       // 3. Fetch users for these campaigns only
+<<<<<<< HEAD
       const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
       const userInfos = await Promise.all(
         uniqueOwnerIds.map(id =>
           userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
         )
+=======
+      const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId).filter(id => id != null))];
+      const userResults = await Promise.allSettled(
+        uniqueOwnerIds.map(id => userService.getUserById(id))
+>>>>>>> main
       );
+      
+      const userInfos = userResults
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map(r => r.value?.success ? r.value.data : null)
+        .filter(u => u != null);
 
       const userMap = new Map<number, UserInfo>();
       userInfos.forEach(u => {
@@ -274,7 +313,11 @@ export default function StaffRequestPage() {
 
 
   return (
+<<<<<<< HEAD
     <div className="flex flex-col absolute inset-0 bg-[#f1f5f9] overflow-hidden">
+=======
+    <div className="flex flex-col flex-1 bg-[#f1f5f9] min-h-0">
+>>>>>>> main
       {/* Folder Tabs Headers */}
       {!isModalOpen && (
         <div className="flex items-end justify-between px-6 h-14">
@@ -325,8 +368,8 @@ export default function StaffRequestPage() {
       )}
 
       {/* Folder Body Container */}
-      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative flex flex-col">
-        <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white">
+      <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative flex flex-col min-h-0 h-full">
+<div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white min-h-0 h-full">
           {activeTab === 'CAMPAIGN' ? (
             <>
 
@@ -553,7 +596,7 @@ export default function StaffRequestPage() {
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
-            <ExpenditureRequestTab />
+            <ExpenditureRequestTab initialCampaignId={targetId ? Number(targetId) : null} />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
           ) : activeTab === 'KYC' ? (

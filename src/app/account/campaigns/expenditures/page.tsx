@@ -2,8 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, AlertCircle, X, HelpCircle } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Plus, AlertCircle, X, HelpCircle, Loader2 } from 'lucide-react';
+import { useState, Suspense } from 'react';
 import CreateOrEditPostModal from '@/components/feed-post/CreateOrEditPostModal';
 
 import ExpenditureStats from './components/ExpenditureStats';
@@ -19,6 +19,18 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { useExpenditureLogic } from './hooks/useExpenditureLogic';
 
 export default function CampaignExpendituresPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex justify-center items-center min-h-screen bg-white">
+                <Loader2 className="w-10 h-10 text-rose-400 animate-spin" />
+            </div>
+        }>
+            <CampaignExpendituresContent />
+        </Suspense>
+    );
+}
+
+function CampaignExpendituresContent() {
     const searchParams = useSearchParams();
     const campaignId = searchParams?.get('campaignId');
     const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -97,13 +109,10 @@ export default function CampaignExpendituresPage() {
                                 <h1 className="text-2xl font-black text-black tracking-tighter leading-none">
                                     {campaign.type === 'AUTHORIZED' ? campaign.title : `Chiến dịch: ${campaign.title}`}
                                 </h1>
-                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase tracking-widest ${campaign.type === 'AUTHORIZED'
-                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                    : 'bg-red-50 text-[#dc2626] border-red-100'
-                                    }`}>
+                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full border border-orange-200 bg-orange-50 text-orange-700 uppercase tracking-widest">
                                     {campaign.type === 'AUTHORIZED' ? 'Quỹ ủy quyền' : 'Quỹ vật phẩm'}
                                 </span>
-                                <button 
+                                <button
                                     onClick={() => setIsProcessModalOpen(true)}
                                     className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[#1b4332] text-[9px] font-black uppercase tracking-wider hover:bg-slate-100 transition-all"
                                 >
@@ -120,7 +129,7 @@ export default function CampaignExpendituresPage() {
                                 className="inline-flex items-center px-8 py-3 rounded-full shadow-2xl shadow-red-900/10 text-xs font-black uppercase tracking-[1px] text-white bg-red-800 hover:bg-red-900 transition-all hover:scale-[1.02] active:scale-[0.98]"
                             >
                                 <Plus className="w-4 h-4 mr-2" />
-                                Tạo khoản chi mới
+                                Tạo đợt chi tiêu mới
                             </Link>
                         ) : (
                             <div className="flex flex-col items-end gap-2">
@@ -129,7 +138,7 @@ export default function CampaignExpendituresPage() {
                                     className="inline-flex items-center px-8 py-3 rounded-full text-xs font-black uppercase tracking-[1px] text-white bg-gray-300 cursor-not-allowed opacity-60"
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Tạo khoản chi mới
+                                    Tạo đợt chi tiêu mới
                                 </button>
                                 <p className="text-[10px] font-bold text-amber-600 max-w-xs text-right flex items-start gap-1">
                                     <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
@@ -141,14 +150,15 @@ export default function CampaignExpendituresPage() {
                 </div>
 
                 {/* Stats */}
-                <ExpenditureStats 
-                    balance={campaign.balance} 
-                    expendituresCount={expenditures.length} 
-                    totalSpent={totalSpent} 
+                <ExpenditureStats
+                    campaignId={campaign.id}
+                    balance={campaign.balance}
+                    expendituresCount={expenditures.length}
+                    totalSpent={totalSpent}
                 />
 
                 {/* Expenditure List */}
-                <ExpenditureTable 
+                <ExpenditureTable
                     expenditures={expenditures}
                     campaign={campaign}
                     isDisabled={isDisabled}
@@ -166,7 +176,7 @@ export default function CampaignExpendituresPage() {
                     handleOpenUpdateModal={handleOpenUpdateModal}
                     fetchData={fetchData}
                 />
-                
+
                 {/* Modals */}
                 {showWithdrawalModal && (
                     <WithdrawalModal
@@ -289,7 +299,7 @@ export default function CampaignExpendituresPage() {
                         onClose={() => setGalleryModalItemId(null)}
                         itemName={
                             updateItemsData.find(i => i.id === galleryModalItemId)?.category ||
-                            expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.category || 
+                            expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.category ||
                             'Vật phẩm'
                         }
                         media={itemMedia[galleryModalItemId] || []}
@@ -303,11 +313,11 @@ export default function CampaignExpendituresPage() {
                 {/* Process Flow Modal */}
                 {isProcessModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                        <div 
+                        <div
                             className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 relative"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <button 
+                            <button
                                 onClick={() => setIsProcessModalOpen(false)}
                                 className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-black hover:bg-slate-100 transition-all z-30"
                             >

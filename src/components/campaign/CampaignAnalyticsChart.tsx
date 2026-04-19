@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
     LineChart,
     Line,
@@ -214,7 +215,15 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
         }}>
             <div className="d-flex flex-column gap-4" style={{ marginBottom: 32 }}>
                 <div className="d-flex align-items-center justify-content-between">
-                    <h4 style={{ marginBottom: 0, fontSize: 20, fontWeight: 700 }}>Thống Kê Giao Dịch</h4>
+                    <div className="d-flex align-items-center gap-3">
+                        <h4 style={{ marginBottom: 0, fontSize: 20, fontWeight: 700 }}>Thống Kê Giao Dịch</h4>
+                        <Link
+                            href={`/account/campaigns/transactions?campaignId=${campaignId}`}
+                            className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#F84D43] text-white text-[11px] font-black uppercase tracking-wider hover:bg-red-600 transition-all shadow-sm shadow-red-100"
+                        >
+                            Xem biến động số dư
+                        </Link>
+                    </div>
 
                     <div className="d-flex align-items-center gap-2">
                         <select

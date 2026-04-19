@@ -102,7 +102,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
     }>({ isOpen: false, campaignId: 0, campaignTitle: '' });
 
     const [confirmAction, setConfirmAction] = useState<{
-        type: 'UNLOCK_CAMPAIGN';
+        type: 'UNLOCK_CAMPAIGN' | 'ALLOW_EDIT_EVIDENCE';
         id: number;
         title: string;
         message: string;
@@ -235,6 +235,9 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
             if (confirmAction.type === 'UNLOCK_CAMPAIGN') {
                 await campaignService.reviewCampaign(rec.campaignId, 'APPROVED');
                 toast.success('Đã mở khóa chiến dịch thành công');
+            } else if (confirmAction.type === 'ALLOW_EDIT_EVIDENCE') {
+                await expenditureService.updateEvidenceStatus(rec.expenditureId, 'ALLOWED_EDIT');
+                toast.success('Đã mở quyền chỉnh sửa cho chủ quỹ');
             }
             onRefresh();
         } catch { toast.error('Thao tác thất bại'); }
@@ -264,7 +267,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {aiResult && <AIAnalysisModal result={aiResult} onClose={() => setAiResult(null)} />}
             {lightbox && (
                 <div className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
@@ -333,7 +336,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
             </div>
 
             {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 custom-scrollbar pr-1 max-h-full">
 
                 {/* Thông tin chủ quỹ */}
                 <div className="px-4 py-3">
@@ -412,75 +415,93 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 </div>
             </div>
 
-            {/* ── Footer Actions ── */}
-            <div className="flex-shrink-0 px-4 py-2.5 border-t border-gray-100 bg-gray-50/30 space-y-1.5">
-                {/* Hàng 1 */}
-                <div className="flex gap-1.5">
+            {/* ── Action Grid (8 Buttons) ── */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-gray-50/10">
+                <div className="grid grid-cols-2 gap-2">
+                    {/* 1. AI */}
                     <button onClick={runAI} disabled={analyzing || !hasPhotos}
-                        title={!hasPhotos ? 'Cần có ảnh minh chứng để phân tích' : 'Phân tích hóa đơn bằng AI'}
-                        className="flex-[2] h-9 rounded-lg text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                        className="h-10 rounded-xl text-[10px] font-black text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-sm px-3"
                         style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
                         <Sparkles className="h-4 w-4" />
-                        {analyzing ? 'Đang phân tích...' : 'AI phân tích minh chứng'}
+                        <span className="uppercase">AI Phân tích</span>
                     </button>
-                    <button onClick={startChat} disabled={isChatting} title="Nhắn tin với chủ quỹ về minh chứng này"
-                        className="flex-1 h-9 rounded-lg border border-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-white transition-all disabled:opacity-50">
-                        <MessageSquare className="h-4 w-4" />
-                        {isChatting ? 'Đang mở...' : 'Nhắn tin'}
-                    </button>
-                </div>
 
-                {/* Hàng 2 — Công cụ quản lý */}
-                <div className="flex flex-wrap items-center gap-1.5">
+                    {/* 2. Message */}
+                    <button onClick={startChat} disabled={isChatting}
+                        className="h-10 rounded-xl border border-gray-200 bg-white text-gray-700 text-[10px] font-black flex items-center justify-center gap-2 hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm px-3">
+                        <MessageSquare className="h-4 w-4 text-[#446b5f]" />
+                        <span className="uppercase">Nhắn tin</span>
+                    </button>
+
+                    {/* 3. Lock Campaign */}
                     {(() => {
                         const isLocked = rec.campaignStatus?.toUpperCase() === 'DISABLED' || rec.campaignStatus?.toUpperCase() === 'LOCKED';
                         return (
                             <button onClick={handleLockCampaign} disabled={loading}
-                                className={`flex items-center gap-1.5 h-8 px-3 border rounded-lg text-[10px] font-black uppercase transition-all shadow-sm ${
+                                className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
                                     isLocked
-                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
-                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                                        : 'bg-white border-gray-100 text-gray-500 hover:border-red-200 hover:text-red-700 hover:bg-red-50'
                                 }`}>
-                                {isLocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                                {isLocked ? 'Mở khóa chiến dịch' : 'Khóa chiến dịch'}
+                                {isLocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                                <span>{isLocked ? 'Mở khóa CD' : 'Khóa chiến dịch'}</span>
                             </button>
                         );
                     })()}
-                    
+
+                    {/* 4. Ban Account */}
                     <button onClick={handleLockAccount} disabled={loading}
-                        className={`flex items-center gap-1.5 h-8 px-3 border rounded-lg text-[10px] font-black uppercase transition-all shadow-sm ${
+                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
                             !rec.ownerIsActive 
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100' 
-                                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                                : 'bg-white border-gray-100 text-gray-500 hover:border-red-200 hover:text-red-700 hover:bg-red-50'
                         }`}>
-                        {!rec.ownerIsActive ? <CheckCircle className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
-                        {!rec.ownerIsActive ? 'Ngừng đình chỉ TK' : 'Đình chỉ tài khoản'}
+                        {!rec.ownerIsActive ? <CheckCircle className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                        <span>{!rec.ownerIsActive ? 'Mở tài khoản' : 'Đình chỉ TK'}</span>
                     </button>
 
-                    <button onClick={() => !hasPostedFraud && setConfirm('post_fraud')} title={hasPostedFraud ? 'Đã đăng bài thông báo rủi ro' : 'Tố cáo sai phạm'}
-                        disabled={loading || hasPostedFraud}
-                        className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center justify-center gap-1 transition-all active:scale-95 ${
+                    {/* 5. Fraud Post */}
+                    <button onClick={() => !hasPostedFraud && setConfirm('post_fraud')} disabled={loading || hasPostedFraud}
+                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
                             hasPostedFraud 
                                 ? 'bg-amber-50 border-amber-200 text-amber-700' 
-                                : 'border-gray-200 text-gray-700 hover:bg-red-50 hover:border-red-200 hover:text-red-700'
+                                : 'bg-white border-gray-100 text-gray-500 hover:border-amber-200 hover:text-amber-700 hover:bg-amber-50'
                         }`}>
-                        {hasPostedFraud ? <CheckCircle className="h-3.5 w-3.5" /> : <Megaphone className="h-3.5 w-3.5" />} 
-                        {hasPostedFraud ? 'Đã đăng tố cáo' : 'Tố cáo'}
+                        {hasPostedFraud ? <CheckCircle className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />} 
+                        <span>{hasPostedFraud ? 'Đã tố cáo' : 'Đăng tố cáo'}</span>
                     </button>
 
-                    <button onClick={() => setConfirm('send_legal')} title="Cảnh báo pháp lý"
-                        className="h-8 px-3 rounded-lg border border-gray-200 text-gray-700 text-[10px] font-black flex items-center justify-center gap-1 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all active:scale-95">
-                        <ShieldAlert className="h-3.5 w-3.5" /> Pháp lý
+                    {/* 6. Legal Warning */}
+                    <button onClick={() => setConfirm('send_legal')}
+                        className="flex items-center justify-center gap-2 h-10 px-3 rounded-xl border border-gray-100 bg-white text-gray-500 text-[10px] font-black uppercase hover:border-red-200 hover:text-red-700 hover:bg-red-50 transition-all shadow-sm">
+                        <ShieldAlert className="h-4 w-4" />
+                        <span>Cảnh báo pháp lý</span>
                     </button>
 
-                    <button onClick={() => setShowSchedule(true)} 
-                        title={rec.hasAppointment ? `Đã có lịch hẹn vào ${fmtDate(rec.appointmentDate)}` : "Tạo lịch hẹn làm việc"}
-                        className={`h-8 px-3 rounded-lg border text-[10px] font-black flex items-center justify-center gap-1 transition-all active:scale-95 ${
+                    {/* 7. Appointment */}
+                    <button onClick={() => setShowSchedule(true)}
+                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
                             rec.hasAppointment 
                                 ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                                : 'border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
+                                : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200 hover:text-blue-700 hover:bg-blue-50'
                         }`}>
-                        <Calendar className="h-3.5 w-3.5" /> {rec.hasAppointment ? 'Đã đặt lịch' : 'Lịch hẹn'}
+                        <Calendar className="h-4 w-4" /> 
+                        <span>{rec.hasAppointment ? 'Đã đặt lịch' : 'Tạo lịch hẹn'}</span>
+                    </button>
+
+                    {/* 8. Allow Update */}
+                    <button 
+                        onClick={() => setConfirmAction({
+                            type: 'ALLOW_EDIT_EVIDENCE',
+                            id: rec.expenditureId,
+                            title: 'Cho phép chỉnh sửa?',
+                            message: 'Chủ quỹ sẽ nhận được thông báo yêu cầu cập nhật lại minh chứng này. Trạng thái minh chứng sẽ chuyển sang "Từ chối" để mở quyền chỉnh sửa.'
+                        })}
+                        disabled={loading || rec.evidenceStatus === 'REJECTED' || rec.evidenceStatus === 'ALLOWED_EDIT'}
+                        className="flex items-center justify-center gap-2 h-10 px-3 rounded-xl border border-gray-100 bg-white text-gray-500 text-[10px] font-black uppercase hover:border-amber-200 hover:text-amber-700 hover:bg-amber-50 transition-all shadow-sm disabled:opacity-50"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        <span>Cho phép sửa</span>
                     </button>
                 </div>
 
@@ -610,7 +631,7 @@ export default function EvidenceTab() {
     if (loading) return <div className="flex h-40 items-center justify-center text-[10px] font-black text-gray-300 tracking-[0.2em] uppercase animate-pulse">Đang tải...</div>;
 
     return (
-        <div className="flex-1 flex gap-4 h-full overflow-hidden">
+        <div className="flex-1 flex h-full min-h-0 gap-4 overflow-hidden">
             {/* ── Sidebar ── */}
             <div className={`${selected ? 'w-80 flex-shrink-0' : 'flex-1'} flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white`}>
                 <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
@@ -642,7 +663,7 @@ export default function EvidenceTab() {
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
                     {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 opacity-20">
                             <AlertCircle className="h-5 w-5" />
@@ -680,7 +701,7 @@ export default function EvidenceTab() {
 
             {/* ── Detail ── */}
             {selected && (
-                <div className="flex-1 overflow-hidden flex flex-col border border-gray-100 rounded-2xl shadow-sm bg-white">
+                <div className="flex-1 overflow-hidden flex flex-col h-full min-h-0 border border-gray-100 rounded-2xl shadow-sm bg-white">
                     <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-50 bg-gray-50/40 flex-shrink-0">
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Chi tiết bằng chứng</p>
                         <button onClick={() => setSelected(null)} title="Đóng panel chi tiết"

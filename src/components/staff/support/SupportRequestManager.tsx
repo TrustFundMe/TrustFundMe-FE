@@ -88,7 +88,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
     }, [history, statusFilter]);
 
     return (
-        <div className="flex flex-col h-full gap-6">
+        <div className="flex flex-col flex-1 gap-6 min-h-0">
             {/* Header / Filter Bar */}
             <div className="flex items-center justify-between gap-4 bg-white p-1 rounded-2xl border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -121,7 +121,7 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
                     <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách yêu cầu hỗ trợ quỹ</h2>
                 </div>
 
-                <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm min-h-0 bg-white">
+                <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm min-h-0 bg-white custom-scrollbar">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-full gap-3 py-20">
                             <div className="h-10 w-10 border-4 border-[#db5945]/20 border-t-[#db5945] rounded-full animate-spin" />

@@ -499,7 +499,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
     );
 
     return (
-        <div className="flex-1 flex gap-4 h-full overflow-hidden">
+        <div className="flex-1 flex gap-4 overflow-hidden">
             {/* Sidebar: Campaign List */}
             <div className="w-64 flex-shrink-0 flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
                 <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
