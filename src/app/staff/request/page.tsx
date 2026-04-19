@@ -86,43 +86,24 @@ function StaffRequestContent() {
       }
 
       // 2. Fetch only the campaigns needed for these tasks in parallel
-<<<<<<< HEAD
-      // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
-      const campaigns = await Promise.all(
-        campaignTaskIds.slice(0, 100).map(id =>
-          campaignService.getById(id).catch(err => {
-            console.error(`Failed to fetch campaign ${id}`, err);
-            return null;
-          })
-        )
-=======
       // Use allSettled to be extremely resilient against individual 500 errors
       const validTaskIds = campaignTaskIds.filter(id => id != null && id !== 'undefined');
-      
+
       const results = await Promise.allSettled(
         validTaskIds.slice(0, 100).map(id => campaignService.getById(id))
->>>>>>> main
       );
-      
+
       const validCampaigns = results
         .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
         .map(r => r.value)
         .filter(c => c !== null);
 
       // 3. Fetch users for these campaigns only
-<<<<<<< HEAD
-      const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
-      const userInfos = await Promise.all(
-        uniqueOwnerIds.map(id =>
-          userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
-        )
-=======
       const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId).filter(id => id != null))];
       const userResults = await Promise.allSettled(
         uniqueOwnerIds.map(id => userService.getUserById(id))
->>>>>>> main
       );
-      
+
       const userInfos = userResults
         .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
         .map(r => r.value?.success ? r.value.data : null)
@@ -313,11 +294,7 @@ function StaffRequestContent() {
 
 
   return (
-<<<<<<< HEAD
-    <div className="flex flex-col absolute inset-0 bg-[#f1f5f9] overflow-hidden">
-=======
     <div className="flex flex-col flex-1 bg-[#f1f5f9] min-h-0">
->>>>>>> main
       {/* Folder Tabs Headers */}
       {!isModalOpen && (
         <div className="flex items-end justify-between px-6 h-14">
@@ -369,7 +346,7 @@ function StaffRequestContent() {
 
       {/* Folder Body Container */}
       <div className="flex-1 bg-white mx-2 mb-2 rounded-[24px] shadow-lg border border-gray-100 overflow-hidden relative flex flex-col min-h-0 h-full">
-<div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white min-h-0 h-full">
+        <div className="flex-1 overflow-hidden p-6 flex flex-col gap-6 bg-white min-h-0 h-full">
           {activeTab === 'CAMPAIGN' ? (
             <>
 
