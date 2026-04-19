@@ -491,33 +491,26 @@ export default function FlagsManagementPage() {
 
     try {
       setLoading(true);
-      if (confirmAction.type === 'LOCK_POST') {
-        const post = selectedTarget?.flags[0]?.post;
-        const isCurrentlyLocked = post?.isLocked;
-        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
+      const { type, postId } = confirmAction;
+      const post = selectedTarget?.flags[0]?.post;
+      const isCurrentlyLocked = post?.isLocked;
+      
+      const updatedPost = await feedPostService.lockPost(postId);
 
-        // Manual update to local state for immediate feedback
-        setAllFlags(prev => prev.map(f => {
-          if (f.postId === confirmAction.postId) {
-            return { ...f, post: updatedPost };
-          }
-          return f;
-        }));
+      // Manual update to local state for immediate feedback
+      setAllFlags(prev => prev.map(f => {
+        if (f.postId === postId) {
+          return { ...f, post: updatedPost as any };
+        }
+        return f;
+      }));
 
+      if (type === 'LOCK_POST') {
         toast.success(`Đã ${isCurrentlyLocked ? 'mở khóa' : 'khóa'} bài viết thành công`);
       } else {
-        const updatedPost = await feedPostService.lockPost(confirmAction.postId);
-        
-        // Manual update to local state for immediate feedback
-        setAllFlags(prev => prev.map(f => {
-          if (f.postId === confirmAction.postId) {
-            return { ...f, post: updatedPost };
-          }
-          return f;
-        }));
-
         toast.success(`Đã cập nhật chặn bình luận`);
       }
+      
       fetchData(); // Sync with server
     } catch (err) {
       toast.error('Thao tác thất bại');
