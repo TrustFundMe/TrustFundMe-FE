@@ -26,7 +26,15 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError | any) => {
+    // Clean up Spring Boot's ResponseStatusException message format: '400 BAD_REQUEST "Error message"'
+    if (error.response?.data?.message && typeof error.response.data.message === 'string') {
+      const match = error.response.data.message.match(/^[0-9]{3} [A-Z_]+ "(.*)"$/);
+      if (match && match[1]) {
+        error.response.data.message = match[1];
+      }
+    }
+
     if (error.response?.status !== 401) {
       return Promise.reject(error);
     }

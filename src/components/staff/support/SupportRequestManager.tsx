@@ -61,8 +61,22 @@ export default function SupportRequestManager({ onModalToggle }: { onModalToggle
 
     const fetchCampaigns = async () => {
         try {
-            const response = await axiosInstance.get('/api/campaigns/status/APPROVED');
-            setCampaigns((response.data as any).filter((c: any) => c.status === 'APPROVED' || c.status === 'ACTIVE'));
+            const [approvedRes, activeRes] = await Promise.all([
+                axiosInstance.get('/api/campaigns/status/APPROVED'),
+                axiosInstance.get('/api/campaigns/status/ACTIVE'),
+            ]);
+            const merged = [
+                ...(approvedRes.data as any[]),
+                ...(activeRes.data as any[]),
+            ];
+            // Dedupe by id, exclude the General Fund (id=1 or type=GENERAL_FUND)
+            const seen = new Set<number>();
+            const result = merged.filter((c: any) => {
+                if (seen.has(c.id)) return false;
+                seen.add(c.id);
+                return c.id !== 1 && c.type !== 'GENERAL_FUND';
+            });
+            setCampaigns(result);
         } catch (error) {
             console.error('Failed to fetch campaigns', error);
         }
@@ -230,8 +244,9 @@ function CreateSupportRequestModal({ campaigns, onClose, onSuccess }: { campaign
             } as any);
             toast.success('Gửi yêu cầu thành công!');
             onSuccess();
-        } catch (error) {
-            toast.error('Gửi yêu cầu thất bại');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || 'Gửi yêu cầu thất bại';
+            toast.error(errorMsg);
         } finally {
             setSubmitting(false);
         }

@@ -22,13 +22,10 @@ interface Step3FinancialPlanProps {
     onNext: () => void;
 }
 
-const PAGE_SIZE = 5;
-
 export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: Step3FinancialPlanProps) {
     const { toast } = useToast();
     const [isParsing, setIsParsing] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const excelInputRef = useRef<HTMLInputElement>(null);
 
@@ -128,7 +125,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             }));
             const updated = [...items, ...newItems];
             onChange('expenditureItems', updated);
-            setCurrentPage(Math.ceil(updated.length / PAGE_SIZE));
             toast(`Đã nhập ${newItems.length} vật phẩm từ file Excel!`, 'success');
         } catch (err: any) {
             console.error('[Excel Import Error]', err);
@@ -142,10 +138,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     const items: ExpenditureItem[] = data.expenditureItems || [];
     const total = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
-    // Pagination
-    const totalPages = Math.ceil(items.length / PAGE_SIZE);
-    const pagedItems = items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
     const addItem = () => {
         const newItem: ExpenditureItem = {
             id: Math.random().toString(36).substr(2, 9),
@@ -157,14 +149,11 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
         };
         const updated = [...items, newItem];
         onChange('expenditureItems', updated);
-        setCurrentPage(Math.ceil(updated.length / PAGE_SIZE));
     };
 
     const removeItem = (id: string) => {
         const updated = items.filter(item => item.id !== id);
         onChange('expenditureItems', updated);
-        const newTotal = Math.ceil(updated.length / PAGE_SIZE) || 1;
-        if (currentPage > newTotal) setCurrentPage(newTotal);
     };
 
     const updateItem = (id: string, field: keyof ExpenditureItem, value: any) => {
@@ -230,7 +219,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             }));
             const updated = [...items, ...newItems];
             onChange('expenditureItems', updated);
-            setCurrentPage(Math.ceil(updated.length / PAGE_SIZE));
             toast(`Đã nhập ${newItems.length} vật phẩm từ file Excel!`, 'success');
         } catch (err: any) {
             console.error('[Excel Parse Error]', err);
@@ -286,7 +274,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     }
 
     return (
-        <div className="max-w-5xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="max-w-5xl mx-auto w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row gap-4">
                 {/* AI Import */}
                 <div
@@ -329,73 +317,63 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     )}
                 </div>
 
-                {/* Excel Import */}
+                {/* Excel Section (Integrated Frame) */}
                 <div
-                    onClick={() => !isExcelImporting && excelInputRef.current?.click()}
-                    className={`relative group h-24 flex-1 rounded-[1.5rem] border-2 border-dashed transition-all cursor-pointer flex items-center justify-center gap-4 overflow-hidden ${isExcelImporting
-                        ? 'cursor-wait border-[#dc2626] bg-[#dc2626]/5'
-                        : 'border-black/5 bg-gray-50/50 hover:bg-white hover:border-black/10'
-                        }`}
+                    className={`flex-[1.8] h-24 rounded-[1.5rem] border-2 border-dashed bg-gray-50/50 flex transition-all overflow-hidden border-black/5`}
                 >
-                    <input
-                        type="file"
-                        ref={excelInputRef}
-                        className="hidden"
-                        onChange={handleExcelImport}
-                        accept=".xlsx,.xls"
-                    />
-
-                    {isExcelImporting ? (
-                        <div className="flex items-center gap-3">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#dc2626] border-t-transparent shadow-sm" />
-                            <span className="text-xs font-black text-black">Đang nhập...</span>
+                    {/* Left Part: Download Template (2/3 width) */}
+                    <button
+                        type="button"
+                        onClick={handleDownloadTemplate}
+                        className="flex-[2] flex items-center justify-center gap-4 px-6 hover:bg-indigo-50/50 transition-all group border-r-2 border-dashed border-black/5"
+                    >
+                        <div className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Download className="h-5 w-5 text-indigo-500" />
                         </div>
-                    ) : (
-                        <>
-                            <div className="h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                <FileSpreadsheet className="h-5 w-5 text-black/20" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors">
-                                    Nhập Excel trực tiếp
-                                </span>
-                                <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
-                                    Nhấn để chọn tệp Excel (.xlsx)
-                                </span>
-                            </div>
-                        </>
-                    )}
+                        <div className="flex flex-col items-start">
+                            <span className="text-xs font-black text-black group-hover:text-indigo-600 transition-colors">Xuất mẫu Excel</span>
+                            <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest leading-none">Tải file mẫu (.xlsx)</span>
+                        </div>
+                    </button>
+
+                    {/* Right Part: Upload Area (1/3 width) */}
+                    <div
+                        onClick={() => !isExcelImporting && excelInputRef.current?.click()}
+                        className={`flex-1 relative group cursor-pointer flex items-center justify-center gap-3 hover:bg-white transition-all ${isExcelImporting ? 'cursor-wait' : ''}`}
+                    >
+                        <input
+                            type="file"
+                            ref={excelInputRef}
+                            className="hidden"
+                            onChange={handleExcelImport}
+                            accept=".xlsx,.xls"
+                        />
+
+                        {isExcelImporting ? (
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#dc2626] border-t-transparent shadow-sm" />
+                        ) : (
+                            <>
+                                <div className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <FileSpreadsheet className="h-5 w-5 text-black/20" />
+                                </div>
+                                <div className="flex flex-col items-start">
+                                    <span className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors">Nhập Excel</span>
+                                    <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest leading-none">Nhấn để chọn</span>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Tải mẫu / Xuất Excel buttons */}
-            <div className="flex items-center justify-end gap-2">
-                <button
-                    type="button"
-                    onClick={handleDownloadTemplate}
-                    className="text-[9px] font-black text-gray-500 hover:text-[#dc2626] px-3 py-1 rounded-full bg-gray-50 border border-gray-200 transition-all uppercase tracking-widest"
-                >
-                    Tải mẫu
-                </button>
-                {items.length > 0 && (
-                    <button
-                        type="button"
-                        onClick={handleExportItems}
-                        className="text-[9px] font-black text-gray-500 hover:text-[#dc2626] px-3 py-1 rounded-full bg-gray-50 border border-gray-200 transition-all uppercase tracking-widest"
-                    >
-                        Xuất Excel
-                    </button>
-                )}
-            </div>
-
             <div className="bg-white rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden">
-                <div className="px-8 pt-6 pb-4 flex items-center justify-between">
+                <div className="px-8 pt-4 pb-2 flex items-center justify-between">
                     <h4 className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Chi tiết vật phẩm chi tiêu</h4>
                     <div className="flex items-center gap-2">
                         {items.length > 0 && (
                             <button
                                 type="button"
-                                onClick={() => { onChange('expenditureItems', []); setCurrentPage(1); }}
+                                onClick={() => { onChange('expenditureItems', []); }}
                                 className="text-[9px] font-black text-red-400 hover:text-white hover:bg-red-500 px-3 py-1 rounded-full bg-red-50 transition-all uppercase tracking-widest"
                             >
                                 Xóa hết
@@ -405,7 +383,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     </div>
                 </div>
 
-                <div className="px-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+                <div className="px-4 max-h-[225px] overflow-y-auto custom-scrollbar">
                     <table className="w-full">
                         <thead>
                             <tr className="text-[10px] font-black text-black/20 uppercase tracking-widest border-b border-gray-50">
@@ -419,8 +397,8 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50/50">
-                            {pagedItems.map((item, idx) => {
-                                const globalIndex = (currentPage - 1) * PAGE_SIZE + idx;
+                            {items.map((item, idx) => {
+                                const globalIndex = idx;
                                 return (
                                     <tr key={item.id} className="group hover:bg-gray-50/30 transition-colors">
                                         <td className="px-3 py-3 text-xs font-black text-black/20">{globalIndex + 1}</td>
@@ -477,7 +455,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     </table>
                 </div>
 
-                <div className="flex items-center justify-end gap-4 px-6 py-2 border-t border-gray-50/80">
+                <div className="flex items-center justify-end gap-4 px-6 py-1.5 border-t border-gray-50/80">
                     {total > data.targetAmount && <span className="text-[10px] font-black text-rose-500 uppercase animate-pulse">⚠️ Vượt quá mục tiêu quỹ</span>}
                     <span className="text-[10px] font-black text-black/30 uppercase tracking-[2px]">Tổng cộng dự chi</span>
                     <div className="flex flex-col items-end">
@@ -486,25 +464,18 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     </div>
                 </div>
 
-                <div className="p-3 border-t border-gray-50 flex items-center justify-between">
+                <div className="p-2 border-t border-gray-50 flex items-center justify-between">
                     <button type="button" onClick={addItem} className="flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black text-black/30 uppercase tracking-[2px] hover:text-[#dc2626] hover:bg-red-50 transition-all group">
                         <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" /> Thêm vật phẩm
                     </button>
-                    {totalPages > 1 && (
-                        <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="h-7 w-7 rounded-full flex items-center justify-center bg-gray-50 text-black/30 hover:bg-[#dc2626] hover:text-white transition-all disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5" /></button>
-                            <span className="text-[10px] font-black text-black/30 uppercase tracking-widest min-w-[60px] text-center">{currentPage} / {totalPages}</span>
-                            <button type="button" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="h-7 w-7 rounded-full flex items-center justify-center bg-gray-50 text-black/30 hover:bg-[#dc2626] hover:text-white transition-all disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5" /></button>
-                        </div>
-                    )}
                 </div>
 
-                <div className="flex items-center gap-3 px-6 py-3 border-t border-gray-50">
+                <div className="flex items-center gap-3 px-6 py-2 border-t border-gray-50">
                     <ShieldCheck className="h-4 w-4 text-amber-500 shrink-0" />
                     <p className="text-[10px] font-bold text-amber-800/60 leading-relaxed">Kế hoạch chi tiêu này sẽ được cộng đồng giám sát. Lưu ý: đây chỉ là kế hoạch dự kiến.</p>
                 </div>
 
-                <div className="px-8 py-3 border-t border-black/5 flex justify-end items-center gap-4 bg-gray-50/10">
+                <div className="px-8 py-2.5 border-t border-black/5 flex justify-end items-center gap-4 bg-gray-50/10">
                     <button type="button" onClick={onPrev} className="text-sm font-black text-black/20 hover:text-black transition-colors">Prev</button>
                     <div className="h-4 w-px bg-black/10" />
                     <button type="button" onClick={onNext} className="text-sm font-black text-[#dc2626] hover:text-red-700 transition-colors">Next</button>
