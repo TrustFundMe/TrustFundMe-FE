@@ -1,6 +1,17 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BE_API_URL ?? "/api";
+// Client-side: dùng proxy /api-backend (Next.js forward → BE), tránh Mixed Content
+// Server-side: gọi thẳng BE URL (server-to-server không bị HTTPS block)
+const BASE_URL = (() => {
+  if (typeof window !== "undefined") {
+    return "/api-backend"; // Proxy qua Next.js → tránh Mixed Content trên Vercel
+  }
+  return (
+    process.env.NEXT_PUBLIC_BE_API_URL ||
+    process.env.BE_API_GATEWAY_URL ||
+    "http://localhost:8080"
+  );
+})();
 
 export const api = axios.create({
   baseURL: BASE_URL,
