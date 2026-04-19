@@ -33,7 +33,7 @@ const nextConfig = {
       },
       {
         source: '/api-ai/:path*',
-        destination: `${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/:path*`,
+        destination: `${process.env.BE_API_GATEWAY_URL || 'http://localhost:8080'}/:path*`,
       },
     ];
   },
