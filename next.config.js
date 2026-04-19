@@ -26,7 +26,16 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    return [];
+    return [
+      {
+        source: '/api-backend/:path*',
+        destination: `${process.env.BE_API_GATEWAY_URL || 'http://localhost:8080'}/:path*`,
+      },
+      {
+        source: '/api-ai/:path*',
+        destination: `${process.env.BE_API_GATEWAY_URL || 'http://localhost:8080'}/:path*`,
+      },
+    ];
   },
   experimental: {
     middlewareClientMaxBodySize: '50mb',
