@@ -124,7 +124,7 @@ const TrendLineChart = ({ dataPoints, labels, isPositive, filter }: any) => {
 };
 
 export default function AdminGeneralFundPage() {
-    const [stats, setStats] = useState<GeneralFundStats>({ balance: 0, outcome: 0, income: 0 });
+    const [stats, setStats] = useState<GeneralFundStats & { transactionCount?: number }>({ balance: 0, outcome: 0, income: 0, transactionCount: 0 });
     const [history, setHistory] = useState<InternalTransaction[]>([]);
     const [campaigns, setCampaigns] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
@@ -302,7 +302,7 @@ export default function AdminGeneralFundPage() {
                 />
                 <StatCard
                     title="GIAO DỊCH"
-                    value={history.length}
+                    value={stats.transactionCount || 0}
                     isCurrency={false}
                     bgColor="bg-[#f8fafc]" // gray-50
                     titleColor="text-gray-400"

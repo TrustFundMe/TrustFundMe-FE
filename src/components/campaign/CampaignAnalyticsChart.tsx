@@ -91,7 +91,8 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                 if (res && res.chartData) {
                     res.chartData.forEach(d => {
                         const s = extractSlot(d.date, period);
-                        const b = (d.balanceGreen !== undefined && d.balanceGreen !== null) ? d.balanceGreen : (d.balanceRed !== null ? d.balanceRed : 0);
+                        const rawB = (d.balanceGreen !== undefined && d.balanceGreen !== null) ? d.balanceGreen : (d.balanceRed !== null ? d.balanceRed : 0);
+                        const b = Math.max(0, rawB);
                         lastBalancesPerSlot.set(s, b);
                     });
                 }
@@ -243,6 +244,13 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                         <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Tổng rút</span>
                         <span style={{ fontSize: 16, fontWeight: 800, color: '#ef4444', marginLeft: 8 }}>
                             {new Intl.NumberFormat('vi-VN').format(data.totalSpent)} ₫
+                        </span>
+                    </div>
+                    <div className="d-flex align-items-center">
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>
+                        <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Nhận từ quỹ chung</span>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: '#3b82f6', marginLeft: 8 }}>
+                            {new Intl.NumberFormat('vi-VN').format(data.receivedFromGeneralFund || 0)} ₫
                         </span>
                     </div>
                     <div className="d-flex align-items-center">

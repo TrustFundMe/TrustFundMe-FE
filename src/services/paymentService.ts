@@ -237,6 +237,7 @@ export interface CampaignAnalyticsResponse {
     totalSpent: number;
     currentBalance: number;
     targetAmount: number;
+    receivedFromGeneralFund: number;
     approvedAt: string;
     chartData: ChartPoint[];
 }

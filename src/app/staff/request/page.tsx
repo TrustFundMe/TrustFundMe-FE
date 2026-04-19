@@ -58,7 +58,7 @@ export default function StaffRequestPage() {
     try {
       // 1. Get tasks assigned to this staff first
       const tasks = await campaignService.getTasksByStaff(currentUser.id);
-      
+
       const campaignTaskIds = tasks
         .filter(t => t.type === 'CAMPAIGN' && t.status !== 'COMPLETED')
         .map(t => t.targetId);
@@ -72,7 +72,7 @@ export default function StaffRequestPage() {
       // 2. Fetch only the campaigns needed for these tasks in parallel
       // Limit to first 50 campaigns if there are too many, but usually staff tasks are manageable
       const campaigns = await Promise.all(
-        campaignTaskIds.slice(0, 100).map(id => 
+        campaignTaskIds.slice(0, 100).map(id =>
           campaignService.getById(id).catch(err => {
             console.error(`Failed to fetch campaign ${id}`, err);
             return null;
@@ -84,7 +84,7 @@ export default function StaffRequestPage() {
       // 3. Fetch users for these campaigns only
       const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
       const userInfos = await Promise.all(
-        uniqueOwnerIds.map(id => 
+        uniqueOwnerIds.map(id =>
           userService.getUserById(id).then(res => res.success ? res.data : null).catch(() => null)
         )
       );
@@ -215,6 +215,11 @@ export default function StaffRequestPage() {
 
     if (!targetCampaign || targetCampaign.type !== 'APPROVE_CAMPAIGN') return;
 
+    if (isApprove && !targetCampaign.kycVerified) {
+      toast.error('Người dùng chưa xác thực KYC');
+      return;
+    }
+
     try {
       const status = isApprove ? 'APPROVED' : 'REJECTED';
       await campaignService.reviewCampaign(targetCampaign.campaignId, status, reason);
@@ -269,7 +274,7 @@ export default function StaffRequestPage() {
 
 
   return (
-    <div className="flex flex-col h-full bg-[#f1f5f9]">
+    <div className="flex flex-col absolute inset-0 bg-[#f1f5f9] overflow-hidden">
       {/* Folder Tabs Headers */}
       {!isModalOpen && (
         <div className="flex items-end justify-between px-6 h-14">
