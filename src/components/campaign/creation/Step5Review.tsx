@@ -30,7 +30,7 @@ export default function Step5Review({ data, onSubmit, isSubmitting, result, onPr
                         <h2 className="text-3xl font-black text-black leading-tight tracking-tight">
                             {data.title || 'Chưa đặt tiêu đề'}
                         </h2>
-                        <div className="text-sm font-medium text-black/60 leading-relaxed whitespace-pre-wrap">
+                        <div className="text-sm font-medium text-black/60 leading-relaxed whitespace-pre-wrap max-h-[200px] overflow-y-auto custom-scrollbar">
                             {data.description || 'Chưa có mô tả chi tiết.'}
                         </div>
                     </div>

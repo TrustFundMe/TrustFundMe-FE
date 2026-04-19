@@ -27,10 +27,21 @@ export default function AIDescriptionModal({ open, onOpenChange, onApply }: AIDe
         setIsLoading(true);
         try {
             const data = await aiService.generateDescription(prompt);
+            if (!data.description) {
+                toast('Không thể tạo mô tả cho nội dung này. Hãy thử nhập thông tin khác.', 'error');
+                return;
+            }
             setResult(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('AI Generation error:', error);
-            toast('Không thể tạo mô tả. Vui lòng thử lại.', 'error');
+            const message = error?.response?.data?.error || error?.message || '';
+            if (message.includes('retryable') || message.includes('couldn\'t generate') || message.includes('rephrasing')) {
+                toast('AI không thể tạo nội dung cho thông tin này. Hãy thử nhập cách khác.', 'error');
+            } else if (message.includes('Network Error') || message.includes('network')) {
+                toast('Không thể kết nối AI service. Hãy kiểm tra server.', 'error');
+            } else {
+                toast('Không thể tạo mô tả. Vui lòng thử lại.', 'error');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -82,7 +93,7 @@ export default function AIDescriptionModal({ open, onOpenChange, onApply }: AIDe
                                 <label className="text-[10px] font-black text-[#dc2626] uppercase tracking-[2px] ml-1">
                                     Tiêu đề gợi ý
                                 </label>
-                                <div className="p-4 rounded-xl bg-red-50 text-sm font-black text-black border border-red-100">
+                                <div className="p-4 rounded-xl bg-red-50 text-sm font-black text-black border border-red-100 max-h-[80px] overflow-y-auto custom-scrollbar">
                                     {result.title}
                                 </div>
                             </div>
@@ -90,7 +101,7 @@ export default function AIDescriptionModal({ open, onOpenChange, onApply }: AIDe
                                 <label className="text-[10px] font-black text-[#dc2626] uppercase tracking-[2px] ml-1">
                                     Mô tả chi tiết
                                 </label>
-                                <div className="p-5 rounded-2xl bg-gray-50 text-sm font-medium text-gray-700 border border-gray-100 max-h-[300px] overflow-y-auto leading-relaxed whitespace-pre-wrap">
+                                <div className="p-5 rounded-2xl bg-gray-50 text-sm font-medium text-gray-700 border border-gray-100 max-h-[250px] overflow-y-auto custom-scrollbar leading-relaxed whitespace-pre-wrap">
                                     {result.description}
                                 </div>
                             </div>
