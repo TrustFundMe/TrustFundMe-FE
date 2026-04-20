@@ -1,71 +1,93 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
+import { trustScoreService, LeaderboardEntry } from "@/services/trustScoreService";
+import { campaignService } from "@/services/campaignService";
+import Link from "next/link";
 
-interface FundOwner {
-    id: number;
-    name: string;
-    reputation: number;
-    image: string;
-    count: number;
+interface FundOwner extends LeaderboardEntry {
+    campaignCount?: number;
 }
-
-const MOCK_OWNERS: FundOwner[] = [
-    {
-        id: 1,
-        name: "Nguyễn Văn An",
-        reputation: 9.8,
-        image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop",
-        count: 24,
-    },
-    {
-        id: 2,
-        name: "Trần Thị Bình",
-        reputation: 9.5,
-        image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop",
-        count: 18,
-    },
-    {
-        id: 3,
-        name: "Phạm Minh Đức",
-        reputation: 9.2,
-        image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1974&auto=format&fit=crop",
-        count: 15,
-    },
-];
 
 const OwnerCard = ({ owner }: { owner: FundOwner }) => {
     return (
-        <motion.div
-            whileHover={{ y: -10 }}
-            className="relative group overflow-hidden rounded-sm aspect-[3/4] cursor-pointer"
-        >
-            <img
-                src={owner.image}
-                alt={owner.name}
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ease-in-out"
-            />
-            <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
-                <h4 className="text-xl font-bold uppercase tracking-wider mb-1">
-                    {owner.name}
-                </h4>
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-[#F84D43]">
-                        <Star className="h-4 w-4 fill-current" />
-                        <span className="text-sm font-bold">{owner.reputation}</span>
+        <Link href={`/fund-owner-details?id=${owner.userId}`}>
+            <motion.div
+                whileHover={{ y: -10 }}
+                className="relative group overflow-hidden rounded-sm aspect-[3/4] cursor-pointer"
+            >
+                <img
+                    src={owner.userAvatarUrl || "/assets/img/default-avatar.png"}
+                    alt={owner.userFullName}
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ease-in-out"
+                />
+                <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent text-white">
+                    <h4 className="text-xl font-bold uppercase tracking-wider mb-1">
+                        {owner.userFullName}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-[#F84D43]">
+                            <Star className="h-4 w-4 fill-current" />
+                            <span className="text-sm font-bold">{owner.totalScore.toFixed(1)}</span>
+                        </div>
+                        {owner.campaignCount !== undefined && (
+                            <span className="text-slate-300 text-xs uppercase tracking-widest">
+                                • {owner.campaignCount} Chiến dịch
+                            </span>
+                        )}
                     </div>
-                    <span className="text-slate-300 text-xs uppercase tracking-widest">
-                        • {owner.count} Chiến dịch
-                    </span>
                 </div>
-            </div>
-        </motion.div>
+            </motion.div>
+        </Link>
     );
 };
 
 export const TopFundOwnersSection = () => {
+    const [owners, setOwners] = useState<FundOwner[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const leaderboard = await trustScoreService.getLeaderboard(3);
+
+                // Fetch campaign counts for each top owner
+                const ownersWithCounts = await Promise.all(
+                    leaderboard.map(async (entry) => {
+                        try {
+                            const count = await campaignService.getCampaignCount(entry.userId);
+                            return { ...entry, campaignCount: count };
+                        } catch (err) {
+                            return entry;
+                        }
+                    })
+                );
+
+                setOwners(ownersWithCounts);
+            } catch (error) {
+                console.error("Error fetching top fund owners:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (loading) {
+        return (
+            <section className="w-full py-20 bg-[#F7F3F0]">
+                <div className="container mx-auto px-4 text-center">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#F84D43] border-r-transparent"></div>
+                </div>
+            </section>
+        );
+    }
+
+    if (owners.length === 0) return null;
+
     return (
         <section className="w-full py-20 bg-[#F7F3F0]">
             <div className="container mx-auto px-4">
@@ -82,8 +104,8 @@ export const TopFundOwnersSection = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {MOCK_OWNERS.map((owner) => (
-                        <OwnerCard key={owner.id} owner={owner} />
+                    {owners.map((owner) => (
+                        <OwnerCard key={owner.userId} owner={owner} />
                     ))}
                 </div>
             </div>

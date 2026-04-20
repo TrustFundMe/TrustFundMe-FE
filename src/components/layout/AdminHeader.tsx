@@ -2,12 +2,7 @@
 
 import React from "react";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
-import { Menu, ChevronDown, UserCircle, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const URL_TO_LABEL: Record<string, string> = {
   admin: 'Quản lý',
@@ -74,23 +69,6 @@ export function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 px-4 rounded-xl font-bold text-blue-800 border-blue-100 hover:bg-blue-50 gap-2 !outline-none shadow-sm">
-              <UserCircle className="h-4 w-4" />
-              <span>Admin View</span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[180px] rounded-xl shadow-xl border-slate-100">
-             <DropdownMenuItem className="font-bold text-xs py-2.5">Hồ sơ cá nhân</DropdownMenuItem>
-             <DropdownMenuItem className="font-bold text-xs py-2.5">Cấu hình hệ thống</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-slate-400 hover:bg-slate-100">
-          <Sun className="h-4 w-4" />
-        </Button>
       </div>
     </header>
   );

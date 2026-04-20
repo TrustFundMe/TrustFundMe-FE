@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Eye, Search, X } from 'lucide-react';
+import { FileText, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { campaignService } from '@/services/campaignService';
@@ -188,13 +188,12 @@ const ExpenditureTab = ({ id }: { id: string | number }) => {
                             <th>Thời gian tạo</th>
                             <th>Hạn nộp bằng chứng</th>
                             <th>Bằng chứng</th>
-                            <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredExpenditures.length === 0 ? (
                             <tr>
-                                <td colSpan={7} style={{ textAlign: 'center', color: '#94a3b8', padding: 24 }}>
+                                <td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: 24 }}>
                                     Không có khoản chi tiêu nào.
                                 </td>
                             </tr>
@@ -215,11 +214,6 @@ const ExpenditureTab = ({ id }: { id: string | number }) => {
                                             title="Xem bằng chứng"
                                         >
                                             <FileText size={14} />
-                                        </button>
-                                    </td>
-                                    <td className="center-cell">
-                                        <button className="view-btn">
-                                            <Eye size={13} />
                                         </button>
                                     </td>
                                 </tr>
@@ -279,12 +273,6 @@ const ExpenditureTab = ({ id }: { id: string | number }) => {
         }
         .evidence-btn:hover { background: #fff7ed; border-color: #f97316; color: #f97316; }
 
-        .view-btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            background: #fff; border: 1px solid #e2e8f0; border-radius: 6px;
-            padding: 5px 8px; cursor: pointer; transition: all 0.2s; color: #64748b;
-        }
-        .view-btn:hover { background: #fff7ed; border-color: #f97316; color: #f97316; }
       `}</style>
         </div>
     );
