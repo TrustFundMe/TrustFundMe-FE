@@ -115,8 +115,8 @@ function ChatWithDonorContent() {
 
         setConversations(mappedConversations);
 
-        const convId = searchParams.get('conversationId');
-        const campaignId = searchParams.get('campaignId');
+        const convId = searchParams?.get('conversationId');
+        const campaignId = searchParams?.get('campaignId');
 
         if (convId) {
           const found = mappedConversations.find(c => c.id === convId);
@@ -150,8 +150,8 @@ function ChatWithDonorContent() {
 
   // Update active conversation when search params change
   useEffect(() => {
-    const convId = searchParams.get('conversationId');
-    const campaignId = searchParams.get('campaignId');
+    const convId = searchParams?.get('conversationId');
+    const campaignId = searchParams?.get('campaignId');
 
     if (convId && conversations.length > 0) {
       const found = conversations.find(c => c.id.toString() === convId);
@@ -258,7 +258,8 @@ function ChatWithDonorContent() {
     };
 
     fetchMessages();
-  }, [activeId, activeConversation, formatTimeAgo, user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, formatTimeAgo, user?.id]);
 
   const [activeMediaItems, setActiveMediaItems] = useState<MediaItem[]>([]);
   const [isMediaLoading, setIsMediaLoading] = useState<boolean>(false);
@@ -382,7 +383,8 @@ function ChatWithDonorContent() {
     return () => {
       webSocketService.unsubscribe(`/topic/conversation/${activeId}`);
     };
-  }, [activeId, activeConversation, formatTimeAgo, user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, formatTimeAgo, user?.id]);
 
   // Handle image select
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

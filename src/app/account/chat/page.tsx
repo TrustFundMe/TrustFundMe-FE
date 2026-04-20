@@ -127,8 +127,8 @@ function AccountChatContent() {
                     setConversations(mappedConversations);
 
                     // Handle query params AFTER conversations are set
-                    const convId = searchParams.get('conversationId');
-                    const campaignId = searchParams.get('campaignId');
+                    const convId = searchParams?.get('conversationId');
+                    const campaignId = searchParams?.get('campaignId');
 
                     if (convId) {
                         const found = mappedConversations.find(c => c.id === convId);
@@ -292,7 +292,8 @@ function AccountChatContent() {
         };
 
         fetchMessages();
-    }, [activeId, activeConversation, formatTimeAgo, user?.id, user?.fullName, user?.avatarUrl]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeId, formatTimeAgo, user?.id, user?.fullName, user?.avatarUrl]);
 
     const [activeMediaItems, setActiveMediaItems] = useState<MediaItem[]>([]);
     const [isMediaLoading, setIsMediaLoading] = useState<boolean>(false);
@@ -442,7 +443,8 @@ function AccountChatContent() {
         return () => {
             webSocketService.unsubscribe(`/topic/conversation/${activeId}`);
         };
-    }, [activeId, activeConversation, formatTimeAgo, user?.id, user?.fullName, user?.avatarUrl]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeId, formatTimeAgo, user?.id, user?.fullName, user?.avatarUrl]);
 
     // Handle image select
     const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
