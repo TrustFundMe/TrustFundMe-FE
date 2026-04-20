@@ -83,23 +83,19 @@ const Header1 = ({ open }: { open: () => void }) => (
   <header id="header-sticky" className="header-4">
     <div className="container">
       <div className="mega-menu-wrapper">
-        <div className="header-main style-2">
-          <div className="header-left">
+        <div className="header-main style-2 d-flex justify-content-between align-items-center">
+          <div className="header-left" style={{ flex: 1 }}>
             <div className="logo">
               <Logo />
               <Logo className="header-logo-2" logo="black-logo.png" />
             </div>
           </div>
-          <div className="header-right d-flex justify-content-end align-items-center gap-3">
+          <div className="header-middle d-flex justify-content-center" style={{ flex: 2 }}>
             <div className="mean__menu-wrapper">
               <Nav />
             </div>
-            <div className="header-button d-none d-sm-block">
-              <Link href="/contact" className="theme-btn">
-                Ủng hộ ngay
-                <i className="ps-2 far fa-heart" />
-              </Link>
-            </div>
+          </div>
+          <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: 1 }}>
             <NotificationBell />
             <AuthButton />
             <div className="header__hamburger d-xl-none my-auto">
@@ -115,10 +111,10 @@ const Header1 = ({ open }: { open: () => void }) => (
 );
 
 const Header3 = ({ open }: { open: () => void }) => {
-  const [toggle, setToggle] = useState(false);
+
   return (
     <Fragment>
-      <SearchPopup open={toggle} close={() => setToggle(false)} />
+
       <header className="header-section-1">
         <div id="header-sticky" className="header-1 bg-[var(--theme-light,#f74938)]" style={{ backgroundColor: '#fff5f4' }}>
           <div className="main-logo">
@@ -126,26 +122,16 @@ const Header3 = ({ open }: { open: () => void }) => {
           </div>
           <div className="container-fluid">
             <div className="mega-menu-wrapper">
-              <div className="header-main">
-                <div className="header-left">
+              <div className="header-main d-flex justify-content-between align-items-center">
+                <div className="header-left d-flex align-items-center" style={{ flex: 1 }}>
+                  <Logo logo="white-logo.png" />
+                </div>
+                <div className="header-middle d-flex justify-content-center" style={{ flex: 2 }}>
                   <div className="mean__menu-wrapper">
                     <Nav />
                   </div>
                 </div>
-                <div className="header-right d-flex justify-content-end align-items-center gap-3">
-                  <a
-                    href="#0"
-                    className="search-trigger search-icon"
-                    onClick={() => setToggle(true)}
-                  >
-                    <i className="fas fa-search"></i>
-                  </a>
-                  <div className="header-button">
-                    <Link href="/contact" className="theme-btn">
-                      Ủng hộ ngay
-                      <i className="ps-2 far fa-heart" />
-                    </Link>
-                  </div>
+                <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: 1 }}>
                   <NotificationBell />
                   <AuthButton />
                   <div className="header__hamburger d-xl-none my-auto">
@@ -164,36 +150,24 @@ const Header3 = ({ open }: { open: () => void }) => {
 };
 
 const Header4 = ({ open }: { open: () => void }) => {
-  const [toggle, setToggle] = useState(false);
+
   return (
     <Fragment>
-      <SearchPopup open={toggle} close={() => setToggle(false)} />
+
       {/* Main header — trắng, sticky */}
       <header id="header-sticky" className="header-4" style={{ backgroundColor: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', padding: '6px 0' }}>
         <div className="container">
           <div className="mega-menu-wrapper">
             <div className="header-main style-2 flex items-center justify-between">
-              <div className="header-left d-flex align-items-center">
+              <div className="header-left d-flex align-items-center" style={{ flex: 1 }}>
                 <Logo logo="black-logo.png" />
               </div>
-              <div className="header-right d-flex justify-content-end align-items-center gap-3">
+              <div className="header-middle d-flex justify-content-center" style={{ flex: 2 }}>
                 <div className="mean__menu-wrapper">
                   <Nav />
                 </div>
-                <a
-                  href="#0"
-                  className="search-trigger search-icon"
-                  onClick={() => setToggle(true)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', transition: 'all 0.3s' }}
-                >
-                  <i className="fas fa-search" style={{ color: '#333' }}></i>
-                </a>
-                <div className="header-button d-none d-sm-block">
-                  <Link href="/donation-details" className="theme-btn" style={{ padding: '10px 20px', fontSize: '13px', backgroundColor: '#F84D43', color: '#fff', border: 'none', borderRadius: '6px' }}>
-                    Ủng hộ ngay
-                    <i className="ps-2 far fa-heart" />
-                  </Link>
-                </div>
+              </div>
+              <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: 1 }}>
                 <NotificationBell />
                 <AuthButton />
               </div>
@@ -206,7 +180,7 @@ const Header4 = ({ open }: { open: () => void }) => {
 };
 
 const Header5 = ({ open }: { open: () => void }) => {
-  const [toggle, setToggle] = useState(false);
+
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -220,7 +194,7 @@ const Header5 = ({ open }: { open: () => void }) => {
 
   return (
     <Fragment>
-      <SearchPopup open={toggle} close={() => setToggle(false)} />
+
       {/* Transparent overlay header */}
       <header
         className={`header-5 fixed w-full z-50 left-0 top-0 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md py-2' : 'bg-transparent py-4'}`}
@@ -229,27 +203,15 @@ const Header5 = ({ open }: { open: () => void }) => {
         <div className="container">
           <div className="mega-menu-wrapper">
             <div className="header-main style-2 flex items-center justify-between">
-              <div className="header-left d-flex align-items-center">
+              <div className="header-left d-flex align-items-center" style={{ flex: 1 }}>
                 <Logo logo={isScrolled ? "black-logo.png" : "white-logo.png"} />
               </div>
-              <div className="header-right d-flex justify-content-end align-items-center gap-3">
+              <div className="header-middle d-flex justify-content-center" style={{ flex: 2 }}>
                 <div className="mean__menu-wrapper">
                   <Nav whiteText={!isScrolled} />
                 </div>
-                <a
-                  href="#0"
-                  className="search-trigger search-icon"
-                  onClick={() => setToggle(true)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', transition: 'all 0.3s' }}
-                >
-                  <i className="fas fa-search" style={{ color: isScrolled ? '#333' : '#fff' }}></i>
-                </a>
-                <div className="header-button d-none d-sm-block">
-                  <Link href="/donation-details" className="theme-btn" style={{ padding: '10px 20px', fontSize: '13px', backgroundColor: '#F84D43', color: '#fff', border: 'none', borderRadius: '6px' }}>
-                    Ủng hộ ngay
-                    <i className="ps-2 far fa-heart" />
-                  </Link>
-                </div>
+              </div>
+              <div className="header-right d-flex justify-content-end align-items-center gap-3" style={{ flex: 1 }}>
                 <NotificationBell />
                 <AuthButton whiteText={!isScrolled} />
                 <div className="header__hamburger d-xl-none my-auto">
@@ -311,24 +273,7 @@ const Nav = ({ whiteText = false }: { whiteText?: boolean }) => (
   </div>
 );
 
-const SearchPopup = ({ open, close }: { open: boolean; close: () => void }) => (
-  <div className="search-wrap" style={{ display: open ? "block" : "none" }}>
-    <div className="search-inner">
-      <i className="fas fa-times search-close" onClick={close}></i>
-      <div className="search-cell">
-        <form method="get">
-          <div className="search-field-holder">
-            <input
-              type="search"
-              className="main-search-input"
-              placeholder="Tìm kiếm..."
-            />
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-);
+
 
 const MobileMenu = ({ open, close }: { open: boolean; close: () => void }) => {
   const { isAuthenticated } = useAuth();
