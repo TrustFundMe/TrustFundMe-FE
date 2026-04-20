@@ -17,10 +17,10 @@ import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: React.ReactNode }> = {
-    PENDING: { label: 'Chờ duyệt', color: 'text-amber-700', bg: 'bg-amber-50 ring-amber-200', dot: 'bg-amber-400', icon: <Clock className="h-3 w-3" /> },
-    CONFIRMED: { label: 'Đã xác nhận', color: 'text-[#446b5f]', bg: 'bg-[#446b5f]/10 ring-[#446b5f]/20', dot: 'bg-[#446b5f]', icon: <CheckCircle className="h-3 w-3" /> },
-    CANCELLED: { label: 'Đã hủy', color: 'text-gray-500', bg: 'bg-gray-50 ring-gray-200', dot: 'bg-gray-400', icon: <XCircle className="h-3 w-3" /> },
-    COMPLETED: { label: 'Hoàn thành', color: 'text-blue-700', bg: 'bg-blue-50 ring-blue-200', dot: 'bg-blue-400', icon: <CheckCircle className="h-3 w-3" /> },
+    PENDING:   { label: 'Chờ duyệt',     color: 'text-amber-700',   bg: 'bg-amber-50 ring-amber-200',       dot: 'bg-amber-400',   icon: <Clock className="h-3 w-3" /> },
+    CONFIRMED: { label: 'Chuẩn bị gặp', color: 'text-[#446b5f]',   bg: 'bg-[#446b5f]/10 ring-[#446b5f]/20', dot: 'bg-[#446b5f]',   icon: <CheckCircle className="h-3 w-3" /> },
+    CANCELLED: { label: 'Bị hủy',         color: 'text-gray-500',    bg: 'bg-gray-50 ring-gray-200',          dot: 'bg-gray-400',    icon: <XCircle className="h-3 w-3" /> },
+    COMPLETED: { label: 'Hoàn thành gặp', color: 'text-blue-700',    bg: 'bg-blue-50 ring-blue-200',          dot: 'bg-blue-400',    icon: <CheckCircle className="h-3 w-3" /> },
 };
 
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -84,16 +84,14 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
     const end = formatDateTime(appointment.endTime);
     const duration = getDuration(appointment.startTime, appointment.endTime);
     const cfg = STATUS_CONFIG[appointment.status];
-    const hoursUntilStart = (new Date(appointment.startTime).getTime() - Date.now()) / 3600000;
-    const confirmDeadlinePassed = hoursUntilStart < 24;
-    const appointmentEnded = Date.now() > new Date(appointment.endTime).getTime();
+    // Chỉ cho phép hủy khi lịch chưa bắt đầu
+    const appointmentStarted = Date.now() >= new Date(appointment.startTime).getTime();
+    const canCancel = appointment.status === 'CONFIRMED' && !appointmentStarted;
 
-    const handleStatus = async (status: AppointmentStatus) => {
-        setUpdating(status);
-        try { await onStatusChange(appointment.id, status); } finally { setUpdating(null); }
+    const handleCancel = async () => {
+        setUpdating('CANCELLED');
+        try { await onStatusChange(appointment.id, 'CANCELLED'); } finally { setUpdating(null); }
     };
-
-    const nextStatuses: AppointmentStatus[] = appointment.status === 'PENDING' ? ['CONFIRMED', 'CANCELLED'] : appointment.status === 'CONFIRMED' ? ['COMPLETED', 'CANCELLED'] : [];
 
     return (
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col transition-all duration-300">
@@ -133,42 +131,34 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                     </div>
                 ))}
 
-                {/* Actions */}
-                {nextStatuses.length > 0 && (
-                    <div className="pt-1 space-y-2">
-                        {appointment.status === 'PENDING' && confirmDeadlinePassed && (
-                            <div className="p-2.5 rounded-xl bg-red-50 border border-red-100 text-[9px] text-red-600 font-bold uppercase tracking-tight text-center">
-                                Quá hạn xác nhận (phải confirm trước 24h)
-                            </div>
-                        )}
-                        {appointment.status === 'CONFIRMED' && !appointmentEnded && (
-                            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-[9px] text-amber-700 font-bold uppercase tracking-tight text-center">
-                                Có thể hoàn thành sau khi kết thúc lịch
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-1.5">
-                            {nextStatuses.map(s => {
-                                const isAction = s === 'CONFIRMED' || s === 'COMPLETED';
-                                const isDisabledByConfirmRule = s === 'CONFIRMED' && confirmDeadlinePassed;
-                                const isDisabledByEndRule = s === 'COMPLETED' && !appointmentEnded;
-                                const isDisabled = isDisabledByConfirmRule || isDisabledByEndRule;
-                                return (
-                                    <button
-                                        key={s}
-                                        onClick={() => !isDisabled && handleStatus(s)}
-                                        disabled={updating !== null || isDisabled}
-                                        className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isDisabled
-                                            ? 'bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed'
-                                            : isAction
-                                                ? 'bg-[#446b5f] text-white hover:bg-[#36564c] shadow-sm shadow-[#446b5f]/10'
-                                                : 'text-gray-500 bg-gray-100 border border-gray-200 hover:bg-gray-200'
-                                            } disabled:opacity-60`}
-                                    >
-                                        {updating === s ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : s === 'CONFIRMED' ? 'Duyệt lịch' : s === 'CANCELLED' ? 'Hủy lịch' : 'Hoàn thành'}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                {/* Chỉ hiện nút Hủy lịch khi chưa đến giờ hẹn */}
+                {canCancel && (
+                    <div className="pt-1">
+                        <button
+                            onClick={handleCancel}
+                            disabled={updating !== null}
+                            className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 disabled:opacity-60"
+                        >
+                            {updating === 'CANCELLED' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                            Hủy lịch hẹn
+                        </button>
+                    </div>
+                )}
+
+                {/* Thông báo khi không thể hủy */}
+                {appointment.status === 'CONFIRMED' && appointmentStarted && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-[9px] text-amber-700 font-bold uppercase tracking-tight text-center">
+                        Không thể hủy sau khi đã đến giờ hẹn
+                    </div>
+                )}
+                {appointment.status === 'COMPLETED' && (
+                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-[9px] text-blue-600 font-bold uppercase tracking-tight text-center">
+                        Lịch hẹn đã hoàn thành
+                    </div>
+                )}
+                {appointment.status === 'CANCELLED' && (
+                    <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 text-[9px] text-gray-500 font-bold uppercase tracking-tight text-center">
+                        Lịch hẹn đã bị hủy
                     </div>
                 )}
             </div>
@@ -373,10 +363,10 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
             {/* Toolbar - Standardized Layout (Filters Left, Search Right) */}
             <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100 pr-3">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    {(['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
+                    {(['ALL', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const).map(s => (
                         <button
                             key={s}
-                            onClick={() => setStatusFilter(s)}
+                            onClick={() => setStatusFilter(s as AppointmentStatus | 'ALL')}
                             className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
                                 ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
                                 : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
@@ -577,9 +567,9 @@ function StaffScheduleContent() {
 
     const stats = {
         total: displayedAppointments.length,
-        pending: displayedAppointments.filter(a => a.status === 'PENDING').length,
-        confirmed: displayedAppointments.filter(a => a.status === 'CONFIRMED').length,
+        upcoming: displayedAppointments.filter(a => a.status === 'CONFIRMED').length,
         completed: displayedAppointments.filter(a => a.status === 'COMPLETED').length,
+        cancelled: displayedAppointments.filter(a => a.status === 'CANCELLED').length,
     };
 
     const TABS: { id: TabType; label: string; icon: React.ReactNode }[] = [

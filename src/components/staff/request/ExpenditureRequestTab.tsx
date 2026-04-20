@@ -173,13 +173,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                                     <p className="text-[10px] opacity-90 truncate">{exp.accountHolderName} • {exp.bankCode}</p>
                                 </div>
                             )}
-                            {exp.disbursementProofUrl && (
-                                <div className="bg-white rounded-lg border border-gray-100 p-1.5">
-                                    <a href={exp.disbursementProofUrl} target="_blank" rel="noreferrer" className="block aspect-video rounded-md overflow-hidden bg-gray-50">
-                                        <img src={exp.disbursementProofUrl} alt="proof" className="w-full h-full object-cover" />
-                                    </a>
-                                </div>
-                            )}
+
                             <div className="space-y-1.5">
                                 <button onClick={handleAIAnalyze} disabled={analyzingAI} className="w-full h-8 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-bold uppercase flex items-center justify-center gap-2 border border-emerald-100 hover:bg-emerald-100 transition-colors">
                                     {analyzingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} PHÂN TÍCH AI

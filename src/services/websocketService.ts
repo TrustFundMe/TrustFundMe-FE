@@ -1,9 +1,17 @@
 import { Client, StompSubscription, IFrame } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-// Use gateway URL via proxy to avoid CORS, or environment variable
-const RAW_WS_URL = process.env.NEXT_PUBLIC_BE_API_URL ? `${process.env.NEXT_PUBLIC_BE_API_URL}/ws` : '/ws';
-// SockJS expects http/https, not ws/wss. Convert if necessary.
+// Priority order for WS URL:
+// 1. NEXT_PUBLIC_WS_URL (Absolute override)
+// 2. /ws (Relative proxy via Next.js - RECOMMENDED for local/prod)
+// 3. NEXT_PUBLIC_BE_API_URL/ws (Absolute fallback)
+const getWsUrl = () => {
+    if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+    if (typeof window !== 'undefined') return '/ws';
+    return (process.env.NEXT_PUBLIC_BE_API_URL || 'http://localhost:8080') + '/ws';
+};
+
+const RAW_WS_URL = getWsUrl();
 const BROKER_URL = RAW_WS_URL.replace(/^ws:\/\/|^wss:\/\//, (match) => match === 'ws://' ? 'http://' : 'https://');
 
 console.log('[WS] Initializing with URL:', BROKER_URL, '(Original:', RAW_WS_URL, ')');
