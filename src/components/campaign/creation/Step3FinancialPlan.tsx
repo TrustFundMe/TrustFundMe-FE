@@ -121,7 +121,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
                 name: item.category || '',
-                unit: 'chiếc',
+                unit: item.unit || '',
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.expectedPrice) || 0,
                 note: item.note || '',
@@ -150,7 +150,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
         const newItem: ExpenditureItem = {
             id: Math.random().toString(36).substr(2, 9),
             name: '',
-            unit: 'chiếc',
+            unit: '',
             quantity: 1,
             price: 0,
             note: '',
@@ -223,7 +223,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
                 name: item.category || '',
-                unit: 'chiếc',
+                unit: item.unit || '',
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.expectedPrice) || 0,
                 note: item.note || '',
