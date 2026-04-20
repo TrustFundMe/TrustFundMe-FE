@@ -4,11 +4,10 @@ import React, { useEffect, useState } from 'react';
 import {
     X, Sparkles, CheckCircle,
     ShieldCheck, Printer, MapPin, Phone, Mail, Hash,
-    AlertTriangle, LineChart, Store, Receipt, Loader2
+    AlertTriangle, LineChart, Store, Loader2
 } from 'lucide-react';
 import { ExpenditureItem, Expenditure } from '@/types/expenditure';
 import { expenditureService } from '@/services/expenditureService';
-import { paymentService } from '@/services/paymentService';
 
 interface DetectedItem {
     name: string;
@@ -19,9 +18,13 @@ interface DetectedItem {
     plannedCategory?: string;
     plannedAmount?: number;
     differenceAmount?: number;
+    marketUnitPrice?: number;
+    marketPriceRange?: string;
+    unit?: string;
 }
 
 interface AIAnalysisResult {
+    expenditureId?: number;
     riskScore: number;
     riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
     summary: string;
@@ -44,6 +47,7 @@ interface AIAnalysisModalProps {
     itemsProp?: ExpenditureItem[];
     donationSummary?: Record<number, number>;
     exp?: Expenditure;
+    mode?: 'plan' | 'evidence';
     onClose: () => void;
 }
 
@@ -52,12 +56,11 @@ const fmtVND = (v: number) =>
 
 const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 
-
 export default function AIAnalysisModal({
     result,
     itemsProp = [],
-    donationSummary: donationSummaryProp = {},
     exp,
+    mode = 'evidence',
     onClose,
 }: AIAnalysisModalProps) {
     const [items, setItems] = useState<ExpenditureItem[]>(itemsProp);
@@ -69,18 +72,10 @@ export default function AIAnalysisModal({
     }, []);
 
     useEffect(() => {
-        if (!exp?.id) return;
-        if (itemsProp && itemsProp.length > 0) {
+        const targetId = exp?.id || result.expenditureId;
+        if (!targetId || itemsProp.length > 0) {
             setItems(itemsProp);
             setLoadingItems(false);
-        }
-    }, [itemsProp, exp?.id]);
-
-    // Fetch items if not passed from parent
-    useEffect(() => {
-        const targetId = exp?.id || result.expenditureId;
-        if (!targetId || (itemsProp && itemsProp.length > 0)) {
-            if (itemsProp) setItems(itemsProp);
             return;
         }
 
@@ -121,11 +116,11 @@ export default function AIAnalysisModal({
                         </div>
                         <div>
                             <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter">
-                                Hệ thống Kiểm toán AI V3.0
+                                Hệ thống Kiểm toán AI V3.0 {mode === 'plan' ? '(KẾ HOẠCH)' : '(MINH CHỨNG)'}
                             </h3>
                             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                 <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                                Phân tích rủi ro &amp; Đối soát thực tế
+                                {mode === 'plan' ? 'Thẩm định tính hợp lý của kế hoạch' : 'Đối soát thực tế & Minh chứng'}
                             </p>
                         </div>
                     </div>
@@ -141,15 +136,13 @@ export default function AIAnalysisModal({
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50 p-4 space-y-4">
-
-
-                    {/* Grid: Vendor + Conclusion */}
+                    {/* Grid: Vendor (if exists) + Conclusion */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2 p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
                                 <Store className="h-4 w-4 text-indigo-500" />
                                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                    Thông tin đơn vị cung cấp (Vendor)
+                                    {mode === 'plan' ? 'Thông tin dự kiến (Kế hoạch)' : 'Thông tin đơn vị cung cấp (Vendor)'}
                                 </p>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
@@ -195,7 +188,7 @@ export default function AIAnalysisModal({
                         </div>
 
                         <div className="flex flex-col gap-4">
-                            <div className="p-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800">
+                            <div className="p-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800 h-full">
                                 <div className="flex items-center gap-2 mb-2">
                                     <CheckCircle className="h-4 w-4 text-emerald-400" />
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kết luận kiểm toán</p>
@@ -209,183 +202,163 @@ export default function AIAnalysisModal({
                         </div>
                     </div>
 
-                    {/* Red Flags + AI Detection stack vertically or adjusted grid */}
-                    <div className="flex flex-col gap-6">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 px-1">
-                                <AlertTriangle className="h-4 w-4 text-rose-500" />
-                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
-                                    Cảnh báo vi phạm &amp; Nghi vấn ({redFlags.length})
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                {redFlags.length === 0 && (
-                                    <p className="text-[10px] text-slate-400 italic px-2">Không phát hiện dấu hiệu vi phạm</p>
-                                )}
-                                {redFlags.map((flag, idx) => (
-                                    <div key={idx} className="p-2.5 rounded-lg border border-rose-100 bg-rose-50/30 flex items-start gap-2 hover:bg-rose-50 transition-colors">
-                                        <AlertTriangle className="h-3 w-3 text-rose-400 mt-0.5 shrink-0" />
-                                        <p className="text-[11px] font-bold text-rose-900 leading-snug">{flag}</p>
-                                    </div>
-                                ))}
-                            </div>
+                    {/* Red Flags */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-1">
+                            <AlertTriangle className="h-4 w-4 text-rose-500" />
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
+                                Cảnh báo vi phạm &amp; Nghi vấn ({redFlags.length})
+                            </p>
                         </div>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 px-1">
-                                <LineChart className="h-4 w-4 text-slate-400" />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Đối soát dữ liệu bóc tách từ AI ({detected.length} hạng mục)
-                                </p>
-                            </div>
-                            {detected.length === 0 ? (
-                                <p className="text-[11px] text-slate-400 italic p-4 text-center bg-white rounded-xl border border-slate-100">
-                                    Không có dữ liệu bóc tách
-                                </p>
-                            ) : (
-                                <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                                    <table className="w-full text-left text-[11px]">
-                                        <thead className="bg-[#F8FAFC] border-b border-slate-200">
-                                            <tr>
-                                                <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
-                                                <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa kê khai</th>
-                                                <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đã chi (Database)</th>
-                                                <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Bóc tách từ hóa đơn</th>
-                                                <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center">Chênh lệch</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {detected
-                                                .filter(item => {
-                                                    const sItem = items.find(i => {
-                                                        const s1 = (i.category || '').toLowerCase().trim();
-                                                        const s2 = (item.plannedCategory || '').toLowerCase().trim();
-                                                        return s1 === s2 || s1.includes(s2) || s2.includes(s1);
-                                                    });
-                                                    const sTotal = sItem ? (sItem.actualQuantity ?? sItem.quantity ?? 0) * (sItem.price || 0) : 0;
-                                                    return sTotal > 0 || (item.total || 0) > 0;
-                                                })
-                                                .map((item, idx) => {
-                                                    const sysItem = items.find(i => {
-                                                        const s1 = (i.category || '').toLowerCase().trim();
-                                                        const s2 = (item.plannedCategory || '').toLowerCase().trim();
-                                                        return s1 === s2 || s1.includes(s2) || s2.includes(s1);
-                                                    });
-                                                    const sysTotal = sysItem ? (sysItem.actualQuantity ?? sysItem.quantity ?? 0) * (sysItem.price || 0) : 0;
-
-                                                    const diff = sysTotal > 0 ? sysTotal - item.total : (item.differenceAmount !== undefined ? Number(item.differenceAmount) : 0);
-                                                    const isTotalMatch = Math.abs(diff) < 100;
-
-                                                    const matchLabel = item.matchStatus === 'MATCHED' ? 'KHỚP' : item.matchStatus === 'PARTIAL' ? 'XEM XÉT' : 'SAI LỆCH';
-                                                    const matchStyle = item.matchStatus === 'MATCHED'
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                                        : item.matchStatus === 'PARTIAL'
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-100'
-                                                        : 'bg-rose-50 text-rose-700 border-rose-100';
-
-                                                    return (
-                                                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                                                            <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
-                                                            <td className="px-3 py-3 border-r border-slate-50">
-                                                                <div className="font-bold text-slate-800 leading-tight">{item.plannedCategory || 'Chưa xác định'}</div>
-                                                            </td>
-                                                            <td className="px-3 py-3 text-center border-r border-slate-50">
-                                                                {sysItem ? (
-                                                                    <div className="flex flex-col items-center">
-                                                                        <div className="text-[10px] text-slate-500">
-                                                                            {sysItem.actualQuantity ?? sysItem.quantity} x {fmtNum(sysItem.price)}
-                                                                        </div>
-                                                                        <div className="text-[11px] font-black text-blue-700 tabular-nums">
-                                                                            {fmtVND(sysTotal)}
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="text-center font-bold text-slate-300 tabular-nums italic text-[9px]">
-                                                                        Không có trong DB
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-3 py-3 border-r border-slate-50">
-                                                                <div className="font-bold text-slate-800 leading-tight">{item.name || '—'}</div>
-                                                                <div className="text-[10px] text-slate-500 mt-1">
-                                                                    {item.quantity > 0 ? `${item.quantity} x ${fmtNum(item.unitPrice)} = ${fmtVND(item.total)}` : '—'}
-                                                                </div>
-                                                                {(item as any).marketCheck && (item as any).marketCheck !== 'Bình thường' && (
-                                                                    <div className="mt-1 text-[9px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100/50 inline-block">
-                                                                        ⚠️ {(item as any).marketCheck}
-                                                                    </div>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-3 py-3 text-center">
-                                                                <div className={`font-black text-[10px] tabular-nums ${isTotalMatch ? 'text-emerald-500' : 'text-rose-600'}`}>
-                                                                    {diff !== 0 ? (diff > 0 ? '+' : '') : ''}{fmtVND(diff)}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                        </tbody>
-                                        <tfoot className="bg-slate-50/80 border-t-2 border-slate-200">
-                                            {(() => {
-                                                const sysTotalSum = detected.reduce((acc, item) => {
-                                                    const sItem = items.find(i => {
-                                                        const s1 = (i.category || '').toLowerCase().trim();
-                                                        const s2 = (item.plannedCategory || '').toLowerCase().trim();
-                                                        return s1 === s2 || s1.includes(s2) || s2.includes(s1);
-                                                    });
-                                                    return acc + (sItem ? (sItem.actualQuantity ?? sItem.quantity ?? 0) * (sItem.price || 0) : 0);
-                                                }, 0);
-                                                const aiTotalSum = detected.reduce((acc, item) => acc + (item.total || 0), 0);
-                                                const isMismatch = Math.abs(sysTotalSum - aiTotalSum) > 10000;
-
-                                                return (
-                                                    <tr className="font-black text-slate-800">
-                                                        <td colSpan={2} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
-                                                            <span>Tổng cộng (Verify)</span>
-                                                        </td>
-                                                        <td className="px-3 py-3 text-center border-r border-slate-200 text-blue-700 text-xs tabular-nums">
-                                                            {fmtVND(sysTotalSum)}
-                                                        </td>
-                                                        <td className={`px-3 py-3 text-left border-r border-slate-200 text-xs tabular-nums ${isMismatch ? 'text-rose-600' : 'text-slate-800'}`}>
-                                                            {fmtVND(aiTotalSum)}
-                                                        </td>
-                                                        <td className={`px-3 py-3 text-center text-xs tabular-nums ${Math.abs(sysTotalSum - aiTotalSum) < 100 ? 'text-emerald-500' : 'text-rose-600'}`}>
-                                                            {sysTotalSum - aiTotalSum !== 0 ? (sysTotalSum - aiTotalSum > 0 ? '+' : '') : ''}{fmtVND(sysTotalSum - aiTotalSum)}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })()}
-                                        </tfoot>
-                                    </table>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {redFlags.length === 0 && (
+                                <div className="p-4 rounded-xl bg-white border border-slate-100 flex items-center justify-center col-span-full">
+                                    <p className="text-[10px] text-slate-400 italic">Không phát hiện dấu hiệu vi phạm</p>
                                 </div>
                             )}
+                            {redFlags.map((flag, idx) => (
+                                <div key={idx} className="p-3 rounded-lg border border-rose-100 bg-rose-50/50 flex items-start gap-2 hover:bg-rose-100/50 transition-colors">
+                                    <AlertTriangle className="h-3.5 w-3.5 text-rose-500 mt-0.5 shrink-0" />
+                                    <p className="text-[11px] font-black text-rose-900 leading-snug">{flag}</p>
+                                </div>
+                            ))}
                         </div>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                            <LineChart className="h-4 w-4 text-slate-400" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                {mode === 'plan' ? 'Phân tích chênh lệch với giá thị trường' : 'Đối soát dữ liệu Hệ thống vs. Hóa đơn'}
+                            </p>
+                        </div>
+                        {loadingItems ? (
+                            <div className="h-40 flex flex-col items-center justify-center bg-white rounded-xl border border-slate-100">
+                                <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                                <p className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Đang tải dữ liệu gốc...</p>
+                            </div>
+                        ) : detected.length === 0 ? (
+                            <div className="p-10 text-center bg-white rounded-xl border border-slate-100">
+                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu bóc tách được từ hình ảnh/nội dung</p>
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                <table className="w-full text-left text-[11px]">
+                                    <thead className="bg-[#F8FAFC] border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
+                                                {mode === 'plan' ? 'Kế hoạch (Dự kiến)' : 'Hệ thống (Database)'}
+                                            </th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">
+                                                {mode === 'plan' ? 'Thẩm định (Giá thị trường)' : 'Bóc tách từ hóa đơn'}
+                                            </th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center">Lệch</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {detected.map((item, idx) => {
+                                            const sysItem = items.find(i => {
+                                                const s1 = (i.category || '').toLowerCase().trim();
+                                                const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                                return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                            });
+
+                                            const sysVal = sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+                                            const diff = sysVal - item.total;
+                                            const isMatch = Math.abs(diff) < 500;
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                                                    <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center border-r border-slate-50">
+                                                        <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
+                                                        <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
+                                                            {sysItem ? (mode === 'plan' ? `${sysItem.quantity} x ${fmtNum(sysItem.expectedPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="font-black text-slate-800 text-[11px] tabular-nums">
+                                                            {fmtVND(item.total)}
+                                                        </div>
+                                                        <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
+                                                            {mode === 'plan' && item.marketPriceRange ? (
+                                                                <span className="bg-blue-50 px-1 rounded">Khoảng: {item.marketPriceRange}</span>
+                                                            ) : (
+                                                                `${item.quantity} x ${fmtNum(item.unitPrice)}`
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <div className={`font-black text-[10px] tabular-nums ${isMatch ? 'text-emerald-500' : 'text-rose-600'}`}>
+                                                            {diff !== 0 ? (diff > 0 ? '+' : '') : ''}{fmtVND(diff)}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                    <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                                        {(() => {
+                                            const totalSys = detected.reduce((acc, item) => {
+                                                const sysItem = items.find(i => {
+                                                    const s1 = (i.category || '').toLowerCase().trim();
+                                                    const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                                    return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                                });
+                                                return acc + (sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
+                                            }, 0);
+                                            const totalAI = detected.reduce((acc, item) => acc + item.total, 0);
+                                            const diffTotal = totalSys - totalAI;
+
+                                            return (
+                                                <tr className="font-black text-slate-800">
+                                                    <td colSpan={2} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
+                                                        <span>Tổng cộng đối soát:</span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center border-r border-slate-200 text-blue-700 text-xs tabular-nums">{fmtVND(totalSys)}</td>
+                                                    <td className="px-3 py-3 text-left border-r border-slate-200 text-slate-800 text-xs tabular-nums">{fmtVND(totalAI)}</td>
+                                                    <td className={`px-3 py-3 text-center text-xs tabular-nums ${Math.abs(diffTotal) < 1000 ? 'text-emerald-500' : 'text-rose-600'}`}>
+                                                        {diffTotal !== 0 ? (diffTotal > 0 ? '+' : '') : ''}{fmtVND(diffTotal)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })()}
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Footer */}
                 <div className="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-4 flex-shrink-0">
-                    <div>
+                    <div className="hidden sm:block">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                            Audit System Protocol &bull; TrustFundMe Platform
+                            Transparency Audit Protocol &bull; TrustFundMe AI Center
                         </p>
                         <p className="text-[9px] text-slate-500 font-medium italic">
-                            Báo cáo dựa trên đối soát thực tế ảnh hóa đơn và kế hoạch chi tiêu.
+                            Báo cáo phân tích dựa trên {mode === 'plan' ? 'kế hoạch dự kiến' : 'minh chứng thực tế'}.
                         </p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <button
                             onClick={() => window.print()}
-                            className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 flex items-center gap-2 hover:bg-slate-50 transition-all text-[10px] font-black uppercase"
+                            className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 flex items-center gap-2 hover:bg-slate-50 transition-all text-[10px] font-black uppercase"
                         >
-                            <Printer className="h-3.5 w-3.5" /> In báo cáo
+                            <Printer className="h-3.5 w-3.5" /> In
                         </button>
                         <button
                             onClick={onClose}
-                            className="flex-1 sm:flex-none px-6 h-9 rounded-lg bg-[#111827] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                            className="flex-1 sm:flex-none px-8 h-9 rounded-lg bg-[#111827] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                         >
                             <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                            Xác nhận &amp; Đóng
+                            Đã xem
                         </button>
                     </div>
                 </div>

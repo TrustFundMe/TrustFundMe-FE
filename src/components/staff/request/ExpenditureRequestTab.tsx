@@ -20,6 +20,7 @@ import AIAnalysisModal from './AIAnalysisModal';
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070&auto=format&fit=crop';
 
 const fmt = (v: number) => new Intl.NumberFormat('vi-VN').format(v) + ' VND';
+const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('vi-VN');
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
@@ -45,20 +46,8 @@ const CAM_TYPE: Record<string, string> = { 'AUTHORIZED': 'Ủy Quyền', 'ITEMIZ
 /* ════════════════════════════ SUB-COMPONENTS ════════════════════════════ */
 
 // Hiện 1 badge duy nhất: ưu tiên evidence status nếu đã nộp, ngược lại hiện expenditure status
-const CombinedStatusPill = ({ expStatus, evidenceStatus }: { expStatus: string; evidenceStatus?: string }) => {
-    const evKey = (evidenceStatus ?? '').toUpperCase();
+const ExpenditureStatusPill = ({ expStatus }: { expStatus: string }) => {
     const exKey = (expStatus ?? '').toUpperCase();
-    // Nếu evidence đã nộp (SUBMITTED / APPROVED / REJECTED) → hiện badge evidence
-    if (evKey && evKey !== 'NOT_SUBMITTED' && EVIDENCE_STATUS[evKey]) {
-        const cfg = EVIDENCE_STATUS[evKey];
-        return (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
-                style={{ color: cfg.color, backgroundColor: cfg.bg, borderColor: `${cfg.color}30` }}>
-                {cfg.label}
-            </span>
-        );
-    }
-    // Ngược lại hiện expenditure status
     const cfg = STATUS_EXP[exKey] ?? { label: 'Không rõ', color: '#6b7280', bg: '#f3f4f6' };
     return (
         <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase border"
@@ -68,99 +57,43 @@ const CombinedStatusPill = ({ expStatus, evidenceStatus }: { expStatus: string; 
     );
 };
 
-const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
-
 const ItemTable = ({
     items,
-    totalExpected,
-    donationSummary,
-    exp,
 }: {
     items: ExpenditureItem[];
-    totalExpected: number;
-    donationSummary: Record<number, number>;
-    exp: Expenditure;
 }) => {
-    const isEvidenceSubmitted = ['SUBMITTED', 'APPROVED', 'ALLOWED_EDIT'].includes(exp.evidenceStatus || '');
-
-    // Totals
     const totalPlan = items.reduce((s, i) => s + (i.quantity || 0) * (i.expectedPrice || 0), 0);
-    const totalDonated = items.reduce((s, i) => s + (donationSummary[i.id] || 0) * (i.expectedPrice || 0), 0);
-    const totalActual = items.reduce((s, i) => s + (i.actualQuantity || 0) * (i.price || 0), 0);
 
     return (
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'auto' }}>
             <thead className="sticky top-0 bg-[#F1F5F9] z-10 border-b border-gray-200">
                 <tr>
-                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 min-w-[140px]">Tên hàng hóa</th>
-                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center border-r border-gray-200 min-w-[130px]">Kế hoạch (SL x ĐG)</th>
-                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center border-r border-gray-200 min-w-[130px]">Quyên góp (SL x ĐG)</th>
-                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center min-w-[130px]">Đã chi (SL x ĐG)</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase w-10 text-center border-r border-gray-200">#</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Hàng hóa</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase text-right">Dự kiến chi (SL x ĐG)</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-                {items.map((item, idx) => {
-                    const priceDiff = (item.price || 0) - (item.expectedPrice || 0);
-                    const priceColor = priceDiff > 0 ? 'text-rose-500' : priceDiff < 0 ? 'text-emerald-700' : 'text-gray-800';
-                    return (
-                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                            <td className="py-2 px-2 border-r border-gray-100">
-                                <div className="text-[11px] font-bold text-gray-800">{item.category}</div>
-                                {item.note && <div className="text-[10px] text-gray-400 italic mt-0.5">{item.note}</div>}
-                            </td>
-                            <td className="py-2 px-2 text-center text-[11px] text-gray-500 border-r border-gray-100">
-                                {item.quantity} <span className="mx-0.5 text-gray-300">x</span> <span className="font-bold text-gray-800">{fmtNum(item.expectedPrice || 0)}</span>
-                            </td>
-                            <td className="py-2 px-2 text-center text-[11px] text-gray-500 border-r border-gray-100">
-                                <span className="font-bold text-gray-800">{donationSummary[item.id] || 0}</span> <span className="mx-0.5 text-gray-300">x</span> <span className="font-bold text-gray-800">{fmtNum(item.expectedPrice || 0)}</span>
-                            </td>
-                            <td className="py-2 px-2 text-center text-[11px] text-gray-500">
-                                {isEvidenceSubmitted ? (
-                                    <>
-                                        <span className="font-bold text-gray-800">{item.actualQuantity || 0}</span> <span className="mx-0.5 text-gray-300">x</span> <span className={`font-bold ${priceColor}`}>{fmtNum(item.price || 0)}</span>
-                                    </>
-                                ) : (
-                                    <span className="text-[10px] text-gray-300 italic">Chưa cập nhật</span>
-                                )}
-                            </td>
-                        </tr>
-                    );
-                })}
+                {items.length > 0 ? items.map((i, idx) => (
+                    <tr key={i.id || idx} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-2 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-100">{idx + 1}</td>
+                        <td className="py-2 px-3 border-r border-gray-100">
+                            <div className="text-[11px] font-bold text-gray-800 uppercase leading-none">{i.category || 'Hàng hóa'}</div>
+                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">{i.note || 'Chi tiêu phục vụ chiến dịch'}</div>
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                            <div className="text-[11px] font-black text-[#446b5f]">{fmtNum(i.quantity * i.expectedPrice)}</div>
+                            <div className="text-[9px] text-gray-400 font-bold mt-0.5">{i.quantity} x {fmtNum(i.expectedPrice)}</div>
+                        </td>
+                    </tr>
+                )) : (
+                    <tr><td colSpan={3} className="py-10 text-center text-[10px] font-bold text-gray-300 uppercase">Trống</td></tr>
+                )}
             </tbody>
-            <tfoot className="sticky bottom-0 bg-[#F1F5F9] border-t-2 border-gray-200">
+            <tfoot className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
                 <tr className="font-black text-gray-800">
-                    <td className="py-2 px-2 text-[10px] font-black uppercase text-gray-500 border-r border-gray-200">Σ Tổng cộng</td>
-                    <td className="py-2 px-2 text-center text-[11px] font-black text-blue-600 border-r border-gray-200">{fmtNum(totalPlan)} đ</td>
-                    <td className="py-2 px-2 border-r border-gray-200 align-top">
-                        <div className="flex flex-col gap-0.5 text-[10px] tabular-nums">
-                            <div className="flex justify-between w-full text-gray-700">
-                                <span>Quyên góp:</span>
-                                <span className="font-bold">{fmtNum(totalDonated)} đ</span>
-                            </div>
-                            <div className="border-t border-gray-300/50 my-0.5" />
-                            <div className="flex justify-between w-full text-emerald-700">
-                                <span className="font-black uppercase">Giải ngân:</span>
-                                <span className="font-black">{fmtNum(exp.totalReceivedAmount || 0)} đ</span>
-                            </div>
-                        </div>
-                    </td>
-                    <td className="py-2 px-2 align-top">
-                        <div className="flex flex-col gap-0.5 text-[10px] tabular-nums">
-                            <div className="flex justify-between w-full text-gray-700">
-                                <span>Đã chi:</span>
-                                <span className="font-bold">
-                                    {isEvidenceSubmitted ? `${fmtNum(totalActual)} đ` : <span className="text-gray-300 italic">Chưa cập nhật</span>}
-                                </span>
-                            </div>
-                            <div className="border-t border-gray-300/50 my-0.5" />
-                            <div className="flex justify-between w-full text-emerald-700">
-                                <span className="font-black uppercase">Số dư:</span>
-                                <span className="font-black">
-                                    {isEvidenceSubmitted ? `${fmtNum(exp.variance || 0)} đ` : <span className="text-gray-300 italic">Chưa cập nhật</span>}
-                                </span>
-                            </div>
-                        </div>
-                    </td>
+                    <td colSpan={2} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng kế hoạch:</td>
+                    <td className="py-2.5 px-3 text-right text-xs text-[#446b5f]">{fmtNum(totalPlan)} đ</td>
                 </tr>
             </tfoot>
         </table>
@@ -225,7 +158,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                     <div className="space-y-0.5">
                         <h5 className="text-[11px] font-bold text-gray-900 uppercase leading-none">{exp.plan}</h5>
                         <div className="flex items-center gap-2">
-                            <CombinedStatusPill expStatus={exp.status || 'PENDING'} evidenceStatus={exp.evidenceStatus} />
+                            <ExpenditureStatusPill expStatus={exp.status || 'PENDING'} />
                         </div>
                         {(exp.status === 'REJECTED' || exp.evidenceStatus === 'REJECTED') && exp.rejectReason && (
                             <p className="text-[9px] text-rose-600 font-bold mt-1 bg-rose-50/50 px-2 py-0.5 rounded border border-rose-100/50 italic leading-tight">
@@ -242,7 +175,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                         <div className="lg:col-span-8 space-y-3">
                             <div className="bg-white rounded-lg border border-gray-100 overflow-hidden min-h-[100px] max-h-[300px] overflow-y-auto custom-scrollbar">
                                 {loading ? <div className="p-10 text-center text-[10px] font-bold text-gray-300 animate-pulse uppercase">Đang tải...</div>
-                                    : items.length ? <ItemTable items={items} totalExpected={exp.totalExpectedAmount} donationSummary={donationSummary} exp={exp} />
+                                    : items.length ? <ItemTable items={items} />
                                     : <div className="p-10 text-center text-[10px] font-bold text-gray-300 uppercase">Không có dữ liệu</div>}
                             </div>
                         </div>
@@ -260,10 +193,10 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                                     {analyzingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} PHÂN TÍCH AI
                                 </button>
                                 <div className="flex gap-1.5">
-                                    {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW' || exp.evidenceStatus === 'SUBMITTED') && (
+                                    {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
                                         <>
                                             <button onClick={() => setShowReject(true)} className="flex-1 h-8 rounded-lg border border-rose-100 text-rose-500 text-[10px] font-bold uppercase hover:bg-rose-50 transition-colors">TỪ CHỐI</button>
-                                            <button onClick={() => exp.evidenceStatus === 'SUBMITTED' ? handleAction(expenditureService.updateEvidenceStatus, 'APPROVED') : handleAction(expenditureService.updateStatus, 'APPROVED')} className="flex-[2] h-8 rounded-lg bg-[#446b5f] text-white text-[10px] font-bold uppercase hover:bg-[#345249] transition-colors shadow-sm">DUYỆT</button>
+                                            <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="flex-[2] h-8 rounded-lg bg-[#446b5f] text-white text-[10px] font-bold uppercase hover:bg-[#345249] transition-colors shadow-sm">DUYỆT CHI TIÊU</button>
                                         </>
                                     )}
                                 </div>
@@ -272,8 +205,8 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                     </div>
                 </div>
             )}
-            {showReject && <RejectModal onConfirm={(r: string) => exp.evidenceStatus === 'SUBMITTED' ? handleAction(expenditureService.updateEvidenceStatus, 'REJECTED', r) : handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
-            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={items} donationSummary={donationSummary} exp={exp} onClose={() => setAiResult(null)} />}
+            {showReject && <RejectModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
+            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={items} mode="plan" exp={exp} onClose={() => setAiResult(null)} />}
         </div>
     );
 }
@@ -341,7 +274,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
 
                 const group = groupsMap.get(exp.campaignId);
                 group.expenditures.push(exp);
-                if (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW' || exp.evidenceStatus === 'SUBMITTED') {
+                if (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') {
                     group.needsAttention = true;
                 }
             });
@@ -437,7 +370,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             <div className="flex items-center gap-2 mb-2 opacity-30"><LayoutDashboard className="h-3 w-3" /><span className="text-[9px] font-bold uppercase tracking-widest">Danh sách đợt chi</span></div>
                             {selected.expenditures.map((e: any) => <ExpenditureCard key={e.id} exp={e} campaignData={selected} onUpdate={(u: any) => {
-                                setGrouped(prev => prev.map(g => g.campaignId === selected.campaignId ? { ...g, expenditures: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex), needsAttention: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex).some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW' || nx.evidenceStatus === 'SUBMITTED') } : g));
+                                setGrouped(prev => prev.map(g => g.campaignId === selected.campaignId ? { ...g, expenditures: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex), needsAttention: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex).some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW') } : g));
                             }} />)}
                         </div>
                     </div>

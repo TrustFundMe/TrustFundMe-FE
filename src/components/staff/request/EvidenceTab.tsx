@@ -279,6 +279,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     result={aiResult} 
                     itemsProp={rec.expenditureItems}
                     exp={{ id: rec.expenditureId } as any}
+                    mode="evidence"
                     onClose={() => setAiResult(null)} 
                 />
             )}
