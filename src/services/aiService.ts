@@ -55,9 +55,10 @@ export const aiService = {
         }>;
     },
 
-    async ocrKYC(file: File) {
+    async ocrKYC(file: File, side: 'front' | 'back' = 'front') {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('side', side);
 
         const response = await axios.post(`${AI_BASE_URL}/api/ocr-kyc`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
