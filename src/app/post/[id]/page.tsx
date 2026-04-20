@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import DanboxLayout from "@/layout/DanboxLayout";
@@ -24,29 +23,6 @@ import { useAuth } from "@/contexts/AuthContextProxy";
 import { CampaignDto } from "@/types/campaign";
 import { AnimatePresence } from "framer-motion";
 
-function CampaignThumb({ src, alt }: { src?: string; alt: string }) {
-  const [imgSrc, setImgSrc] = useState(src || "");
-  const DEFAULT_IMG = "/assets/img/campaign/1.png";
-
-  useEffect(() => {
-    setImgSrc(src || "");
-  }, [src]);
-
-  return (
-    <div className="flex-shrink-0 w-10 h-10 rounded-lg overflow-hidden shadow-inner ring-1 ring-black/5 bg-zinc-100">
-      <Image
-        src={imgSrc || DEFAULT_IMG}
-        alt={alt}
-        width={40}
-        height={40}
-        unoptimized
-        onError={() => { setImgSrc(DEFAULT_IMG); }}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-    </div>
-  );
-}
-
 const FeedPostDetailPage = () => {
   const router = useRouter();
   const params = useParams();
@@ -58,13 +34,9 @@ const FeedPostDetailPage = () => {
   const [post, setPost] = useState<(FeedPost & { campaign?: CampaignInfo }) | null>(null);
   const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<FeedPost[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  /** Sidebar "Chiến dịch khác" — mọi chiến dịch (khám phá) */
-  const [campaignsList, setCampaignsList] = useState<{ id: number; title: string; coverImage?: string }[]>([]);
   /** Modal tạo/sửa bài — chỉ chiến dịch của user đang đăng nhập */
   const [myCampaignsList, setMyCampaignsList] = useState<{ id: number; title: string }[]>([]);
   const [campaignTitlesMap, setCampaignTitlesMap] = useState<Record<string, string>>({});
-  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -116,54 +88,81 @@ const FeedPostDetailPage = () => {
       }
 
       if (dto.targetId != null) {
-        // Fetch campaign info for any linked post
-        try {
-          const campaign = await campaignService.getById(dto.targetId);
-          const raised = campaign.balance ?? 0;
-          const goal = raised > 0 ? raised : 1;
-
-          let coverImageUrl = campaign.coverImageUrl;
-          if (!coverImageUrl) {
-            const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
-            coverImageUrl = firstImage?.url || campaign.coverImageUrl;
-          }
-
-          setPost((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  campaign: {
-                    id: String(campaign.id),
-                    title: campaign.title ?? "",
-                    image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
-                    raised,
-                    goal,
-                    progress: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0,
-                    status: campaign.status,
-                  } as CampaignInfo,
-                }
-              : null
-          );
-        } catch {
-          // no campaign
-        }
-
-        // Fetch expenditure info if EXPENDITURE type
         if (dto.targetType === "EXPENDITURE") {
+          // Fetch expenditure first, then campaign via exp.campaignId
           try {
             const exp = await expenditureService.getById(dto.targetId);
             setExpenditure(exp);
+
+            if (exp.campaignId) {
+              try {
+                const campaign = await campaignService.getById(exp.campaignId);
+                let coverImageUrl = campaign.coverImageUrl;
+                if (!coverImageUrl) {
+                  const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
+                  coverImageUrl = firstImage?.url || campaign.coverImageUrl;
+                }
+                setPost((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        campaign: {
+                          id: String(campaign.id),
+                          title: campaign.title ?? "",
+                          image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
+                          raised: campaign.balance ?? 0,
+                          goal: (campaign.balance ?? 0) > 0 ? campaign.balance ?? 0 : 1,
+                          progress: (campaign.balance ?? 0) > 0 ? Math.min(100, Math.round(((campaign.balance ?? 0) / ((campaign.balance ?? 0) > 0 ? campaign.balance ?? 0 : 1)) * 100)) : 0,
+                          status: campaign.status,
+                        } as CampaignInfo,
+                      }
+                    : null
+                );
+              } catch {
+                // no campaign
+              }
+            }
           } catch {
             setExpenditure(null);
           }
         } else {
+          // CAMPAIGN type — fetch campaign directly with targetId
+          try {
+            const campaign = await campaignService.getById(dto.targetId);
+            const raised = campaign.balance ?? 0;
+            const goal = raised > 0 ? raised : 1;
+
+            let coverImageUrl = campaign.coverImageUrl;
+            if (!coverImageUrl) {
+              const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
+              coverImageUrl = firstImage?.url || campaign.coverImageUrl;
+            }
+
+            setPost((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    campaign: {
+                      id: String(campaign.id),
+                      title: campaign.title ?? "",
+                      image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
+                      raised,
+                      goal,
+                      progress: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0,
+                      status: campaign.status,
+                    } as CampaignInfo,
+                  }
+                : null
+            );
+          } catch {
+            // no campaign
+          }
           setExpenditure(null);
         }
       }
 
-      const [listRes, campaignsRes] = await Promise.all([
-        feedPostService.getAll(),
-        campaignService.getAll(0, 100).catch(() => ({ content: [] })),
+      const [listRes] = await Promise.all([
+        feedPostService.getAll().catch(() => []),
       ]);
       const list = Array.isArray(listRes) ? listRes : [];
       const allFeedPosts = list.map((p) => dtoToFeedPost(p));
@@ -174,25 +173,11 @@ const FeedPostDetailPage = () => {
         ? allFeedPosts.filter((p) => p.id !== postId && p.targetId === campaignId)
         : allFeedPosts.filter((p) => p.id !== postId);
       setRelatedPosts(sameCampaignPosts.slice(0, 4));
-      setFeedPosts(allFeedPosts);
-      setCategories([...new Set(allFeedPosts.map((p) => p.category).filter((c): c is string => Boolean(c)))]);
-      const campaigns = (campaignsRes as { content?: CampaignDto[] }).content ?? [];
-      const titles: Record<string, string> = {};
-      const cList: { id: number; title: string; coverImage?: string }[] = [];
-      const imgPromises = campaigns.map(async (c) => {
-        titles[String(c.id)] = c.title ?? "";
-        let coverImage = c.coverImageUrl;
-        if (!coverImage) {
-          try {
-            const firstImage = await mediaService.getCampaignFirstImage(c.id).catch(() => null);
-            coverImage = firstImage?.url || undefined;
-          } catch { /* ignore */ }
-        }
-        cList.push({ id: c.id, title: c.title ?? "", coverImage: coverImage ?? undefined });
-      });
-      await Promise.all(imgPromises);
-      setCampaignTitlesMap(titles);
-      setCampaignsList(cList);
+      setCampaignTitlesMap(Object.fromEntries(
+        allFeedPosts
+          .filter((p) => p.targetId != null)
+          .map((p) => [String(p.targetId), p.targetName || `Chiến dịch #${p.targetId}`])
+      ));
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       const errorMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message;
@@ -281,40 +266,7 @@ const FeedPostDetailPage = () => {
         style={{ padding: "24px 0", fontFamily: "var(--font-dm-sans)" }}
       >
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_280px] gap-6 lg:gap-8">
-            {/* Left sidebar: Quay lại + Chiến dịch */}
-            <aside className="hidden lg:flex flex-col gap-4">
-              <Link href="/post" className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 hover:text-[#ff5e14] font-medium text-sm">
-                <ArrowLeft className="w-4 h-4" />
-                Quay lại
-              </Link>
-              <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 shadow-sm">
-                <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">Chiến dịch khác</p>
-                <nav className="flex flex-col gap-2">
-                  {campaignsList.length === 0 ? (
-                    <span className="px-3 py-2 text-sm text-zinc-400 italic">Chưa có chiến dịch</span>
-                  ) : (
-                    campaignsList.map((c) => {
-                      const count = feedPosts.filter((p) => String(p.targetId) === String(c.id)).length;
-                      return (
-                        <Link key={c.id}
-                          href={`/post?campaignId=${c.id}`}
-                          className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-700 group transition-colors no-underline">
-                          {/* Cover image */}
-                          <CampaignThumb src={c.coverImage} alt={c.title} />
-                          {/* Title + count */}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 truncate group-hover:text-[#ff5e14] transition-colors leading-tight">{c.title}</p>
-                            <p className="text-[10px] text-zinc-400 mt-0.5">{count} bài viết</p>
-                          </div>
-                        </Link>
-                      );
-                    })
-                  )}
-                </nav>
-              </div>
-            </aside>
-
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6 lg:gap-8">
             {/* Main: Nội dung bài viết */}
             <div className="min-w-0">
               <div className="lg:hidden mb-4">

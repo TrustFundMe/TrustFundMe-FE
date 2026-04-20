@@ -253,22 +253,35 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
         if (!hasPhotos) { toast.error('Chưa có ảnh minh chứng'); return; }
         setAnalyzing(true);
         try {
+            const itemsToAnalyze = rec.expenditureItems.filter((i: any) => (i.actualQuantity ?? 0) > 0);
+
             const res = await axios.post(`${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/api/analyze-evidence`, { 
                 expenditureId: rec.expenditureId, 
                 plan: rec.plan, 
                 purpose: rec.purpose || '', 
                 totalAmount: rec.totalAmount, 
-                items: rec.expenditureItems, 
+                items: itemsToAnalyze.length > 0 ? itemsToAnalyze : rec.expenditureItems, 
                 photoUrls: rec.evidencePhotos,
                 createdAt: rec.createdAt
             });
             setAiResult(res.data);
-        } catch { toast.error('AI phân tích thất bại'); } finally { setAnalyzing(false); }
+        } catch (err: any) {
+            const msg = err?.response?.data?.error || err?.response?.data?.details || err?.message || 'AI phân tích thất bại';
+            console.error('[runAI]', msg);
+            toast.error(msg);
+        } finally { setAnalyzing(false); }
     };
 
     return (
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {aiResult && <AIAnalysisModal result={aiResult} onClose={() => setAiResult(null)} />}
+            {aiResult && (
+                <AIAnalysisModal 
+                    result={aiResult} 
+                    itemsProp={rec.expenditureItems}
+                    exp={{ id: rec.expenditureId } as any}
+                    onClose={() => setAiResult(null)} 
+                />
+            )}
             {lightbox && (
                 <div className="fixed inset-0 z-[300] bg-black/90 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
                     <img src={lightbox} alt="phóng to" className="max-h-full max-w-full rounded-xl object-contain" />
@@ -395,7 +408,9 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     {photosOpen && (
                         hasPhotos ? (
                             <div className="grid grid-cols-4 gap-1.5">
-                                {rec.evidencePhotos.map((url, i) => (
+                                {rec.evidencePhotos
+                                    .filter((u: any) => typeof u === 'string')
+                                    .map((url: string, i: number) => (
                                     <button key={i} onClick={() => setLightbox(url)}
                                         className="aspect-square rounded-lg overflow-hidden border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all group relative">
                                         <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />

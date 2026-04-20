@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
+import { paymentService } from '@/services/paymentService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
@@ -67,43 +68,111 @@ const CombinedStatusPill = ({ expStatus, evidenceStatus }: { expStatus: string; 
     );
 };
 
-const ItemTable = ({ items, totalExpected }: { items: ExpenditureItem[], totalExpected: number }) => (
-    <table className="w-full text-left border-collapse table-fixed">
-        <thead className="sticky top-0 bg-white z-10">
-            <tr className="border-b border-gray-100">
-                <th className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase w-1/3">Hạng mục</th>
-                <th className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase text-right">Đơn giá</th>
-                <th className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase text-right w-10">SL</th>
-                <th className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase text-right w-1/4">Thành tiền</th>
-                <th className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase text-right">Ghi chú</th>
-            </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-            {items.map((item, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-2 px-2 text-[11px] font-medium text-gray-700 truncate">{item.category}</td>
-                    <td className="py-2 px-2 text-right text-[11px] text-gray-500">{fmt(item.expectedPrice || item.price || 0)}</td>
-                    <td className="py-2 px-2 text-right text-[11px] font-bold text-gray-600">{item.quantity}</td>
-                    <td className="py-2 px-2 text-right text-[11px] font-bold text-gray-900">{fmt((item.expectedPrice || item.price || 0) * item.quantity)}</td>
-                    <td className="py-2 px-2 text-right text-[10px] text-gray-400 truncate italic">{item.note || '—'}</td>
+const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
+
+const ItemTable = ({
+    items,
+    totalExpected,
+    donationSummary,
+    exp,
+}: {
+    items: ExpenditureItem[];
+    totalExpected: number;
+    donationSummary: Record<number, number>;
+    exp: Expenditure;
+}) => {
+    const isEvidenceSubmitted = ['SUBMITTED', 'APPROVED', 'ALLOWED_EDIT'].includes(exp.evidenceStatus || '');
+
+    // Totals
+    const totalPlan = items.reduce((s, i) => s + (i.quantity || 0) * (i.expectedPrice || 0), 0);
+    const totalDonated = items.reduce((s, i) => s + (donationSummary[i.id] || 0) * (i.expectedPrice || 0), 0);
+    const totalActual = items.reduce((s, i) => s + (i.actualQuantity || 0) * (i.price || 0), 0);
+
+    return (
+        <table className="w-full text-left border-collapse" style={{ tableLayout: 'auto' }}>
+            <thead className="sticky top-0 bg-[#F1F5F9] z-10 border-b border-gray-200">
+                <tr>
+                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 min-w-[140px]">Tên hàng hóa</th>
+                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center border-r border-gray-200 min-w-[130px]">Kế hoạch (SL x ĐG)</th>
+                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center border-r border-gray-200 min-w-[130px]">Quyên góp (SL x ĐG)</th>
+                    <th className="py-2 px-2 text-[10px] font-black text-gray-600 uppercase text-center min-w-[130px]">Đã chi (SL x ĐG)</th>
                 </tr>
-            ))}
-        </tbody>
-        <tfoot className="sticky bottom-0 bg-gray-50/50">
-            <tr className="border-t border-gray-100">
-                <td colSpan={3} className="py-2 px-2 text-[10px] font-bold text-gray-400 uppercase text-right">Tổng cộng</td>
-                <td className="py-2 px-2 text-right text-[11px] font-bold text-blue-600">{fmt(totalExpected)}</td>
-                <td></td>
-            </tr>
-        </tfoot>
-    </table>
-);
+            </thead>
+            <tbody className="divide-y divide-gray-100 bg-white">
+                {items.map((item, idx) => {
+                    const priceDiff = (item.price || 0) - (item.expectedPrice || 0);
+                    const priceColor = priceDiff > 0 ? 'text-rose-500' : priceDiff < 0 ? 'text-emerald-700' : 'text-gray-800';
+                    return (
+                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            <td className="py-2 px-2 border-r border-gray-100">
+                                <div className="text-[11px] font-bold text-gray-800">{item.category}</div>
+                                {item.note && <div className="text-[10px] text-gray-400 italic mt-0.5">{item.note}</div>}
+                            </td>
+                            <td className="py-2 px-2 text-center text-[11px] text-gray-500 border-r border-gray-100">
+                                {item.quantity} <span className="mx-0.5 text-gray-300">x</span> <span className="font-bold text-gray-800">{fmtNum(item.expectedPrice || 0)}</span>
+                            </td>
+                            <td className="py-2 px-2 text-center text-[11px] text-gray-500 border-r border-gray-100">
+                                <span className="font-bold text-gray-800">{donationSummary[item.id] || 0}</span> <span className="mx-0.5 text-gray-300">x</span> <span className="font-bold text-gray-800">{fmtNum(item.expectedPrice || 0)}</span>
+                            </td>
+                            <td className="py-2 px-2 text-center text-[11px] text-gray-500">
+                                {isEvidenceSubmitted ? (
+                                    <>
+                                        <span className="font-bold text-gray-800">{item.actualQuantity || 0}</span> <span className="mx-0.5 text-gray-300">x</span> <span className={`font-bold ${priceColor}`}>{fmtNum(item.price || 0)}</span>
+                                    </>
+                                ) : (
+                                    <span className="text-[10px] text-gray-300 italic">Chưa cập nhật</span>
+                                )}
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+            <tfoot className="sticky bottom-0 bg-[#F1F5F9] border-t-2 border-gray-200">
+                <tr className="font-black text-gray-800">
+                    <td className="py-2 px-2 text-[10px] font-black uppercase text-gray-500 border-r border-gray-200">Σ Tổng cộng</td>
+                    <td className="py-2 px-2 text-center text-[11px] font-black text-blue-600 border-r border-gray-200">{fmtNum(totalPlan)} đ</td>
+                    <td className="py-2 px-2 border-r border-gray-200 align-top">
+                        <div className="flex flex-col gap-0.5 text-[10px] tabular-nums">
+                            <div className="flex justify-between w-full text-gray-700">
+                                <span>Quyên góp:</span>
+                                <span className="font-bold">{fmtNum(totalDonated)} đ</span>
+                            </div>
+                            <div className="border-t border-gray-300/50 my-0.5" />
+                            <div className="flex justify-between w-full text-emerald-700">
+                                <span className="font-black uppercase">Giải ngân:</span>
+                                <span className="font-black">{fmtNum(exp.totalReceivedAmount || 0)} đ</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td className="py-2 px-2 align-top">
+                        <div className="flex flex-col gap-0.5 text-[10px] tabular-nums">
+                            <div className="flex justify-between w-full text-gray-700">
+                                <span>Đã chi:</span>
+                                <span className="font-bold">
+                                    {isEvidenceSubmitted ? `${fmtNum(totalActual)} đ` : <span className="text-gray-300 italic">Chưa cập nhật</span>}
+                                </span>
+                            </div>
+                            <div className="border-t border-gray-300/50 my-0.5" />
+                            <div className="flex justify-between w-full text-emerald-700">
+                                <span className="font-black uppercase">Số dư:</span>
+                                <span className="font-black">
+                                    {isEvidenceSubmitted ? `${fmtNum(exp.variance || 0)} đ` : <span className="text-gray-300 italic">Chưa cập nhật</span>}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    );
+};
 
 /* ══════════════════════════════ EXPENDITURE CARD ══════════════════════════════ */
 
 function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, campaignData: any, onUpdate: any }) {
     const [open, setOpen] = useState(false);
     const [items, setItems] = useState<ExpenditureItem[]>([]);
+    const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
     const [analyzingAI, setAnalyzingAI] = useState(false);
     const [aiResult, setAiResult] = useState<any>(null);
@@ -112,8 +181,20 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const loadItems = useCallback(async () => {
         if (!open || items.length) return;
         setLoading(true);
-        try { setItems(await expenditureService.getItems(exp.id)); } finally { setLoading(false); }
-    }, [open, exp.id, items.length]);
+        try {
+            const fetchedItems = await expenditureService.getItems(exp.id);
+            setItems(fetchedItems);
+            // Load donation summary for ITEMIZED campaigns
+            if (campaignData?.campaignType !== 'AUTHORIZED' && fetchedItems.length > 0) {
+                try {
+                    const summary = await paymentService.getDonationSummary(fetchedItems.map((i: ExpenditureItem) => i.id));
+                    const map: Record<number, number> = {};
+                    summary.forEach((s: any) => { map[s.expenditureItemId] = s.donatedQuantity; });
+                    setDonationSummary(map);
+                } catch { /* ignore */ }
+            }
+        } finally { setLoading(false); }
+    }, [open, exp.id, items.length, campaignData?.campaignType]);
 
     useEffect(() => { loadItems(); }, [loadItems]);
 
@@ -161,7 +242,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                         <div className="lg:col-span-8 space-y-3">
                             <div className="bg-white rounded-lg border border-gray-100 overflow-hidden min-h-[100px] max-h-[300px] overflow-y-auto custom-scrollbar">
                                 {loading ? <div className="p-10 text-center text-[10px] font-bold text-gray-300 animate-pulse uppercase">Đang tải...</div>
-                                    : items.length ? <ItemTable items={items} totalExpected={exp.totalExpectedAmount} />
+                                    : items.length ? <ItemTable items={items} totalExpected={exp.totalExpectedAmount} donationSummary={donationSummary} exp={exp} />
                                     : <div className="p-10 text-center text-[10px] font-bold text-gray-300 uppercase">Không có dữ liệu</div>}
                             </div>
                         </div>
@@ -192,7 +273,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                 </div>
             )}
             {showReject && <RejectModal onConfirm={(r: string) => exp.evidenceStatus === 'SUBMITTED' ? handleAction(expenditureService.updateEvidenceStatus, 'REJECTED', r) : handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
-            {aiResult && <AIAnalysisModal result={aiResult} onClose={() => setAiResult(null)} />}
+            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={items} donationSummary={donationSummary} exp={exp} onClose={() => setAiResult(null)} />}
         </div>
     );
 }

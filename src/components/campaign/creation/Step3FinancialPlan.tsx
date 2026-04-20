@@ -26,10 +26,7 @@ const PAGE_SIZE = 5;
 
 export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: Step3FinancialPlanProps) {
     const { toast } = useToast();
-    const [isParsing, setIsParsing] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const excelInputRef = useRef<HTMLInputElement>(null);
 
     // ── Excel Import / Export ───────────────────────────────────────────────
@@ -173,82 +170,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
         ));
     };
 
-    const handleFileUpload = async (file: File) => {
-        setIsParsing(true);
-        try {
-            const result = await expenditureService.importItemsFromExcel(file);
-            if (!result.success || !result.data) {
-                toast(result.error || 'Không thể đọc file Excel', 'error');
-                return;
-            }
-
-            // Validate items from Excel
-            const errors: string[] = [];
-            result.data.forEach((item, idx) => {
-                const row = idx + 1;
-                const errs: string[] = [];
-                if (!item.category || item.category.trim() === '') {
-                    errs.push(`Dòng ${row}: Thiếu tên vật phẩm`);
-                }
-                const qty = Number(item.quantity);
-                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
-                    errs.push(`Dòng ${row}: Thiếu số lượng`);
-                } else if (qty <= 0) {
-                    errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
-                } else if (!Number.isInteger(qty)) {
-                    errs.push(`Dòng ${row}: Số lượng phải là số nguyên`);
-                } else if (qty > 10000) {
-                    errs.push(`Dòng ${row}: Số lượng không được vượt quá 10.000`);
-                }
-                const price = Number(item.expectedPrice);
-                if (item.expectedPrice === undefined || item.expectedPrice === null || isNaN(price)) {
-                    errs.push(`Dòng ${row}: Thiếu đơn giá`);
-                } else if (price < 0) {
-                    errs.push(`Dòng ${row}: Đơn giá không được nhỏ hơn 0`);
-                }
-                if (item.category && item.category.trim().length > 50) {
-                    errs.push(`Dòng ${row}: Tên vật phẩm không được vượt quá 50 ký tự`);
-                }
-                if (item.note && item.note.trim().length > 100) {
-                    errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
-                }
-                errors.push(...errs);
-            });
-
-            if (errors.length > 0) {
-                toast('File Excel có lỗi:\n' + errors.slice(0, 10).join('\n') + (errors.length > 10 ? `\n...và ${errors.length - 10} lỗi khác` : ''), 'error');
-                return;
-            }
-
-            const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
-                id: Math.random().toString(36).substr(2, 9),
-                name: item.category || '',
-                unit: item.unit || '',
-                quantity: Number(item.quantity) || 1,
-                price: Number(item.expectedPrice) || 0,
-                note: item.note || '',
-            }));
-            const updated = [...items, ...newItems];
-            onChange('expenditureItems', updated);
-            setCurrentPage(Math.ceil(updated.length / PAGE_SIZE));
-            toast(`Đã nhập ${newItems.length} vật phẩm từ file Excel!`, 'success');
-        } catch (err: any) {
-            console.error('[Excel Parse Error]', err);
-            toast('Không thể phân tích file. Đảm bảo AI Service đang chạy và thử lại.', 'error');
-        } finally {
-            setIsParsing(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
-
-    const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
-    const onDragLeave = () => setIsDragging(false);
-    const onDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFileUpload(file);
-    };
 
     if (data.fundType === 'AUTHORIZED') {
         return (
@@ -288,46 +209,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     return (
         <div className="max-w-5xl mx-auto w-full space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row gap-3">
-                {/* AI Import */}
-                <div
-                    onDragOver={onDragOver}
-                    onDragLeave={onDragLeave}
-                    onDrop={onDrop}
-                    onClick={() => !isParsing && fileInputRef.current?.click()}
-                    className={`relative group h-16 flex-1 rounded-[1.5rem] border-2 border-dashed transition-all cursor-pointer flex items-center justify-center gap-3 overflow-hidden ${isDragging
-                        ? 'border-[#dc2626] bg-[#dc2626]/5 scale-[0.98]'
-                        : 'border-black/5 bg-gray-50/50 hover:bg-white hover:border-black/10'
-                        } ${isParsing ? 'cursor-wait' : ''}`}
-                >
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-                        accept=".xlsx,.xls,.csv"
-                    />
 
-                    {isParsing ? (
-                        <div className="flex items-center gap-3">
-                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dc2626] border-t-transparent shadow-sm" />
-                            <span className="text-xs font-black text-black">AI đang phân tích...</span>
-                        </div>
-                    ) : (
-                        <>
-                            <div className={`h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center transition-transform duration-500 group-hover:scale-105 ${isDragging ? 'rotate-12 scale-105' : ''}`}>
-                                <Sparkles className={`h-4 w-4 ${isDragging ? 'text-[#dc2626]' : 'text-indigo-400'}`} />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors">
-                                    {isDragging ? 'Thả tệp vào đây' : 'Phân tích kế hoạch bằng AI'}
-                                </span>
-                                <span className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
-                                    Kéo thả hoặc nhấn để chọn tệp
-                                </span>
-                            </div>
-                        </>
-                    )}
-                </div>
 
                 {/* Excel Import */}
                 <div
