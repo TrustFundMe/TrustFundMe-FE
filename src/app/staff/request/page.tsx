@@ -368,7 +368,7 @@ function StaffRequestContent() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 overflow-hidden">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 min-h-0">
                 <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedCampaignId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
                   <div className="flex items-center justify-between flex-shrink-0 px-1">
                     <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách nhiệm vụ duyệt chiến dịch</h2>

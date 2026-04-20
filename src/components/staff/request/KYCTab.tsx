@@ -134,7 +134,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 flex-1">
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">
@@ -163,15 +163,15 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
         {/* Table Area */}
         <div className={`flex flex-col gap-3 overflow-hidden transition-all duration-300 ${showKycForm ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
           <div className="flex items-center justify-between flex-shrink-0 px-1">
             <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách người dùng</h2>
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{filteredUsers.length} kết quả</span>
           </div>
-          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative custom-scrollbar">
-            <table className="w-full text-sm border-separate border-spacing-0">
+          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative custom-scrollbar min-h-0">
+            <table className="w-full min-w-[800px] text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                   <th className="px-4 py-2 text-left first:rounded-tl-xl w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
@@ -192,7 +192,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase">
+                    <td colSpan={7} className="px-6 py-20 text-center text-xs font-black text-gray-400 tracking-widest uppercase">
                       Không tìm thấy người dùng
                     </td>
                   </tr>

@@ -154,8 +154,8 @@ export default function HistoryTab() {
   if (loading) return <div className="p-10 text-center text-xs font-black text-gray-400 animate-pulse tracking-widest uppercase">ĐANG TẢI LỊCH SỬ...</div>;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 overflow-hidden">
-      <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedTaskId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 min-h-0">
+      <div className={`min-h-0 overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedTaskId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
         <div className="flex items-center justify-between flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
           <div className="flex items-center gap-2 px-3">
             <History className="h-4 w-4 text-gray-400" />

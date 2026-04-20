@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
+    console.log('>>> Proxying login request to:', `${BE_API_URL}/api/auth/login`);
 
     const response = await fetch(`${BE_API_URL}/api/auth/login`, {
       method: 'POST',
@@ -25,7 +26,19 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type');
+    let data: any = {};
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      console.error('Non-JSON response from BE:', text);
+      return NextResponse.json(
+        { error: `Backend server error (${response.status})` },
+        { status: response.status || 500 }
+      );
+    }
 
     if (!response.ok) {
       return NextResponse.json(
