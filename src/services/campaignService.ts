@@ -218,6 +218,13 @@ export const campaignService = {
   },
 
   async sendCommitmentEmail(campaignId: number): Promise<void> {
-    await api.post(`/api/campaigns/commitments/send-email/${campaignId}`);
+    const origin = window.location.origin;
+    // Chỉ truyền frontendUrl nếu đang ở local để backend ghi đè.
+    // Nếu ở VPS/Production, để trống để backend dùng mặc định (Vercel)
+    const frontendUrl = origin.includes('localhost') ? origin : '';
+    
+    await api.post(`/api/campaigns/commitments/send-email/${campaignId}`, null, {
+      params: { frontendUrl }
+    });
   },
 };
