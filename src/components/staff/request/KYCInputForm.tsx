@@ -190,6 +190,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
             ...validateDates(formData.issueDate, formData.expiryDate),
             issuePlace: validateIssuePlace(formData.issuePlace),
             taxId: validateTaxId(formData.taxId) as any,
+            address: !formData.address?.trim() ? 'Vui lòng nhập địa chỉ cư trú' : undefined,
         };
 
         const needsBackImage = formData.idType !== 'PASSPORT';
@@ -296,20 +297,31 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                                     return isNaN(d.getTime()) ? prevDate : d;
                                 };
 
-                                // ── Fill ALL OCR fields including fullName, address ──
-                                setFormData(prev => ({
-                                    ...prev,
-                                    idType: isValidStr(ocrResult.idType) ? ocrResult.idType : prev.idType,
-                                    idNumber: isValidStr(ocrResult.idNumber) ? ocrResult.idNumber : prev.idNumber,
-                                    fullName: isValidStr(ocrResult.fullName) ? ocrResult.fullName : prev.fullName,
-                                    address: isValidStr(ocrResult.placeOfResidence) ? ocrResult.placeOfResidence : (isValidStr(ocrResult.placeOfOrigin) ? ocrResult.placeOfOrigin : prev.address),
-                                    issueDate: parseDateSafely(ocrResult.issueDate, prev.issueDate),
-                                    expiryDate: parseDateSafely(ocrResult.expiryDate, prev.expiryDate),
-                                    issuePlace: isValidStr(ocrResult.issuePlace) ? ocrResult.issuePlace : prev.issuePlace,
-                                }));
-                                const docLabel = ocrResult.idType === 'PASSPORT' ? 'Hộ chiếu'
-                                    : ocrResult.idType === 'DRIVER_LICENSE' ? 'Bằng lái xe' : 'CCCD';
-                                return `AI trích xuất thông tin từ ${docLabel} thành công! (Chỉ cập nhật các trường tìm thấy)`;
+                                const isBack = fieldName === 'idImageBack';
+                                if (isBack) {
+                                    // Mặt sau: CHỈ cập nhật issueDate và issuePlace, KHÔNG được chạm vào idNumber hay các trường mặt trước
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        issueDate: parseDateSafely(ocrResult.issueDate, prev.issueDate),
+                                        issuePlace: isValidStr(ocrResult.issuePlace) ? ocrResult.issuePlace : prev.issuePlace,
+                                    }));
+                                    return `AI trích xuất thông tin mặt sau thành công!`;
+                                } else {
+                                    // Mặt trước: cập nhật tất cả các trường thông tin
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        idType: isValidStr(ocrResult.idType) ? ocrResult.idType : prev.idType,
+                                        idNumber: isValidStr(ocrResult.idNumber) ? ocrResult.idNumber : prev.idNumber,
+                                        fullName: isValidStr(ocrResult.fullName) ? ocrResult.fullName : prev.fullName,
+                                        address: isValidStr(ocrResult.placeOfResidence) ? ocrResult.placeOfResidence : (isValidStr(ocrResult.placeOfOrigin) ? ocrResult.placeOfOrigin : prev.address),
+                                        issueDate: parseDateSafely(ocrResult.issueDate, prev.issueDate),
+                                        expiryDate: parseDateSafely(ocrResult.expiryDate, prev.expiryDate),
+                                        issuePlace: isValidStr(ocrResult.issuePlace) ? ocrResult.issuePlace : prev.issuePlace,
+                                    }));
+                                    const docLabel = ocrResult.idType === 'PASSPORT' ? 'Hộ chiếu'
+                                        : ocrResult.idType === 'DRIVER_LICENSE' ? 'Bằng lái xe' : 'CCCD';
+                                    return `AI trích xuất thông tin từ ${docLabel} thành công!`;
+                                }
                             },
                             error: (err: any) => err.message || 'AI không thể đọc được nội dung ảnh này.'
                         },
@@ -528,7 +540,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
 
                 {/* Địa chỉ thường trú */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Địa chỉ cư trú</label>
+                    <label className="block text-sm font-medium text-gray-700">Địa chỉ cư trú <span className="text-red-500">*</span></label>
                     <input
                         type="text"
                         name="address"
@@ -583,7 +595,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 {/* Loại định danh + Số định danh */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Loại định danh</label>
+                        <label className="block text-sm font-medium text-gray-700">Loại định danh <span className="text-red-500">*</span></label>
                         <select name="idType" value={formData.idType} onChange={handleChange}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
                             disabled={readOnly}>
@@ -595,7 +607,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     <div>
                         <label className="block text-sm font-medium text-gray-700">
                             {formData.idType === 'PASSPORT' ? 'Số hộ chiếu'
-                                : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe' : 'Số CCCD/CMND'}
+                                : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe' : 'Số CCCD/CMND'} <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text" name="idNumber" required
@@ -612,7 +624,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 {/* Ngày cấp + Ngày hết hạn */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Ngày cấp</label>
+                        <label className="block text-sm font-medium text-gray-700">Ngày cấp <span className="text-red-500">*</span></label>
                         <DatePicker
                             selected={formData.issueDate}
                             onChange={(date: Date | null) => handleDateChange('issueDate', date)}
@@ -625,7 +637,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         {errors.issueDate && <p className="mt-1 text-xs text-red-600">{errors.issueDate}</p>}
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Ngày hết hạn</label>
+                        <label className="block text-sm font-medium text-gray-700">Ngày hết hạn <span className="text-red-500">*</span></label>
                         <DatePicker
                             selected={formData.expiryDate}
                             onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
@@ -641,7 +653,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
 
                 {/* Nơi cấp */}
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Nơi cấp</label>
+                    <label className="block text-sm font-medium text-gray-700">Nơi cấp <span className="text-red-500">*</span></label>
                     <input
                         type="text" name="issuePlace" required
                         value={formData.issuePlace} onChange={handleChange}
