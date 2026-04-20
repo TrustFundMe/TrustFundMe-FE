@@ -29,10 +29,14 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
             </div>
 
             {/* Content */}
-            <div className="flex-1 min-w-0 mr-4 flex items-center justify-between">
-                <div>
-                    <div className="font-bold text-gray-900 text-sm">
-                        {item.name}
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                        <div className="font-bold text-gray-900 text-sm">
+                            {item.name}
+                        </div>
+                        <div className="font-black text-[#dc2626] text-sm">
+                            — {item.price.toLocaleString('vi-VN')} ₫
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-500 line-clamp-1">{item.description}</span>
@@ -42,37 +46,32 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
                     </div>
                 </div>
 
-                <div className="text-right">
-                    <div className="font-bold text-gray-900 text-sm">{item.price.toLocaleString('vi-VN')} ₫</div>
-                </div>
-            </div>
-
             {/* Controls (Absolute Right) */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-white flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 {isSelected && (
                     <button
                         onClick={onDeselect}
-                        className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 rounded-lg font-bold transition-all"
+                        className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl font-bold transition-all shadow-sm shadow-red-100"
                         title="Bỏ chọn"
                     >
-                        <X className="w-4 h-4" />
+                        <X className="w-5 h-5" />
                     </button>
                 )}
-                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <div className="flex items-center bg-slate-100/80 rounded-2xl p-1 gap-1">
                     <button
                         onClick={() => onQuantityChange(-1)}
                         disabled={quantity <= 1}
-                        className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 rounded font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
+                        className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 rounded-xl font-bold transition-all disabled:opacity-20 disabled:cursor-not-allowed hover:bg-white active:scale-90"
                     >
-                        <Minus className="w-4 h-4" />
+                        <Minus className="w-4 h-4 cursor-pointer" />
                     </button>
-                    <span className="w-8 text-center font-bold text-sm text-gray-900">{quantity || 1}</span>
+                    <span className="w-8 text-center font-black text-base text-slate-900">{quantity || 1}</span>
                     <button
                         onClick={() => onQuantityChange(1)}
                         disabled={quantity >= item.quantityLeft}
-                        className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 rounded font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white"
+                        className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 rounded-xl font-bold transition-all disabled:opacity-20 disabled:cursor-not-allowed hover:bg-white active:scale-90"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 cursor-pointer" />
                     </button>
                 </div>
             </div>

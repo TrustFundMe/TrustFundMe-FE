@@ -526,7 +526,7 @@ export default function EvidenceTab() {
     const [selected, setSelected] = useState<EvidenceRecord | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'SUBMITTED' | 'OVERDUE'>('ALL');
+    const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'SUBMITTED' | 'OVERDUE' | 'APPROVED'>('ALL');
     const { user } = useAuth();
 
     const load = useCallback(async () => {
@@ -538,25 +538,37 @@ export default function EvidenceTab() {
                 appointmentService.getByStaff(user.id).catch(() => [])
             ]);
 
-            const et = tasks.filter((t: any) => t.type === 'EVIDENCE' && t.status !== 'COMPLETED');
+            const et = tasks.filter((t: any) => t.type === 'EVIDENCE');
             const rows = await Promise.all(et.map(async (task: any) => {
                 try {
                     const exp = await expenditureService.getById(task.targetId);
                     const camp = await campaignService.getById(exp.campaignId);
                     const ownerRes = await userService.getUserById(camp.fundOwnerId);
                     const owner = ownerRes.data;
-                    const mediaParent = await mediaService.getMediaByExpenditureId(exp.id).catch(() => []);
                     const items = await expenditureService.getItems(exp.id).catch(() => []);
                     
-                    // Also fetch media for each item to aggregate
-                    const itemsMediaResponses = await Promise.all(
-                        items.map(item => mediaService.getMediaByExpenditureItemId(item.id).catch(() => []))
-                    );
-                    const mediaItems = itemsMediaResponses.flat();
-                    
-                    // Combine all unique media by URL or ID
-                    const allMedia = [...mediaParent, ...mediaItems];
-                    const uniqueMedia = Array.from(new Map(allMedia.map(m => [m.id, m])).values());
+                    // Lấy ảnh từ feedpost minh chứng (targetName = evidence, targetType = EXPENDITURE)
+                    let evidencePhotos: string[] = [];
+                    try {
+                        const posts = await feedPostService.getByTarget(exp.id, 'EXPENDITURE');
+                        const evidencePost = posts.find((p: any) => {
+                            const tName = p.targetName || p.target_name || '';
+                            return tName === 'evidence' || tName.startsWith('evidence|');
+                        });
+                        
+                        if (evidencePost) {
+                            // Ưu tiên lấy từ attachments của post DTO nếu có
+                            if (evidencePost.attachments && evidencePost.attachments.length > 0) {
+                                evidencePhotos = evidencePost.attachments.map((a: any) => a.url);
+                            } else {
+                                // Fallback: fetch media by postId
+                                const media = await mediaService.getMediaByPostId(evidencePost.id).catch(() => []);
+                                evidencePhotos = media.map((m: any) => m.url);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`[EvidenceTab] Failed to fetch feed posts for expenditure ${exp.id}`, err);
+                    }
 
                     // Check for existing fraud report
                     let hasReport = false;
@@ -590,7 +602,7 @@ export default function EvidenceTab() {
                         evidenceStatus: exp.evidenceStatus || 'PENDING', 
                         evidenceDueAt: (exp as any).evidenceDueAt || null, 
                         createdAt: exp.createdAt || new Date().toISOString(), 
-                        evidencePhotos: uniqueMedia.map((m: any) => m.url), 
+                        evidencePhotos: evidencePhotos, 
                         expenditureItems: items, 
                         purpose: (exp as any).purpose || '',
                         ownerIsActive: (owner as any)?.isActive ?? (owner as any)?.is_active ?? true,
@@ -621,6 +633,7 @@ export default function EvidenceTab() {
         if (filter === 'PENDING')   list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) >= 0);
         else if (filter === 'SUBMITTED') list = list.filter(r => r.evidenceStatus === 'SUBMITTED');
         else if (filter === 'OVERDUE')   list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) < 0);
+        else if (filter === 'APPROVED')  list = list.filter(r => r.evidenceStatus === 'APPROVED' || r.evidenceStatus === 'VERIFIED');
         if (search.trim()) list = list.filter(r => r.campaignTitle.toLowerCase().includes(search.toLowerCase()) || r.ownerName.toLowerCase().includes(search.toLowerCase()) || r.plan.toLowerCase().includes(search.toLowerCase()));
         setFiltered(list);
     }, [search, filter, records]);
@@ -653,6 +666,7 @@ export default function EvidenceTab() {
                             { k: 'PENDING',   v: 'Chờ nộp', t: 'Chưa nộp, chưa quá hạn' },
                             { k: 'SUBMITTED', v: 'Đã nộp',  t: 'Đã nộp ảnh, chờ AI phân tích' },
                             { k: 'OVERDUE',   v: 'Quá hạn', t: 'Đã quá hạn nộp minh chứng' },
+                            { k: 'APPROVED',  v: 'Đã duyệt', t: 'Minh chứng đã được xác nhận' },
                         ] as const).map(f => (
                             <button key={f.k} onClick={() => setFilter(f.k)} title={f.t}
                                 className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase whitespace-nowrap transition-all ${filter === f.k ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>

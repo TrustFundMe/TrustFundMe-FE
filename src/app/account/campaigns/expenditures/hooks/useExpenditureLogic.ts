@@ -209,9 +209,34 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
             setModalError('Vui lòng chọn hạn nộp minh chứng.');
             return;
         }
+
+        const amountNum = parseFloat(withdrawAmount.replace(/[.,\s]/g, '')) || 0;
+        if (amountNum <= 0) {
+            setModalError('Vui lòng nhập số tiền hợp lệ.');
+            return;
+        }
+
+        // Validation based on campaign type
+        if (campaign?.type === 'ITEMIZED') {
+            const exp = expenditures.find(e => e.id === selectedExpId);
+            const items = exp?.items ?? [];
+            const currentReceived = items.reduce((sum, item) => {
+                const donatedQty = donationSummary[item.id] ?? 0;
+                return sum + donatedQty * (item.expectedPrice || 0);
+            }, 0);
+
+            if (amountNum < currentReceived) {
+                setModalError(`Số tiền rút phải lớn hơn hoặc bằng tổng quyên góp (${new Intl.NumberFormat('vi-VN').format(currentReceived)} đ).`);
+                return;
+            }
+        }
+
+        if (amountNum > (campaign?.balance ?? 0)) {
+            setModalError('Số tiền rút không được vượt quá số dư hiện tại của chiến dịch.');
+            return;
+        }
         try {
             setSubmittingWithdrawal(true);
-            const amountNum = parseFloat(withdrawAmount.replace(/[.,]/g, '')) || 0;
             const updated = await expenditureService.requestWithdrawal(selectedExpId, new Date(evidenceDate).toISOString(), amountNum);
             setExpenditures(prev => prev.map(exp => exp.id === selectedExpId ? updated : exp));
             setShowWithdrawalModal(false);

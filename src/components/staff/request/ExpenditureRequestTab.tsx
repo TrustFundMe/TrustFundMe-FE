@@ -220,7 +220,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
         try {
             // 1. Get staff tasks
             const tasks = await campaignService.getTasksByStaff(user.id);
-            const expTasks = tasks.filter((t: any) => t.type === 'EXPENDITURE' && t.status !== 'COMPLETED');
+            const expTasks = tasks.filter((t: any) => t.type === 'EXPENDITURE');
             
             if (expTasks.length === 0) {
                 setGrouped([]);
@@ -331,7 +331,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                                 <h3 className={`text-[12px] font-bold uppercase leading-snug mb-3 line-clamp-2 ${selected?.key === g.key ? 'text-[#446b5f]' : 'text-gray-900'}`}>{g.campaignTitle}</h3>
                                 <div className="pt-3 border-t border-gray-50 flex items-center justify-between">
                                     <div className="space-y-0.5">
-                                        <p className="text-[8px] font-bold text-gray-400 uppercase">Ngân sách quỹ</p>
+                                        <p className="text-[8px] font-bold text-gray-400 uppercase">Số dư quỹ</p>
                                         <p className="text-[12px] font-bold text-gray-900 leading-none">{fmt(g.campaignBalance)}</p>
                                     </div>
                                     <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
@@ -355,7 +355,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                             </div>
                         </div>
                         <div className="grid grid-cols-3 border-b border-gray-50 py-2.5 px-6">
-                            <div className="space-y-0.5"><p className="text-[8px] font-bold text-gray-400 uppercase">Ngân sách</p><p className="text-[11px] font-bold text-emerald-600">{fmt(selected.campaignBalance)}</p></div>
+                            <div className="space-y-0.5"><p className="text-[8px] font-bold text-gray-400 uppercase">Số dư quỹ</p><p className="text-[11px] font-bold text-emerald-600">{fmt(selected.campaignBalance)}</p></div>
                             <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Tiến độ</p><p className="text-[11px] font-bold text-gray-900">{Math.round(selected.campaignProgress)}%</p></div>
                             <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Trạng thái</p><span className="text-[9px] font-bold text-[#446b5f] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">Quản lý</span></div>
                         </div>

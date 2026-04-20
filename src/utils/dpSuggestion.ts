@@ -122,7 +122,10 @@ function dpGenerate(amount: number, items: ItemInput[]): SuggestionOption[] {
     const item = eligible[i];
     const price = item.price;
     const maxQty = Math.min(item.quantityLeft, MAX_QTY_PER_ITEM, Math.floor(amount / price));
-    if (maxQty === 0) continue;
+    if (maxQty === 0) {
+      dp[i + 1] = dp[i];
+      continue;
+    }
 
     dp[i + 1] = new Map<number, Map<string, Record<string, number>>>();
 
@@ -179,8 +182,8 @@ function dpGenerate(amount: number, items: ItemInput[]): SuggestionOption[] {
     }
   }
 
-  // Collect all valid combos from final DP table
-  const finalDP = dp[n] || new Map<number, Map<string, Record<string, number>>>();
+  // Collect all valid combos from final computed DP table
+  const finalDP = dp[dp.length - 1] || new Map<number, Map<string, Record<string, number>>>();
   for (let b = 1; b <= scaledAmount; b++) {
     const combosAtB = finalDP.get(b);
     if (!combosAtB || combosAtB.size === 0) continue;

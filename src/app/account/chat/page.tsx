@@ -85,12 +85,12 @@ function AccountChatContent() {
                             const staff = staffResult.success && staffResult.data ? staffResult.data : null;
 
                             let campaignTitle = undefined;
-                            if (conv.campaignId) {
+                            if (conv.campaignId && Number(conv.campaignId) > 0) {
                                 try {
-                                    const campaign = await campaignService.getById(conv.campaignId);
-                                    campaignTitle = campaign.title;
+                                    const campaign = await campaignService.getById(Number(conv.campaignId));
+                                    campaignTitle = campaign?.title;
                                 } catch (err) {
-                                    console.error(`Failed to fetch title for campaign ${conv.campaignId}:`, err);
+                                    console.warn(`[Chat] Non-fatal: Failed to fetch title for campaign ${conv.campaignId}. It might have been deleted.`);
                                 }
                             }
 
@@ -219,19 +219,26 @@ function AccountChatContent() {
         }
 
         const fetchCampaignInfo = async () => {
+            if (!activeConversation.campaignId || Number(activeConversation.campaignId) <= 0) {
+                setActiveCampaignInfo(null);
+                return;
+            }
+
             try {
-                const campaign = await campaignService.getById(activeConversation.campaignId!);
-                try {
-                    const firstImage = await mediaService.getCampaignFirstImage(Number(activeConversation.campaignId));
-                    if (firstImage && firstImage.url) {
-                        campaign.coverImageUrl = firstImage.url;
+                const campaign = await campaignService.getById(Number(activeConversation.campaignId));
+                if (campaign) {
+                    try {
+                        const firstImage = await mediaService.getCampaignFirstImage(Number(activeConversation.campaignId));
+                        if (firstImage && firstImage.url) {
+                            campaign.coverImageUrl = firstImage.url;
+                        }
+                    } catch (mediaError) {
+                        console.warn("[Chat] Could not fetch campaign cover image.");
                     }
-                } catch (mediaError) {
-                    console.error("Failed to fetch campaign media:", mediaError);
+                    setActiveCampaignInfo(campaign);
                 }
-                setActiveCampaignInfo(campaign);
             } catch (error) {
-                console.error("Failed to fetch campaign info:", error);
+                console.warn(`[Chat] Failed to fetch info for active campaign ${activeConversation.campaignId}.`);
                 setActiveCampaignInfo(null);
             }
         };

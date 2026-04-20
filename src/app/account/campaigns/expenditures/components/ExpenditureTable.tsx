@@ -366,7 +366,17 @@ export default function ExpenditureTable({
                                                                                                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-black/5">
                                                                                                                     <div>
                                                                                                                         <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Số tiền rút</label>
-                                                                                                                        <p className="text-xl font-black text-black tracking-tight">{new Intl.NumberFormat('vi-VN').format(exp.totalReceivedAmount || 0)} đ</p>
+                                                                                                                        <p className="text-xl font-black text-black tracking-tight">
+                                                                                                                            {(() => {
+                                                                                                                                const withdrawalTx = exp.transactions?.find((t: any) => 
+                                                                                                                                    t.type === 'WITHDRAWAL' || 
+                                                                                                                                    t.type === 'DISBURSEMENT' || 
+                                                                                                                                    t.type === 'PAYOUT'
+                                                                                                                                );
+                                                                                                                                const amount = withdrawalTx ? withdrawalTx.amount : (exp.totalAmount || exp.totalReceivedAmount || 0);
+                                                                                                                                return new Intl.NumberFormat('vi-VN').format(amount);
+                                                                                                                            })()} đ
+                                                                                                                        </p>
                                                                                                                     </div>
                                                                                                                     {exp.evidenceDueAt && (
                                                                                                                         <div>

@@ -12,6 +12,9 @@ export const campaignService = {
   },
 
   async getById(id: number): Promise<CampaignDto> {
+    if (!id || id <= 0) {
+      throw new Error(`Invalid campaign ID: ${id}`);
+    }
     const res = await api.get<CampaignDto>(API_ENDPOINTS.CAMPAIGNS.BY_ID(id));
     return res.data;
   },

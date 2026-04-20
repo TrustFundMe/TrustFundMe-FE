@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <head>
         <link
           rel="stylesheet"
@@ -48,7 +48,7 @@ export default function RootLayout({
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         />
       </head>
-      <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`}>
+      <body className={`${chelsea_market.variable} ${dmSans.variable} ${playfair.variable}`} suppressHydrationWarning>
         <ClientProviders>
           <Preloader />
           {children}

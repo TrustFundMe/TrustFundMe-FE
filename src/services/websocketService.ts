@@ -14,6 +14,7 @@ class WebSocketService {
     private client: Client;
     private subscriptions: Map<string, StompSubscription> = new Map();
     private pendingSubscriptions: Array<{ topic: string, callback: MessageHandler }> = [];
+    private pendingMessages: Array<{ destination: string, body: any }> = [];
     public isConnected: boolean = false;
 
     constructor() {
@@ -24,7 +25,7 @@ class WebSocketService {
             heartbeatOutgoing: 4000,
             debug: (str) => {
                 // Reduce noise in production
-                console.log('[WS Debug]:', str);
+                // console.log('[WS Debug]:', str);
             },
         });
 
@@ -32,6 +33,7 @@ class WebSocketService {
             console.log('Connected to WebSocket');
             this.isConnected = true;
             this.processPendingSubscriptions();
+            this.processPendingMessages();
         };
 
         this.client.onDisconnect = () => {
@@ -103,6 +105,16 @@ class WebSocketService {
         }
     }
 
+    private processPendingMessages() {
+        if (this.pendingMessages.length > 0) {
+            console.log(`Processing ${this.pendingMessages.length} pending messages...`);
+            this.pendingMessages.forEach(msg => {
+                this.sendMessage(msg.destination, msg.body);
+            });
+            this.pendingMessages = [];
+        }
+    }
+
     unsubscribe(topic: string) {
         // Remove from active subscriptions
         const sub = this.subscriptions.get(topic);
@@ -123,7 +135,9 @@ class WebSocketService {
                 body: JSON.stringify(body),
             });
         } else {
-            console.error('WebSocket is not connected. Cannot send message to:', destination);
+            console.log('[WS] Not connected. Queuing message for:', destination);
+            this.pendingMessages.push({ destination, body });
+            this.connect();
         }
     }
 }
