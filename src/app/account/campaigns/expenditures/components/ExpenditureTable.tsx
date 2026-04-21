@@ -475,7 +475,7 @@ export default function ExpenditureTable({
                                                                                                     )}        
                 
                                                                                                     <div className="space-y-4">        
-                                                                                                        {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
+                                                                                                        {(exp.evidenceStatus === 'PENDING' || exp.evidenceStatus === 'PENDING_REVIEW' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
                                                                                                             <>        
                                                                                                                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200 group/step">        
                                                                                                                     <div className="flex items-center gap-4">        
@@ -683,7 +683,7 @@ export default function ExpenditureTable({
                 
                                                                                                                 return (        
                                                                                                                     <>        
-                                                                                                                        {(exp.evidenceStatus === 'PENDING' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
+                                                                                                                        {(exp.evidenceStatus === 'PENDING' || exp.evidenceStatus === 'PENDING_REVIEW' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
                                                                                                                             <>        
                                                                                                                                 <button        
                                                                                                                                     onClick={async () => {        
