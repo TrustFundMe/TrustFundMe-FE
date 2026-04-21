@@ -11,6 +11,7 @@ import { notificationService } from '@/services/notificationService';
 import { chatService } from '@/services/chatService';
 import { feedPostService } from '@/services/feedPostService';
 import { appointmentService } from '@/services/appointmentService';
+import { aiService } from '@/services/aiService';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useRouter } from 'next/navigation';
 import AIAnalysisModal from './AIAnalysisModal';
