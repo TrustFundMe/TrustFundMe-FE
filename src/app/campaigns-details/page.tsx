@@ -138,15 +138,17 @@ function CampaignDetailsInner() {
           campaignService.getExpendituresByCampaignId(campaignId)
         ]);
 
-        // Map expenditures to CampaignPlan (only DISBURSED)
+        // Map expenditures to CampaignPlan
         const mappedPlans: CampaignPlan[] = (expenditures || [])
-          .filter((exp: any) => exp.status === 'DISBURSED')
           .map((exp: any) => ({
             id: String(exp.id),
-            title: `Giải ngân: ${exp.plan || 'Chi tiết chi tiêu'}`,
-            amount: exp.totalAmount,
+            title: `Đợt chi tiêu: ${exp.plan || 'Chi tiết chi tiêu'}`,
+            amount: exp.totalAmount || exp.totalExpectedAmount || 0,
             description: exp.plan || '',
-            date: exp.disbursedAt ? new Date(exp.disbursedAt).toLocaleDateString('vi-VN') : 'Đã giải ngân'
+            date: exp.disbursedAt 
+              ? new Date(exp.disbursedAt).toLocaleDateString('vi-VN') 
+              : (exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('vi-VN') : ''),
+            status: exp.status
           }));
 
         if (!mounted) return;
@@ -482,7 +484,7 @@ function CampaignDetailsInner() {
                   <PlansList
                     plans={plans}
                     onOpenPlan={(planId) => {
-                      alert(`Chi tiết giải ngân: ${planId} (chưa thực hiện)`);
+                      router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
                     }}
                   />
                 </div>
