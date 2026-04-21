@@ -9,6 +9,8 @@ import Aurora from '@/components/ui/Aurora';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto, TransactionItem } from '@/types/campaign';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import AccountCampaignTabbar from '../expenditures/components/AccountCampaignTabbar';
 
 const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
