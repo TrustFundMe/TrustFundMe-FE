@@ -255,7 +255,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
         try {
             const itemsToAnalyze = rec.expenditureItems.filter((i: any) => (i.actualQuantity ?? 0) > 0);
 
-            const res = await axios.post(`${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/api/analyze-evidence`, { 
+            const result = await aiService.analyzeEvidence({ 
                 expenditureId: rec.expenditureId, 
                 plan: rec.plan, 
                 purpose: rec.purpose || '', 
@@ -264,7 +264,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 photoUrls: rec.evidencePhotos,
                 createdAt: rec.createdAt
             });
-            setAiResult(res.data);
+            setAiResult(result as any);
         } catch (err: any) {
             const msg = err?.response?.data?.error || err?.response?.data?.details || err?.message || 'AI phân tích thất bại';
             console.error('[runAI]', msg);

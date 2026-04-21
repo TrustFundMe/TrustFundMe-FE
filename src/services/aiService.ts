@@ -1,12 +1,27 @@
 import axios from 'axios';
 
-const AI_BASE_URL = '/api-ai';
+const AI_BASE_URL = (() => {
+    if (typeof window !== "undefined") {
+        return "/api-ai"; // Proxy qua Next.js → tránh Mixed Content trên Vercel
+    }
+    return (
+        process.env.NEXT_PUBLIC_AI_SERVICE_URL ||
+        process.env.NEXT_PUBLIC_BE_API_URL ||
+        "http://localhost:7000"
+    );
+})();
 
 const aiApi = axios.create({
     baseURL: AI_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+});
+
+// Add a request interceptor to help debug local vs vps calls
+aiApi.interceptors.request.use((config) => {
+    console.log(`[AI-Service] Calling: ${config.baseURL}${config.url}`);
+    return config;
 });
 
 export interface FlagAnalysisResult {
@@ -16,7 +31,7 @@ export interface FlagAnalysisResult {
     keyFindings: string[];
     concerns: string[];
     recommendation: string;
-    actionTypes: ('HIDE_POST' | 'DELETE_POST' | 'LOCK_ACCOUNT' | 'REQUIRE_DOCUMENT' | 'APPROVE' | 'WARN_USER')[];
+    actionTypes: ('LOCK_CAMPAIGN' | 'SUSPEND_ACCOUNT' | 'SEND_WARNING' | 'DELETE_CONTENT' | 'REQUIRE_DOCUMENT' | 'APPROVE' | 'HIDE_POST' | 'DELETE_POST' | 'LOCK_ACCOUNT')[];
     confidence: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
@@ -43,7 +58,7 @@ export const aiService = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await axios.post(`${AI_BASE_URL}/api/parse-expenditure-excel`, formData, {
+        const response = await aiApi.post('/api/parse-expenditure-excel', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data.items as Array<{
@@ -60,7 +75,7 @@ export const aiService = {
         formData.append('file', file);
         formData.append('side', side);
 
-        const response = await axios.post(`${AI_BASE_URL}/api/ocr-kyc`, formData, {
+        const response = await aiApi.post('/api/ocr-kyc', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
 
@@ -108,5 +123,18 @@ export const aiService = {
     }) {
         const response = await aiApi.post<{ labels: string[] }>('/api/generate-suggestion-labels', params);
         return response.data.labels;
+    },
+
+    async analyzeEvidence(data: {
+        expenditureId: number;
+        plan: string;
+        purpose: string;
+        totalAmount: number;
+        items: any[];
+        photoUrls: string[];
+        createdAt: string;
+    }) {
+        const response = await aiApi.post<ExpenditureAnalysisResult>('/api/analyze-evidence', data);
+        return response.data;
     },
 };
