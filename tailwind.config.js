@@ -31,6 +31,9 @@ module.exports = {
           DEFAULT: "#ff5e14",
           foreground: "hsl(var(--primary-foreground))",
         },
+        /** Cam thương hiệu TrustFundMe — dùng cho CTA / focus mock flow */
+        brand: "#ff5e14",
+        "brand-hover": "#ea550c",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
