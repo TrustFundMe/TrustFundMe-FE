@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
@@ -126,24 +125,15 @@ function FeaturedBlock({
       variants={featuredBlockContainer}
     >
       <motion.div
-        className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+        className="mb-4"
         variants={featuredBlockItem}
       >
-        <div className="min-w-0">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
-            {title}
-          </p>
-          <p className="mt-1 text-slate-600 text-sm md:text-base max-w-xl line-clamp-2">
-            {description}
-          </p>
-        </div>
-        <Link
-          href={`/campaigns/campaignsList?categoryId=${id}`}
-          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
-        >
-          Xem thêm
-          <ChevronRight className="h-4 w-4" />
-        </Link>
+        <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
+          {title}
+        </p>
+        <p className="mt-1 text-slate-600 text-sm md:text-base max-w-xl line-clamp-2">
+          {description}
+        </p>
       </motion.div>
       <motion.div
         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
