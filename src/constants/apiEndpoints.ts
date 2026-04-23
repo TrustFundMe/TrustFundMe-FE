@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     CLOSE: (id: number | string) => `/api/campaigns/${id}/close`,
     COUNT: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/count`,
     STATISTICS: (fundOwnerId: number | string) => `/api/campaigns/fund-owner/${fundOwnerId}/statistics`,
+    TRANSACTIONS_HISTORY: (id: number | string) => `/api/campaigns/${id}/transactions-history`,
   },
   CAMPAIGN_FOLLOWS: {
     BASE: "/api/campaign-follows",

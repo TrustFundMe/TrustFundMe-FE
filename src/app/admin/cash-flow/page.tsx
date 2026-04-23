@@ -7,7 +7,7 @@ import { CashFlowTable, TransactionDetailModal, Transaction } from '@/components
 import { api as axiosInstance } from '@/config/axios';
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_BE_API_URL ?? 'http://localhost:8080';
+
 
 // Filter label map
 const filterLabels: FilterLabels = {
@@ -107,7 +107,7 @@ export default function CashFlowPage() {
             await Promise.allSettled(
                 allExpenditureIds.map(async (expId) => {
                     try {
-                        const res = await axiosInstance.get(`${API_URL}/api/expenditures/${expId}`);
+                        const res = await axiosInstance.get(`/api/expenditures/${expId}`);
                         if (res.data?.campaignId) {
                             expenditureMap[String(expId)] = String(res.data.campaignId);
                         }
@@ -124,7 +124,7 @@ export default function CashFlowPage() {
             await Promise.allSettled(
                 allCampaignIds.map(async (cid) => {
                     try {
-                        const res = await axiosInstance.get(`${API_URL}/api/campaigns/${cid}`);
+                        const res = await axiosInstance.get(`/api/campaigns/${cid}`);
                         campaignMap[String(cid)] = {
                             title: res.data?.title || `Chiến dịch`,
                             type: res.data?.type || 'AUTHORIZED',
@@ -144,7 +144,7 @@ export default function CashFlowPage() {
             await Promise.allSettled(
                 allDonorIds.map(async (uid) => {
                     try {
-                        const res = await axiosInstance.get(`${API_URL}/api/users/${uid}`);
+                        const res = await axiosInstance.get(`/api/users/${uid}`);
                         userMap[String(uid)] = res.data?.fullName || '';
                     } catch { /* fallback */ }
                 })

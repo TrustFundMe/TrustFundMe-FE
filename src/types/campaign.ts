@@ -87,3 +87,14 @@ export interface UpdateCampaignRequest {
   approvedByStaff?: number | null;
   approvedAt?: string | null;
 }
+
+export interface TransactionItem {
+  id: string;
+  type: 'DONATION' | 'INTERNAL_TRANSFER' | 'EXPENDITURE' | 'REFUND';
+  description: string;
+  amount: number;
+  date: string;
+  balanceAfter: number;
+  relatedCampaignId?: number;
+  expenditureId?: number;
+}

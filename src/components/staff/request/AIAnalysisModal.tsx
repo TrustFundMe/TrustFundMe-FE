@@ -1,49 +1,95 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { 
-    X, Sparkles, CheckCircle, 
-    ShieldCheck, Info, Printer, MapPin, Phone, Mail, Hash,
-    AlertTriangle, LineChart, Package, Store
+import React, { useEffect, useState } from 'react';
+import {
+    X, Sparkles, CheckCircle,
+    ShieldCheck, Printer, MapPin, Phone, Mail, Hash,
+    AlertTriangle, LineChart, Store, Loader2
 } from 'lucide-react';
+import { ExpenditureItem, Expenditure } from '@/types/expenditure';
+import { expenditureService } from '@/services/expenditureService';
+
+interface DetectedItem {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    matchStatus: 'MATCHED' | 'PARTIAL' | 'MISMATCHED';
+    plannedCategory?: string;
+    plannedAmount?: number;
+    differenceAmount?: number;
+    marketUnitPrice?: number;
+    marketPriceRange?: string;
+    unit?: string;
+}
+
+interface AIAnalysisResult {
+    expenditureId?: number;
+    riskScore: number;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    summary: string;
+    recommendation: string;
+    redFlags: string[];
+    spendingAnalysis: string[];
+    confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+    vendorInfo?: {
+        name: string;
+        address?: string;
+        phone?: string;
+        email?: string;
+        taxId?: string;
+    };
+    detectedItems?: DetectedItem[];
+}
 
 interface AIAnalysisModalProps {
-    result: {
-        riskScore: number;
-        riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
-        summary: string;
-        recommendation: string;
-        redFlags: string[];
-        spendingAnalysis: string[];
-        confidence: 'LOW' | 'MEDIUM' | 'HIGH';
-        vendorInfo?: {
-            name: string;
-            address?: string;
-            phone?: string;
-            email?: string;
-            taxId?: string;
-        };
-        detectedItems?: {
-            name: string;
-            quantity: number;
-            unitPrice: number;
-            total: number;
-            matchStatus: 'MATCHED' | 'PARTIAL' | 'MISMATCHED';
-            plannedCategory?: string;
-            plannedAmount?: number;
-            differenceAmount?: number;
-        }[];
-    };
+    result: AIAnalysisResult;
+    itemsProp?: ExpenditureItem[];
+    donationSummary?: Record<number, number>;
+    exp?: Expenditure;
+    mode?: 'plan' | 'evidence';
     onClose: () => void;
 }
 
-const fmt = (v: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
+const fmtVND = (v: number) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v);
 
-export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProps) {
+const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
+
+export default function AIAnalysisModal({
+    result,
+    itemsProp = [],
+    exp,
+    mode = 'evidence',
+    onClose,
+}: AIAnalysisModalProps) {
+    const [items, setItems] = useState<ExpenditureItem[]>(itemsProp);
+    const [loadingItems, setLoadingItems] = useState(itemsProp.length === 0);
+
     useEffect(() => {
         document.body.style.overflow = 'hidden';
         return () => { document.body.style.overflow = 'auto'; };
     }, []);
+
+    useEffect(() => {
+        const targetId = exp?.id || result.expenditureId;
+        if (!targetId || itemsProp.length > 0) {
+            setItems(itemsProp);
+            setLoadingItems(false);
+            return;
+        }
+
+        const fetchItems = async () => {
+            try {
+                setLoadingItems(true);
+                const fetched: ExpenditureItem[] = await expenditureService.getItems(targetId);
+                setItems(fetched);
+            } catch { /* ignore */ } finally {
+                setLoadingItems(false);
+            }
+        };
+        fetchItems();
+    }, [exp?.id, itemsProp, result.expenditureId]);
 
     const getRiskStyles = (score: number) => {
         if (score < 30) return 'text-emerald-700 bg-emerald-50 border-emerald-100';
@@ -51,23 +97,30 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
         return 'text-rose-700 bg-rose-50 border-rose-100';
     };
 
+    const detected: DetectedItem[] = Array.isArray(result.detectedItems) ? result.detectedItems : [];
+    const redFlags: string[] = Array.isArray(result.redFlags)
+        ? result.redFlags.map((f) => (typeof f === 'string' ? f : JSON.stringify(f)))
+        : [];
+
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
-            
+
             <div className="relative bg-[#fcfcfc] rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh] border border-slate-200 animate-in zoom-in-95 duration-200">
-                
-                {/* Compact Header */}
+
+                {/* Header */}
                 <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between border-b border-slate-200 bg-white">
                     <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-[#111827] flex items-center justify-center text-white">
                             <Sparkles className="h-4 w-4" />
                         </div>
                         <div>
-                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter">Hệ thống Kiểm toán AI V3.0</h3>
+                            <h3 className="text-xs font-black text-slate-900 uppercase tracking-tighter">
+                                Hệ thống Kiểm toán AI V3.0 {mode === 'plan' ? '(KẾ HOẠCH)' : '(MINH CHỨNG)'}
+                            </h3>
                             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
                                 <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                                Phân tích rủi ro & Đối soát thực tế
+                                {mode === 'plan' ? 'Thẩm định tính hợp lý của kế hoạch' : 'Đối soát thực tế & Minh chứng'}
                             </p>
                         </div>
                     </div>
@@ -81,180 +134,231 @@ export default function AIAnalysisModal({ result, onClose }: AIAnalysisModalProp
                     </div>
                 </div>
 
+                {/* Body */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50 p-4 space-y-4">
-                    
-                    {/* Grid: Vendor & Recommendation */}
+                    {/* Grid: Vendor (if exists) + Conclusion */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Vendor Identity */}
                         <div className="md:col-span-2 p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
                                 <Store className="h-4 w-4 text-indigo-500" />
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Thông tin đơn vị cung cấp (Vendor)</p>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                    {mode === 'plan' ? 'Thông tin dự kiến (Kế hoạch)' : 'Thông tin đơn vị cung cấp (Vendor)'}
+                                </p>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Tên doanh nghiệp/Cửa hàng</p>
-                                    <p className="text-xs font-black text-slate-800">{result.vendorInfo?.name || 'Không xác định'}</p>
+                                    <p className="text-xs font-black text-slate-800">
+                                        {result.vendorInfo?.name || 'Không xác định'}
+                                    </p>
                                 </div>
                                 {result.vendorInfo?.taxId && (
                                     <div>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Mã số thuế</p>
-                                        <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5"><Hash className="h-3 w-3" /> {result.vendorInfo.taxId}</p>
+                                        <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                            <Hash className="h-3 w-3" /> {result.vendorInfo.taxId}
+                                        </p>
                                     </div>
                                 )}
                                 <div className="sm:col-span-2">
                                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Địa chỉ</p>
-                                    <p className="text-xs font-medium text-slate-600 flex items-start gap-1.5"><MapPin className="h-3 w-3 mt-0.5 shrink-0 text-slate-400" /> {result.vendorInfo?.address || 'N/A'}</p>
+                                    <p className="text-xs font-medium text-slate-600 flex items-start gap-1.5">
+                                        <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-slate-400" />
+                                        {result.vendorInfo?.address || 'N/A'}
+                                    </p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Liên hệ</p>
                                     <div className="flex flex-col gap-1 mt-1">
-                                        {result.vendorInfo?.phone && <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> {result.vendorInfo.phone}</span>}
-                                        {result.vendorInfo?.email && <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5"><Mail className="h-3 w-3 text-slate-400" /> {result.vendorInfo.email}</span>}
+                                        {result.vendorInfo?.phone && (
+                                            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                                                <Phone className="h-3 w-3 text-slate-400" />
+                                                {result.vendorInfo.phone}
+                                            </span>
+                                        )}
+                                        {result.vendorInfo?.email && (
+                                            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                                                <Mail className="h-3 w-3 text-slate-400" />
+                                                {result.vendorInfo.email}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Summary & recommendation - Compact */}
                         <div className="flex flex-col gap-4">
-                            <div className="p-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800">
+                            <div className="p-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800 h-full">
                                 <div className="flex items-center gap-2 mb-2">
                                     <CheckCircle className="h-4 w-4 text-emerald-400" />
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kết luận kiểm toán</p>
                                 </div>
                                 <p className="text-xs font-black leading-relaxed mb-3">{result.recommendation}</p>
                                 <div className="h-px bg-slate-700 my-2" />
-                                <p className="text-[11px] text-slate-300 italic opacity-80 leading-relaxed">"{result.summary}"</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Detection Table: Real Items vs Planned Categories */}
-                    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Package className="h-4 w-4 text-slate-500" />
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Chi tiết hàng hóa bóc tách từ hóa đơn (Itemized Audit)</p>
-                            </div>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{result.detectedItems?.length || 0} Sản phẩm phát hiện</span>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-white text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                        <th className="px-4 py-2.5 border-b border-slate-100">Sản phẩm phát hiện</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-center">Cửa hàng</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100">SL</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Đơn giá</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100">Kế hoạch</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Dự kiến</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-right">Giá thị trường</th>
-                                        <th className="px-4 py-2.5 border-b border-slate-100 text-center">Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {result.detectedItems?.map((item, idx) => {
-                                        const actual = item.total || (item.quantity * item.unitPrice) || 0;
-                                        const planned = item.plannedAmount || 0;
-                                        const diff = item.differenceAmount !== undefined ? item.differenceAmount : (actual - planned);
-                                        
-                                        return (
-                                            <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                                                <td className="px-4 py-2 text-xs font-black text-slate-800">{item.name}</td>
-                                                <td className="px-4 py-2 text-center text-[10px] font-bold text-slate-400 italic">
-                                                    {item.vendor || '---'}
-                                                </td>
-                                                <td className="px-4 py-2 text-xs font-bold text-slate-600">{item.quantity}</td>
-                                                <td className="px-4 py-2 text-xs font-bold text-slate-600 text-right">{fmt(item.unitPrice)}</td>
-                                                <td className="px-4 py-2 text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">
-                                                    {item.plannedCategory || '---'}
-                                                </td>
-                                                <td className="px-4 py-2 text-xs font-bold text-slate-500 text-right">
-                                                    {planned > 0 ? fmt(planned) : '---'}
-                                                </td>
-                                                <td className="px-4 py-2 text-xs font-black text-slate-400 text-right italic">
-                                                    {item.marketUnitPrice ? `~ ${fmt(item.marketUnitPrice)}/${item.unit || 'đơn vị'}` : '---'}
-                                                </td>
-                                                <td className="px-4 py-2 text-center uppercase">
-                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border inline-block min-w-[60px] ${
-                                                        item.matchStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                        item.matchStatus === 'PARTIAL' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                        'bg-rose-50 text-rose-700 border-rose-100'
-                                                    }`}>
-                                                        {item.matchStatus === 'MATCHED' ? 'Hợp lý' : item.matchStatus === 'PARTIAL' ? 'Xem xét' : 'Không hợp lý'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {(!result.detectedItems || result.detectedItems.length === 0) && (
-                                        <tr>
-                                            <td colSpan={8} className="px-4 py-10 text-center text-[11px] font-medium text-slate-400 italic">Không có dữ liệu bóc tách chi tiết</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Double Column: Red Flags & Analysis Logic */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Red Flags Section */}
-                        <div className="space-y-2">
-                             <div className="flex items-center gap-2 px-1">
-                                <AlertTriangle className="h-4 w-4 text-rose-500" />
-                                <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
-                                    Cảnh báo vi phạm & Nghi vấn ({Array.isArray(result.redFlags) ? result.redFlags.length : (typeof result.redFlags === 'string' ? 1 : 0)})
+                                <p className="text-[11px] text-slate-300 italic opacity-80 leading-relaxed">
+                                    &ldquo;{result.summary}&rdquo;
                                 </p>
                             </div>
-                            <div className="space-y-1.5">
-                                {(Array.isArray(result.redFlags) ? result.redFlags : []).map((flag, idx) => (
-                                    <div key={idx} className="p-2.5 rounded-lg border border-rose-100 bg-rose-50/30 flex items-start gap-2 group hover:bg-rose-50 transition-colors">
-                                        <AlertTriangle className="h-3 w-3 text-rose-400 mt-0.5" />
-                                        <p className="text-[11px] font-bold text-rose-900 leading-snug">{flag}</p>
-                                    </div>
-                                ))}
-                                {(!result.redFlags || (Array.isArray(result.redFlags) && result.redFlags.length === 0)) && (
-                                    <p className="text-[10px] text-slate-400 italic px-2">Không phát hiện dấu hiệu vi phạm</p>
-                                )}
-                            </div>
                         </div>
+                    </div>
 
-                        {/* Logical Basis Section */}
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 px-1">
-                                <LineChart className="h-4 w-4 text-slate-400" />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cơ sở lập luận của AI</p>
-                            </div>
-                            <div className="rounded-xl border border-slate-100 bg-white shadow-sm divide-y divide-slate-50">
-                                {(Array.isArray(result.spendingAnalysis) ? result.spendingAnalysis : (typeof result.spendingAnalysis === 'string' ? [result.spendingAnalysis] : [])).map((point, idx) => (
-                                    <div key={idx} className="p-2.5 flex gap-3 items-start group hover:bg-slate-50 transition-colors">
-                                        <div className="h-4 w-4 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400 shrink-0 mt-0.5">{idx + 1}</div>
-                                        <p className="text-[11px] font-medium text-slate-600 leading-relaxed">{point}</p>
-                                    </div>
-                                ))}
-                                {(!result.spendingAnalysis || (Array.isArray(result.spendingAnalysis) && result.spendingAnalysis.length === 0)) && (
-                                    <p className="text-[11px] text-slate-400 italic p-4 text-center">Chưa có dữ liệu lập luận</p>
-                                )}
-                            </div>
+                    {/* Red Flags */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-1">
+                            <AlertTriangle className="h-4 w-4 text-rose-500" />
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
+                                Cảnh báo vi phạm &amp; Nghi vấn ({redFlags.length})
+                            </p>
                         </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {redFlags.length === 0 && (
+                                <div className="p-4 rounded-xl bg-white border border-slate-100 flex items-center justify-center col-span-full">
+                                    <p className="text-[10px] text-slate-400 italic">Không phát hiện dấu hiệu vi phạm</p>
+                                </div>
+                            )}
+                            {redFlags.map((flag, idx) => (
+                                <div key={idx} className="p-3 rounded-lg border border-rose-100 bg-rose-50/50 flex items-start gap-2 hover:bg-rose-100/50 transition-colors">
+                                    <AlertTriangle className="h-3.5 w-3.5 text-rose-500 mt-0.5 shrink-0" />
+                                    <p className="text-[11px] font-black text-rose-900 leading-snug">{flag}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                            <LineChart className="h-4 w-4 text-slate-400" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                {mode === 'plan' ? 'Phân tích chênh lệch với giá thị trường' : 'Đối soát dữ liệu Hệ thống vs. Hóa đơn'}
+                            </p>
+                        </div>
+                        {loadingItems ? (
+                            <div className="h-40 flex flex-col items-center justify-center bg-white rounded-xl border border-slate-100">
+                                <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
+                                <p className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Đang tải dữ liệu gốc...</p>
+                            </div>
+                        ) : detected.length === 0 ? (
+                            <div className="p-10 text-center bg-white rounded-xl border border-slate-100">
+                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu bóc tách được từ hình ảnh/nội dung</p>
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                <table className="w-full text-left text-[11px]">
+                                    <thead className="bg-[#F8FAFC] border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
+                                                {mode === 'plan' ? 'Kế hoạch (Dự kiến)' : 'Hệ thống (Database)'}
+                                            </th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">
+                                                {mode === 'plan' ? 'Thẩm định (Giá thị trường)' : 'Bóc tách từ hóa đơn'}
+                                            </th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center">Lệch</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {detected.map((item, idx) => {
+                                            const sysItem = items.find(i => {
+                                                const s1 = (i.category || '').toLowerCase().trim();
+                                                const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                                return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                            });
+
+                                            const sysVal = sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+                                            const diff = sysVal - item.total;
+                                            const isMatch = Math.abs(diff) < 500;
+
+                                            return (
+                                                <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                                                    <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center border-r border-slate-50">
+                                                        <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
+                                                        <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
+                                                            {sysItem ? (mode === 'plan' ? `${sysItem.quantity} x ${fmtNum(sysItem.expectedPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="font-black text-slate-800 text-[11px] tabular-nums">
+                                                            {fmtVND(item.total)}
+                                                        </div>
+                                                        <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
+                                                            {mode === 'plan' && item.marketPriceRange ? (
+                                                                <span className="bg-blue-50 px-1 rounded">Khoảng: {item.marketPriceRange}</span>
+                                                            ) : (
+                                                                `${item.quantity} x ${fmtNum(item.unitPrice)}`
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <div className={`font-black text-[10px] tabular-nums ${isMatch ? 'text-emerald-500' : 'text-rose-600'}`}>
+                                                            {diff !== 0 ? (diff > 0 ? '+' : '') : ''}{fmtVND(diff)}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                    <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                                        {(() => {
+                                            const totalSys = detected.reduce((acc, item) => {
+                                                const sysItem = items.find(i => {
+                                                    const s1 = (i.category || '').toLowerCase().trim();
+                                                    const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                                    return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                                });
+                                                return acc + (sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
+                                            }, 0);
+                                            const totalAI = detected.reduce((acc, item) => acc + item.total, 0);
+                                            const diffTotal = totalSys - totalAI;
+
+                                            return (
+                                                <tr className="font-black text-slate-800">
+                                                    <td colSpan={2} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
+                                                        <span>Tổng cộng đối soát:</span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center border-r border-slate-200 text-blue-700 text-xs tabular-nums">{fmtVND(totalSys)}</td>
+                                                    <td className="px-3 py-3 text-left border-r border-slate-200 text-slate-800 text-xs tabular-nums">{fmtVND(totalAI)}</td>
+                                                    <td className={`px-3 py-3 text-center text-xs tabular-nums ${Math.abs(diffTotal) < 1000 ? 'text-emerald-500' : 'text-rose-600'}`}>
+                                                        {diffTotal !== 0 ? (diffTotal > 0 ? '+' : '') : ''}{fmtVND(diffTotal)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })()}
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Footer: Action Heavy */}
+                {/* Footer */}
                 <div className="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-4 flex-shrink-0">
-                    <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 text-center sm:text-left">Audit System Protocol • TrustFundMe Platform</p>
-                        <p className="text-[9px] text-slate-500 font-medium italic">Báo cáo dựa trên đối soát thực tế ảnh hóa đơn và kế hoạch chi tiêu.</p>
+                    <div className="hidden sm:block">
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                            Transparency Audit Protocol &bull; TrustFundMe AI Center
+                        </p>
+                        <p className="text-[9px] text-slate-500 font-medium italic">
+                            Báo cáo phân tích dựa trên {mode === 'plan' ? 'kế hoạch dự kiến' : 'minh chứng thực tế'}.
+                        </p>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                        <button onClick={() => window.print()} className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 flex items-center gap-2 hover:bg-slate-50 transition-all text-[10px] font-black uppercase">
-                            <Printer className="h-3.5 w-3.5" /> In báo cáo
+                        <button
+                            onClick={() => window.print()}
+                            className="h-9 px-4 rounded-lg border border-slate-200 bg-white text-slate-500 flex items-center gap-2 hover:bg-slate-50 transition-all text-[10px] font-black uppercase"
+                        >
+                            <Printer className="h-3.5 w-3.5" /> In
                         </button>
-                        <button onClick={onClose} 
-                            className="flex-1 sm:flex-none px-6 h-9 rounded-lg bg-[#111827] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" /> Xác nhận & Đóng
+                        <button
+                            onClick={onClose}
+                            className="flex-1 sm:flex-none px-8 h-9 rounded-lg bg-[#111827] hover:bg-black text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                        >
+                            <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                            Đã xem
                         </button>
                     </div>
                 </div>

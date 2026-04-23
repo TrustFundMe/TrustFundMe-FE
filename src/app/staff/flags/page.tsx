@@ -9,6 +9,7 @@ import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
 import { aiService, FlagAnalysisResult } from '@/services/aiService';
 import { chatService } from '@/services/chatService';
+import { paymentService } from '@/services/paymentService';
 import { feedPostService } from '@/services/feedPostService';
 import { useRouter } from 'next/navigation';
 import BanUserModal from '@/components/staff/BanUserModal';
@@ -247,28 +248,49 @@ export default function FlagsManagementPage() {
           }
 
           if (resolvedCampaignId) {
-            const [expenditures, fullCampaign, followerData] = await Promise.all([
+            const [expenditures, fullCampaign, followerData, campaignProgress] = await Promise.all([
               campaignService.getExpendituresByCampaignId(Number(resolvedCampaignId)),
               campaignService.getById(Number(resolvedCampaignId)),
-              campaignService.getFollowerCount(Number(resolvedCampaignId))
+              campaignService.getFollowerCount(Number(resolvedCampaignId)),
+              paymentService.getCampaignProgress(Number(resolvedCampaignId)).catch(() => null)
             ]);
             
+            const latestExp = expenditures && expenditures.length > 0 
+              ? [...expenditures]
+                  .filter((e: any) => e.status === 'DISBURSED' || e.status === 'APPROVED_DISBURSED' || e.status === 'PAID')
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+              : null;
+
             setCampaignDetails({
               id: resolvedCampaignId,
               title: fullCampaign?.title,
               expenditureCount: expenditures?.length || 0,
-              donorCount: Math.floor(Math.random() * 100) + 12,
+              donorCount: campaignProgress?.donorCount || 0,
               followerCount: followerData || 0,
-              goalAmount: fullCampaign?.activeGoal?.targetAmount || 0,
-              progress: fullCampaign?.activeGoal?.targetAmount 
+              goalAmount: campaignProgress?.goalAmount || fullCampaign?.activeGoal?.targetAmount || 0,
+              progress: campaignProgress?.progressPercentage || (fullCampaign?.activeGoal?.targetAmount 
                 ? ((fullCampaign as any).raisedAmount || 0) / fullCampaign.activeGoal.targetAmount * 100 
-                : 0,
-              raisedAmount: (fullCampaign as any).raisedAmount || 0,
+                : 0),
+              raisedAmount: campaignProgress?.raisedAmount || (fullCampaign as any).raisedAmount || 0,
               startDate: fullCampaign?.startDate,
               endDate: fullCampaign?.endDate,
+              campaignCreatedAt: fullCampaign?.createdAt,
               categoryName: fullCampaign?.categoryName || fullCampaign?.category || 'Chưa phân loại',
               authorAvatar: (fullCampaign as any)?.authorAvatar,
-              authorName: (fullCampaign as any)?.authorName || (selectedTarget?.flags[0]?.post as any)?.authorName
+              authorName: (fullCampaign as any)?.authorName || (selectedTarget?.flags[0]?.post as any)?.authorName,
+              allExpenditures: expenditures?.map((e: any) => ({
+                id: e.id,
+                purpose: e.purpose,
+                amount: e.totalAmount,
+                status: e.status
+              })) || [],
+              latestExpenditure: latestExp ? {
+                purpose: latestExp.purpose,
+                amount: latestExp.totalAmount,
+                status: latestExp.status,
+                createdAt: latestExp.createdAt,
+                hasProof: !!latestExp.disbursementProofUrl || !!latestExp.evidenceUrl
+              } : null
             });
           }
 
@@ -338,12 +360,26 @@ export default function FlagsManagementPage() {
             title: selectedTarget.flags[0]?.campaign?.title || selectedTarget.title,
             description: selectedTarget.flags[0]?.campaign?.description,
             status: selectedTarget.flags[0]?.campaign?.status,
-            raisedAmount: selectedTarget.flags[0]?.campaign?.raisedAmount,
+            // Use real data from campaignDetails if available, fallback to flag data
+            raisedAmount: campaignDetails?.raisedAmount ?? selectedTarget.flags[0]?.campaign?.raisedAmount ?? 0,
+            goalAmount: campaignDetails?.goalAmount ?? 0,
             authorName: selectedTarget.flags[0]?.campaign?.authorName,
             authorId: selectedTarget.flags[0]?.campaign?.authorId,
-            createdAt: selectedTarget.flags[0]?.campaign?.createdAt,
+            createdAt: campaignDetails?.campaignCreatedAt || selectedTarget.flags[0]?.campaign?.createdAt,
             totalFlags: selectedTarget.totalCount,
             pendingFlags: selectedTarget.pendingCount,
+            // Enhanced metadata
+            ownerTrustScore: targetUser?.trustScore,
+            ownerJoinedAt: targetUser?.createdAt,
+            campaignStartDate: campaignDetails?.startDate,
+            campaignEndDate: campaignDetails?.endDate,
+            expenditureCount: campaignDetails?.expenditureCount,
+            donorCount: campaignDetails?.donorCount,
+            lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
+            currency: 'VND',
+            dashboardUrl: `https://trust-fund-me-fe.vercel.app/campaigns-details?id=${selectedTarget.targetId}`,
+            // Gửi toàn bộ danh sách để AI có thể dẫn link
+            allExpenditures: selectedTarget.type === 'CAMPAIGN' ? campaignDetails?.allExpenditures : [],
             ...campaignDetails,
           }
         : {
@@ -361,6 +397,11 @@ export default function FlagsManagementPage() {
             createdAt: selectedTarget.flags[0]?.post?.createdAt,
             totalFlags: selectedTarget.totalCount,
             pendingFlags: selectedTarget.pendingCount,
+            // Enhanced metadata
+            ownerTrustScore: targetUser?.trustScore,
+            ownerJoinedAt: targetUser?.createdAt,
+            lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
+            currency: 'VND',
             campaignInfo: campaignDetails,
             expenditureInfo: expenditureDetails,
           };
@@ -535,6 +576,28 @@ export default function FlagsManagementPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderLinkedText = (text: string | null | undefined) => {
+    if (!text) return null;
+    const parts = text.split(/(\[.*?\]\(.*?\))/g);
+    return parts.map((part, i) => {
+      const match = part.match(/\[(.*?)\]\((.*?)\)/);
+      if (match) {
+        return (
+          <a 
+            key={i} 
+            href={match[2]} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-amber-600 underline font-bold hover:text-amber-700 transition-colors"
+          >
+            {match[1]}
+          </a>
+        );
+      }
+      return part;
+    });
   };
 
   return (
@@ -1134,7 +1197,7 @@ export default function FlagsManagementPage() {
                       <div className="p-4 space-y-4 text-[12px]">
                         {/* Summary */}
                         <div className="p-3 rounded bg-white/60 border border-[#446b5f]/10">
-                          <p className="text-[13px] font-bold text-[#446b5f] leading-relaxed">{aiResult.summary}</p>
+                          <p className="text-[13px] font-bold text-[#446b5f] leading-relaxed">{renderLinkedText(aiResult.summary)}</p>
                         </div>
 
                         {/* Key Findings */}
@@ -1147,7 +1210,7 @@ export default function FlagsManagementPage() {
                                   <div className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#446b5f]/10">
                                     <span className="text-[9px] font-black text-[#446b5f]">{i + 1}</span>
                                   </div>
-                                  <p className="text-[12px] font-medium text-[#446b5f] leading-snug">{finding}</p>
+                                  <p className="text-[12px] font-medium text-[#446b5f] leading-snug">{renderLinkedText(finding)}</p>
                                 </div>
                               ))}
                             </div>
@@ -1156,7 +1219,7 @@ export default function FlagsManagementPage() {
                           {/* Recommendation */}
                           <div className="p-4 rounded bg-[#446b5f]/10 border border-[#446b5f]/10">
                              <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-2">Đề xuất hành động</p>
-                             <p className="text-[12px] font-medium text-[#446b5f] leading-relaxed mb-4">{aiResult.recommendation}</p>
+                             <p className="text-[12px] font-medium text-[#446b5f] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
                              <div className="flex flex-wrap gap-1.5">
                                {aiResult.actionTypes.map((action, i) => (
                                  <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#446b5f] border-[#446b5f]/20">

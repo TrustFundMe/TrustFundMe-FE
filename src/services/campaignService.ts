@@ -1,6 +1,6 @@
 import { api } from "@/config/axios";
 import { API_ENDPOINTS } from "@/constants/apiEndpoints";
-import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest, FundraisingGoal } from "@/types/campaign";
+import type { CampaignDto, CreateCampaignRequest, UpdateCampaignRequest, FundraisingGoal, TransactionItem } from "@/types/campaign";
 import { PaginatedResponse } from "@/types/pagination";
 
 export const campaignService = {
@@ -229,5 +229,10 @@ export const campaignService = {
     await api.post(`/api/campaigns/commitments/send-email/${campaignId}`, null, {
       params: { frontendUrl }
     });
+  },
+
+  async getTransactionsHistory(campaignId: number | string): Promise<TransactionItem[]> {
+    const res = await api.get<TransactionItem[]>(API_ENDPOINTS.CAMPAIGNS.TRANSACTIONS_HISTORY(campaignId));
+    return res.data;
   },
 };

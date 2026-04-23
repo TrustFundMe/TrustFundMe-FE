@@ -117,6 +117,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                     return isEvidence && tType === 'EXPENDITURE' && Number(tid) === Number(e.id);
                 });
             });
+            exps.sort((a, b) => b.id - a.id);
             setExpenditurePosts(postsMap);
             setExpenditures(exps);
         } catch (err) {
@@ -358,11 +359,24 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
         if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chiến dịch đã bị vô hiệu hóa.', isDisabled: true };
         if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
+        
+        // Lấy đợt chi tiêu mới nhất (đã sort desc theo ID ở trên)
         const last = expenditures[0];
-        const isReady = last.status === 'DISBURSED' || last.status === 'REJECTED';
+        
+        // Nếu đợt cuối bị từ chối thì cho phép tạo đợt mới
+        if (last.status === 'REJECTED') return { canCreate: true, blockReason: null, isDisabled: false };
+        
+        // Nếu chưa giải ngân thì không cho tạo đợt mới
+        if (last.status !== 'DISBURSED') {
+            return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa được giải ngân.' };
+        }
+        
+        // Nếu đã giải ngân, phải nộp minh chứng (SUBMITTED hoặc APPROVED) mới được tạo đợt tiếp theo
         const hasEvidence = last.evidenceStatus === 'SUBMITTED' || last.evidenceStatus === 'APPROVED';
-        if (!isReady) return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa được giải ngân.' };
-        if (last.status === 'DISBURSED' && !hasEvidence) return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa nộp minh chứng.' };
+        if (!hasEvidence) {
+            return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa hoàn tất nộp minh chứng.' };
+        }
+        
         return { canCreate: true, blockReason: null, isDisabled: false };
     }, [campaign, expenditures]);
 

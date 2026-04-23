@@ -223,8 +223,7 @@ export default function FeedPostHeader({
       {post.targetType === "EXPENDITURE" && expenditure && (() => {
         const isEvidence = post.targetName?.startsWith('evidence');
         return (
-        <a
-          href={`/account/campaigns/expenditures/${post.targetId}`}
+        <div
           style={{
             display: "block",
             padding: "14px 16px",
@@ -232,9 +231,7 @@ export default function FeedPostHeader({
             border: isEvidence ? "1px solid rgba(124,58,237,0.3)" : "1px solid rgba(124,58,237,0.2)",
             borderRadius: 10,
             fontFamily: "var(--font-dm-sans)",
-            textDecoration: "none",
-            color: "inherit",
-            cursor: "pointer",
+            cursor: "default",
             marginBottom: 16,
             transition: "border-color 0.2s, background 0.2s",
           }}
@@ -263,7 +260,7 @@ export default function FeedPostHeader({
 
           {/* Campaign name */}
           <div style={{ fontSize: 13, color: "rgba(0,0,0,0.6)", marginBottom: 10, fontFamily: "var(--font-dm-sans)" }}>
-            Chiến dịch: <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{post.campaign?.title || `Chiến dịch #${post.targetId}`}</span>
+            Chiến dịch: <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{post.campaign?.title || expenditure.plan || `Chiến dịch #${expenditure.campaignId}`}</span>
           </div>
 
           {/* Trạng thái */}
@@ -282,16 +279,6 @@ export default function FeedPostHeader({
             </span>
           </div>
 
-          {/* Minh chứng */}
-          {expenditure.evidenceStatus && (
-            <div style={{ fontSize: 12, color: "rgba(0,0,0,0.6)", marginBottom: 6, fontFamily: "var(--font-dm-sans)" }}>
-              <span style={{ fontWeight: 500 }}>Minh chứng: </span>
-              <span style={{ fontWeight: 600, color: expenditure.evidenceStatus === "PROVIDED" ? "#1D4ED8" : "#D97706" }}>
-                {expenditure.evidenceStatus === "PROVIDED" ? "Đã cung cấp" : "Chờ cung cấp"}
-              </span>
-            </div>
-          )}
-
           {/* Ngày tạo */}
           {expenditure.createdAt && (
             <div style={{ fontSize: 12, color: "rgba(0,0,0,0.5)", marginBottom: 10, fontFamily: "var(--font-dm-sans)" }}>
@@ -300,11 +287,47 @@ export default function FeedPostHeader({
             </div>
           )}
 
-          {/* Số tiền rút */}
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}>
-            Số tiền rút: <span style={{ color: "#7C3AED" }}>{expenditure.totalExpectedAmount.toLocaleString("vi-VN")}đ</span>
+          {/* Footer: Số tiền rút + Link */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}>
+              Số tiền rút: <span style={{ color: "#7C3AED" }}>
+                {(expenditure.totalReceivedAmount != null ? Number(expenditure.totalReceivedAmount) : Number(expenditure.totalExpectedAmount)).toLocaleString("vi-VN")}đ
+              </span>
+            </div>
+            <a
+              href={`/account/campaigns/expenditures/${post.targetId}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "5px 12px",
+                borderRadius: 8,
+                background: "rgba(124,58,237,0.1)",
+                border: "1px solid rgba(124,58,237,0.3)",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#7C3AED",
+                textDecoration: "none",
+                fontFamily: "var(--font-dm-sans)",
+                transition: "background 0.15s, border-color 0.15s",
+                whiteSpace: "nowrap",
+              }}
+              onClick={e => e.stopPropagation()}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.18)";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.5)";
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.background = "rgba(124,58,237,0.1)";
+                (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,0.3)";
+              }}
+            >
+              Xem chi tiết →
+            </a>
           </div>
-        </a>
+        </div>
       );})()}
 
       {/* Content */}

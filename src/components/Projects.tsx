@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import ProjectCard from "./ui/project-card"
 import { ChevronLeft, ChevronRight, Globe, Target, Rocket, Zap, TrendingUp } from "lucide-react"
+import { campaignService } from "@/services/campaignService"
+import type { CampaignDto } from "@/types/campaign"
 
 export const Projects1 = () => {
   const [selectedFilter, setSelectedFilter] = useState("all")
@@ -11,6 +13,7 @@ export const Projects1 = () => {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [campaigns, setCampaigns] = useState<CampaignDto[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const sectionRef = useRef<HTMLElement>(null)
@@ -96,89 +99,54 @@ export const Projects1 = () => {
       }
     }
   }, [mounted])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadCampaigns = async () => {
+      try {
+        const response = await campaignService.getAll(0, 24)
+        if (!isActive) return
+        const activeCampaigns = (response.content ?? []).filter((campaign) => campaign.status === "APPROVED")
+        setCampaigns(activeCampaigns)
+      } catch (error) {
+        console.error("Failed to load campaigns for landing page:", error)
+        if (isActive) {
+          setCampaigns([])
+        }
+      }
+    }
+
+    void loadCampaigns()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
   
-  const allProjects = [
-    {
-      id: 1,
-      imageSrc: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?fit=crop&w=600&h=450",
-      title: "Giáo dục cho mọi trẻ em",
-      description: "Xây trường học tại vùng nông thôn",
-      raised: 125000,
-      goal: 200000,
-      votes: 1543,
-      category: "close-to-goal",
-    },
-    {
-      id: 2,
-      imageSrc: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?fit=crop&w=400&h=300",
-      title: "Nước sạch cho cộng đồng",
-      description: "Khoan giếng và lắp hệ thống lọc",
-      raised: 78500,
-      goal: 100000,
-      votes: 892,
-      category: "close-to-goal",
-    },
-    {
-      id: 3,
-      imageSrc: "https://images.unsplash.com/photo-1593113598332-cd288d649433?fit=crop&w=400&h=300",
-      title: "Chăm sóc y tế lưu động",
-      description: "Xe y tế lưu động về vùng sâu",
-      raised: 95000,
-      goal: 150000,
-      votes: 1205,
-      category: "worldwide",
-    },
-    {
-      id: 4,
-      imageSrc: "https://images.unsplash.com/photo-1509099836639-18ba1795216d?fit=crop&w=400&h=300",
-      title: "Bữa ăn cho học sinh",
-      description: "Bếp ăn bán trú cho trường vùng cao",
-      raised: 42000,
-      goal: 75000,
-      votes: 634,
-      category: "needs-momentum",
-    },
-    {
-      id: 5,
-      imageSrc: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?fit=crop&w=400&h=300",
-      title: "Trao quyền cho thanh niên",
-      description: "Khoá đào tạo kỹ năng & nghề nghiệp",
-      raised: 68000,
-      goal: 120000,
-      votes: 978,
-      category: "just-launched",
-    },
-    {
-      id: 6,
-      imageSrc: "https://images.unsplash.com/photo-1509099652299-30938b0aeb63?fit=crop&w=400&h=300",
-      title: "Phụ nữ khởi nghiệp",
-      description: "Hỗ trợ vốn xoay vòng cho hộ gia đình",
-      raised: 55000,
-      goal: 100000,
-      votes: 721,
-      category: "worldwide",
-    },
-    {
-      id: 7,
-      imageSrc: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?fit=crop&w=400&h=300",
-      title: "Tiếp cận công nghệ",
-      description: "Trang bị máy tính cho trường vùng xa",
-      raised: 32000,
-      goal: 80000,
-      votes: 456,
-      category: "needs-momentum",
-    },
-    {
-      id: 8,
-      imageSrc: "https://images.unsplash.com/photo-1509099863731-ef4bff19e808?fit=crop&w=400&h=300",
-      title: "Bảo vệ môi trường",
-      description: "Trồng rừng và bảo tồn nguồn nước",
-      raised: 15000,
-      goal: 50000,
-      votes: 289,
-      category: "just-launched",
-    },
-  ]
+  const allProjects = campaigns
+    .map((campaign) => {
+      const raised = Math.max(Number(campaign.balance) || 0, 0)
+      const goal = Math.max(Number(campaign.activeGoal?.targetAmount) || 0, raised, 1)
+      const progress = (raised / goal) * 100
+
+      let category = "needs-momentum"
+      if (progress >= 80) category = "close-to-goal"
+      else if (progress < 25) category = "just-launched"
+      else if (progress >= 50) category = "worldwide"
+
+      return {
+        id: campaign.id,
+        imageSrc: campaign.coverImageUrl || "https://placehold.co/600x400?text=Campaign&bg=f5f5f5&color=111111",
+        title: campaign.title,
+        description: campaign.description || "Chiến dịch đang cập nhật nội dung chi tiết.",
+        raised,
+        goal,
+        votes: Math.max(raised > 0 ? Math.floor(raised / 100000) : 0, 0),
+        category,
+      }
+    })
+    .sort((a, b) => b.raised - a.raised)
 
   const filters = [
     { id: "all", label: "Tất cả chiến dịch", Icon: Globe },
@@ -196,6 +164,17 @@ export const Projects1 = () => {
   const totalPages = Math.ceil(filteredProjects.length / projectsPerPage)
   const startIndex = currentPage * projectsPerPage
   const displayedProjects = filteredProjects.slice(startIndex, startIndex + projectsPerPage)
+
+  useEffect(() => {
+    if (totalPages === 0 && currentPage !== 0) {
+      setCurrentPage(0)
+      return
+    }
+
+    if (currentPage > totalPages - 1 && totalPages > 0) {
+      setCurrentPage(Math.max(totalPages - 1, 0))
+    }
+  }, [currentPage, totalPages])
   
   const featuredProject = displayedProjects[0]
   const otherProjects = displayedProjects.slice(1)
@@ -240,21 +219,6 @@ export const Projects1 = () => {
       suppressHydrationWarning
     >
       <div className="container">
-        <div 
-          className={`section-title text-center mb-4 transition-all duration-700 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
-          }`}
-        >
-          <span className="sub-title color-2">
-            <i className="far fa-heart" />
-            Tác động của cộng đồng
-          </span>
-          <h2 className="mt-char-animation">
-            Khám phá những chiến dịch gây quỹ<br />
-            dựa trên điều bạn quan tâm nhất
-          </h2>
-        </div>
-
         {/* Filter Dropdown */}
         <div 
           className={`flex justify-between items-center mb-5 transition-all duration-700 delay-200 ${
@@ -414,7 +378,7 @@ export const Projects1 = () => {
 
         {/* Page Indicator */}
         <div className="text-center mt-4 text-sm text-gray-600">
-          Page {currentPage + 1} of {totalPages}
+          {totalPages > 0 ? `Page ${currentPage + 1} of ${totalPages}` : "Chưa có chiến dịch phù hợp"}
         </div>
       </div>
     </section>

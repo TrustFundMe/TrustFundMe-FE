@@ -43,6 +43,7 @@ export type CampaignPlan = {
   amount: number;
   description: string;
   date: string;
+  status?: string;
 };
 
 export type CampaignMedia = {

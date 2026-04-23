@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api as axiosInstance } from '@/config/axios';
 import { toast } from 'react-hot-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_BE_API_URL ?? 'http://localhost:8080';
+
 
 export interface Transaction {
     id: string;
@@ -275,9 +275,9 @@ export const TransactionDetailModal = ({ transaction, onClose }: TransactionDeta
             setIsLoading(true);
             try {
                 const [campRes, userRes, txRes] = await Promise.allSettled([
-                    transaction.campaignId ? axiosInstance.get(`${API_URL}/api/campaigns/${transaction.campaignId}`) : Promise.reject(),
-                    transaction.actorId ? axiosInstance.get(`${API_URL}/api/users/${transaction.actorId}`) : Promise.reject(),
-                    transaction.type !== 'DONATION' ? axiosInstance.get(`${API_URL}/api/expenditures/transactions/${transaction.id}`) : Promise.reject()
+                    transaction.campaignId ? axiosInstance.get(`/api/campaigns/${transaction.campaignId}`) : Promise.reject(),
+                    transaction.actorId ? axiosInstance.get(`/api/users/${transaction.actorId}`) : Promise.reject(),
+                    transaction.type !== 'DONATION' ? axiosInstance.get(`/api/expenditures/transactions/${transaction.id}`) : Promise.reject()
                 ]);
 
                 setDetail({
