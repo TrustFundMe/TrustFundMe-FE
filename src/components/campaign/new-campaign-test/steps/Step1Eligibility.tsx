@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { mockBanks } from '../mockData';
 import { CredibilityFile, NewCampaignTestState } from '../types';
+import LegalModal from '../parts/LegalModal';
 
 interface Props {
   state: NewCampaignTestState;
@@ -105,9 +106,9 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
   const [bankOpen, setBankOpen] = useState(false);
   const [kycChecking, setKycChecking] = useState(false);
   const [kycNotice, setKycNotice] = useState('');
+  const [legalOpen, setLegalOpen] = useState(false);
   const bankWrapRef = useRef<HTMLDivElement>(null);
   const KYC_PAGE_HREF = '/account/profile';
-  const LEGAL_PAGE_HREF = '/new-campaign-test/legal';
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -496,13 +497,14 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
           <div className="space-y-4">
             <p className="text-sm text-gray-700">
               Xem toàn bộ điều khoản tại{' '}
-              <Link
-                href={LEGAL_PAGE_HREF}
+              <button
+                type="button"
+                onClick={() => setLegalOpen(true)}
                 className="inline-flex items-center gap-1 font-semibold text-brand underline decoration-orange-300 underline-offset-2 hover:text-brand-hover"
               >
                 <InfoIcon />
                 Chi tiết pháp lý
-              </Link>
+              </button>
             </p>
             <label className="flex cursor-pointer items-start gap-3">
               <input
@@ -538,6 +540,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
           Tiếp tục
         </motion.button>
       </div>
+      <LegalModal open={legalOpen} onClose={() => setLegalOpen(false)} />
     </div>
   );
 }

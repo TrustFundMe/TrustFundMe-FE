@@ -8,7 +8,6 @@ import { seedState } from '@/components/campaign/new-campaign-test/mockData';
 import Step1Eligibility from '@/components/campaign/new-campaign-test/steps/Step1Eligibility';
 import Step2CampaignForm from '@/components/campaign/new-campaign-test/steps/Step2CampaignForm';
 import Step3Milestones from '@/components/campaign/new-campaign-test/steps/Step3Milestones';
-import Step4BudgetPerMilestone from '@/components/campaign/new-campaign-test/steps/Step4BudgetPerMilestone';
 import Step5RiskTerms from '@/components/campaign/new-campaign-test/steps/Step5RiskTerms';
 import Step6ReviewSubmit from '@/components/campaign/new-campaign-test/steps/Step6ReviewSubmit';
 import { NewCampaignTestState } from '@/components/campaign/new-campaign-test/types';
@@ -25,7 +24,6 @@ const steps = [
     subtitle: 'Tiêu đề, mục tiêu, nhiều ảnh và chọn ảnh bìa, thời gian, vị trí',
   },
   { id: 'milestones', title: 'Giai đoạn', subtitle: 'Thiết lập các giai đoạn thực hiện & giải ngân' },
-  { id: 'budget', title: 'Dự toán', subtitle: 'Dự toán chi phí theo từng giai đoạn' },
   { id: 'terms', title: 'Điều khoản', subtitle: 'Điều khoản bắt buộc' },
   { id: 'review', title: 'Gửi duyệt', subtitle: 'OTP ký điện tử' },
 ];
@@ -122,33 +120,13 @@ export default function NewCampaignTestPage() {
     return milestoneTotal === target;
   }, [state.milestones.length, state.campaignCore.targetAmount, milestoneTotal]);
 
-  const step4CanNext = useMemo(() => {
-    // All milestones must have budget lines totaling their planned amount
-    const target = state.campaignCore.targetAmount;
-    if (target <= 0 || state.milestones.length === 0) return false;
-    return state.milestones.every((m, idx) => {
-      const mTarget =
-        idx === state.milestones.length - 1
-          ? Math.max(
-              target - state.milestones.slice(0, -1).reduce((s, m2) => s + (m2.plannedAmount || 0), 0),
-              0,
-            )
-          : m.plannedAmount;
-      const allocated = state.budgetLines
-        .filter((b) => b.milestoneId === m.id)
-        .reduce((s, b) => s + (b.plannedAmount || 0), 0);
-      return mTarget > 0 && allocated === mTarget;
-    });
-  }, [state.milestones, state.budgetLines, state.campaignCore.targetAmount]);
-
-  const step5CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
+  const step4CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
 
   const finalValidations = useMemo(() => {
     const target = state.campaignCore.targetAmount;
     const bank = state.bankInfo;
     return {
       coreOk: Object.keys(step2Errors).length === 0,
-      budgetOk: budgetTotal === target,
       milestoneOk: milestoneTotal === target,
       bankOk: Boolean(bank.accountHolderName && bank.accountNumber && bank.bankName && bank.bankCode),
       acknowledgementsOk:
@@ -165,7 +143,7 @@ export default function NewCampaignTestPage() {
         state.acknowledgements.slaAccepted,
       otpOk: otpRequested && otpCode.trim().length >= 4,
     };
-  }, [state, step2Errors, budgetTotal, milestoneTotal, otpRequested, otpCode]);
+  }, [state, step2Errors, milestoneTotal, otpRequested, otpCode]);
 
   const canSubmit = Object.values(finalValidations).every(Boolean);
 
@@ -186,7 +164,7 @@ export default function NewCampaignTestPage() {
   };
 
   const showPreviewModal =
-    (activeStep === 1 && previewVisible) || (activeStep === 5 && step6FullPreview);
+    (activeStep === 1 && previewVisible) || (activeStep === 4 && step6FullPreview);
 
   /**
    * Điều hướng wizard:
@@ -208,14 +186,13 @@ export default function NewCampaignTestPage() {
           (current === 0 && step0CanNext) ||
           (current === 1 && step2CanNext) ||
           (current === 2 && step3CanNext) ||
-          (current === 3 && step4CanNext) ||
-          (current === 4 && step5CanNext);
+          (current === 3 && step4CanNext);
         if (!ok) return current;
         setMaxReached((m) => Math.max(m, target));
         return target;
       });
     },
-    [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext, step5CanNext],
+    [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext],
   );
 
   return (
@@ -319,7 +296,7 @@ export default function NewCampaignTestPage() {
               />
             )}
             {activeStep === 3 && (
-              <Step4BudgetPerMilestone
+              <Step5RiskTerms
                 state={state}
                 onPatch={patchState}
                 onPrev={() => goToStep(2)}
@@ -328,15 +305,6 @@ export default function NewCampaignTestPage() {
               />
             )}
             {activeStep === 4 && (
-              <Step5RiskTerms
-                state={state}
-                onPatch={patchState}
-                onPrev={() => goToStep(3)}
-                onNext={() => goToStep(5)}
-                canNext={step5CanNext}
-              />
-            )}
-            {activeStep === 5 && (
               <Step6ReviewSubmit
                 state={state}
                 checks={finalValidations}
@@ -345,7 +313,7 @@ export default function NewCampaignTestPage() {
                 onRequestOtp={() => setOtpRequested(true)}
                 otpRequested={otpRequested}
                 onOpenFullPreview={() => setStep6FullPreview(true)}
-                onPrev={() => goToStep(4)}
+                onPrev={() => goToStep(3)}
                 onSubmit={handleMockSubmit}
                 canSubmit={canSubmit}
               />
@@ -375,10 +343,10 @@ export default function NewCampaignTestPage() {
           state={state}
           budgetTotal={budgetTotal}
           milestoneTotal={milestoneTotal}
-          fullScreen={activeStep === 5}
+          fullScreen={activeStep === 4}
           onClose={() => {
             if (activeStep === 1) setPreviewVisible(false);
-            if (activeStep === 5) setStep6FullPreview(false);
+            if (activeStep === 4) setStep6FullPreview(false);
           }}
         />
       )}
