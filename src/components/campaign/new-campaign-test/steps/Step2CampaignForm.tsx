@@ -26,7 +26,7 @@ function inputClass(fieldKey: string, errors: Record<string, string>, showErrors
     'w-full rounded-xl border-2 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition duration-150',
     err
       ? 'border-red-200 bg-red-50/50 focus:border-red-400 focus:ring-2 focus:ring-red-100'
-      : 'border-transparent bg-gray-50/80 focus:border-brand focus:bg-white focus:ring-2 focus:ring-orange-100',
+      : 'border-gray-200 bg-white focus:border-brand focus:bg-white focus:ring-2 focus:ring-orange-100',
   ].join(' ');
 }
 
@@ -222,50 +222,63 @@ export default function Step2CampaignForm({
             Thêm nhiều ảnh (16:9 khuyến nghị). Bấm &quot;Đặt làm bìa&quot; để chọn ảnh hiển thị trên thẻ chiến dịch.
           </p>
 
+          {/* Large cover preview */}
+          {images.length > 0 && core.coverImageUrl ? (
+            <div className="relative mb-3 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
+              <div className="aspect-video w-full">
+                <img src={core.coverImageUrl} alt="Ảnh bìa" className="h-full w-full object-cover" />
+              </div>
+              <span className="absolute left-2.5 top-2.5 rounded-full bg-brand/90 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white shadow">
+                Bìa
+              </span>
+            </div>
+          ) : null}
+
+          {/* Thumbnails row */}
           {images.length > 0 ? (
-            <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 pt-0.5 [scrollbar-gutter:stable]">
+            <div className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-gutter:stable]">
               {images.map((img) => {
                 const isCover = img.id === core.coverImageId;
                 return (
                   <div
                     key={img.id}
-                    className={`relative w-[132px] shrink-0 overflow-hidden rounded-xl bg-gray-200 ring-2 transition ${
+                    className={`relative shrink-0 overflow-hidden rounded-lg bg-gray-200 ring-2 transition cursor-pointer ${
                       isCover ? 'ring-brand' : 'ring-transparent hover:ring-gray-300'
                     }`}
+                    style={{ width: 80 }}
+                    onClick={() => setCover(img.id)}
                   >
                     <div className="aspect-video w-full">
                       <img src={img.url} alt="" className="h-full w-full object-cover" />
                     </div>
                     {isCover ? (
-                      <span className="absolute left-2 top-2 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                      <span className="absolute left-1 top-1 rounded-full bg-brand px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide text-white">
                         Bìa
                       </span>
-                    ) : null}
+                    ) : (
+                      <div className="absolute inset-0 flex items-end justify-center pb-1">
+                        <span className="rounded bg-black/40 px-1 py-0.5 text-[9px] font-medium text-white">
+                          Chọn bìa
+                        </span>
+                      </div>
+                    )}
                     <button
                       type="button"
-                      onClick={(e) => removeImage(img.id, e)}
-                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/75"
+                      onClick={(e) => { e.stopPropagation(); removeImage(img.id, e); }}
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
                       aria-label="Gỡ ảnh"
                     >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <svg className="h-3 w-3" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                         <path d="M2 2l10 10M12 2L2 12" />
                       </svg>
                     </button>
-                    {!isCover ? (
-                      <button
-                        type="button"
-                        onClick={() => setCover(img.id)}
-                        className="absolute bottom-1.5 left-1.5 right-1.5 rounded-lg bg-white/95 py-1 text-center text-[10px] font-semibold text-gray-800 shadow-sm ring-1 ring-gray-200 transition hover:bg-white"
-                      >
-                        Đặt làm bìa
-                      </button>
-                    ) : null}
                   </div>
                 );
               })}
             </div>
           ) : null}
 
+          {/* Drop zone */}
           <div
             onDragEnter={() => setIsDragging(true)}
             onDragLeave={() => setIsDragging(false)}
@@ -276,7 +289,7 @@ export default function Step2CampaignForm({
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             role="button"
-            className={`mt-2 flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all duration-200 lg:min-h-[88px] ${
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-5 transition-all duration-200 ${
               coverErr && images.length === 0
                 ? 'border-red-200 bg-red-50/50'
                 : isDragging

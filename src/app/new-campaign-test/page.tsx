@@ -7,8 +7,8 @@ import NewCampaignTestStepper from '@/components/campaign/new-campaign-test/NewC
 import { seedState } from '@/components/campaign/new-campaign-test/mockData';
 import Step1Eligibility from '@/components/campaign/new-campaign-test/steps/Step1Eligibility';
 import Step2CampaignForm from '@/components/campaign/new-campaign-test/steps/Step2CampaignForm';
-import Step3BudgetMilestones from '@/components/campaign/new-campaign-test/steps/Step3BudgetMilestones';
-import Step4Milestones from '@/components/campaign/new-campaign-test/steps/Step4Milestones';
+import Step3Milestones from '@/components/campaign/new-campaign-test/steps/Step3Milestones';
+import Step4BudgetPerMilestone from '@/components/campaign/new-campaign-test/steps/Step4BudgetPerMilestone';
 import Step5RiskTerms from '@/components/campaign/new-campaign-test/steps/Step5RiskTerms';
 import Step6ReviewSubmit from '@/components/campaign/new-campaign-test/steps/Step6ReviewSubmit';
 import { NewCampaignTestState } from '@/components/campaign/new-campaign-test/types';
@@ -24,8 +24,8 @@ const steps = [
     title: 'Thông tin chiến dịch',
     subtitle: 'Tiêu đề, mục tiêu, nhiều ảnh và chọn ảnh bìa, thời gian, vị trí',
   },
-  { id: 'budget', title: 'Dự toán', subtitle: 'Một quỹ tổng và các hạng mục' },
-  { id: 'milestones', title: 'Mốc giải ngân', subtitle: 'Thiết lập nhiều chặng giải ngân' },
+  { id: 'milestones', title: 'Giai đoạn', subtitle: 'Thiết lập các giai đoạn thực hiện & giải ngân' },
+  { id: 'budget', title: 'Dự toán', subtitle: 'Dự toán chi phí theo từng giai đoạn' },
   { id: 'terms', title: 'Điều khoản', subtitle: 'Điều khoản bắt buộc' },
   { id: 'review', title: 'Gửi duyệt', subtitle: 'OTP ký điện tử' },
 ];
@@ -39,6 +39,8 @@ const stepVariants = {
 export default function NewCampaignTestPage() {
   const [state, setState] = useState<NewCampaignTestState>(seedState);
   const [activeStep, setActiveStep] = useState(0);
+  /** Bước xa nhất user đã từng đạt tới (đã validate). Cho phép nhảy tự do trong [0, maxReached]. */
+  const [maxReached, setMaxReached] = useState(0);
   const [submittedSnapshot, setSubmittedSnapshot] = useState<string>('');
   const [mockDraftId, setMockDraftId] = useState<string>('');
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -105,7 +107,7 @@ export default function NewCampaignTestPage() {
       b.accountNumber.trim() !== '' &&
       b.bankCode.trim() !== '' &&
       b.bankName.trim() !== '' &&
-      b.accountHolderName.trim() === state.kycFullName.trim() &&
+      b.accountHolderName.trim() !== '' &&
       state.bankProofFiles.length > 0 &&
       state.acknowledgements.legalRead &&
       state.acknowledgements.slaAccepted
@@ -116,14 +118,28 @@ export default function NewCampaignTestPage() {
 
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
-    return budgetTotal === target && target > 0;
-  }, [state.campaignCore.targetAmount, budgetTotal]);
-
-  const step4CanNext = useMemo(() => {
-    const target = state.campaignCore.targetAmount;
     if (state.milestones.length < 1) return false;
     return milestoneTotal === target;
   }, [state.milestones.length, state.campaignCore.targetAmount, milestoneTotal]);
+
+  const step4CanNext = useMemo(() => {
+    // All milestones must have budget lines totaling their planned amount
+    const target = state.campaignCore.targetAmount;
+    if (target <= 0 || state.milestones.length === 0) return false;
+    return state.milestones.every((m, idx) => {
+      const mTarget =
+        idx === state.milestones.length - 1
+          ? Math.max(
+              target - state.milestones.slice(0, -1).reduce((s, m2) => s + (m2.plannedAmount || 0), 0),
+              0,
+            )
+          : m.plannedAmount;
+      const allocated = state.budgetLines
+        .filter((b) => b.milestoneId === m.id)
+        .reduce((s, b) => s + (b.plannedAmount || 0), 0);
+      return mTarget > 0 && allocated === mTarget;
+    });
+  }, [state.milestones, state.budgetLines, state.campaignCore.targetAmount]);
 
   const step5CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
 
@@ -144,7 +160,7 @@ export default function NewCampaignTestPage() {
         state.kycStatus === 'APPROVED' &&
         state.bankProofFiles.length > 0 &&
         Boolean(state.bankInfo.bankCode) &&
-        state.bankInfo.accountHolderName.trim() === state.kycFullName.trim() &&
+        state.bankInfo.accountHolderName.trim() !== '' &&
         state.acknowledgements.legalRead &&
         state.acknowledgements.slaAccepted,
       otpOk: otpRequested && otpCode.trim().length >= 4,
@@ -174,9 +190,9 @@ export default function NewCampaignTestPage() {
 
   /**
    * Điều hướng wizard:
-   * - Lùi (về bước có chỉ số nhỏ hơn): luôn cho phép — chủ yếu qua stepper hoặc "Quay lại".
-   * - Tiến một bước: chỉ khi bước hiện tại thỏa điều kiện (tương đương bấm "Tiếp tục" hợp lệ).
-   * - Nhảy cóc về phía trước (>1 bước): không cho — tránh bỏ qua gate / form.
+   * - Trong [0, maxReached]: nhảy tự do (đã validate trước đây).
+   * - Vượt maxReached: chỉ tiến 1 step và phải pass validation hiện tại.
+   * - Khi tiến thành công, mở rộng maxReached.
    */
   const goToStep = useCallback(
     (target: number) => {
@@ -184,8 +200,10 @@ export default function NewCampaignTestPage() {
       if (target < 0 || target > last) return;
       setActiveStep((current) => {
         if (target === current) return current;
-        if (target < current) return target;
-        if (target > current + 1) return current;
+        // Trong vùng đã đạt: nhảy tự do
+        if (target <= maxReached) return target;
+        // Ngoài vùng: chỉ cho tiến 1 step và phải pass validate
+        if (target !== current + 1) return current;
         const ok =
           (current === 0 && step0CanNext) ||
           (current === 1 && step2CanNext) ||
@@ -193,29 +211,71 @@ export default function NewCampaignTestPage() {
           (current === 3 && step4CanNext) ||
           (current === 4 && step5CanNext);
         if (!ok) return current;
+        setMaxReached((m) => Math.max(m, target));
         return target;
       });
     },
-    [step0CanNext, step2CanNext, step3CanNext, step4CanNext, step5CanNext],
+    [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext, step5CanNext],
   );
 
   return (
-    <div className="min-h-[100dvh] bg-[#f9fafb] px-4 py-6 md:py-8">
-      <div className="mx-auto max-w-[960px]">
-        {/* Header */}
-        <div className="mb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-800 md:text-3xl">
-            Tạo chiến dịch mới
-          </h1>
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-slate-50">
+      {/* Top bar */}
+      <header className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 py-3 md:px-8">
+          <button
+            type="button"
+            onClick={() => {
+              if (activeStep > 0) goToStep(activeStep - 1);
+              else if (typeof window !== 'undefined') window.history.back();
+            }}
+            className="group inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+            aria-label="Quay lại"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
+              <path
+                d="M12 4l-6 6 6 6"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Quay lại
+          </button>
+          <div className="h-5 w-px bg-slate-200" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+              Hồ sơ chiến dịch
+            </p>
+            <h1 className="truncate text-[15px] font-semibold leading-tight text-slate-900">
+              Tạo chiến dịch gây quỹ từ thiện
+            </h1>
+          </div>
+          <div className="hidden items-center gap-2 md:flex">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Bản nháp
+            </span>
+          </div>
         </div>
 
-        {/* Horizontal Stepper */}
-        <NewCampaignTestStepper
-          steps={steps}
-          activeIndex={activeStep}
-          onJump={goToStep}
-        />
+        {/* Horizontal stepper — compact, always on screen */}
+        <div className="border-t border-slate-100">
+          <div className="mx-auto max-w-[1200px] px-4 py-3 md:px-8">
+            <NewCampaignTestStepper
+              steps={steps}
+              activeIndex={activeStep}
+              maxReached={maxReached}
+              onJump={goToStep}
+            />
+          </div>
+        </div>
+      </header>
 
+      {/* Scrollable content */}
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-[960px] px-4 py-6 md:px-8 md:py-8">
         {/* Step content with animation */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -249,9 +309,9 @@ export default function NewCampaignTestPage() {
               />
             )}
             {activeStep === 2 && (
-              <Step3BudgetMilestones
+              <Step3Milestones
                 state={state}
-                budgetTotal={budgetTotal}
+                milestoneTotal={milestoneTotal}
                 onPatch={patchState}
                 onPrev={() => goToStep(1)}
                 onNext={() => goToStep(3)}
@@ -259,9 +319,8 @@ export default function NewCampaignTestPage() {
               />
             )}
             {activeStep === 3 && (
-              <Step4Milestones
+              <Step4BudgetPerMilestone
                 state={state}
-                milestoneTotal={milestoneTotal}
                 onPatch={patchState}
                 onPrev={() => goToStep(2)}
                 onNext={() => goToStep(4)}
@@ -308,7 +367,8 @@ export default function NewCampaignTestPage() {
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
+        </div>
+      </main>
 
       {showPreviewModal && (
         <CampaignPreviewPanel

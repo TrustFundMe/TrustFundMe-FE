@@ -8,85 +8,115 @@ type StepItem = { id: string; title: string; subtitle: string };
 interface Props {
   steps: StepItem[];
   activeIndex: number;
+  /** Bước xa nhất đã đạt tới — cho phép nhảy tự do trong [0, maxReached] */
+  maxReached?: number;
   onJump: (idx: number) => void;
 }
 
 function CheckIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
-      <path d="M5 10.5l3.5 3.5L15 7" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
+      <path
+        d="M3.5 8.5l3 3 6-6.5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export default function NewCampaignTestStepper({ steps, activeIndex, onJump }: Props) {
+/**
+ * Horizontal stepper — tông cam chuyên nghiệp, fit trong header.
+ * - Marker 20px, connector 1px.
+ * - Done: orange-500 solid + check; Active: orange-600 đậm + ring halo; Pending: outline xám.
+ * - Click nhảy trong vùng [0, maxReached] (đã validate).
+ */
+export default function NewCampaignTestStepper({
+  steps,
+  activeIndex,
+  maxReached,
+  onJump,
+}: Props) {
+  const reached = typeof maxReached === 'number' ? maxReached : activeIndex;
+
   return (
-    <nav className="mb-5" aria-label="Quy trình tạo chiến dịch">
-      <div className="flex items-start">
+    <nav aria-label="Quy trình tạo chiến dịch" className="w-full">
+      <ol className="flex items-center">
         {steps.map((step, idx) => {
           const done = idx < activeIndex;
           const active = idx === activeIndex;
-          /** Chỉ cho lùi: không mở tắt các bước phía trước khi chưa hoàn tất bước hiện tại bằng Tiếp tục. */
-          const canClick = idx < activeIndex;
+          const canClick = idx !== activeIndex && idx <= reached;
+          const isLast = idx === steps.length - 1;
+          // Connector "đã qua" khi bước kế tiếp đã từng đạt tới
+          const connectorDone = idx < reached;
 
           return (
             <Fragment key={step.id}>
-              <button
-                type="button"
-                aria-current={active ? 'step' : undefined}
-                title={`${step.title}. ${step.subtitle}`}
-                onClick={() => canClick && onJump(idx)}
-                disabled={!canClick && !active}
-                className={`flex shrink-0 flex-col items-center gap-1.5 ${canClick ? 'cursor-pointer' : 'cursor-default'}`}
-              >
-                <motion.div
-                  className={`relative flex items-center justify-center rounded-full text-sm font-semibold transition-colors duration-300 ${
-                    done
-                      ? 'h-9 w-9 bg-emerald-500 text-white'
-                      : active
-                        ? 'h-10 w-10 bg-brand text-white'
-                        : 'h-9 w-9 bg-gray-100 text-gray-400 ring-1 ring-gray-200'
+              <li className="flex min-w-0 shrink-0 items-center">
+                <button
+                  type="button"
+                  aria-current={active ? 'step' : undefined}
+                  onClick={() => canClick && onJump(idx)}
+                  disabled={!canClick && !active}
+                  title={`${step.title} — ${step.subtitle}`}
+                  className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors ${
+                    canClick ? 'cursor-pointer hover:bg-orange-50' : 'cursor-default'
                   }`}
-                  animate={{ scale: active ? 1.08 : 1 }}
-                  transition={{ type: 'spring', stiffness: 380, damping: 26 }}
                 >
-                  {done ? <CheckIcon /> : <span>{idx + 1}</span>}
-                  {active && (
-                    <motion.span
-                      className="absolute inset-0 rounded-full bg-brand/25"
-                      animate={{ scale: [1, 1.7, 1], opacity: [0.6, 0, 0.6] }}
-                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                  )}
-                </motion.div>
+                  {/* Marker */}
+                  <span
+                    className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-semibold tabular-nums transition-colors ${
+                      done
+                        ? 'border-orange-500 bg-orange-500 text-white'
+                        : active
+                          ? 'border-orange-600 bg-orange-600 text-white'
+                          : 'border-slate-300 bg-white text-slate-400 group-hover:border-orange-300'
+                    }`}
+                  >
+                    {done ? <CheckIcon /> : idx + 1}
+                    {active && (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute -inset-[3px] rounded-full ring-2 ring-orange-500/25"
+                      />
+                    )}
+                  </span>
 
-                <span
-                  className={`hidden text-center text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors duration-200 md:block ${
-                    active ? 'text-brand' : done ? 'text-emerald-600' : 'text-gray-400'
-                  }`}
-                  style={{ maxWidth: 72 }}
+                  {/* Label */}
+                  <span
+                    className={`whitespace-nowrap text-[12.5px] font-medium leading-none transition-colors ${
+                      active
+                        ? 'text-orange-700'
+                        : done
+                          ? 'text-slate-700 group-hover:text-orange-700'
+                          : 'text-slate-500'
+                    } ${active ? 'inline' : 'hidden md:inline'}`}
+                  >
+                    {step.title}
+                  </span>
+                </button>
+              </li>
+
+              {!isLast && (
+                <li
+                  aria-hidden
+                  className="relative mx-2 h-px min-w-[16px] flex-1 bg-slate-200 md:mx-3"
                 >
-                  {step.title}
-                </span>
-              </button>
-
-              {idx < steps.length - 1 && (
-                <motion.div
-                  className={`mt-[18px] h-[2px] flex-1 self-start rounded-full md:mt-[20px] mx-1 sm:mx-2`}
-                  animate={{ backgroundColor: done ? '#34d399' : '#e5e7eb' }}
-                  transition={{ duration: 0.5 }}
-                />
+                  <motion.span
+                    initial={false}
+                    animate={{ scaleX: connectorDone ? 1 : 0 }}
+                    style={{ transformOrigin: 'left center' }}
+                    transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                    className="absolute inset-0 block bg-orange-500"
+                  />
+                </li>
               )}
             </Fragment>
           );
         })}
-      </div>
-
-      <div className="mt-3 text-center md:hidden">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand">
-          Bước {activeIndex + 1} / {steps.length} — {steps[activeIndex].title}
-        </p>
-      </div>
+      </ol>
     </nav>
   );
 }

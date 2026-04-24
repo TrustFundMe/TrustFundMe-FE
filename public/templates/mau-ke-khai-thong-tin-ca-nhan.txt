@@ -1,0 +1,13 @@
+﻿MẪU KÊ KHAI THÔNG TIN CÁ NHÂN KYC
+
+1) Họ và tên: [HỌ VÀ TÊN]
+2) Ngày sinh: [DD/MM/YYYY]
+3) Số CCCD/CMND/Hộ chiếu: [SỐ GIẤY TỜ]
+4) Địa chỉ liên hệ: [ĐỊA CHỈ]
+5) Số điện thoại: [SĐT]
+6) Email: [EMAIL]
+
+Tôi xác nhận thông tin kê khai là đúng sự thật và chịu trách nhiệm trước pháp luật về nội dung đã cung cấp.
+
+Ngày ... tháng ... năm ...
+Người kê khai ký tên

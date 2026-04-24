@@ -41,6 +41,8 @@ export interface CampaignCore {
 
 export interface BudgetLine {
   id: string;
+  /** ID của milestone mà hạng mục này thuộc về */
+  milestoneId: string;
   category: BudgetCategory;
   title: string;
   plannedAmount: number;
