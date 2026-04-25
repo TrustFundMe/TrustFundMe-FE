@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Plus, ChevronDown, Clock, User, X, MapPin, Search, Phone, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, ChevronDown, Clock, User, X, MapPin, Search, Phone, AlertCircle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { AppointmentScheduleDto, appointmentService, CreateAppointmentRequest } from '@/services/appointmentService';
 import { userService, UserInfo } from '@/services/userService';
 import { toast } from 'react-hot-toast';
@@ -18,7 +18,7 @@ interface CalendarGridProps {
 }
 
 const DAYS_ORDERED = ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN'];
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 to 22:00
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 00:00 to 23:00
 
 const VIEW_LABELS: Record<string, string> = {
     Month: 'Tháng',
@@ -311,13 +311,34 @@ export const CalendarGrid = ({
         }
     };
 
+    const handleUpdateStatus = async (status: 'CONFIRMED' | 'CANCELLED') => {
+        if (!selectedEvent) return;
+        setIsSubmitting(true);
+        setError(null);
+        try {
+            await appointmentService.updateStatus(selectedEvent.id, status);
+            toast.success(status === 'CONFIRMED' ? 'Đã xác nhận lịch hẹn' : 'Đã hủy lịch hẹn');
+            setIsModalOpen(false);
+            if (onRefresh) {
+                onRefresh();
+            } else {
+                onDateChange(new Date(currentDate));
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message || err?.message || 'Không thể cập nhật trạng thái');
+            toast.error('Lỗi khi cập nhật trạng thái.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const weekDays = getWeekDays();
     const dateRangeLabel = view === 'Month'
         ? currentDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })
-        : `${weekDays[0].getDate().toString().padStart(2, '0')}-${weekDays[6].getDate().toString().padStart(2, '0')} ${currentDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}`;
+        : `${weekDays[0].getDate().toString().padStart(2, '0')}/${(weekDays[0].getMonth() + 1).toString().padStart(2, '0')} - ${weekDays[6].getDate().toString().padStart(2, '0')}/${(weekDays[6].getMonth() + 1).toString().padStart(2, '0')} ${weekDays[6].getFullYear()}`;
 
     const filteredDrawerEvents = selectedDate ? getDayEvents(selectedDate).filter(a => {
         const matchesStatus = statusFilter === 'ALL' || a.status === statusFilter;
@@ -379,7 +400,7 @@ export const CalendarGrid = ({
                         {weekDays.some(d => d.toDateString() === now.toDateString()) && (
                             <div
                                 className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
-                                style={{ top: `${(((now.getHours() - 6) * 60 + now.getMinutes()) * 80) / 60}px` }}
+                                style={{ top: `${((now.getHours() * 60 + now.getMinutes()) * 80) / 60}px` }}
                             >
                                 <div className="absolute -left-[84px] bg-black text-white text-[10px] font-black px-1.5 py-0.5 rounded-full shadow-lg">
                                     {now.getHours().toString().padStart(2, '0')}:{now.getMinutes().toString().padStart(2, '0')}
@@ -398,9 +419,9 @@ export const CalendarGrid = ({
                                         const start = new Date(appt.startTime);
                                         const end = new Date(appt.endTime);
 
-                                        // Calculate minutes since 06:00 of this specific day
+                                        // Calculate minutes since 00:00 of this specific day
                                         const dayStart = new Date(date);
-                                        dayStart.setHours(6, 0, 0, 0);
+                                        dayStart.setHours(0, 0, 0, 0);
 
                                         const startMin = (start.getTime() - dayStart.getTime()) / (1000 * 60);
                                         const originalDuration = (end.getTime() - start.getTime()) / (1000 * 60);
@@ -464,23 +485,31 @@ export const CalendarGrid = ({
                             <button onClick={goToNext} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-white hover:text-gray-900 text-gray-400 transition-all"><ChevronRight className="w-4 h-4" /></button>
                         </div>
                     ) : (
-                        <div className="relative" ref={dropdownRef}>
-                            <button onClick={() => setIsYearPickerOpen(!isYearPickerOpen)} className="flex items-center gap-2 px-6 py-2 bg-gray-50 hover:bg-white hover:shadow-sm border border-gray-100 rounded-2xl transition-all group">
-                                <span className="text-[11px] font-black text-gray-900 tracking-tight uppercase">{currentDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}</span>
-                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 group-hover:text-gray-900 ${isYearPickerOpen ? 'rotate-180' : ''}`} />
+                        <div className="flex items-center gap-4">
+                            <button onClick={goToPrev} className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-white border border-gray-100 text-gray-400 hover:text-gray-900 transition-all shadow-sm">
+                                <ChevronLeft className="w-4 h-4" />
                             </button>
-                            {isYearPickerOpen && (
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-[100] animate-in fade-in zoom-in duration-200">
-                                    <div className="flex items-center justify-between mb-4 px-2">
-                                        <button onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() - 1); onDateChange(d); }} className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"><ChevronLeft className="w-4 h-4" /></button>
-                                        <span className="text-sm font-black text-gray-900">{currentDate.getFullYear()}</span>
-                                        <button onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() + 1); onDateChange(d); }} className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"><ChevronRight className="w-4 h-4" /></button>
+                            <div className="relative" ref={dropdownRef}>
+                                <button onClick={() => setIsYearPickerOpen(!isYearPickerOpen)} className="flex items-center gap-2 px-6 py-2 bg-gray-50 hover:bg-white hover:shadow-sm border border-gray-100 rounded-2xl transition-all group">
+                                    <span className="text-[11px] font-black text-gray-900 tracking-tight uppercase">{currentDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' })}</span>
+                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 group-hover:text-gray-900 ${isYearPickerOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isYearPickerOpen && (
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 p-4 z-[100] animate-in fade-in zoom-in duration-200">
+                                        <div className="flex items-center justify-between mb-4 px-2">
+                                            <button onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() - 1); onDateChange(d); }} className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"><ChevronLeft className="w-4 h-4" /></button>
+                                            <span className="text-sm font-black text-gray-900">{currentDate.getFullYear()}</span>
+                                            <button onClick={() => { const d = new Date(currentDate); d.setFullYear(d.getFullYear() + 1); onDateChange(d); }} className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-900 transition-all"><ChevronRight className="w-4 h-4" /></button>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {Array.from({ length: 12 }).map((_, i) => <button key={i} onClick={() => { const d = new Date(currentDate); d.setMonth(i); onDateChange(d); setIsYearPickerOpen(false); }} className={`py-2 rounded-xl text-[10px] font-black transition-all ${currentDate.getMonth() === i ? 'bg-[#ff715e] text-white shadow-md shadow-rose-100' : 'hover:bg-gray-50 text-gray-500 hover:text-gray-900'}`}>{`T${i + 1}`}</button>)}
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {Array.from({ length: 12 }).map((_, i) => <button key={i} onClick={() => { const d = new Date(currentDate); d.setMonth(i); onDateChange(d); setIsYearPickerOpen(false); }} className={`py-2 rounded-xl text-[10px] font-black transition-all ${currentDate.getMonth() === i ? 'bg-[#ff715e] text-white shadow-md shadow-rose-100' : 'hover:bg-gray-50 text-gray-500 hover:text-gray-900'}`}>{`T${i + 1}`}</button>)}
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
+                            <button onClick={goToNext} className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-white border border-gray-100 text-gray-400 hover:text-gray-900 transition-all shadow-sm">
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
                     )}
                 </div>
@@ -591,7 +620,11 @@ export const CalendarGrid = ({
                             <div className="flex items-center gap-4">
                                 <h2 className="text-2xl font-black text-gray-900 tracking-tight">{modalMode === 'EVENT_DETAIL' ? 'Chi Tiết Lịch Hẹn' : 'Tạo Lịch Hẹn Mới'}</h2>
                                 {modalMode === 'EVENT_DETAIL' && selectedEvent && (
-                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[selectedEvent.status]}`}>{STATUS_LABELS[selectedEvent.status]}</div>
+                                    <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[selectedEvent.status]}`}>
+                                        {selectedEvent.status === 'PENDING' 
+                                            ? (selectedEvent.createdByRole !== 'ROLE_USER' ? 'Chờ bạn xác nhận' : 'Đang chờ Staff xác nhận') 
+                                            : (selectedEvent.status === 'CONFIRMED' ? 'Chuẩn bị gặp' : STATUS_LABELS[selectedEvent.status])}
+                                    </div>
                                 )}
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 transition-all"><X className="w-5 h-5" /></button>
@@ -628,7 +661,6 @@ export const CalendarGrid = ({
                                             <div className="flex flex-col gap-1">
                                                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nhân viên tiếp nhận</p>
                                                 <p className="text-[15px] font-black text-gray-900">{selectedEvent.staffName || 'Chưa phân công'}</p>
-                                                <p className="text-[11px] font-bold text-gray-400">ID Nhân viên: {selectedEvent.staffId}</p>
                                             </div>
                                         </div>
 
@@ -639,8 +671,40 @@ export const CalendarGrid = ({
                                     </div>
 
 
-                                    <div className="pt-2">
-                                        <button className="w-full py-2.5 bg-white border border-rose-100 text-rose-500 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-rose-50 transition-all shadow-sm">Hủy Lịch Hẹn</button>
+                                    <div className="pt-4 flex gap-3">
+                                        {selectedEvent.status === 'PENDING' && (
+                                            <>
+                                                {selectedEvent.createdByRole !== 'ROLE_USER' && (
+                                                    <button
+                                                        onClick={() => handleUpdateStatus('CONFIRMED')}
+                                                        disabled={isSubmitting}
+                                                        className="flex-1 py-3 bg-[#ff715e] text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#f74938] transition-all shadow-lg shadow-rose-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                                                    >
+                                                        {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                                                        Xác nhận
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleUpdateStatus('CANCELLED')}
+                                                    disabled={isSubmitting}
+                                                    className="flex-1 py-3 bg-white border border-gray-100 text-gray-500 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                >
+                                                    {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                                                    {selectedEvent.createdByRole === 'ROLE_USER' ? 'Hủy yêu cầu' : 'Từ chối'}
+                                                </button>
+                                            </>
+                                        )}
+                                        
+                                        {(selectedEvent.status === 'CONFIRMED') && (
+                                            <button
+                                                onClick={() => handleUpdateStatus('CANCELLED')}
+                                                disabled={isSubmitting}
+                                                className="w-full py-3 bg-white border border-rose-100 text-rose-500 text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                                            >
+                                                {isSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                                                Hủy Lịch Hẹn
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ) : (

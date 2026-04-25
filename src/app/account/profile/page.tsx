@@ -9,8 +9,10 @@ import Link from 'next/link';
 import {
   User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
   CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag, Search, Box,
-  Star, ScrollText, Plus, Minus
+  Star, ScrollText, Plus, Minus, Clock, MapPin, Calendar, Check, AlertCircle
 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { appointmentService, AppointmentScheduleDto } from '@/services/appointmentService';
@@ -347,12 +349,174 @@ function TrustScoreLogsModal({
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 
+function AppointmentsModal({
+  appointments,
+  loading,
+  onClose,
+  onStatusChange,
+  highlightId,
+}: {
+  appointments: AppointmentScheduleDto[];
+  loading: boolean;
+  onClose: () => void;
+  onStatusChange: (id: number, status: 'CONFIRMED' | 'CANCELLED') => Promise<void>;
+  highlightId?: number | null;
+}) {
+  const [updating, setUpdating] = useState<number | null>(null);
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', h);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', h); document.body.style.overflow = ''; };
+  }, [onClose]);
+
+  const handleAction = async (id: number, status: 'CONFIRMED' | 'CANCELLED') => {
+    setUpdating(id);
+    try {
+      await onStatusChange(id, status);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const sorted = [...appointments].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
+      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(0,0,0,0.4)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-white/20"
+        style={{ maxHeight: '85vh', animation: 'apptSlideUp .3s cubic-bezier(.34,1.56,.64,1)' }}
+      >
+        {/* Header */}
+        <div className="relative px-8 pt-8 pb-12 bg-gradient-to-br from-[#ff5e14] to-[#ff9114] text-white">
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <h2 className="text-2xl font-black uppercase tracking-tight">Lịch Hẹn Của Tôi</h2>
+              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Xác nhận hoặc quản lý buổi gặp</p>
+            </div>
+            <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-all">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1200 50" preserveAspectRatio="none" style={{ display: 'block', height: '40px' }}>
+            <path d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z" fill="white" />
+          </svg>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 custom-scrollbar">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-[#ff5e14]" />
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Đang tải lịch hẹn...</p>
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-16 w-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-4">
+                <CalendarClock className="h-8 w-8 text-orange-200" />
+              </div>
+              <p className="text-sm font-bold text-gray-500">Bạn chưa có lịch hẹn nào</p>
+            </div>
+          ) : (
+            sorted.map(appt => {
+              const isHighlight = highlightId === appt.id;
+              const isPending = appt.status === 'PENDING';
+              const start = new Date(appt.startTime);
+              const dateStr = start.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+              const timeStr = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+              return (
+                <div 
+                  key={appt.id}
+                  className={`group relative rounded-2xl border transition-all duration-300 p-5 ${isHighlight ? 'bg-orange-50/50 border-orange-200 shadow-lg ring-2 ring-orange-100 scale-[1.02]' : 'bg-gray-50/30 border-gray-100 hover:border-gray-200 hover:bg-white hover:shadow-md'}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                          appt.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                          appt.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-100' :
+                          appt.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                          'bg-amber-50 text-amber-600 border-amber-100 animate-pulse'
+                        }`}>
+                          {appt.status === 'PENDING' ? (appt.createdByRole === 'ROLE_USER' ? 'Đang chờ Staff xác nhận' : 'Chờ bạn xác nhận') : 
+                           appt.status === 'CONFIRMED' ? 'Chuẩn bị gặp' : 
+                           appt.status === 'CANCELLED' ? 'Đã hủy' : 'Đã hoàn thành'}
+                        </span>
+                        <span className="text-[10px] font-bold text-gray-400">#{appt.id}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-[#ff5e14]" /><span className="text-xs font-bold text-gray-700">{dateStr}</span></div>
+                        <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-[#ff5e14]" /><span className="text-xs font-bold text-gray-700">{timeStr}</span></div>
+                      </div>
+
+                      <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-gray-400" /><span className="text-xs font-medium text-gray-600 line-clamp-1">{appt.location || 'Địa điểm chưa xác định'}</span></div>
+                      <p className="text-xs text-gray-500 italic line-clamp-2">{appt.purpose || 'Không có mô tả mục đích'}</p>
+                    </div>
+
+                    {isPending && (
+                      <div className="flex flex-col gap-2 shrink-0">
+                        {appt.createdByRole !== 'ROLE_USER' && (
+                          <button
+                            onClick={() => handleAction(appt.id, 'CONFIRMED')}
+                            disabled={updating != null}
+                            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff5e14] text-white text-[10px] font-black uppercase tracking-widest shadow-md shadow-orange-100 hover:bg-[#e04332] transition-all disabled:opacity-50"
+                          >
+                            {updating === appt.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                            Xác nhận
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleAction(appt.id, 'CANCELLED')}
+                          disabled={updating != null}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all disabled:opacity-50"
+                        >
+                          {appt.createdByRole === 'ROLE_STAFF' ? 'Từ chối' : 'Hủy yêu cầu'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen flex items-center justify-center bg-[#f8fafe]">
+        <Loader2 className="h-10 w-10 animate-spin text-[#ff715e]" />
+      </div>
+    }>
+      <ProfileContent />
+    </Suspense>
+  );
+}
+
+function ProfileContent() {
   const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Appointments state
+  const [showAppts, setShowAppts] = useState(false);
+  const [myAppts, setMyAppts] = useState<AppointmentScheduleDto[]>([]);
+  const [apptsLoading, setApptsLoading] = useState(false);
+  const [highlightApptId, setHighlightApptId] = useState<number | null>(null);
+
+  const searchParams = useSearchParams();
 
   // Flags state
   const [showFlags, setShowFlags] = useState(false);
@@ -425,6 +589,42 @@ export default function ProfilePage() {
   }, []);
 
   const openFlags = () => { setShowFlags(true); fetchFlags(); };
+
+  // Fetch Appointments
+  const fetchAppts = useCallback(async () => {
+    if (!user?.id) return;
+    setApptsLoading(true);
+    try {
+      const data = await appointmentService.getByDonor(user.id);
+      setMyAppts(data);
+    } catch {
+      setMyAppts([]);
+    } finally {
+      setApptsLoading(false);
+    }
+  }, [user?.id]);
+
+  const handleApptStatusChange = async (id: number, status: 'CONFIRMED' | 'CANCELLED') => {
+    try {
+      const updated = await appointmentService.updateStatus(id, status);
+      setMyAppts(prev => prev.map(a => a.id === id ? updated : a));
+      toast(status === 'CONFIRMED' ? 'Đã xác nhận lịch hẹn' : 'Đã từ chối lịch hẹn', 'success');
+    } catch (err: any) {
+      toast(err.response?.data?.message || 'Không thể cập nhật trạng thái', 'error');
+    }
+  };
+
+  // Handle query params for specific appointment
+  useEffect(() => {
+    const apptId = searchParams.get('appointmentId');
+    if (apptId) {
+      setHighlightApptId(Number(apptId));
+      setShowAppts(true);
+      fetchAppts();
+    }
+  }, [searchParams, fetchAppts]);
+
+  const openAppts = () => { setShowAppts(true); fetchAppts(); setHighlightApptId(null); };
 
   // Fetch trust score
   useEffect(() => {
@@ -576,16 +776,20 @@ export default function ProfilePage() {
 
   // Quick access "Lịch Hẹn" button
   const LichHenBtn = () => (
-    <Link
-      href="/account/schedule"
+    <button
+      onClick={openAppts}
       className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 group w-full text-left"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10 group-hover:bg-[#ff5e14]/15 transition-colors">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10 group-hover:bg-[#ff5e14]/15 transition-colors relative">
         <CalendarClock className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
+        {/* Unconfirmed indicator */}
+        {myAppts.some(a => a.status === 'PENDING') && (
+          <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff5e14] border-2 border-white rounded-full animate-bounce" />
+        )}
       </div>
       <span className="text-sm font-medium text-gray-700 flex-1">Lịch Hẹn</span>
       <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#ff5e14] transition-colors" />
-    </Link>
+    </button>
   );
 
   // Quick access "Tố Cáo" button
@@ -689,6 +893,8 @@ export default function ProfilePage() {
                 Sửa hồ sơ
               </button>
             )}
+            <LichHenBtn />
+            <MyFlagsBtn />
           </div>
         </div>
 

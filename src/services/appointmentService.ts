@@ -14,6 +14,7 @@ export interface AppointmentScheduleDto {
     status: AppointmentStatus;
     location?: string;
     purpose?: string;
+    createdByRole: 'ROLE_STAFF' | 'ROLE_USER';
     createdAt: string;
     updatedAt?: string;
 }

@@ -17,7 +17,7 @@ import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: React.ReactNode }> = {
-    PENDING:   { label: 'Chờ duyệt',     color: 'text-amber-700',   bg: 'bg-amber-50 ring-amber-200',       dot: 'bg-amber-400',   icon: <Clock className="h-3 w-3" /> },
+    PENDING:   { label: 'Đang chờ xác nhận', color: 'text-amber-700',   bg: 'bg-amber-50 ring-amber-200',       dot: 'bg-amber-400',   icon: <Clock className="h-3 w-3" /> },
     CONFIRMED: { label: 'Chuẩn bị gặp', color: 'text-[#446b5f]',   bg: 'bg-[#446b5f]/10 ring-[#446b5f]/20', dot: 'bg-[#446b5f]',   icon: <CheckCircle className="h-3 w-3" /> },
     CANCELLED: { label: 'Bị hủy',         color: 'text-gray-500',    bg: 'bg-gray-50 ring-gray-200',          dot: 'bg-gray-400',    icon: <XCircle className="h-3 w-3" /> },
     COMPLETED: { label: 'Hoàn thành gặp', color: 'text-blue-700',    bg: 'bg-blue-50 ring-blue-200',          dot: 'bg-blue-400',    icon: <CheckCircle className="h-3 w-3" /> },
@@ -83,14 +83,31 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
     const start = formatDateTime(appointment.startTime);
     const end = formatDateTime(appointment.endTime);
     const duration = getDuration(appointment.startTime, appointment.endTime);
-    const cfg = STATUS_CONFIG[appointment.status];
-    // Chỉ cho phép hủy khi lịch chưa bắt đầu
-    const appointmentStarted = Date.now() >= new Date(appointment.startTime).getTime();
-    const canCancel = appointment.status === 'CONFIRMED' && !appointmentStarted;
+    const now = Date.now();
+    const startTime = new Date(appointment.startTime).getTime();
+    const endTime = new Date(appointment.endTime).getTime();
+    
+    const isPast = now > endTime;
+    const isOngoing = now >= startTime && now <= endTime;
+    
+    // Tự động coi là COMPLETED nếu đã qua giờ hẹn
+    const effectiveStatus = (appointment.status === 'CONFIRMED' && isPast) ? 'COMPLETED' : appointment.status;
+    const canCancel = effectiveStatus !== 'COMPLETED' && effectiveStatus !== 'CANCELLED';
+
+    const cfg = STATUS_CONFIG[effectiveStatus];
+    let displayLabel = cfg.label;
+    if (appointment.status === 'CONFIRMED' && isOngoing) {
+        displayLabel = 'Đang diễn ra';
+    }
 
     const handleCancel = async () => {
         setUpdating('CANCELLED');
         try { await onStatusChange(appointment.id, 'CANCELLED'); } finally { setUpdating(null); }
+    };
+
+    const handleConfirm = async () => {
+        setUpdating('CONFIRMED');
+        try { await onStatusChange(appointment.id, 'CONFIRMED'); } finally { setUpdating(null); }
     };
 
     return (
@@ -98,8 +115,8 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-3">
                 <div className="text-sm font-black text-gray-900 uppercase tracking-tight">Chi tiết lịch hẹn</div>
-                <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ring-1 ${cfg.bg} ${cfg.color}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
+                <span className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ring-1 ${cfg.bg} ${cfg.color} ${appointment.status === 'CONFIRMED' && isOngoing ? 'animate-pulse' : ''}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />{displayLabel}
                 </span>
             </div>
 
@@ -131,26 +148,34 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                     </div>
                 ))}
 
-                {/* Chỉ hiện nút Hủy lịch khi chưa đến giờ hẹn */}
-                {canCancel && (
-                    <div className="pt-1">
+                {/* Nút thao tác */}
+                <div className="pt-1 space-y-2">
+                    {appointment.status === 'PENDING' && (!appointment.createdByRole || !appointment.createdByRole.includes('STAFF')) && (
+                        <button
+                            onClick={handleConfirm}
+                            disabled={updating !== null}
+                            className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-100 disabled:opacity-60"
+                        >
+                            {updating === 'CONFIRMED' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                            Xác nhận lịch hẹn
+                        </button>
+                    )}
+
+                    {canCancel && (
                         <button
                             onClick={handleCancel}
                             disabled={updating !== null}
                             className="w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 disabled:opacity-60"
                         >
                             {updating === 'CANCELLED' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                            Hủy lịch hẹn
+                            {appointment.status === 'PENDING' 
+                                ? (appointment.createdByRole === 'ROLE_USER' ? 'Từ chối lịch hẹn' : 'Hủy yêu cầu') 
+                                : 'Hủy lịch hẹn'}
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Thông báo khi không thể hủy */}
-                {appointment.status === 'CONFIRMED' && appointmentStarted && (
-                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-100 text-[9px] text-amber-700 font-bold uppercase tracking-tight text-center">
-                        Không thể hủy sau khi đã đến giờ hẹn
-                    </div>
-                )}
                 {appointment.status === 'COMPLETED' && (
                     <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-[9px] text-blue-600 font-bold uppercase tracking-tight text-center">
                         Lịch hẹn đã hoàn thành
@@ -467,9 +492,26 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                                 )}
                                                 <td className="px-4 py-1 border-r border-gray-50/50">
                                                     <div className="flex justify-center">
-                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')} whitespace-nowrap`}>
-                                                            {cfg.label}
-                                                        </span>
+                                                        {(() => {
+                                                                const now = Date.now();
+                                                                const start = new Date(appt.startTime).getTime();
+                                                                const end = new Date(appt.endTime).getTime();
+                                                                
+                                                                const isPast = now > end;
+                                                                const isOngoing = now >= start && now <= end;
+                                                                
+                                                                const effectiveStatus = (appt.status === 'CONFIRMED' && isPast) ? 'COMPLETED' : appt.status;
+                                                                const cfg = STATUS_CONFIG[effectiveStatus];
+                                                                
+                                                                let label = cfg.label;
+                                                                if (appt.status === 'CONFIRMED' && isOngoing) label = 'Đang diễn ra';
+
+                                                                return (
+                                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight border ${cfg.bg} ${cfg.color} ${cfg.color.replace('text-', 'border-').replace('700', '200')} whitespace-nowrap`}>
+                                                                        {label}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-1">
@@ -560,6 +602,33 @@ function StaffScheduleContent() {
             toast.success(`Đã cập nhật trạng thái thành ${STATUS_CONFIG[status].label}`);
         } catch (err: any) { toast.error(err?.response?.data?.message || 'Không thể cập nhật trạng thái'); }
     };
+
+    // Tự động cập nhật DB cho các lịch hẹn đã quá giờ
+    useEffect(() => {
+        const autoUpdateOverdue = async () => {
+            const now = Date.now();
+            const overdue = appointments.filter(a => 
+                a.status === 'CONFIRMED' && 
+                now > new Date(a.endTime).getTime()
+            );
+
+            if (overdue.length > 0) {
+                console.log(`[Schedule] Tự động hoàn thành ${overdue.length} lịch hẹn quá hạn...`);
+                try {
+                    // Cập nhật từng cái trong DB
+                    await Promise.all(overdue.map(a => appointmentService.updateStatus(a.id, 'COMPLETED')));
+                    // Tải lại danh sách để đồng bộ DB
+                    fetchAppointments();
+                } catch (error) {
+                    console.error("[Schedule] Lỗi khi tự động cập nhật trạng thái:", error);
+                }
+            }
+        };
+
+        if (!isLoading && appointments.length > 0) {
+            autoUpdateOverdue();
+        }
+    }, [appointments, isLoading, fetchAppointments]);
 
     const displayedAppointments = myId
         ? appointments.filter(a => Number(a.staffId) === myId)

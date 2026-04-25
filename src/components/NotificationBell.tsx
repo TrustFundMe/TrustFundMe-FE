@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, X, Flag, Heart, MessageCircle, Megaphone, Info } from "lucide-react";
+import { Bell, X, Flag, Heart, MessageCircle, Megaphone, Info, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContextProxy";
@@ -38,6 +38,7 @@ function NotifIcon({ type }: { type: string }) {
   if (t.includes("campaign") || t.includes("update")) return <div style={{ ...base, background: "rgba(26,104,91,0.1)" }}><Megaphone className="w-4 h-4" style={{ color: "#1A685B" }} /></div>;
   if (t.includes("flag")) return <div style={{ ...base, background: "rgba(248,77,67,0.1)" }}><Flag className="w-4 h-4" style={{ color: "#F84D43" }} /></div>;
   if (t.includes("kyc")) return <div style={{ ...base, background: "rgba(59,130,246,0.1)" }}><Info className="w-4 h-4" style={{ color: "#3B82F6" }} /></div>;
+  if (t.includes("appointment")) return <div style={{ ...base, background: "rgba(255,94,20,0.1)" }}><Calendar className="w-4 h-4" style={{ color: "#FF5E14" }} /></div>;
 
   return <div style={{ ...base, background: "rgba(0,0,0,0.06)" }}><Bell className="w-4 h-4" style={{ color: "#666" }} /></div>;
 }
@@ -59,9 +60,10 @@ export default function NotificationBell() {
     createdAt: n.createdAt,
     link: (n.type === "CAMPAIGN_APPROVED" || n.type === "CAMPAIGN_REJECTED" || n.type === "EXPENDITURE_APPROVED" || n.type === "EXPENDITURE_REJECTED")
       ? `/account/campaigns?id=${n.targetId}`
-      : n.targetType === "CAMPAIGN" ? `/campaign/${n.targetId}` :
-        n.targetType === "FEED" ? `/forum/post/${n.targetId}` :
-          n.targetType === "Conversation" ? `/chat/${n.targetId}` : undefined
+      : n.targetType === "APPOINTMENT" ? `/account/profile?appointmentId=${n.targetId}` :
+        n.targetType === "CAMPAIGN" ? `/campaign/${n.targetId}` :
+          n.targetType === "FEED" ? `/forum/post/${n.targetId}` :
+            n.targetType === "Conversation" ? `/chat/${n.targetId}` : undefined
   }), []);
 
   const fetchNotifications = useCallback(async () => {
