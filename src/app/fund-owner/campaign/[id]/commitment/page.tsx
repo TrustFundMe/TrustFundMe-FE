@@ -630,7 +630,7 @@ export default function CommitmentPage() {
                 setShowSuccessModal(false);
                 router.push(`/fund-owner/campaign/${id}`);
               }}
-              className="w-full bg-[#446b5f] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-900/20 hover:bg-[#35534a] hover:scale-105 active:scale-95 transition-all"
+              className="w-full bg-[#1A685B] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-900/20 hover:bg-[#35534a] hover:scale-105 active:scale-95 transition-all"
             >
               VỀ TRANG CHIẾN DỊCH
             </button>

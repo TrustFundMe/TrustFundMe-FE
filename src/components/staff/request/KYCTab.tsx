@@ -31,7 +31,7 @@ interface UserWithKyc extends UserInfo {
 
 const statusConfig = {
   PENDING: { label: 'Chờ duyệt', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  APPROVED: { label: 'Đã duyệt', color: 'bg-[#446b5f]/10 text-[#446b5f]', icon: CheckCircle },
+  APPROVED: { label: 'Đã duyệt', color: 'bg-[#ff5e14]/10 text-[#ff5e14]', icon: CheckCircle },
   REJECTED: { label: 'Từ chối', color: 'bg-gray-100 text-gray-500', icon: XCircle },
 };
 
@@ -143,7 +143,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
               key={s}
               onClick={() => setFilter(s)}
               className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${filter === s
-                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                 }`}
             >
@@ -158,7 +158,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
             placeholder="Tìm theo tên, email, ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 w-[500px] bg-white transition-all focus:w-[550px]"
+            className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#ff5e14]/10 w-[500px] bg-white transition-all focus:w-[550px]"
           />
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
           <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative custom-scrollbar min-h-0">
             <table className="w-full min-w-[800px] text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
-                <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                <tr className="bg-[#ff5e14] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                   <th className="px-4 py-2 text-left first:rounded-tl-xl w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
                   <th className="px-4 py-2 text-left border-r border-white/5">NGƯỜI DÙNG</th>
                   <th className={`px-4 py-2 text-left border-r border-white/5 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>EMAIL</th>
@@ -212,8 +212,8 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                         }}
                         className={`group transition-all cursor-pointer ${
                           isSelected 
-                            ? 'bg-[#446b5f]/10' 
-                            : 'hover:bg-[#446b5f]/5'
+                            ? 'bg-[#ff5e14]/10' 
+                            : 'hover:bg-[#ff5e14]/5'
                         }`}
                       >
                         <td className="px-4 py-2 text-[10px] font-black text-gray-400 border-r border-gray-50/50">
@@ -222,7 +222,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                         <td className="px-4 py-2 border-r border-gray-50/50">
                           <div className="flex items-center gap-2">
                             <div className={`h-8 w-8 rounded-full flex items-center justify-center border border-white shadow-sm transition-colors ${
-                              isSelected ? 'bg-[#446b5f]/20 text-[#446b5f]' : 'bg-gray-100 text-gray-400 group-hover:bg-[#446b5f]/10 group-hover:text-[#446b5f]'
+                              isSelected ? 'bg-[#ff5e14]/20 text-[#ff5e14]' : 'bg-gray-100 text-gray-400 group-hover:bg-[#ff5e14]/10 group-hover:text-[#ff5e14]'
                             }`}>
                               <User className="h-4 w-4" />
                             </div>
@@ -266,7 +266,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                               handleOpenForm(user);
                             }}
                             className={`p-1.5 rounded-lg transition-all shadow-sm ${
-                              isSelected ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-[#446b5f] hover:text-white'
+                              isSelected ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-600 hover:bg-[#ff5e14] hover:text-white'
                             }`}
                             title={kycStatus === 'APPROVED' ? 'Xem chi tiết' : 'Nhập KYC'}
                           >
@@ -306,10 +306,10 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
         </div>
 
         {/* Form Area */}
-        <div className={`lg:col-span-5 flex flex-col gap-3 overflow-hidden transition-all duration-300 animate-in slide-in-from-right-4 ${showKycForm ? 'opacity-100' : 'hidden opacity-0'}`}>
+        <div className={`lg:col-span-5 flex flex-col gap-3 overflow-hidden ${showKycForm ? '' : 'hidden'}`}>
            <div className="flex items-center justify-between flex-shrink-0 px-1">
              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-[#446b5f] flex items-center justify-center text-white shadow-lg shadow-[#446b5f]/20">
+                <div className="h-8 w-8 rounded-xl bg-[#ff5e14] flex items-center justify-center text-white shadow-lg shadow-[#ff5e14]/20">
                    <Shield className="h-4 w-4" />
                 </div>
                 <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">

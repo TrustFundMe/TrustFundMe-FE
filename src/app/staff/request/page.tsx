@@ -6,11 +6,13 @@ import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, C
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
+import CampaignNewFlowDetail from '@/components/staff/request/CampaignNewFlowDetail';
 import ExpenditureRequestTab from '@/components/staff/request/ExpenditureRequestTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import KYCTab from '@/components/staff/request/KYCTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
 import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
+import { newFlowMockCampaigns } from '@/components/staff/request/newFlowMockData';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -25,7 +27,7 @@ export default function StaffRequestPage() {
     <Suspense fallback={
       <div className="flex-1 flex items-center justify-center bg-[#f1f5f9] min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#446b5f] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff5e14] mx-auto mb-4"></div>
           <p className="text-gray-500 font-bold uppercase tracking-widest">Đang tải yêu cầu...</p>
         </div>
       </div>
@@ -80,7 +82,7 @@ function StaffRequestContent() {
         .map(t => t.targetId);
 
       if (campaignTaskIds.length === 0) {
-        setCampaignRows([]);
+        setCampaignRows([...newFlowMockCampaigns]);
         setIsLoading(false);
         return;
       }
@@ -142,7 +144,7 @@ function StaffRequestContent() {
           };
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      setCampaignRows(buildCampaignRows(validCampaigns));
+      setCampaignRows([...buildCampaignRows(validCampaigns), ...newFlowMockCampaigns]);
       setTotalPages(1); // Task-based view usually doesn't need pagination for now
 
       // Auto-select from URL
@@ -161,18 +163,22 @@ function StaffRequestContent() {
   // Gọi khi click vào một dòng — load chi tiết campaign
   const handleSelectCampaign = async (campaignRequest: CampaignRequest) => {
     setSelectedCampaignId(campaignRequest.id);
-    setSelectedCampaignDetail(null); // clear stale data
+    setSelectedCampaignDetail(null);
+
+    if (campaignRequest.newFlowData) {
+      setIsLoadingDetail(false);
+      return;
+    }
+
     setIsLoadingDetail(true);
     try {
       const detail = await campaignService.getById(campaignRequest.campaignId);
       setSelectedCampaignDetail(detail);
 
-      // Kiểm tra trạng thái ký cam kết thực tế từ DB
       const isSigned = await campaignService.isCommitmentSigned(campaignRequest.campaignId);
       if (isSigned) {
         setSignedCommitmentIds(prev => new Set(prev).add(campaignRequest.campaignId));
       } else {
-        // Áp dụng luật: Quá 48h mà chưa ký -> tự động khóa thành DISABLED
         if (detail.status === 'PENDING' && detail.updatedAt) {
           const startTime = new Date(detail.updatedAt).getTime();
           const deadline = startTime + (48 * 60 * 60 * 1000);
@@ -314,15 +320,15 @@ function StaffRequestContent() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`relative px-6 py-2.5 text-sm font-bold transition-all duration-200 group ${isActive
-                    ? 'bg-white text-[#446b5f] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
+                    ? 'bg-white text-[#ff5e14] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11'
                     : 'bg-gray-200/80 text-gray-500 rounded-t-xl hover:bg-gray-200 z-10 h-9 mb-0.5'
                     }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={`h-4 w-4 ${isActive ? 'text-[#446b5f]' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                    <Icon className={`h-4 w-4 ${isActive ? 'text-[#ff5e14]' : 'text-gray-400 group-hover:text-gray-600'}`} />
                     <span className="whitespace-nowrap">{tab.label}</span>
                     {tab.count !== undefined && (
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#446b5f]/10 text-[#446b5f]' : 'bg-gray-300 text-gray-600'}`}>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? 'bg-[#ff5e14]/10 text-[#ff5e14]' : 'bg-gray-300 text-gray-600'}`}>
                         {tab.count}
                       </span>
                     )}
@@ -336,7 +342,7 @@ function StaffRequestContent() {
           <button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95"
+            className="mb-1 h-10 w-10 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-[#ff5e14] hover:border-[#ff5e14]/20 transition shadow-sm group active:scale-95"
             title="Làm mới trang"
           >
             <RefreshCw className={`h-5 w-5 transition-transform group-hover:rotate-180 ${isLoading ? 'animate-spin' : ''}`} />
@@ -359,7 +365,7 @@ function StaffRequestContent() {
                     type="button"
                     onClick={() => setCampaignStatus(s)}
                     className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${campaignStatus === s
-                      ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                      ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                       : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >
@@ -369,11 +375,11 @@ function StaffRequestContent() {
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 min-h-0">
-                <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedCampaignId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+                <div className="overflow-hidden flex flex-col gap-3 lg:col-span-12">
                   <div className="flex items-center justify-between flex-shrink-0 px-1">
                     <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách nhiệm vụ duyệt chiến dịch</h2>
                   </div>
-                  <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm transition-all duration-500">
+                  <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm">
                     {isLoading ? (
                       <div className="p-4 space-y-3 animate-pulse">
                         {[...Array(5)].map((_, i) => (
@@ -399,6 +405,11 @@ function StaffRequestContent() {
                             render: (r: CampaignRequest) => (
                               <div>
                                 <div className="font-black text-gray-900 text-xs uppercase tracking-tight line-clamp-1">{r.campaignTitle}</div>
+                                {r.newFlowData && (
+                                  <span className="inline-flex items-center mt-0.5 text-[8px] font-black text-brand bg-orange-50 px-1.5 py-0.5 rounded-full border border-orange-100 uppercase tracking-wider">
+                                    Quy trình mới
+                                  </span>
+                                )}
                               </div>
                             ),
                           },
@@ -531,45 +542,6 @@ function StaffRequestContent() {
                   </div>
                 </div>
 
-                {selectedCampaignId && (
-                  <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar animate-in slide-in-from-right-4 transition-all duration-500">
-                    {isLoadingDetail ? (
-                      <div className="flex flex-col items-center justify-center h-48 gap-3">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#446b5f] border-t-transparent" />
-                        <span className="text-xs font-bold text-gray-400">Đang tải chi tiết...</span>
-                      </div>
-                    ) : (
-                      <RequestDetailPanel
-                        request={selectedCampaign}
-                        title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
-                        onClose={() => setSelectedCampaignId(undefined)}
-                        fields={[
-                          { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật' },
-                          { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },
-                          { label: 'Chủ quản', value: selectedCampaign?.requesterName },
-                          { label: 'Lĩnh vực', value: selectedCampaign?.category || 'Chưa cập nhật' },
-                          { label: 'Mô tả', value: selectedCampaign?.description || 'Chưa cập nhật' },
-                        ]}
-                        approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
-                        rejectDisabled={false}
-                        approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
-                          ? "Cần xác minh KYC trước khi duyệt chiến dịch"
-                          : ""
-                        }
-                        rejectDisabledReason=""
-                        actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
-                        onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
-                        onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
-                        onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
-                        onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
-                        onSendCommitmentEmail={() => selectedCampaign && handleSendCommitmentEmail(selectedCampaign)}
-                        commitmentSent={selectedCampaign ? sentCommitmentIds.has(selectedCampaign.campaignId) : false}
-                        commitmentSigned={selectedCampaign ? signedCommitmentIds.has(selectedCampaign.campaignId) : false}
-                        kycVerified={selectedCampaign?.kycVerified}
-                      />
-                    )}
-                  </div>
-                )}
               </div>
             </>
           ) : activeTab === 'EXPENDITURE' ? (
@@ -584,6 +556,62 @@ function StaffRequestContent() {
             <HistoryTab />
           )}
         </div>
+
+        {activeTab === 'CAMPAIGN' && selectedCampaignId && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 p-4 md:p-6">
+            <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto custom-scrollbar rounded-none">
+              {isLoadingDetail ? (
+                <div className="flex flex-col items-center justify-center h-64 gap-3 rounded-none border border-gray-100 bg-white">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff5e14] border-t-transparent" />
+                  <span className="text-xs font-bold text-gray-400">Đang tải chi tiết...</span>
+                </div>
+              ) : selectedCampaign?.newFlowData ? (
+                <CampaignNewFlowDetail
+                  request={selectedCampaign}
+                  square
+                  onClose={() => setSelectedCampaignId(undefined)}
+                  onApprove={(reason) => handleReviewCampaign(true, reason, selectedCampaign.campaignId)}
+                  onReject={(reason) => handleReviewCampaign(false, reason, selectedCampaign.campaignId)}
+                  onDisable={(reason) => handleDisableCampaign(selectedCampaign.campaignId, reason)}
+                  onSendCommitmentEmail={() => handleSendCommitmentEmail(selectedCampaign)}
+                  commitmentSent={sentCommitmentIds.has(selectedCampaign.campaignId)}
+                  commitmentSigned={signedCommitmentIds.has(selectedCampaign.campaignId)}
+                  onNavigateToKYC={() => handleNavigateToKYC(selectedCampaign.fundOwnerId)}
+                />
+              ) : (
+                <RequestDetailPanel
+                  request={selectedCampaign}
+                  square
+                  title={selectedCampaign ? `Chi tiết chiến dịch` : 'Chi tiết nhiệm vụ'}
+                  onClose={() => setSelectedCampaignId(undefined)}
+                  fields={[
+                    { label: 'Ngày tạo', value: selectedCampaign?.createdAt ? new Date(selectedCampaign.createdAt).toLocaleDateString('vi-VN') : 'Chưa cập nhật' },
+                    { label: 'Tên chiến dịch', value: selectedCampaign?.campaignTitle },
+                    { label: 'Chủ quản', value: selectedCampaign?.requesterName },
+                    { label: 'Lĩnh vực', value: selectedCampaign?.category || 'Chưa cập nhật' },
+                    { label: 'Mô tả', value: selectedCampaign?.description || 'Chưa cập nhật' },
+                  ]}
+                  approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
+                  rejectDisabled={false}
+                  approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
+                    ? "Cần xác minh KYC trước khi duyệt chiến dịch"
+                    : ""
+                  }
+                  rejectDisabledReason=""
+                  actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
+                  onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
+                  onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
+                  onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}
+                  onDisable={(reason: string | undefined) => handleDisableCampaign(selectedCampaign?.campaignId, reason)}
+                  onSendCommitmentEmail={() => selectedCampaign && handleSendCommitmentEmail(selectedCampaign)}
+                  commitmentSent={selectedCampaign ? sentCommitmentIds.has(selectedCampaign.campaignId) : false}
+                  commitmentSigned={selectedCampaign ? signedCommitmentIds.has(selectedCampaign.campaignId) : false}
+                  kycVerified={selectedCampaign?.kycVerified}
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

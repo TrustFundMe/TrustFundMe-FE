@@ -18,7 +18,7 @@ import CreateAppointmentModal from '@/components/staff/CreateAppointmentModal';
 
 const STATUS_CONFIG: Record<AppointmentStatus, { label: string; color: string; bg: string; dot: string; icon: React.ReactNode }> = {
     PENDING:   { label: 'Đang chờ xác nhận', color: 'text-amber-700',   bg: 'bg-amber-50 ring-amber-200',       dot: 'bg-amber-400',   icon: <Clock className="h-3 w-3" /> },
-    CONFIRMED: { label: 'Chuẩn bị gặp', color: 'text-[#446b5f]',   bg: 'bg-[#446b5f]/10 ring-[#446b5f]/20', dot: 'bg-[#446b5f]',   icon: <CheckCircle className="h-3 w-3" /> },
+    CONFIRMED: { label: 'Chuẩn bị gặp', color: 'text-[#ff5e14]',   bg: 'bg-[#ff5e14]/10 ring-[#ff5e14]/20', dot: 'bg-[#ff5e14]',   icon: <CheckCircle className="h-3 w-3" /> },
     CANCELLED: { label: 'Bị hủy',         color: 'text-gray-500',    bg: 'bg-gray-50 ring-gray-200',          dot: 'bg-gray-400',    icon: <XCircle className="h-3 w-3" /> },
     COMPLETED: { label: 'Hoàn thành gặp', color: 'text-blue-700',    bg: 'bg-blue-50 ring-blue-200',          dot: 'bg-blue-400',    icon: <CheckCircle className="h-3 w-3" /> },
 };
@@ -130,9 +130,9 @@ function AppointmentDetailPanel({ appointment, onStatusChange }: DetailPanelProp
                             <span className="text-gray-300 font-light text-lg">—</span>
                             <span className="text-xl font-black text-gray-800 tracking-tighter leading-none">{end.time}</span>
                         </div>
-                        <span className="text-[10px] font-black text-[#446b5f] uppercase tracking-wider">{duration}</span>
+                        <span className="text-[10px] font-black text-[#ff5e14] uppercase tracking-wider">{duration}</span>
                     </div>
-                    <p className="text-[10px] font-bold text-[#446b5f]/70 italic mt-1.5">{start.date}</p>
+                    <p className="text-[10px] font-bold text-[#ff5e14]/70 italic mt-1.5">{start.date}</p>
                 </div>
 
                 {/* Info Fields */}
@@ -393,7 +393,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                             key={s}
                             onClick={() => setStatusFilter(s as AppointmentStatus | 'ALL')}
                             className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                                ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                                 : 'border-gray-200 bg-white text-gray-400 hover:bg-gray-50'
                                 }`}
                         >
@@ -409,14 +409,14 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="Tìm nội dung lý do, người tham gia..."
-                        className="w-full pl-11 pr-4 py-2 rounded-xl border border-gray-100 text-[11px] font-bold focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 bg-white transition-all placeholder:text-gray-300"
+                        className="w-full pl-11 pr-4 py-2 rounded-xl border border-gray-100 text-[11px] font-bold focus:outline-none focus:ring-4 focus:ring-[#ff5e14]/5 bg-white transition-all placeholder:text-gray-300"
                     />
                 </div>
             </div>
 
             {/* Table + Detail */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
-                <div className={`overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedAppointment ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+                <div className={`overflow-hidden flex flex-col gap-3 ${selectedAppointment ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
                     <div className="flex items-center justify-between flex-shrink-0 px-2">
                         <div className="flex items-center gap-3">
                             <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">Danh sách nhiệm vụ lịch hẹn</h2>
@@ -426,20 +426,20 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                             <button
                                 onClick={onRefresh}
                                 disabled={isLoading || isRefreshing}
-                                className="h-9 w-9 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#446b5f] hover:border-[#446b5f]/20 transition shadow-sm group active:scale-95 disabled:opacity-50"
+                                className="h-9 w-9 rounded-2xl border border-gray-100 bg-white flex items-center justify-center text-gray-400 hover:text-[#ff5e14] hover:border-[#ff5e14]/20 transition shadow-sm group active:scale-95 disabled:opacity-50"
                                 title="Làm mới dữ liệu"
                             >
                                 <RefreshCw className={`h-4 w-4 transition-transform group-hover:rotate-180 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
                             </button>
                             <button
                                 onClick={onOpenCreate}
-                                className="flex items-center gap-2 px-6 py-2 rounded-2xl bg-gradient-to-r from-[#446b5f] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition shadow-lg shadow-green-100 active:scale-95"
+                                className="flex items-center gap-2 px-6 py-2 rounded-2xl bg-gradient-to-r from-[#ff5e14] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition shadow-lg shadow-green-100 active:scale-95"
                             >
                                 <Plus className="h-4 w-4" /> Tạo lịch hẹn
                             </button>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-auto rounded-[24px] border border-gray-100 shadow-sm transition-all duration-500 bg-white">
+                    <div className="flex-1 overflow-auto rounded-[24px] border border-gray-100 shadow-sm bg-white">
                         {isLoading ? (
                             <div className="p-20 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest italic animate-pulse whitespace-nowrap">Đang truy xuất dữ liệu...</div>
                         ) : filtered.length === 0 ? (
@@ -447,7 +447,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                         ) : (
                             <table className="w-full text-sm border-separate border-spacing-0">
                                 <thead>
-                                    <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm">
+                                    <tr className="bg-[#ff5e14] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm">
                                         <th className="px-4 py-2 text-left w-[50px] border-r border-white/5" title="Số Thứ Tự">STT</th>
                                         <th className={`px-4 py-2 text-left border-r border-white/5 ${selectedId ? 'min-w-[100px]' : 'min-w-[140px]'}`}>NGƯỜI THAM GIA</th>
                                         <th className={`px-4 py-2 text-left border-r border-white/5 ${selectedId ? 'min-w-[120px]' : 'min-w-[200px]'}`}>LÝ DO GẶP</th>
@@ -516,7 +516,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                                                 </td>
                                                 <td className="px-4 py-1">
                                                     <div className="flex justify-center">
-                                                        <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#446b5f] translate-x-1' : 'text-gray-300'}`} />
+                                                        <ChevronRight className={`h-4 w-4 transition-transform duration-300 ${isSelected ? 'text-[#ff5e14] translate-x-1' : 'text-gray-300'}`} />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -528,7 +528,7 @@ function ListView({ appointments, isLoading, onStatusChange, onOpenCreate, onRef
                     </div>
                 </div>
                 {selectedAppointment && (
-                    <div className="lg:col-span-4 overflow-hidden pt-[21px] animate-in slide-in-from-right duration-300">
+                    <div className="lg:col-span-4 overflow-hidden pt-[21px]">
                         <div className="flex items-center justify-between px-1 mb-2">
                             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
                             <button onClick={() => setSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">
@@ -551,7 +551,7 @@ export default function StaffSchedulePage() {
         <Suspense fallback={
             <div className="flex-1 flex items-center justify-center bg-white min-h-[400px]">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#446b5f] mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff5e14] mx-auto mb-4"></div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Đang tải lịch hẹn...</p>
                 </div>
             </div>
@@ -653,13 +653,13 @@ function StaffScheduleContent() {
                 {TABS.map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`relative px-6 py-2.5 text-[10px] font-black tracking-widest uppercase transition-all duration-300 flex items-center gap-2.5 ${activeTab === tab.id
-                            ? 'bg-white text-[#446b5f] rounded-t-2xl shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.1)] z-20 h-11 border-t-2 border-[#446b5f]'
+                            ? 'bg-white text-[#ff5e14] rounded-t-2xl shadow-[0_-8px_20px_-8px_rgba(0,0,0,0.1)] z-20 h-11 border-t-2 border-[#ff5e14]'
                             : 'bg-gray-100/50 text-gray-400 rounded-t-xl hover:bg-gray-200/50 z-10 h-9 mb-0.5'}`}>
                         {tab.icon}
                         <span className="whitespace-nowrap">{tab.label}</span>
                         {tab.id === 'list' && (
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all ${activeTab === 'list'
-                                ? 'bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20'
+                                ? 'bg-[#ff5e14]/10 text-[#ff5e14] border-[#ff5e14]/20'
                                 : 'bg-gray-200 text-gray-400 border-gray-300'
                                 }`}>
                                 {displayedAppointments.length}
@@ -690,7 +690,7 @@ function StaffScheduleContent() {
                     {activeTab === 'calendar' && (
                         <div className="flex-1 min-h-0 flex gap-4 overflow-hidden">
                             {/* Calendar takes remaining space */}
-                            <div className={`transition-all duration-500 overflow-hidden flex flex-col ${calendarSelectedId ? 'flex-[2]' : 'flex-1'}`}>
+                            <div className={`overflow-hidden flex flex-col ${calendarSelectedId ? 'flex-[2]' : 'flex-1'}`}>
                                 <CalendarView
                                     appointments={displayedAppointments}
                                     onSelect={appt => setCalendarSelectedId(appt.id)}
@@ -699,7 +699,7 @@ function StaffScheduleContent() {
                             </div>
                             {/* Detail panel — fixed width, always visible */}
                             {calendarSelectedId && (
-                                <div className="w-[340px] flex-shrink-0 overflow-auto animate-in slide-in-from-right duration-300">
+                                <div className="w-[340px] flex-shrink-0 overflow-auto">
                                     <div className="flex items-center justify-between px-1 mb-2">
                                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Chi tiết lịch hẹn</h3>
                                         <button onClick={() => setCalendarSelectedId(null)} className="h-6 w-6 rounded-lg hover:bg-gray-100 flex items-center justify-center transition">

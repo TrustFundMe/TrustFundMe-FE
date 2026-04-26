@@ -134,7 +134,7 @@ export default function CommitmentsPage() {
         return (
             <div className="min-h-[600px] flex items-center justify-center bg-slate-50/50 rounded-2xl w-full m-8">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-8 w-8 text-[#446b5f] animate-spin" />
+                    <Loader2 className="h-8 w-8 text-[#1A685B] animate-spin" />
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px]">Đang tải dữ liệu...</p>
                 </div>
             </div>
@@ -150,7 +150,7 @@ export default function CommitmentsPage() {
                         <h1 className="text-4xl font-[1000] text-slate-900 uppercase tracking-tighter leading-none">
                             Biên bản cam kết
                         </h1>
-                        <span className="px-3 py-1 bg-[#446b5f] text-white text-[10px] font-black rounded-full shadow-lg shadow-green-900/10">
+                        <span className="px-3 py-1 bg-[#1A685B] text-white text-[10px] font-black rounded-full shadow-lg shadow-green-900/10">
                             {campaigns.length} BẢN GỐC
                         </span>
                     </div>
@@ -161,7 +161,7 @@ export default function CommitmentsPage() {
 
                 {/* Refined Search Bar */}
                 <div className="relative w-full md:w-72 group">
-                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none transition-colors group-focus-within:text-[#446b5f]">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none transition-colors group-focus-within:text-[#1A685B]">
                         <Search className="h-4 w-4 text-slate-400" />
                     </div>
                     <input
@@ -169,7 +169,7 @@ export default function CommitmentsPage() {
                         placeholder="Tìm dự án..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[20px] text-sm focus:outline-none focus:border-[#446b5f]/50 focus:bg-white transition-all font-semibold placeholder:text-slate-300 shadow-sm shadow-slate-100/50"
+                        className="w-full pl-11 pr-10 py-3.5 bg-slate-50/50 border border-slate-200 rounded-[20px] text-sm focus:outline-none focus:border-[#1A685B]/50 focus:bg-white transition-all font-semibold placeholder:text-slate-300 shadow-sm shadow-slate-100/50"
                     />
                     {searchTerm && (
                         <button
@@ -205,7 +205,7 @@ export default function CommitmentsPage() {
                         className="!w-full px-0"
                         renderItem={(camp, index, isSelected) => (
                             <div className={`group bg-white border rounded-[24px] transition-all flex items-stretch overflow-hidden h-[120px]
-                                ${isSelected ? 'border-[#446b5f]/40 bg-green-50/10' : 'border-gray-100'}`}>
+                                ${isSelected ? 'border-[#1A685B]/40 bg-green-50/10' : 'border-gray-100'}`}>
 
                                 {/* Campaign Image - ĐẢM BẢO TRÀN KHUNG TỪ TRÊN XUỐNG DƯỚI */}
                                 <div className="w-[180px] shrink-0 relative overflow-hidden bg-slate-50">
@@ -221,7 +221,7 @@ export default function CommitmentsPage() {
 
                                 <div className="flex-1 flex items-center justify-between px-8 py-2">
                                     <div className="flex flex-col gap-1.5 min-w-0">
-                                        <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#446b5f] transition-all line-clamp-1 pr-4">{camp.title}</h3>
+                                        <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#1A685B] transition-all line-clamp-1 pr-4">{camp.title}</h3>
                                         <div className="flex items-center gap-3">
                                             <span className={`px-2 py-0.5 rounded-[6px] text-[9px] font-black uppercase tracking-widest ${camp.isSigned
                                                     ? 'bg-emerald-50 text-emerald-700'
@@ -254,7 +254,7 @@ export default function CommitmentsPage() {
                                             href={`/fund-owner/campaign/${camp.id}/commitment`}
                                             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${camp.isSigned
                                                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                                    : 'bg-[#446b5f] text-white hover:bg-[#355249]'
+                                                    : 'bg-[#1A685B] text-white hover:bg-[#355249]'
                                                 }`}>
                                             {camp.isSigned ? 'Xem' : 'Ký ngay'}
                                             <ArrowRight className="h-4 w-4" />

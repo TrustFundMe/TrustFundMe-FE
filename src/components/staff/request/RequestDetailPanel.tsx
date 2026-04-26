@@ -30,6 +30,7 @@ interface RequestDetailPanelProps<T extends StaffRequestBase> {
   kycVerified?: boolean;
   readOnly?: boolean;
   hideActions?: boolean;
+  square?: boolean;
 }
 
 export default function RequestDetailPanel<T extends StaffRequestBase>({
@@ -56,6 +57,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   kycVerified,
   readOnly,
   hideActions,
+  square = false,
 }: RequestDetailPanelProps<T>) {
   const [note, setNote] = useState('');
 
@@ -76,7 +78,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm space-y-3">
+    <div className={`${square ? 'rounded-none' : 'rounded-2xl'} border border-gray-200 bg-white p-3.5 shadow-sm space-y-3`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 border-b border-gray-50 pb-3">
         <div className="flex items-center gap-3">
@@ -187,7 +189,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               {(request.status === 'APPROVED' || request.status === 'WITHDRAWAL_REQUESTED') && onDisburse && !hideActions && (
                 <button
                   onClick={onDisburse}
-                  className="w-full py-3 bg-[#446b5f] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[#355249] transition-all shadow-lg shadow-green-100 active:scale-95 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#ff5e14] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[#355249] transition-all shadow-lg shadow-green-100 active:scale-95 flex items-center justify-center gap-2"
                 >
                   <ShieldCheck className="h-5 w-5" />
                   Xác nhận đã chuyển tiền
@@ -241,7 +243,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Nhập lý do từ chối hoặc ghi chú góp ý..."
-              className="w-full rounded-xl border-gray-200 text-sm shadow-sm focus:border-[#446b5f] focus:ring-4 focus:ring-[#446b5f]/5 p-2.5"
+              className="w-full rounded-xl border-gray-200 text-sm shadow-sm focus:border-[#ff5e14] focus:ring-4 focus:ring-[#ff5e14]/5 p-2.5"
               rows={3}
             />
           </div>
@@ -252,7 +254,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                 onClick={onSendCommitmentEmail}
                 disabled={!kycVerified || commitmentSigned}
                 title={commitmentSigned ? "Người dùng đã ký cam kết, không cần gửi lại" : (!kycVerified ? "Cần xác minh KYC người dùng trước khi gửi mail cam kết" : "Gửi yêu cầu ký cam kết qua email")}
-                className="w-full rounded-xl border-2 border-dashed border-[#446b5f]/30 py-2.5 text-[11px] font-black uppercase tracking-widest text-[#446b5f] hover:border-[#446b5f] hover:bg-[#446b5f]/5 disabled:opacity-40 disabled:bg-gray-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full rounded-xl border-2 border-dashed border-[#ff5e14]/30 py-2.5 text-[11px] font-black uppercase tracking-widest text-[#ff5e14] hover:border-[#ff5e14] hover:bg-[#ff5e14]/5 disabled:opacity-40 disabled:bg-gray-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 <Mail className="h-4 w-4" />
                 Gửi mail yêu cầu ký cam kết
@@ -287,7 +289,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
                 onClick={() => onApprove(note)}
                 disabled={approveDisabled || !commitmentSigned}
                 title={!kycVerified ? "Cần xác minh KYC trước" : !commitmentSigned ? "Chờ người dùng ký cam kết" : approveDisabledReason}
-                className="flex-[1.5] rounded-xl bg-[#446b5f] py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#355249] disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg shadow-green-100 transition-all active:scale-95"
+                className="flex-[1.5] rounded-xl bg-[#ff5e14] py-2.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-[#355249] disabled:opacity-50 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg shadow-green-100 transition-all active:scale-95"
               >
                 {(!kycVerified || !commitmentSigned) ? "CHƯA ĐỦ ĐIỀU KIỆN" : "DUYỆT YÊU CẦU"}
               </button>
@@ -324,7 +326,7 @@ export default function RequestDetailPanel<T extends StaffRequestBase>({
               {actionLabel && onActionClick && (
                 <button
                   onClick={onActionClick}
-                  className="w-full mt-3 py-2.5 bg-blue-600 rounded-xl text-[11px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:scale-95 animate-in zoom-in-95 duration-300"
+                  className="w-full mt-3 py-2.5 bg-blue-600 rounded-xl text-[11px] font-black uppercase tracking-widest text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:scale-95"
                 >
                   <ShieldCheck className="h-4 w-4" />
                   {actionLabel}

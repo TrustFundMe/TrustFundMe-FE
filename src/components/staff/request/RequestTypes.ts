@@ -26,6 +26,7 @@ export type CampaignRequest = StaffRequestBase & {
   kycVerified?: boolean;
   bankVerified?: boolean;
   fundOwnerId: number;
+  newFlowData?: NewFlowCampaignData;
 };
 
 export type ExpenditureItem = {
@@ -111,4 +112,48 @@ export type SupportRequest = StaffRequestBase & {
 
 export type TabType = 'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'USER_VERIFICATION';
 
+export type NewFlowEligibility = {
+  kycStatus: 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  kycFullName: string;
+  bankInfo: {
+    bankCode: string;
+    bankName: string;
+    accountHolderName: string;
+    accountNumber: string;
+  };
+  credibilityFiles: { id: string; name: string; sizeKb: number }[];
+  credibilityPitch: string;
+};
 
+export type NewFlowMilestone = {
+  id: string;
+  title: string;
+  description: string;
+  plannedAmount: number;
+  releaseCondition: string;
+};
+
+export type NewFlowAcknowledgements = {
+  legalRead: boolean;
+  slaAccepted: boolean;
+  overfundPolicyAccepted: boolean;
+  termsAccepted: boolean;
+  transparencyAccepted: boolean;
+  legalLiabilityAccepted: boolean;
+};
+
+export type NewFlowCampaignData = {
+  eligibility: NewFlowEligibility;
+  campaignImages: { id: string; url: string }[];
+  coverImageId: string;
+  objective: string;
+  targetAmount: number;
+  startDate: string;
+  endDate: string;
+  region: string;
+  beneficiaryType: string;
+  thankMessage: string;
+  milestones: NewFlowMilestone[];
+  acknowledgements: NewFlowAcknowledgements;
+  otpSigned: boolean;
+};

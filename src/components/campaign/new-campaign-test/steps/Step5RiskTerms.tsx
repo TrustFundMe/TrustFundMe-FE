@@ -63,11 +63,11 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
       >
         {/* Doc header */}
         <div className="mb-6 border-b border-gray-100 pb-5 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">Tài liệu mô phỏng nền tảng</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">Tài liệu nền tảng</p>
           <h3 className="mt-2 text-base font-bold text-gray-800">
             Quy tắc Quản trị Tài chính & Xử lý Rủi ro
           </h3>
-          <p className="mt-1 text-xs text-gray-400">Phiên bản: risk-tos-v1 · Ngày ban hành: 01/01/2026</p>
+          <p className="mt-1 text-xs text-gray-400">Phiên bản áp dụng: risk-tos-v1 · Ngày hiệu lực: 01/01/2026</p>
         </div>
 
         {/* Preamble */}
@@ -121,13 +121,14 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
       <motion.label
         animate={{ opacity: scrolledToEnd ? 1 : 0.5 }}
         transition={{ duration: 0.3 }}
-        className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4"
+        className={`mt-5 flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 ${scrolledToEnd ? 'cursor-pointer' : 'cursor-not-allowed'}`}
       >
         <div className="relative mt-0.5">
           <input
             type="checkbox"
-            className="peer h-5 w-5 cursor-pointer rounded border-gray-300 accent-brand"
+            className="peer h-5 w-5 rounded border-gray-300 accent-brand disabled:cursor-not-allowed"
             checked={accepted}
+            disabled={!scrolledToEnd}
             onChange={(e) =>
               onPatch({
                 acknowledgements: {
@@ -154,8 +155,13 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
             Tôi đã đọc và chấp nhận vô điều kiện
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
-            Tôi hiểu rõ các quy tắc quản trị tài chính, xử lý rủi ro và cơ chế hậu kiểm của nền tảng (mô phỏng).
+            Tôi hiểu rõ các quy tắc quản trị tài chính, xử lý rủi ro và cơ chế hậu kiểm của nền tảng.
           </p>
+          {!scrolledToEnd && (
+            <p className="mt-1 text-[11px] font-medium text-amber-700">
+              Vui lòng đọc hết tài liệu trước khi tick chấp nhận.
+            </p>
+          )}
         </div>
       </motion.label>
 

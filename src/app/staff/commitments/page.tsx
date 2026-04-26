@@ -209,7 +209,7 @@ export default function StaffCommitmentsPage() {
                             key={b.val}
                             onClick={() => setFilter(b.val)}
                             className={`inline-flex h-9 items-center rounded-full border px-5 text-xs font-bold uppercase tracking-widest transition-all ${filter === b.val
-                                    ? 'border-[#446b5f]/40 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                                    ? 'border-[#ff5e14]/40 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                                     : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                                 }`}
                         >
@@ -224,7 +224,7 @@ export default function StaffCommitmentsPage() {
                         placeholder="Tìm theo tên chiến dịch hoặc chủ quỹ..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 bg-white w-[350px]"
+                        className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#ff5e14]/10 bg-white w-[350px]"
                     />
                 </div>
             </div>
@@ -240,8 +240,8 @@ export default function StaffCommitmentsPage() {
 
                     {loading && campaigns.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-40">
-                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#446b5f] border-t-transparent mb-4" />
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#446b5f]">Khởi tạo danh sách...</p>
+                            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff5e14] border-t-transparent mb-4" />
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#ff5e14]">Khởi tạo danh sách...</p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center space-y-3 opacity-30 py-20">
@@ -253,14 +253,14 @@ export default function StaffCommitmentsPage() {
                             {filtered.map(camp => (
                                 <div
                                     key={camp.id}
-                                    className="group bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:border-[#446b5f] hover:shadow-lg"
+                                    className="group bg-white border border-gray-100 rounded-2xl overflow-hidden flex flex-col transition-all duration-300 hover:border-[#ff5e14] hover:shadow-lg"
                                 >
                                     {/* Photo Container */}
                                     <div className="aspect-[16/10] relative overflow-hidden bg-gray-100 flex-shrink-0">
                                         <img
                                             src={camp.coverImageUrl || FALLBACK_IMAGE}
                                             alt={camp.title}
-                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                            className="w-full h-full object-cover"
                                             onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
                                         />
                                     </div>
@@ -328,7 +328,7 @@ export default function StaffCommitmentsPage() {
                                                     <button
                                                         onClick={() => handleExportPDF(camp)}
                                                         disabled={exportingId === camp.id}
-                                                        className="flex-1 h-8 rounded-lg bg-[#446b5f] text-white hover:bg-[#3a5c51] transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide shadow-sm shadow-green-900/10"
+                                                        className="flex-1 h-8 rounded-lg bg-[#ff5e14] text-white hover:bg-[#3a5c51] transition-all flex items-center justify-center gap-1 font-bold text-[11px] uppercase tracking-wide shadow-sm shadow-green-900/10"
                                                     >
                                                         {exportingId === camp.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                                                         Xuất PDF
@@ -363,7 +363,7 @@ export default function StaffCommitmentsPage() {
                             key={i}
                             onClick={() => setPage(i)}
                             className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all ${page === i
-                                    ? 'bg-[#446b5f] text-white shadow-lg shadow-green-900/10'
+                                    ? 'bg-[#ff5e14] text-white shadow-lg shadow-green-900/10'
                                     : 'text-gray-400 hover:bg-gray-50'
                                 }`}
                         >

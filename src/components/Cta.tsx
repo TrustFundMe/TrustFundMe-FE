@@ -77,7 +77,21 @@ export const Cta2 = () => {
                 type="submit"
               >
                 <span>
-                  Bắt đầu ngay <i className="far fa-arrow-right" />
+                  Bắt đầu ngay{' '}
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    className="inline-block h-4 w-4 align-[-0.125em]"
+                  >
+                    <path
+                      d="M4 10h12M10 4l6 6-6 6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                 </span>
               </button>
             </div>

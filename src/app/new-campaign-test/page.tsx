@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CampaignPreviewPanel from '@/components/campaign/new-campaign-test/CampaignPreviewPanel';
 import NewCampaignTestStepper from '@/components/campaign/new-campaign-test/NewCampaignTestStepper';
 import { seedState } from '@/components/campaign/new-campaign-test/mockData';
@@ -25,7 +25,7 @@ const steps = [
   },
   { id: 'milestones', title: 'Giai đoạn', subtitle: 'Thiết lập các giai đoạn thực hiện & giải ngân' },
   { id: 'terms', title: 'Điều khoản', subtitle: 'Điều khoản bắt buộc' },
-  { id: 'review', title: 'Gửi duyệt', subtitle: 'OTP ký điện tử' },
+  { id: 'review', title: 'Gửi duyệt', subtitle: 'Xác nhận hồ sơ' },
 ];
 
 const stepVariants = {
@@ -43,9 +43,8 @@ export default function NewCampaignTestPage() {
   const [mockDraftId, setMockDraftId] = useState<string>('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [step6FullPreview, setStep6FullPreview] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpRequested, setOtpRequested] = useState(false);
   const [step2ShowErrors, setStep2ShowErrors] = useState(false);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
 
   const budgetTotal = useMemo(
     () => state.budgetLines.reduce((sum, item) => sum + (item.plannedAmount || 0), 0),
@@ -141,9 +140,8 @@ export default function NewCampaignTestPage() {
         state.bankInfo.accountHolderName.trim() !== '' &&
         state.acknowledgements.legalRead &&
         state.acknowledgements.slaAccepted,
-      otpOk: otpRequested && otpCode.trim().length >= 4,
     };
-  }, [state, step2Errors, milestoneTotal, otpRequested, otpCode]);
+  }, [state, step2Errors, milestoneTotal]);
 
   const canSubmit = Object.values(finalValidations).every(Boolean);
 
@@ -195,21 +193,26 @@ export default function NewCampaignTestPage() {
     [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext],
   );
 
+  useEffect(() => {
+    if (!mainScrollRef.current) return;
+    mainScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeStep]);
+
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-slate-50">
+    <div id="new-campaign-test-root" className="flex h-[100dvh] flex-col overflow-hidden bg-slate-50">
       {/* Top bar */}
       <header className="shrink-0 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center gap-4 px-4 py-3 md:px-8">
+        <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-2 md:px-8">
           <button
             type="button"
             onClick={() => {
               if (activeStep > 0) goToStep(activeStep - 1);
               else if (typeof window !== 'undefined') window.history.back();
             }}
-            className="group inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+            className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
             aria-label="Quay lại"
           >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden>
+            <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" aria-hidden>
               <path
                 d="M12 4l-6 6 6 6"
                 stroke="currentColor"
@@ -220,26 +223,17 @@ export default function NewCampaignTestPage() {
             </svg>
             Quay lại
           </button>
-          <div className="h-5 w-px bg-slate-200" aria-hidden />
+          <div className="h-4 w-px bg-slate-200" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-              Hồ sơ chiến dịch
-            </p>
-            <h1 className="truncate text-[15px] font-semibold leading-tight text-slate-900">
+            <h1 className="truncate text-[13px] font-semibold leading-tight text-slate-900">
               Tạo chiến dịch gây quỹ từ thiện
             </h1>
-          </div>
-          <div className="hidden items-center gap-2 md:flex">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              Bản nháp
-            </span>
           </div>
         </div>
 
         {/* Horizontal stepper — compact, always on screen */}
         <div className="border-t border-slate-100">
-          <div className="mx-auto max-w-[1200px] px-4 py-3 md:px-8">
+          <div className="mx-auto max-w-[1200px] px-4 py-1.5 md:px-8 md:py-2">
             <NewCampaignTestStepper
               steps={steps}
               activeIndex={activeStep}
@@ -251,7 +245,7 @@ export default function NewCampaignTestPage() {
       </header>
 
       {/* Scrollable content */}
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main ref={mainScrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[960px] px-4 py-6 md:px-8 md:py-8">
         {/* Step content with animation */}
         <AnimatePresence mode="wait">
@@ -308,10 +302,6 @@ export default function NewCampaignTestPage() {
               <Step6ReviewSubmit
                 state={state}
                 checks={finalValidations}
-                otpCode={otpCode}
-                onChangeOtp={setOtpCode}
-                onRequestOtp={() => setOtpRequested(true)}
-                otpRequested={otpRequested}
                 onOpenFullPreview={() => setStep6FullPreview(true)}
                 onPrev={() => goToStep(3)}
                 onSubmit={handleMockSubmit}
@@ -350,6 +340,21 @@ export default function NewCampaignTestPage() {
           }}
         />
       )}
+      <style jsx global>{`
+        #new-campaign-test-root h1,
+        #new-campaign-test-root h2,
+        #new-campaign-test-root h3,
+        #new-campaign-test-root h4,
+        #new-campaign-test-root p,
+        #new-campaign-test-root span,
+        #new-campaign-test-root label,
+        #new-campaign-test-root li,
+        #new-campaign-test-root button,
+        #new-campaign-test-root input,
+        #new-campaign-test-root textarea {
+          font-size: 0.92em !important;
+        }
+      `}</style>
     </div>
   );
 }

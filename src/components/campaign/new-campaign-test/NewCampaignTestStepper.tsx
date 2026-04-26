@@ -1,8 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Fragment } from 'react';
-
 type StepItem = { id: string; title: string; subtitle: string };
 
 interface Props {
@@ -11,20 +9,6 @@ interface Props {
   /** Bước xa nhất đã đạt tới — cho phép nhảy tự do trong [0, maxReached] */
   maxReached?: number;
   onJump: (idx: number) => void;
-}
-
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className="h-3 w-3" aria-hidden>
-      <path
-        d="M3.5 8.5l3 3 6-6.5"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 /**
@@ -43,77 +27,56 @@ export default function NewCampaignTestStepper({
 
   return (
     <nav aria-label="Quy trình tạo chiến dịch" className="w-full">
-      <ol className="flex items-center">
+      <ol className="grid grid-cols-1 gap-2 md:grid-cols-5 md:gap-3">
         {steps.map((step, idx) => {
           const done = idx < activeIndex;
           const active = idx === activeIndex;
           const canClick = idx !== activeIndex && idx <= reached;
-          const isLast = idx === steps.length - 1;
-          // Connector "đã qua" khi bước kế tiếp đã từng đạt tới
-          const connectorDone = idx < reached;
 
           return (
-            <Fragment key={step.id}>
-              <li className="flex min-w-0 shrink-0 items-center">
-                <button
-                  type="button"
-                  aria-current={active ? 'step' : undefined}
-                  onClick={() => canClick && onJump(idx)}
-                  disabled={!canClick && !active}
-                  title={`${step.title} — ${step.subtitle}`}
-                  className={`group flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors ${
-                    canClick ? 'cursor-pointer hover:bg-orange-50' : 'cursor-default'
-                  }`}
-                >
-                  {/* Marker */}
+            <li key={step.id} className="min-w-0">
+              <button
+                type="button"
+                aria-current={active ? 'step' : undefined}
+                onClick={() => canClick && onJump(idx)}
+                disabled={!canClick && !active}
+                title={step.title}
+                className={`group relative w-full overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition-all ${
+                  active
+                    ? 'border-orange-200 bg-orange-50 shadow-[0_10px_24px_-18px_rgba(249,115,22,0.7)]'
+                    : done
+                      ? 'border-emerald-200 bg-emerald-50/60'
+                      : 'border-slate-200 bg-white'
+                } ${canClick ? 'cursor-pointer hover:border-orange-200 hover:bg-orange-50/50' : 'cursor-default'}`}
+              >
+                <div className="flex items-center gap-2">
                   <span
-                    className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10.5px] font-semibold tabular-nums transition-colors ${
+                    className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold leading-none tabular-nums transition-colors ${
                       done
-                        ? 'border-orange-500 bg-orange-500 text-white'
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
                         : active
                           ? 'border-orange-600 bg-orange-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-400 group-hover:border-orange-300'
+                          : 'border-slate-300 bg-white text-slate-500'
                     }`}
                   >
-                    {done ? <CheckIcon /> : idx + 1}
-                    {active && (
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute -inset-[3px] rounded-full ring-2 ring-orange-500/25"
-                      />
-                    )}
+                    {idx + 1}
                   </span>
-
-                  {/* Label */}
                   <span
-                    className={`whitespace-nowrap text-[12.5px] font-medium leading-none transition-colors ${
-                      active
-                        ? 'text-orange-700'
-                        : done
-                          ? 'text-slate-700 group-hover:text-orange-700'
-                          : 'text-slate-500'
-                    } ${active ? 'inline' : 'hidden md:inline'}`}
+                    className={`min-w-0 truncate whitespace-nowrap text-xs font-semibold leading-none ${
+                      active ? 'text-orange-700' : done ? 'text-emerald-700' : 'text-slate-700'
+                    }`}
                   >
                     {step.title}
                   </span>
-                </button>
-              </li>
-
-              {!isLast && (
-                <li
-                  aria-hidden
-                  className="relative mx-2 h-px min-w-[16px] flex-1 bg-slate-200 md:mx-3"
-                >
+                </div>
+                {active && (
                   <motion.span
-                    initial={false}
-                    animate={{ scaleX: connectorDone ? 1 : 0 }}
-                    style={{ transformOrigin: 'left center' }}
-                    transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                    className="absolute inset-0 block bg-orange-500"
+                    layoutId="active-step-highlight"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-orange-500"
                   />
-                </li>
-              )}
-            </Fragment>
+                )}
+              </button>
+            </li>
           );
         })}
       </ol>

@@ -144,7 +144,7 @@ export default function ScheduleFormModal({
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4" style={{ background: 'linear-gradient(135deg, #446b5f, #2d4a42)' }}>
+                        <div className="flex items-center justify-between px-5 py-4" style={{ background: 'linear-gradient(135deg, #1A685B, #2d4a42)' }}>
                             <div className="flex items-center gap-2">
                                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                                     <CalendarDays size={16} className="text-white" />
@@ -183,7 +183,7 @@ export default function ScheduleFormModal({
                                     value={purpose}
                                     onChange={(e) => setPurpose(e.target.value)}
                                     placeholder="Vd: Thảo luận dự án từ thiện..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#446b5f] focus:ring-2 focus:ring-[#446b5f]/10 transition-all"
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1A685B] focus:ring-2 focus:ring-[#1A685B]/10 transition-all"
                                 />
                             </div>
 
@@ -195,7 +195,7 @@ export default function ScheduleFormModal({
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                     placeholder="Vd: Online, Quán cà phê..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#446b5f] focus:ring-2 focus:ring-[#446b5f]/10 transition-all"
+                                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#1A685B] focus:ring-2 focus:ring-[#1A685B]/10 transition-all"
                                 />
                             </div>
 
@@ -243,9 +243,9 @@ export default function ScheduleFormModal({
 
                             {/* Preview thời gian */}
                             {startDate && endDate && (
-                                <div className="bg-[#446b5f]/5 border border-[#446b5f]/10 rounded-xl px-3 py-2 flex items-center gap-2">
-                                    <Clock size={13} className="text-[#446b5f] shrink-0" />
-                                    <span className="text-[11px] text-[#446b5f] font-bold">
+                                <div className="bg-[#1A685B]/5 border border-[#1A685B]/10 rounded-xl px-3 py-2 flex items-center gap-2">
+                                    <Clock size={13} className="text-[#1A685B] shrink-0" />
+                                    <span className="text-[11px] text-[#1A685B] font-bold">
                                         {formatPreview(startDate, startHour, startMinute)} → {formatPreview(endDate, endHour, endMinute)}
                                     </span>
                                 </div>
@@ -264,8 +264,8 @@ export default function ScheduleFormModal({
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="flex-[2] px-4 py-2.5 text-sm font-black text-white rounded-xl shadow-lg transition-all shadow-[#446b5f]/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-                                    style={{ backgroundColor: '#446b5f' }}
+                                    className="flex-[2] px-4 py-2.5 text-sm font-black text-white rounded-xl shadow-lg transition-all shadow-[#1A685B]/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                    style={{ backgroundColor: '#1A685B' }}
                                 >
                                     {isSubmitting ? (
                                         <>
@@ -320,7 +320,7 @@ function DateTimeBlock({
                     value={date}
                     min={minDate}
                     onChange={(e) => onDateChange(e.target.value)}
-                    className="w-full pl-7 pr-2 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#446b5f] focus:ring-2 focus:ring-[#446b5f]/10 transition-all cursor-pointer"
+                    className="w-full pl-7 pr-2 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#1A685B] focus:ring-2 focus:ring-[#1A685B]/10 transition-all cursor-pointer"
                 />
             </div>
 
@@ -331,7 +331,7 @@ function DateTimeBlock({
                     <select
                         value={hour}
                         onChange={(e) => onHourChange(Number(e.target.value))}
-                        className="w-full pl-6 pr-1 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#446b5f] focus:ring-2 focus:ring-[#446b5f]/10 transition-all appearance-none cursor-pointer bg-white"
+                        className="w-full pl-6 pr-1 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#1A685B] focus:ring-2 focus:ring-[#1A685B]/10 transition-all appearance-none cursor-pointer bg-white"
                     >
                         {HOURS.map(h => (
                             <option key={h} value={h}>{String(h).padStart(2, '0')}h</option>
@@ -341,7 +341,7 @@ function DateTimeBlock({
                 <select
                     value={minute}
                     onChange={(e) => onMinuteChange(Number(e.target.value))}
-                    className="w-14 px-1 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#446b5f] focus:ring-2 focus:ring-[#446b5f]/10 transition-all appearance-none cursor-pointer bg-white text-center"
+                    className="w-14 px-1 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#1A685B] focus:ring-2 focus:ring-[#1A685B]/10 transition-all appearance-none cursor-pointer bg-white text-center"
                 >
                     {MINUTES.map(m => (
                         <option key={m} value={m}>{String(m).padStart(2, '0')}</option>

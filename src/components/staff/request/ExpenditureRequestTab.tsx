@@ -82,7 +82,7 @@ const ItemTable = ({
                             <div className="text-[9px] text-gray-400 font-medium mt-0.5">{i.note || 'Chi tiêu phục vụ chiến dịch'}</div>
                         </td>
                         <td className="py-2 px-3 text-right">
-                            <div className="text-[11px] font-black text-[#446b5f]">{fmtNum(i.quantity * i.expectedPrice)}</div>
+                            <div className="text-[11px] font-black text-[#ff5e14]">{fmtNum(i.quantity * i.expectedPrice)}</div>
                             <div className="text-[9px] text-gray-400 font-bold mt-0.5">{i.quantity} x {fmtNum(i.expectedPrice)}</div>
                         </td>
                     </tr>
@@ -93,7 +93,7 @@ const ItemTable = ({
             <tfoot className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
                 <tr className="font-black text-gray-800">
                     <td colSpan={2} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng kế hoạch:</td>
-                    <td className="py-2.5 px-3 text-right text-xs text-[#446b5f]">{fmtNum(totalPlan)} đ</td>
+                    <td className="py-2.5 px-3 text-right text-xs text-[#ff5e14]">{fmtNum(totalPlan)} đ</td>
                 </tr>
             </tfoot>
         </table>
@@ -152,7 +152,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
         <div className={`border rounded-xl transition-all mb-2 ${open ? 'border-emerald-100 bg-emerald-50/10' : 'border-gray-100 bg-white'}`}>
             <div onClick={() => setOpen(!open)} className="p-3 flex items-center justify-between cursor-pointer">
                 <div className="flex items-center gap-3">
-                    <div className={`h-6 w-6 rounded flex items-center justify-center transition-all ${open ? 'bg-[#446b5f] text-white' : 'bg-gray-50 text-gray-400'}`}>
+                    <div className={`h-6 w-6 rounded flex items-center justify-center transition-all ${open ? 'bg-[#ff5e14] text-white' : 'bg-gray-50 text-gray-400'}`}>
                         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </div>
                     <div className="space-y-0.5">
@@ -170,7 +170,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
             </div>
 
             {open && (
-                <div className="p-3 pt-0 animate-in fade-in duration-300">
+                <div className="p-3 pt-0">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                         <div className="lg:col-span-8 space-y-3">
                             <div className="bg-white rounded-lg border border-gray-100 overflow-hidden min-h-[100px] max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -181,7 +181,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                         </div>
                         <div className="lg:col-span-4 space-y-3">
                             {exp.accountNumber && (
-                                <div className="bg-[#446b5f] rounded-lg p-2.5 text-white">
+                                <div className="bg-[#ff5e14] rounded-lg p-2.5 text-white">
                                     <p className="text-[9px] font-bold uppercase opacity-60 mb-1">Thụ hưởng</p>
                                     <p className="text-[11px] font-bold tracking-wider leading-none mb-1">{exp.accountNumber}</p>
                                     <p className="text-[10px] opacity-90 truncate">{exp.accountHolderName} • {exp.bankCode}</p>
@@ -196,7 +196,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                                     {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
                                         <>
                                             <button onClick={() => setShowReject(true)} className="flex-1 h-8 rounded-lg border border-rose-100 text-rose-500 text-[10px] font-bold uppercase hover:bg-rose-50 transition-colors">TỪ CHỐI</button>
-                                            <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="flex-[2] h-8 rounded-lg bg-[#446b5f] text-white text-[10px] font-bold uppercase hover:bg-[#345249] transition-colors shadow-sm">DUYỆT CHI TIÊU</button>
+                                            <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="flex-[2] h-8 rounded-lg bg-[#ff5e14] text-white text-[10px] font-bold uppercase hover:bg-[#345249] transition-colors shadow-sm">DUYỆT CHI TIÊU</button>
                                         </>
                                     )}
                                 </div>
@@ -319,11 +319,11 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                         </div>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-300" />
-                            <input type="text" placeholder="Tìm tên chiến dịch..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-[11px] font-medium focus:bg-white focus:border-[#446b5f] transition-all outline-none" />
+                            <input type="text" placeholder="Tìm tên chiến dịch..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-gray-50 border border-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-[11px] font-medium focus:bg-white focus:border-[#ff5e14] transition-all outline-none" />
                         </div>
                         <div className="flex gap-2">
                             {['ALL', 'PENDING', 'APPROVED'].map(f => (
-                                <button key={f} onClick={() => setStatusFilter(f)} className={`flex-1 h-7 rounded-md text-[9px] font-bold uppercase transition-all ${statusFilter === f ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                                <button key={f} onClick={() => setStatusFilter(f)} className={`flex-1 h-7 rounded-md text-[9px] font-bold uppercase transition-all ${statusFilter === f ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
                                     {f === 'ALL' ? 'Tất cả' : f === 'PENDING' ? 'Mới' : 'Đã duyệt'}
                                 </button>
                             ))}
@@ -331,12 +331,12 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                     </div>
                     <div className={`flex-1 overflow-y-auto p-4 custom-scrollbar ${!selected ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start' : 'space-y-2'}`}>
                         {filtered.map(g => (
-                            <div key={g.key} onClick={() => setSelected(g)} className={`p-3.5 rounded-xl border transition-all cursor-pointer h-fit ${selected?.key === g.key ? 'border-[#446b5f] bg-emerald-50/10 shadow-sm shadow-emerald-500/5' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'}`}>
+                            <div key={g.key} onClick={() => setSelected(g)} className={`p-3.5 rounded-xl border transition-all cursor-pointer h-fit ${selected?.key === g.key ? 'border-[#ff5e14] bg-emerald-50/10 shadow-sm shadow-emerald-500/5' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'}`}>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[9px] font-bold text-gray-400 uppercase bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">{(CAM_TYPE as any)[g.campaignType] || 'Cộng đồng'}</span>
                                     {g.needsAttention && <div className="h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse" />}
                                 </div>
-                                <h3 className={`text-[12px] font-bold uppercase leading-snug mb-3 line-clamp-2 ${selected?.key === g.key ? 'text-[#446b5f]' : 'text-gray-900'}`}>{g.campaignTitle}</h3>
+                                <h3 className={`text-[12px] font-bold uppercase leading-snug mb-3 line-clamp-2 ${selected?.key === g.key ? 'text-[#ff5e14]' : 'text-gray-900'}`}>{g.campaignTitle}</h3>
                                 <div className="pt-3 border-t border-gray-50 flex items-center justify-between">
                                     <div className="space-y-0.5">
                                         <p className="text-[8px] font-bold text-gray-400 uppercase">Số dư quỹ</p>
@@ -352,9 +352,9 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                 </div>
 
                 {selected && (
-                    <div className="lg:col-span-8 flex flex-col bg-white overflow-hidden animate-in slide-in-from-right-4 duration-300">
+                    <div className="lg:col-span-8 flex flex-col bg-white overflow-hidden">
                         <div className="relative h-[120px] flex-shrink-0 group overflow-hidden">
-                            <img src={selected.campaignImageUrl || FALLBACK_IMAGE} alt="banner" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 transition-all duration-700" />
+                            <img src={selected.campaignImageUrl || FALLBACK_IMAGE} alt="banner" className="w-full h-full object-cover grayscale opacity-80" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                             <button onClick={() => setSelected(null)} className="absolute top-4 right-4 h-7 w-7 rounded-full bg-black/20 text-white flex items-center justify-center hover:bg-black/50 transition-all"><X className="h-4 w-4" /></button>
                             <div className="absolute bottom-4 left-6 right-6">
@@ -365,7 +365,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                         <div className="grid grid-cols-3 border-b border-gray-50 py-2.5 px-6">
                             <div className="space-y-0.5"><p className="text-[8px] font-bold text-gray-400 uppercase">Số dư quỹ</p><p className="text-[11px] font-bold text-emerald-600">{fmt(selected.campaignBalance)}</p></div>
                             <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Tiến độ</p><p className="text-[11px] font-bold text-gray-900">{Math.round(selected.campaignProgress)}%</p></div>
-                            <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Trạng thái</p><span className="text-[9px] font-bold text-[#446b5f] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">Quản lý</span></div>
+                            <div className="space-y-0.5 border-l border-gray-100 pl-4"><p className="text-[8px] font-bold text-gray-400 uppercase">Trạng thái</p><span className="text-[9px] font-bold text-[#ff5e14] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 uppercase">Quản lý</span></div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             <div className="flex items-center gap-2 mb-2 opacity-30"><LayoutDashboard className="h-3 w-3" /><span className="text-[9px] font-bold uppercase tracking-widest">Danh sách đợt chi</span></div>

@@ -13,7 +13,7 @@ interface Props {
 }
 
 const inCls =
-  'rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition duration-150 focus:border-brand focus:ring-2 focus:ring-orange-100';
+  'rounded-xl border border-[#d9e0e7] bg-white px-3 py-2.5 text-sm text-[#202426] outline-none transition duration-150 focus:border-[#ff5e14] focus:ring-2 focus:ring-[#ff5e14]/20';
 
 function TrashIcon() {
   return (
@@ -31,9 +31,6 @@ function formatVnd(n: number): string {
 export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext }: Props) {
   const target = state.campaignCore.targetAmount;
   const milestonesOk = milestoneTotal === target && target > 0;
-  const diff = milestoneTotal - target;
-  const barColor = milestonesOk ? '#10b981' : diff > 0 ? '#ef4444' : '#f97316';
-  const scaleX = target > 0 ? Math.min(milestoneTotal / target, 1) : 0;
 
   const updateMilestone = (id: string, patch: Partial<Milestone>) => {
     onPatch({ milestones: state.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
@@ -64,50 +61,28 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     });
   };
 
-  // Cumulative progress for each milestone
-  let cumulative = 0;
-
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm md:p-6">
-      <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 3 — Mốc giải ngân</h2>
-      <p className="mt-0.5 text-sm text-gray-500">
-        Thiết lập các chặng giải ngân. Chặng cuối tự động nhận phần còn lại. Tổng phải bằng mục tiêu quyên góp.
+    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-5">
+      <h2 className="text-xl font-bold tracking-tight text-[#202426]">Bước 3 — Mốc giải ngân</h2>
+      <p className="mt-0.5 text-sm text-[#2f3a44]">
+        Thiết lập theo từng đợt. Chỉ cần nhập rõ tên đợt và mô tả đợt để staff dễ duyệt.
       </p>
 
-      {/* Overall progress */}
-      <div className="mt-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">Tổng giải ngân</p>
+      {/* Tổng giải ngân */}
+      <div className="mt-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#dfe6ee] bg-[#fff8f3] px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8a5a2b]">Tổng giải ngân</p>
           <motion.span
-            animate={{ color: milestonesOk ? '#059669' : diff > 0 ? '#dc2626' : '#6b7280' }}
+            animate={{ color: milestonesOk ? '#059669' : '#dc2626' }}
             className="text-sm font-semibold tabular-nums"
           >
             {formatVnd(milestoneTotal)} / {formatVnd(target)} đ
-            {diff !== 0 && target > 0 && (
-              <span className="ml-1 text-xs font-medium">
-                ({diff > 0 ? '+' : ''}{formatVnd(diff)})
-              </span>
-            )}
-            {target > 0 && (
-              <span className="ml-1.5 text-xs font-medium text-gray-400">
-                ({((milestoneTotal / target) * 100).toFixed(1)}%)
-              </span>
-            )}
           </motion.span>
         </div>
-
-        {target > 0 && (
-          <div className="mb-5 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
-            <div
-              className="h-full w-full origin-left rounded-full transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
-              style={{ transform: `scaleX(${scaleX})`, backgroundColor: barColor }}
-            />
-          </div>
-        )}
       </div>
 
       {/* Milestone cards */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {state.milestones.map((m, idx) => {
           const isLast = idx === state.milestones.length - 1;
           const sumBeforeLast = state.milestones
@@ -115,103 +90,54 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
             .reduce((sum, item) => sum + (item.plannedAmount || 0), 0);
           const autoLastAmount = Math.max(target - sumBeforeLast, 0);
           const effectiveAmount = isLast ? autoLastAmount : m.plannedAmount;
-          const pct = target > 0 ? (effectiveAmount / target) * 100 : 0;
-          cumulative += effectiveAmount;
-          const cumulativePct = target > 0 ? (cumulative / target) * 100 : 0;
-          const milestoneBarScale = target > 0 ? Math.min(effectiveAmount / target, 1) : 0;
-
           return (
             <motion.div
               key={m.id}
               layout
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50/80"
+              className="relative ml-4 overflow-visible rounded-xl border border-[#e5ebf1] bg-[#fcfdfd]"
             >
-              {/* Milestone progress bar (thin, at top) */}
-              <div className="h-1.5 w-full bg-gray-100">
-                <div
-                  className="h-full rounded-r-full transition-all duration-500"
-                  style={{
-                    width: `${Math.min(pct, 100)}%`,
-                    backgroundColor: pct > 50 ? '#f59e0b' : '#f97316',
-                  }}
-                />
-              </div>
-
-              <div className="p-4">
-                {/* Header row */}
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-brand">
+              <span className="absolute -left-6 top-5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#ffd8bf] bg-[#ffefe4] text-sm font-black text-[#ff5e14] shadow-sm">
                     {idx + 1}
-                  </span>
-                  <input
-                    className={`${inCls} flex-1 font-semibold`}
-                    value={m.title}
-                    placeholder="Tên mốc giải ngân..."
-                    onChange={(e) => updateMilestone(m.id, { title: e.target.value })}
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <span className="whitespace-nowrap rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold tabular-nums text-brand">
-                      {pct.toFixed(1)}%
-                    </span>
-                    <button
-                      type="button"
-                      disabled={state.milestones.length <= 1}
-                      onClick={() => removeMilestone(m.id)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-gray-400 ring-1 ring-gray-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-100 disabled:cursor-not-allowed disabled:opacity-35"
-                      aria-label="Xóa mốc"
-                    >
-                      <TrashIcon />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div className="mt-2.5">
-                  <textarea
-                    className={`${inCls} w-full resize-none text-sm leading-relaxed`}
-                    rows={2}
-                    placeholder="Mô tả mục tiêu cần đạt cho mốc này..."
-                    value={m.description}
-                    onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                  />
-                </div>
-
-                {/* Release condition + Amount */}
-                <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_180px]">
-                  <input
-                    className={`${inCls} text-sm`}
-                    placeholder="Điều kiện giải ngân..."
-                    value={m.releaseCondition}
-                    onChange={(e) => updateMilestone(m.id, { releaseCondition: e.target.value })}
-                  />
-                  <div className="relative">
+              </span>
+              <div className="p-3">
+                <div className="grid gap-2.5 md:grid-cols-[1fr_1.35fr_auto] md:items-start">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[#202426]">Tên đợt</p>
                     <input
-                      type="number"
-                      className={`${inCls} w-full pr-11 text-right font-mono tabular-nums disabled:bg-gray-100 disabled:text-gray-500`}
-                      value={effectiveAmount || ''}
-                      disabled={isLast}
-                      placeholder="0"
-                      onChange={(e) => updateMilestone(m.id, { plannedAmount: Number(e.target.value) || 0 })}
+                      className={`${inCls} w-full font-semibold`}
+                      value={m.title}
+                      placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
+                      spellCheck={false}
+                      onChange={(e) => updateMilestone(m.id, { title: e.target.value })}
                     />
-                    <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-gray-400">
-                      đ
-                    </span>
                   </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[#202426]">Mô tả đợt</p>
+                    <textarea
+                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
+                      rows={3}
+                      placeholder="Mô tả ngắn mục tiêu và công việc chính..."
+                      value={m.description}
+                      spellCheck={false}
+                      onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={state.milestones.length <= 1}
+                    onClick={() => removeMilestone(m.id)}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#9aa5b1] ring-1 ring-[#d9e0e7] transition hover:bg-[#fff1f1] hover:text-[#dc2626] hover:ring-[#fecaca] disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label="Xóa mốc"
+                  >
+                    <TrashIcon />
+                  </button>
                 </div>
 
-                {/* Footer info */}
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                  {isLast && <p>Tự điền phần còn lại theo mục tiêu.</p>}
-                  <p className="ml-auto tabular-nums">
-                    Lũy kế: {formatVnd(cumulative)} đ ({cumulativePct.toFixed(1)}%)
-                  </p>
-                </div>
-
-                {pct > 50 && (
-                  <p className="mt-1 text-xs font-medium text-amber-600">
-                    ⚠ Chặng này chiếm {pct.toFixed(1)}% mục tiêu.
+                {isLast && (
+                  <p className="mt-1.5 text-xs text-[#2f3a44]">
+                    Đợt cuối tự động nhận phần kinh phí còn lại theo mục tiêu chiến dịch.
                   </p>
                 )}
               </div>
@@ -224,19 +150,19 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       <button
         type="button"
         onClick={addMilestone}
-        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-orange-200 bg-orange-50/40 py-3 text-sm font-semibold text-brand transition hover:bg-orange-50 sm:w-auto sm:px-6"
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#ffcfb3] bg-[#fff4ec] py-2.5 text-sm font-semibold text-[#ff5e14] transition hover:bg-[#ffe9db] sm:w-auto sm:px-5"
       >
         <span className="text-base leading-none">+</span> Thêm mốc giải ngân
       </button>
 
       {/* Navigation */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2.5">
         <motion.button
           type="button"
           onClick={onPrev}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+          className="rounded-full px-5 py-2.5 text-sm font-semibold text-[#202426] ring-1 ring-[#d9e0e7] hover:bg-[#f7f9fb]"
         >
           Quay lại
         </motion.button>

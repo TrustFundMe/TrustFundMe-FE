@@ -26,7 +26,7 @@ export const lawReferences = [
   'Thông tư 41/2022/TT-BTC về chế độ kế toán hoạt động xã hội, từ thiện.',
 ];
 
-/** Nội dung rút gọn: tài khoản nhận riêng (tham chiếu Nghị định 93/2021) — bản giao diện mock. */
+/** Nội dung rút gọn: tài khoản nhận riêng (tham chiếu Nghị định 93/2021). */
 export const decree93SeparateAccountNotice = `Căn cứ quy định về huy động và sử dụng đóng góp tự nguyện, chủ tài khoản cam kết sử dụng tài khoản thanh toán tách bạch, phục vụ xử lý dòng tiền gây quỹ minh bạch và đối soát, không trộn lẫn mục đích cá nhân ngoài phạm vi chiến dịch đã công bố.
 Việc cung cấp sao kê/ảnh thẻ (che số dư) nhằm xác minh quyền sử dụng tài khoản; nền tảng không lưu thông tin nhạy cảm dư thừa sau khi đạt mục đích đối soát.`;
 
@@ -195,9 +195,9 @@ export const seedState: NewCampaignTestState = {
   acknowledgements: {
     legalRead: true,
     slaAccepted: true,
-    overfundPolicyAccepted: true,
-    termsAccepted: true,
-    transparencyAccepted: true,
-    legalLiabilityAccepted: true,
+    overfundPolicyAccepted: false,
+    termsAccepted: false,
+    transparencyAccepted: false,
+    legalLiabilityAccepted: false,
   },
 };

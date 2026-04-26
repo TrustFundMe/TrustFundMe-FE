@@ -258,7 +258,7 @@ export default function StaffFeedPostPage() {
               key={s}
               onClick={() => { setFilter(s); setCurrentPage(0); }}
               className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${filter === s
-                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+                ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                 }`}
             >
@@ -274,7 +274,7 @@ export default function StaffFeedPostPage() {
               placeholder="Tìm theo tiêu đề, nội dung, tác giả..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(0); }}
-              className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 w-[300px] lg:w-[400px] bg-white transition-all focus:w-[450px]"
+              className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#ff5e14]/10 w-[300px] lg:w-[400px] bg-white transition-all focus:w-[450px]"
             />
           </div>
           <button
@@ -298,7 +298,7 @@ export default function StaffFeedPostPage() {
           <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white relative">
             <table className="w-full text-sm border-separate border-spacing-0">
               <thead className="sticky top-0 z-20">
-                <tr className="bg-[#446b5f] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                <tr className="bg-[#ff5e14] text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                   <th className="px-4 py-3 text-left first:rounded-tl-xl w-[50px] border-r border-white/5" title="Số thứ tự">STT</th>
                   <th className="px-4 py-3 text-left border-r border-white/5">NỘI DUNG</th>
                   <th className={`px-4 py-3 text-left border-r border-white/5 ${showDetail ? 'hidden xl:table-cell' : ''}`}>TÁC GIẢ</th>
@@ -346,7 +346,7 @@ export default function StaffFeedPostPage() {
                         key={post.id}
                         onClick={() => handleOpenDetail(post)}
                         className={`group transition-all cursor-pointer ${
-                          isSelected ? 'bg-[#446b5f]/10' : 'hover:bg-[#446b5f]/5'
+                          isSelected ? 'bg-[#ff5e14]/10' : 'hover:bg-[#ff5e14]/5'
                         } ${post.isPinned ? 'bg-orange-50/20 hover:bg-orange-50/50' : ''}`}
                       >
                         <td className="px-4 py-3 text-[10px] font-black text-gray-400 border-r border-gray-50/50">
@@ -377,7 +377,7 @@ export default function StaffFeedPostPage() {
                         </td>
                         <td className={`px-4 py-3 border-r border-gray-50/50 text-center ${showDetail ? 'hidden 2xl:table-cell' : ''}`}>
                           {post.status === 'PUBLISHED' ? (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#446b5f]/10 text-[#446b5f] border border-[#446b5f]/20 whitespace-nowrap`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#ff5e14]/10 text-[#ff5e14] border border-[#ff5e14]/20 whitespace-nowrap`}>
                               Đã đăng
                             </span>
                           ) : post.status === 'ALLOWED_EDIT' ? (
@@ -401,7 +401,7 @@ export default function StaffFeedPostPage() {
                               handleOpenDetail(post);
                             }}
                             className={`p-1.5 rounded-lg transition-all shadow-sm border ${
-                              isSelected ? 'bg-[#446b5f] text-white border-[#446b5f]' : 'bg-white text-gray-500 border-gray-200 hover:border-[#446b5f]/30 hover:bg-[#446b5f]/5 hover:text-[#446b5f]'
+                              isSelected ? 'bg-[#ff5e14] text-white border-[#ff5e14]' : 'bg-white text-gray-500 border-gray-200 hover:border-[#ff5e14]/30 hover:bg-[#ff5e14]/5 hover:text-[#ff5e14]'
                             }`}
                             title="Xem chi tiết"
                           >
@@ -442,10 +442,10 @@ export default function StaffFeedPostPage() {
 
         {/* Detail Panel Area */}
         {selectedPost && (
-          <div className={`lg:col-span-4 flex flex-col gap-3 overflow-hidden transition-all duration-500 animate-in slide-in-from-right-4 ${showDetail ? 'opacity-100' : 'hidden opacity-0'}`}>
+          <div className={`lg:col-span-4 flex flex-col gap-3 overflow-hidden ${showDetail ? '' : 'hidden'}`}>
             <div className="flex items-center justify-between flex-shrink-0 px-1">
                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-xl bg-[#446b5f] flex items-center justify-center text-white shadow-sm">
+                  <div className="h-8 w-8 rounded-xl bg-[#ff5e14] flex items-center justify-center text-white shadow-sm">
                      <MessageSquare className="h-4 w-4" />
                   </div>
                   <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">
@@ -531,7 +531,7 @@ export default function StaffFeedPostPage() {
                  <div className="rounded-xl bg-gray-50/80 p-3 border border-gray-100/50 flex flex-col min-h-0">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tất cả bình luận</p>
-                      <span className="text-[9px] font-black text-[#446b5f] bg-[#446b5f]/10 px-2 py-0.5 rounded-full">{comments.length}</span>
+                      <span className="text-[9px] font-black text-[#ff5e14] bg-[#ff5e14]/10 px-2 py-0.5 rounded-full">{comments.length}</span>
                     </div>
                     <div className="space-y-3 p-2 max-h-[300px] overflow-y-auto custom-scrollbar bg-white rounded-lg border border-gray-100 shadow-sm flex-shrink-0">
                       {loadingComments ? (
@@ -598,7 +598,7 @@ export default function StaffFeedPostPage() {
                     </button>
                     
                     <div className="pt-3 text-center">
-                       <Link href={`/post/${selectedPost.id}`} target="_blank" className="text-[10px] font-black text-[#446b5f] opacity-80 hover:opacity-100 hover:underline uppercase tracking-widest inline-flex items-center gap-1">
+                       <Link href={`/post/${selectedPost.id}`} target="_blank" className="text-[10px] font-black text-[#ff5e14] opacity-80 hover:opacity-100 hover:underline uppercase tracking-widest inline-flex items-center gap-1">
                           Xem bài đăng <Eye className="w-3 h-3" />
                        </Link>
                     </div>

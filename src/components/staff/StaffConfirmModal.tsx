@@ -34,7 +34,7 @@ export default function StaffConfirmModal({
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <div className={`p-2 rounded-xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-[#446b5f]/10 text-[#446b5f]'}`}>
+            <div className={`p-2 rounded-xl ${isDanger ? 'bg-rose-50 text-rose-500' : 'bg-[#ff5e14]/10 text-[#ff5e14]'}`}>
               <AlertCircle className="h-5 w-5" />
             </div>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -59,7 +59,7 @@ export default function StaffConfirmModal({
               onClose();
             }}
             className={`flex-1 h-11 rounded-xl text-white text-xs font-black uppercase tracking-widest transition-all active:scale-[0.98] shadow-lg ${
-              isDanger ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-[#446b5f] shadow-[#446b5f]/20 hover:bg-[#355249]'
+              isDanger ? 'bg-rose-500 shadow-rose-500/20 hover:bg-rose-600' : 'bg-[#ff5e14] shadow-[#ff5e14]/20 hover:bg-[#355249]'
             }`}
           >
             {confirmLabel}

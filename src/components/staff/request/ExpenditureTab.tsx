@@ -96,7 +96,7 @@ function ExpenditureItemRow({ item }: { item: ExpenditureItem }) {
             <td className="py-2 px-3 text-xs text-right text-gray-600">{fmt(item.expectedPrice)}</td>
             <td className="py-2 px-3 text-xs text-right text-gray-600">{fmt(item.price)}</td>
             <td className="py-2 px-3 text-xs text-right font-semibold"
-                style={{ color: diff > 0 ? '#db5945' : diff < 0 ? '#446b5f' : '#6b7280' }}>
+                style={{ color: diff > 0 ? '#db5945' : diff < 0 ? '#ff5e14' : '#6b7280' }}>
                 {diff > 0 ? '+' : ''}{fmt(diff)}
             </td>
         </tr>
@@ -217,7 +217,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                             ) : (
                                 <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                                     <table className="w-full text-xs bg-white">
-                                        <thead className="bg-[#446b5f] text-white">
+                                        <thead className="bg-[#ff5e14] text-white">
                                             <tr className="text-[9px] font-black uppercase tracking-widest">
                                                 <th className="py-2 px-3 text-left border-r border-white/10 w-[40px]">STT</th>
                                                 <th className="py-2 px-3 text-left border-r border-white/10">Hàng hóa</th>
@@ -335,17 +335,17 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
             {/* Summary Stats Rows */}
             {expenditures.length > 0 && (
                 <div className="flex gap-2 mb-3 flex-shrink-0">
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
-                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">DỰ KIẾN</p>
-                        <p className="font-bold text-[#446b5f] text-[11px]">{fmt(totalExpected)}</p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#ff5e14]/20">
+                        <p className="text-[8px] font-black text-[#ff5e14]/60 uppercase tracking-widest mb-0.5">DỰ KIẾN</p>
+                        <p className="font-bold text-[#ff5e14] text-[11px]">{fmt(totalExpected)}</p>
                     </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
-                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">THỰC TẾ CHI</p>
-                        <p className="font-bold text-[#446b5f] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#ff5e14]/20">
+                        <p className="text-[8px] font-black text-[#ff5e14]/60 uppercase tracking-widest mb-0.5">THỰC TẾ CHI</p>
+                        <p className="font-bold text-[#ff5e14] text-[11px]">{fmt(campaign.balance + totalActual)}</p>
                     </div>
-                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#446b5f]/20">
-                        <p className="text-[8px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-0.5">DƯ</p>
-                        <p className="font-black text-[#446b5f] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
+                    <div className="flex-1 rounded-xl border border-gray-50 bg-white p-2 shadow-sm text-center border-b-[#ff5e14]/20">
+                        <p className="text-[8px] font-black text-[#ff5e14]/60 uppercase tracking-widest mb-0.5">DƯ</p>
+                        <p className="font-black text-[#ff5e14] text-[11px]">{fmt((campaign.balance + totalActual) - totalActual)}</p>
                     </div>
                 </div>
             )}
@@ -502,7 +502,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
         <div className="flex-1 flex gap-4 overflow-hidden">
             {/* Sidebar: Campaign List */}
             <div className="w-64 flex-shrink-0 flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
+                <div className="px-4 py-3 flex-shrink-0" style={{ background: 'linear-gradient(135deg,#ff5e14,#6a8d83)' }}>
                     <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Chiến dịch thu chi</h3>
                 </div>
                 <div className="px-2.5 py-2.5 border-b border-gray-50 flex-shrink-0 space-y-2">
@@ -513,7 +513,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                     </div>
                     <div className="flex gap-1 overflow-x-auto no-scrollbar">
                         <button onClick={() => setStatusFilter('ALL')}
-                            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${statusFilter === 'ALL' ? 'bg-[#446b5f] text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
+                            className={`px-3 py-1 rounded-md text-[9px] font-black uppercase transition-all whitespace-nowrap ${statusFilter === 'ALL' ? 'bg-[#ff5e14] text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}>
                             TẤT CẢ
                         </button>
                         <button onClick={() => setStatusFilter('PENDING')}
@@ -535,19 +535,19 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
                     ) : filtered.map(c => {
                         const isActive = selected?.id === c.id;
                         const isTarget = c.type === 'TARGET';
-                        const themeColor = isTarget ? '#446b5f' : '#db5945';
-                        const themeBg = isTarget ? 'bg-[#446b5f]' : 'bg-[#446b5f]';
+                        const themeColor = isTarget ? '#ff5e14' : '#db5945';
+                        const themeBg = isTarget ? 'bg-[#ff5e14]' : 'bg-[#ff5e14]';
 
                         return (
                             <button key={c.id} onClick={() => setSelected(c)}
-                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${isActive ? (isTarget ? 'bg-[#446b5f]/10' : 'bg-[#446b5f]/10') : 'hover:bg-gray-50/30'}`}>
+                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${isActive ? (isTarget ? 'bg-[#ff5e14]/10' : 'bg-[#ff5e14]/10') : 'hover:bg-gray-50/30'}`}>
                                 <div className="flex items-start gap-2.5">
                                     <div className={`h-8 w-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black ${isActive ? `${themeBg} text-white shadow-sm` : 'bg-gray-100 text-gray-400'}`}>
                                         {c.title[0]?.toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#446b5f]' : 'text-[#446b5f]') : 'text-gray-700'}`}>{c.title}</p>
+                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${isActive ? (isTarget ? 'text-[#ff5e14]' : 'text-[#ff5e14]') : 'text-gray-700'}`}>{c.title}</p>
                                             {(c as any).needsAttention && (
                                                 <span className="flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-pulse" />
                                             )}

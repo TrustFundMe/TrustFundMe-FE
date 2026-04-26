@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContextProxy";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Heart, Share2, Users, CreditCard, Smartphone, CheckCircle } from "lucide-react";
+import { Heart, Share2, Users, CreditCard, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function SignOutPage() {
@@ -81,19 +81,6 @@ export default function SignOutPage() {
                       <p className="text-muted mb-0">
                         Hoặc tìm "TrustFundMe" trên cửa hàng ứng dụng của bạn
                       </p>
-                    </div>
-                    <div className="col-lg-4 text-center">
-                      <div
-                        className="rounded-circle d-inline-flex align-items-center justify-content-center"
-                        style={{
-                          width: "120px",
-                          height: "120px",
-                          backgroundColor: "#ff5e14",
-                          color: "white",
-                        }}
-                      >
-                        <Smartphone size={60} />
-                      </div>
                     </div>
                   </div>
                 </div>

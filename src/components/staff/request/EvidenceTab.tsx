@@ -76,7 +76,7 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel, dange
                 <p className="text-xs text-gray-600 leading-relaxed mb-4">{message}</p>
                 <div className="flex gap-2">
                     <button onClick={onCancel} className="flex-1 py-2 rounded-lg border border-gray-200 text-xs text-gray-700 font-bold hover:bg-gray-50">Huỷ</button>
-                    <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-xs font-black text-white transition-all ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-[#446b5f] hover:bg-[#3a5c51]'}`}>{confirmLabel}</button>
+                    <button onClick={onConfirm} className={`flex-1 py-2 rounded-lg text-xs font-black text-white transition-all ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-[#ff5e14] hover:bg-[#3a5c51]'}`}>{confirmLabel}</button>
                 </div>
             </div>
         </div>
@@ -317,7 +317,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
             {/* ── Header ── */}
             <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-gray-50/40">
                 <div className="flex items-center justify-between mb-3">
-                    <p className="text-[9px] font-black text-[#446b5f] uppercase tracking-[0.2em]">Chi tiết bằng chứng</p>
+                    <p className="text-[9px] font-black text-[#ff5e14] uppercase tracking-[0.2em]">Chi tiết bằng chứng</p>
                 </div>
                 <div className="space-y-2">
                     <div className="flex items-start gap-2">
@@ -358,7 +358,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2.5">Thông tin chủ quỹ</p>
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-lg bg-[#446b5f]/10 flex items-center justify-center text-xs font-black text-[#446b5f] flex-shrink-0">{rec.ownerName[0]}</div>
+                            <div className="h-8 w-8 rounded-lg bg-[#ff5e14]/10 flex items-center justify-center text-xs font-black text-[#ff5e14] flex-shrink-0">{rec.ownerName[0]}</div>
                             <div>
                                 <p className="text-xs font-bold text-gray-800 leading-tight">{rec.ownerName}</p>
                                 <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{rec.ownerEmail}</p>
@@ -438,7 +438,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     {/* 1. AI */}
                     <button onClick={runAI} disabled={analyzing || !hasPhotos}
                         className="h-10 rounded-xl text-[10px] font-black text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-sm px-3"
-                        style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
+                        style={{ background: 'linear-gradient(135deg,#ff5e14,#6a8d83)' }}>
                         <Sparkles className="h-4 w-4" />
                         <span className="uppercase">AI Phân tích</span>
                     </button>
@@ -446,7 +446,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     {/* 2. Message */}
                     <button onClick={startChat} disabled={isChatting}
                         className="h-10 rounded-xl border border-gray-200 bg-white text-gray-700 text-[10px] font-black flex items-center justify-center gap-2 hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm px-3">
-                        <MessageSquare className="h-4 w-4 text-[#446b5f]" />
+                        <MessageSquare className="h-4 w-4 text-[#ff5e14]" />
                         <span className="uppercase">Nhắn tin</span>
                     </button>
 
@@ -664,7 +664,7 @@ export default function EvidenceTab() {
         <div className="flex-1 flex h-full min-h-0 gap-4 overflow-hidden">
             {/* ── Sidebar ── */}
             <div className={`${selected ? 'w-80 flex-shrink-0' : 'flex-1'} flex flex-col border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white`}>
-                <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#446b5f,#6a8d83)' }}>
+                <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ background: 'linear-gradient(135deg,#ff5e14,#6a8d83)' }}>
                     <h3 className="text-[11px] font-black text-white uppercase tracking-widest">Minh chứng chi tiêu</h3>
                     <button onClick={load} title="Làm mới" className="h-6 w-6 rounded hover:bg-white/10 flex items-center justify-center"><RefreshCw className="h-3.5 w-3.5 text-white/70" /></button>
                 </div>
@@ -675,7 +675,7 @@ export default function EvidenceTab() {
                     <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm kiếm..."
-                            className="w-full pl-7 pr-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#446b5f]/30" />
+                            className="w-full pl-7 pr-3 py-2 text-xs font-semibold rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-[#ff5e14]/30" />
                     </div>
                     <div className="flex gap-1">
                         {([
@@ -686,7 +686,7 @@ export default function EvidenceTab() {
                             { k: 'APPROVED',  v: 'Đã duyệt', t: 'Minh chứng đã được xác nhận' },
                         ] as const).map(f => (
                             <button key={f.k} onClick={() => setFilter(f.k)} title={f.t}
-                                className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase whitespace-nowrap transition-all ${filter === f.k ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                                className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase whitespace-nowrap transition-all ${filter === f.k ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                                 {f.v}
                             </button>
                         ))}
@@ -707,19 +707,19 @@ export default function EvidenceTab() {
                         const cfg = S[r.evidenceStatus] ?? S.PENDING;
                         return (
                             <button key={r.taskId} onClick={() => setSelected(r)}
-                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${active ? 'bg-[#446b5f]/5' : 'hover:bg-gray-50/50'}`}>
+                                className={`w-full text-left px-3 py-3 border-b border-gray-50 transition-all ${active ? 'bg-[#ff5e14]/5' : 'hover:bg-gray-50/50'}`}>
                                 <div className="flex items-start gap-2">
-                                    <div className={`h-9 w-9 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-black ${active ? 'bg-[#446b5f] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                    <div className={`h-9 w-9 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-black ${active ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-500'}`}>
                                         {over ? '!' : r.evidencePhotos.length > 0 ? r.evidencePhotos.length : r.campaignTitle[0]?.toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-1">
-                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${active ? 'text-[#446b5f]' : 'text-gray-800'}`}>{r.plan}</p>
+                                            <p className={`text-[11px] font-black truncate uppercase tracking-tighter ${active ? 'text-[#ff5e14]' : 'text-gray-800'}`}>{r.plan}</p>
                                             {over && <span className="text-[9px] font-black text-red-500 flex-shrink-0">QUÁ HẠN</span>}
                                         </div>
                                         <p className="text-[10px] text-gray-500 truncate">{r.campaignTitle}</p>
                                         <div className="flex items-center justify-between mt-1">
-                                            <span className="text-[10px] font-black text-[#446b5f]">{fmt(r.totalAmount)}</span>
+                                            <span className="text-[10px] font-black text-[#ff5e14]">{fmt(r.totalAmount)}</span>
                                             <span className="text-[9px] font-black px-1.5 py-0.5 rounded uppercase" style={{ color: cfg.c, background: cfg.bg }}>{cfg.label}</span>
                                         </div>
                                     </div>

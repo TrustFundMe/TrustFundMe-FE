@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Flag, Search, CheckCircle, Clock, Loader2, Lock, LockOpen, X, MessageCircle, Eye, Ban, Info, ArrowRight, Check } from 'lucide-react';
+import { Flag, Search, CheckCircle, Clock, Loader2, Lock, LockOpen, X, MessageCircle, Eye, Ban, Info, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { flagService, FlagDto } from '@/services/flagService';
 import { appointmentService } from '@/services/appointmentService';
@@ -20,8 +20,6 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { UserInfo } from '@/services/userService';
 
 type FlagStatus = 'PENDING' | 'RESOLVED';
-
-const FALLBACK_IMAGE = '/assets/img/flag.jpg';
 
 function formatDate(str?: string) {
   if (!str) return '-';
@@ -91,7 +89,6 @@ export default function FlagsManagementPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Track selected target key in a ref so effect can read it reliably
   const selectedTargetKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (selectedTarget) {
@@ -99,7 +96,6 @@ export default function FlagsManagementPage() {
     }
   }, [selectedTarget]);
 
-  // Sync selectedTarget.flags when allFlags changes from server
   useEffect(() => {
     const key = selectedTargetKeyRef.current;
     if (!key) return;
@@ -122,7 +118,6 @@ export default function FlagsManagementPage() {
     }
   };
 
-  // Group by target
   const groupedTargets = useMemo(() => {
     const map = new Map<string, GroupedTarget>();
 
@@ -133,17 +128,12 @@ export default function FlagsManagementPage() {
       const campaign = flag.campaign;
       const post = flag.post;
 
-      // Get title & image from embedded detail
       let title = `#${targetId}`;
-      let imageUrl: string | undefined = campaign?.imageUrl || (post as any)?.postImages?.[0]?.imageUrl || (post as any)?.imageUrl || FALLBACK_IMAGE;
+      let imageUrl: string | undefined = campaign?.imageUrl || (post as any)?.postImages?.[0]?.imageUrl || (post as any)?.imageUrl;
       let authorName = campaign?.authorName || post?.authorName || 'Vô danh';
-      
-      if (campaign) {
-        title = campaign.title || title;
-      }
-      if (post) {
-        title = post.title || title;
-      }
+
+      if (campaign) title = campaign.title || title;
+      if (post) title = post.title || title;
 
       if (!map.has(key)) {
         map.set(key, { key, type, targetId, title, imageUrl, authorName, flags: [], pendingCount: 0, totalCount: 0 });
@@ -171,7 +161,6 @@ export default function FlagsManagementPage() {
     });
   }, [allFlags, searchTerm, statusFilter]);
 
-  // Keep a live ref to groupedTargets so button can read latest without stale closure
   const groupedTargetsRef = useRef<GroupedTarget[]>([]);
   useEffect(() => { groupedTargetsRef.current = groupedTargets; }, [groupedTargets]);
 
@@ -199,11 +188,8 @@ export default function FlagsManagementPage() {
       await userService.banUser(userId, reason);
       await flagService.reviewFlag(flagId, 'RESOLVED');
       toast.success('Đã khóa tài khoản và xử lý báo cáo');
-      
-      // Refresh target user info immediately
       const res = await userService.getUserById(userId);
       if (res.success && res.data) setTargetUser(res.data);
-      
       fetchData();
     } catch { toast.error('Khóa tài khoản thất bại'); }
     finally { setLoading(false); }
@@ -218,8 +204,7 @@ export default function FlagsManagementPage() {
   useEffect(() => {
     const firstFlag = selectedTarget?.flags[0];
     const post = firstFlag?.post as any;
-    
-    // Resolve target IDs
+
     let targetCampaignId = selectedTarget?.type === 'CAMPAIGN' ? Number(selectedTarget.targetId) : (post?.campaignId || post?.targetId);
     let targetExpenditureId: number | undefined;
     if (post && (post.targetType === 'EXPENDITURE' || post.targetType === 'EVIDENCE')) {
@@ -230,7 +215,7 @@ export default function FlagsManagementPage() {
 
     if (selectedTarget) {
       const fetchExtra = async () => {
-        if (loadingDetails) return; 
+        if (loadingDetails) return;
         setLoadingDetails(true);
         try {
           let resolvedCampaignId = targetCampaignId;
@@ -254,8 +239,8 @@ export default function FlagsManagementPage() {
               campaignService.getFollowerCount(Number(resolvedCampaignId)),
               paymentService.getCampaignProgress(Number(resolvedCampaignId)).catch(() => null)
             ]);
-            
-            const latestExp = expenditures && expenditures.length > 0 
+
+            const latestExp = expenditures && expenditures.length > 0
               ? [...expenditures]
                   .filter((e: any) => e.status === 'DISBURSED' || e.status === 'APPROVED_DISBURSED' || e.status === 'PAID')
                   .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
@@ -268,8 +253,8 @@ export default function FlagsManagementPage() {
               donorCount: campaignProgress?.donorCount || 0,
               followerCount: followerData || 0,
               goalAmount: campaignProgress?.goalAmount || fullCampaign?.activeGoal?.targetAmount || 0,
-              progress: campaignProgress?.progressPercentage || (fullCampaign?.activeGoal?.targetAmount 
-                ? ((fullCampaign as any).raisedAmount || 0) / fullCampaign.activeGoal.targetAmount * 100 
+              progress: campaignProgress?.progressPercentage || (fullCampaign?.activeGoal?.targetAmount
+                ? ((fullCampaign as any).raisedAmount || 0) / fullCampaign.activeGoal.targetAmount * 100
                 : 0),
               raisedAmount: campaignProgress?.raisedAmount || (fullCampaign as any).raisedAmount || 0,
               startDate: fullCampaign?.startDate,
@@ -294,10 +279,9 @@ export default function FlagsManagementPage() {
             });
           }
 
-          // Resolve and fetch user independently
           const rawId = selectedTarget.flags[0]?.campaign?.authorId || (selectedTarget.flags[0]?.post as any)?.authorId || (selectedTarget.flags[0]?.post as any)?.fundOwnerId;
           const authorId = rawId ? Number(rawId) : undefined;
-          
+
           if (authorId && !isNaN(authorId)) {
             try {
               const [userRes, userAppts] = await Promise.all([
@@ -312,13 +296,13 @@ export default function FlagsManagementPage() {
               const latest = userAppts
                 .filter((a: any) => a.status !== 'CANCELLED')
                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-              
+
               if (latest) {
                 setAppointmentsMap(prev => {
                   const next = new Map(prev);
-                  next.set(selectedTarget.key, { 
-                    id: latest.id, 
-                    createdAt: new Date(latest.createdAt).getTime() 
+                  next.set(selectedTarget.key, {
+                    id: latest.id,
+                    createdAt: new Date(latest.createdAt).getTime()
                   });
                   return next;
                 });
@@ -352,7 +336,6 @@ export default function FlagsManagementPage() {
     setAiResult(null);
 
     try {
-      // Build target data from embedded campaign/post info
       const targetData = selectedTarget.type === 'CAMPAIGN'
         ? {
             type: 'CAMPAIGN',
@@ -360,7 +343,6 @@ export default function FlagsManagementPage() {
             title: selectedTarget.flags[0]?.campaign?.title || selectedTarget.title,
             description: selectedTarget.flags[0]?.campaign?.description,
             status: selectedTarget.flags[0]?.campaign?.status,
-            // Use real data from campaignDetails if available, fallback to flag data
             raisedAmount: campaignDetails?.raisedAmount ?? selectedTarget.flags[0]?.campaign?.raisedAmount ?? 0,
             goalAmount: campaignDetails?.goalAmount ?? 0,
             authorName: selectedTarget.flags[0]?.campaign?.authorName,
@@ -368,7 +350,6 @@ export default function FlagsManagementPage() {
             createdAt: campaignDetails?.campaignCreatedAt || selectedTarget.flags[0]?.campaign?.createdAt,
             totalFlags: selectedTarget.totalCount,
             pendingFlags: selectedTarget.pendingCount,
-            // Enhanced metadata
             ownerTrustScore: targetUser?.trustScore,
             ownerJoinedAt: targetUser?.createdAt,
             campaignStartDate: campaignDetails?.startDate,
@@ -378,7 +359,6 @@ export default function FlagsManagementPage() {
             lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
             currency: 'VND',
             dashboardUrl: `https://trust-fund-me-fe.vercel.app/campaigns-details?id=${selectedTarget.targetId}`,
-            // Gửi toàn bộ danh sách để AI có thể dẫn link
             allExpenditures: selectedTarget.type === 'CAMPAIGN' ? campaignDetails?.allExpenditures : [],
             ...campaignDetails,
           }
@@ -397,7 +377,6 @@ export default function FlagsManagementPage() {
             createdAt: selectedTarget.flags[0]?.post?.createdAt,
             totalFlags: selectedTarget.totalCount,
             pendingFlags: selectedTarget.pendingCount,
-            // Enhanced metadata
             ownerTrustScore: targetUser?.trustScore,
             ownerJoinedAt: targetUser?.createdAt,
             lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
@@ -420,15 +399,15 @@ export default function FlagsManagementPage() {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const handleMessage = async () => {
     if (!selectedTarget) return;
-    
+
     setIsStartingChat(true);
     try {
-      const authorId = selectedTarget.type === 'CAMPAIGN' 
-        ? selectedTarget.flags[0]?.campaign?.authorId 
+      const authorId = selectedTarget.type === 'CAMPAIGN'
+        ? selectedTarget.flags[0]?.campaign?.authorId
         : selectedTarget.flags[0]?.post?.authorId;
-      
-      const campaignId = selectedTarget.type === 'CAMPAIGN' 
-        ? selectedTarget.targetId 
+
+      const campaignId = selectedTarget.type === 'CAMPAIGN'
+        ? selectedTarget.targetId
         : undefined;
 
       if (!authorId) {
@@ -436,13 +415,12 @@ export default function FlagsManagementPage() {
         return;
       }
 
-      // Check if a conversation already exists for this author and campaign
       let conversationId: number | undefined;
       const convListRes = await chatService.getAllConversations();
-      
+
       if (convListRes.success && convListRes.data) {
-        const found = convListRes.data.find(c => 
-          c.fundOwnerId === authorId && 
+        const found = convListRes.data.find(c =>
+          c.fundOwnerId === authorId &&
           (campaignId ? c.campaignId === Number(campaignId) : true)
         );
         if (found) {
@@ -473,7 +451,7 @@ export default function FlagsManagementPage() {
 
   const handleLockCampaign = async () => {
     if (!selectedTarget || selectedTarget.type !== 'CAMPAIGN') return;
-    
+
     setDisableCampaignModal({
       isOpen: true,
       campaignId: selectedTarget.targetId,
@@ -518,7 +496,7 @@ export default function FlagsManagementPage() {
 
     const isCurrentlyLocked = post.isLocked;
     const actionText = isCurrentlyLocked ? 'mở khóa' : 'khóa';
-    
+
     setConfirmAction({
       type: 'LOCK_COMMENTS',
       postId: selectedTarget.targetId,
@@ -535,10 +513,9 @@ export default function FlagsManagementPage() {
       const { type, postId } = confirmAction;
       const post = selectedTarget?.flags[0]?.post;
       const isCurrentlyLocked = post?.isLocked;
-      
+
       const updatedPost = await feedPostService.lockPost(postId);
 
-      // Manual update to local state for immediate feedback
       setAllFlags(prev => prev.map(f => {
         if (f.postId === postId) {
           return { ...f, post: updatedPost as any };
@@ -551,8 +528,8 @@ export default function FlagsManagementPage() {
       } else {
         toast.success(`Đã cập nhật chặn bình luận`);
       }
-      
-      fetchData(); // Sync with server
+
+      fetchData();
     } catch (err) {
       toast.error('Thao tác thất bại');
     } finally {
@@ -567,7 +544,6 @@ export default function FlagsManagementPage() {
       setLoading(true);
       await userService.unbanUser(targetUser.id);
       toast.success('Đã gỡ đình chỉ tài khoản');
-      // Refresh user info
       const res = await userService.getUserById(targetUser.id);
       if (res.success && res.data) setTargetUser(res.data);
       fetchData();
@@ -585,12 +561,12 @@ export default function FlagsManagementPage() {
       const match = part.match(/\[(.*?)\]\((.*?)\)/);
       if (match) {
         return (
-          <a 
-            key={i} 
-            href={match[2]} 
-            target="_blank" 
+          <a
+            key={i}
+            href={match[2]}
+            target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-600 underline font-bold hover:text-amber-700 transition-colors"
+            className="text-[#ff5e14] underline font-bold hover:text-[#ea550c]"
           >
             {match[1]}
           </a>
@@ -609,8 +585,8 @@ export default function FlagsManagementPage() {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                ? 'border-[#446b5f]/30 bg-[#446b5f]/10 text-[#446b5f] shadow-sm'
+              className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest ${statusFilter === s
+                ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
               }`}
             >
@@ -625,24 +601,24 @@ export default function FlagsManagementPage() {
             placeholder="Tìm chiến dịch, bài viết, lý do..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#446b5f]/10 bg-white w-[300px]"
+            className="pl-10 pr-4 py-2 rounded-xl border border-gray-100 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#ff5e14]/10 bg-white w-[300px]"
           />
         </div>
       </div>
 
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 overflow-hidden">
-        {/* Left: Target cards */}
-        <div className={`flex flex-col gap-3 overflow-hidden transition-all duration-300 ${selectedTarget ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
+        {/* Left: Table list view */}
+        <div className={`flex flex-col gap-3 overflow-hidden ${selectedTarget ? 'lg:col-span-4' : 'lg:col-span-12'}`}>
           <div className="flex items-center justify-between flex-shrink-0 px-1">
             <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Danh sách báo cáo</h2>
             <span className="text-[10px] font-black text-gray-400">{groupedTargets.length} mục</span>
           </div>
 
-          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white p-3 custom-scrollbar">
+          <div className="flex-1 overflow-auto rounded-xl border border-gray-100 shadow-sm bg-white custom-scrollbar">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-[#446b5f]" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#ff5e14]" />
               </div>
             ) : groupedTargets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 opacity-40">
@@ -650,133 +626,121 @@ export default function FlagsManagementPage() {
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-3">Không có báo cáo</p>
               </div>
             ) : (
-              <div className={`grid gap-3 transition-all duration-300 ${
-                selectedTarget ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4 xl:grid-cols-6'
-              }`}>
-                {groupedTargets.map(group => {
-                  const isCampaign = group.type === 'CAMPAIGN';
-                  const isSelected = selectedTarget?.key === group.key;
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest w-8">#</th>
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">Loại</th>
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">Tên</th>
+                    {!selectedTarget && <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">Chủ sở hữu</th>}
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Báo cáo mới</th>
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest text-center">Tổng</th>
+                    <th className="px-3 py-2.5 text-[9px] font-black text-gray-400 uppercase tracking-widest">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {groupedTargets.map((group, idx) => {
+                    const isSelected = selectedTarget?.key === group.key;
+                    const isCampaign = group.type === 'CAMPAIGN';
 
-                  return (
-                    <button
-                      key={group.key}
-                      onClick={() => setSelectedTarget(isSelected ? null : group)}
-                      className={`group relative flex flex-col bg-white rounded-2xl overflow-hidden border-2 transition-all duration-300 ${
-                        isSelected 
-                          ? 'border-[#446b5f] shadow-xl ring-4 ring-[#446b5f]/5 -translate-y-1' 
-                          : 'border-gray-100 hover:border-gray-200 hover:shadow-lg hover:-translate-y-0.5'
-                      }`}
-                    >
-                      {/* Image Section - Shortened to Square */}
-                      <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
-                        <img
-                          src={group.imageUrl}
-                          alt={group.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
-                        />
-                        
-                        {/* Overlay Gradients */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-                        
-                        {/* Top Labels - Modern Text Indicators */}
-                        <div className="absolute top-2 left-2 right-2 flex justify-end">
-                           <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md shadow-lg border border-white/20 text-[9px] font-black uppercase tracking-widest ${
-                             isCampaign ? 'bg-orange-500/80 text-white' : 'bg-blue-600/80 text-white'
-                           }`}>
-                             {isCampaign ? 'Chiến dịch' : 'Bài viết'}
-                           </div>
-                        </div>
-
-                        {/* Title Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-3">
-                           <h4 className="text-[12px] font-black text-white uppercase tracking-tight leading-tight line-clamp-2 drop-shadow-md group-hover:text-white transition-colors">
-                             {group.title}
-                           </h4>
-                        </div>
-                      </div>
-
-                      {/* Footer Info - More Compact */}
-                      <div className="px-4 py-3 bg-white space-y-2">
-                        <div className="grid grid-cols-2 gap-2 border-b border-gray-50 pb-2">
-                           <div className="space-y-0.5 text-left overflow-hidden">
-                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-tight">Chủ sở hữu</p>
-                              <p className="text-[11px] font-bold text-gray-800 truncate uppercase">{group.authorName}</p>
-                           </div>
-                           <div className="space-y-0.5 text-right">
-                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-tight">Báo cáo mới</p>
-                              <p className="text-xs font-black text-[#446b5f] bg-[#446b5f]/5 px-2 py-0.5 rounded-md inline-block">
-                                {group.pendingCount}
-                              </p>
-                           </div>
-                        </div>
-
-                        {/* Status Row */}
-                        <div className="flex items-center justify-between">
-                           {group.pendingCount > 0 ? (
-                             <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-200">
-                               {group.pendingCount} chưa xử lý
-                             </span>
-                           ) : (
-                             <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-200">
-                               Đã xử lý ({group.totalCount})
-                             </span>
-                           )}
-                           <span className="text-[10px] font-black uppercase tracking-widest text-[#446b5f] group-hover:gap-2 transition-all flex items-center gap-1">
-                              Quản lý <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
-                           </span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                    return (
+                      <tr
+                        key={group.key}
+                        onClick={() => setSelectedTarget(isSelected ? null : group)}
+                        className={`cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#ff5e14]/5 border-l-2 border-l-[#ff5e14]'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <td className="px-3 py-2.5 text-[10px] font-bold text-gray-400">{idx + 1}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                            isCampaign ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'
+                          }`}>
+                            {isCampaign ? 'Chiến dịch' : 'Bài viết'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <p className={`text-[11px] font-bold truncate max-w-[200px] ${isSelected ? 'text-[#ff5e14]' : 'text-gray-800'}`}>
+                            {group.title}
+                          </p>
+                        </td>
+                        {!selectedTarget && (
+                          <td className="px-3 py-2.5 text-[11px] font-medium text-gray-600 truncate max-w-[120px]">
+                            {group.authorName}
+                          </td>
+                        )}
+                        <td className="px-3 py-2.5 text-center">
+                          {group.pendingCount > 0 ? (
+                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-black bg-[#ff5e14] text-white">
+                              {group.pendingCount}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-gray-300">0</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-[10px] font-bold text-gray-500">
+                          {group.totalCount}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          {group.pendingCount > 0 ? (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-50 text-amber-600 border border-amber-200">
+                              Chưa xử lý
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                              Đã xử lý
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
 
         {/* Right: Detail Panel */}
-        <div className={`lg:col-span-8 flex flex-col gap-4 overflow-hidden transition-all duration-500 ${selectedTarget ? 'opacity-100 translate-x-0' : 'hidden opacity-0 translate-x-4'}`}>
-          {selectedTarget ? (
-            <div className="flex flex-col h-full overflow-hidden rounded-[2rem] border border-gray-100 shadow-2xl bg-white relative">
-              <div className="flex-shrink-0 relative overflow-hidden group">
-                <div className="relative h-[120px] w-full">
-                  <img
-                    src={selectedTarget.imageUrl}
-                    alt={selectedTarget.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="flex items-end justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border backdrop-blur-md shadow-lg ${
-                              selectedTarget.type === 'CAMPAIGN' 
-                                ? 'bg-orange-500/20 text-orange-200 border-orange-400/30' 
-                                : 'bg-blue-500/20 text-blue-200 border-blue-400/30'
-                            }`}>
-                              {selectedTarget.type === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết'}
-                            </span>
-                            {selectedTarget.pendingCount > 0 && (
-                              <span className="px-3 py-1 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-lg">
-                                {selectedTarget.pendingCount} BÁO CÁO MỚI
-                              </span>
-                            )}
-                          </div>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight leading-tight line-clamp-1 drop-shadow-lg">
-                          {selectedTarget.title}
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() => setSelectedTarget(null)}
-                        className="p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-lg transition-all text-white flex-shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+        {selectedTarget && (
+          <div className="lg:col-span-8 flex flex-col gap-4 overflow-hidden">
+            <div className="flex flex-col h-full overflow-hidden rounded-2xl border border-gray-100 shadow-sm bg-white">
+              {/* Text-based header — no image */}
+              <div className="flex-shrink-0 px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                        selectedTarget.type === 'CAMPAIGN'
+                          ? 'bg-orange-50 text-orange-600 border border-orange-200'
+                          : 'bg-blue-50 text-blue-600 border border-blue-200'
+                      }`}>
+                        {selectedTarget.type === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết'}
+                      </span>
+                      {selectedTarget.pendingCount > 0 && (
+                        <span className="px-2.5 py-0.5 rounded text-[10px] font-black bg-rose-500 text-white">
+                          {selectedTarget.pendingCount} báo cáo mới
+                        </span>
+                      )}
+                      <span className="text-[10px] font-bold text-gray-400">
+                        Tổng: {selectedTarget.totalCount} báo cáo
+                      </span>
                     </div>
+                    <h3 className="text-base font-black text-gray-900 uppercase tracking-tight leading-tight truncate">
+                      {selectedTarget.title}
+                    </h3>
+                    <p className="text-[11px] font-medium text-gray-500 mt-0.5">
+                      Chủ sở hữu: <span className="font-bold text-gray-700">{selectedTarget.authorName}</span>
+                    </p>
                   </div>
+                  <button
+                    onClick={() => setSelectedTarget(null)}
+                    className="p-1.5 hover:bg-gray-200 rounded-lg text-gray-400 hover:text-gray-600 flex-shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
@@ -790,7 +754,7 @@ export default function FlagsManagementPage() {
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Số tiền quyên góp</p>
-                          <p className="text-[13px] font-bold text-[#446b5f]">{formatCurrency(selectedTarget.flags[0].campaign.raisedAmount)}</p>
+                          <p className="text-[13px] font-bold text-[#ff5e14]">{formatCurrency(selectedTarget.flags[0].campaign.raisedAmount)}</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Mục tiêu (VND)</p>
@@ -801,11 +765,11 @@ export default function FlagsManagementPage() {
                           <div className="flex items-center gap-1.5">
                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                <div
-                                 className="h-full bg-[#446b5f]"
+                                 className="h-full bg-[#ff5e14]"
                                  style={{ width: `${Math.min(campaignDetails?.progress || 0, 100)}%` }}
                                />
                              </div>
-                             <span className="text-[11px] font-bold text-[#446b5f]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
+                             <span className="text-[11px] font-bold text-[#ff5e14]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -842,7 +806,7 @@ export default function FlagsManagementPage() {
                         <div className="space-y-1">
                            <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Chủ tài khoản</p>
                            <div className="flex items-center gap-2 mt-0.5">
-                              <div className="h-7 w-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#446b5f] uppercase shadow-sm overflow-hidden flex-shrink-0">
+                              <div className="h-7 w-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase shadow-sm overflow-hidden flex-shrink-0">
                                  {campaignDetails?.authorAvatar ? (
                                     <img src={campaignDetails.authorAvatar} alt="" className="w-full h-full object-cover" />
                                  ) : (selectedTarget.flags[0].campaign?.authorName?.[0] || 'U')}
@@ -853,7 +817,7 @@ export default function FlagsManagementPage() {
                            </div>
                         </div>
                         <div className="col-span-2 lg:col-span-4 mt-2 pt-3 border-t border-gray-100">
-                          <p className="text-[11px] font-black text-[#446b5f] uppercase tracking-tight mb-2">Nội dung chi tiết chiến dịch</p>
+                          <p className="text-[11px] font-black text-[#ff5e14] uppercase tracking-tight mb-2">Nội dung chi tiết chiến dịch</p>
                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed italic line-clamp-6">
                             {selectedTarget.flags[0].campaign.description || 'Không có mô tả chi tiết.'}
                           </p>
@@ -861,7 +825,6 @@ export default function FlagsManagementPage() {
                       </div>
                     ) : selectedTarget.type === 'FEED_POST' && selectedTarget.flags[0]?.post ? (
                       <div className="space-y-6">
-                        {/* Primary Post Stats */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
                            {[
                             { label: 'Thích', value: selectedTarget.flags[0].post.likeCount ?? 0 },
@@ -893,12 +856,10 @@ export default function FlagsManagementPage() {
                           )}
                         </div>
 
-                        {/* Linked Info (Campaign/Expenditure) */}
                         {(campaignDetails || expenditureDetails) && (
                           <div className="space-y-3">
-                            {/* Expenditure Info Section (if it's an expenditure/evidence post) */}
                             {expenditureDetails && (
-                              <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                              <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-4">
                                 <h5 className="text-[10px] font-black text-orange-700 uppercase tracking-widest mb-3 flex items-center gap-2">
                                   <Info className="h-3 w-3" />
                                   Chi tiết đợt giải ngân # {expenditureDetails.id}
@@ -919,7 +880,7 @@ export default function FlagsManagementPage() {
                                     </span>
                                   </div>
                                 </div>
-                                
+
                                 {expenditureDetails.items && expenditureDetails.items.length > 0 && (
                                   <div className="space-y-2 mt-2 pt-2 border-t border-orange-100">
                                     <p className="text-[10px] font-black text-gray-500 uppercase">Danh sách hạng mục:</p>
@@ -939,10 +900,9 @@ export default function FlagsManagementPage() {
                               </div>
                             )}
 
-                            {/* Campaign Info Section */}
                             {campaignDetails && (
-                              <div className="bg-[#446b5f]/5 border border-[#446b5f]/10 rounded-xl p-4 animate-in fade-in slide-in-from-left-2 duration-300">
-                                <h5 className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-3 flex items-center gap-2">
+                              <div className="bg-[#ff5e14]/5 border border-[#ff5e14]/10 rounded-xl p-4">
+                                <h5 className="text-[10px] font-black text-[#ff5e14] uppercase tracking-widest mb-3 flex items-center gap-2">
                                   <Flag className="h-3 w-3" />
                                   Chiến dịch: {campaignDetails.title}
                                 </h5>
@@ -961,9 +921,9 @@ export default function FlagsManagementPage() {
                                     <p className="text-[10px] font-black text-gray-500 uppercase">Tiến độ quyên góp</p>
                                     <div className="flex items-center gap-2">
                                       <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div className="h-full bg-[#446b5f]" style={{ width: `${Math.min(campaignDetails.progress, 100)}%` }} />
+                                        <div className="h-full bg-[#ff5e14]" style={{ width: `${Math.min(campaignDetails.progress, 100)}%` }} />
                                       </div>
-                                      <span className="text-[10px] font-black text-[#446b5f]">{Math.floor(campaignDetails.progress)}%</span>
+                                      <span className="text-[10px] font-black text-[#ff5e14]">{Math.floor(campaignDetails.progress)}%</span>
                                     </div>
                                   </div>
                                   <div className="space-y-1">
@@ -971,16 +931,16 @@ export default function FlagsManagementPage() {
                                     <p className="text-[12px] font-black text-gray-800">{campaignDetails.expenditureCount}</p>
                                   </div>
                                 </div>
-                                <div className="mt-3 pt-3 border-t border-[#446b5f]/10 flex items-center justify-between">
+                                <div className="mt-3 pt-3 border-t border-[#ff5e14]/10 flex items-center justify-between">
                                   <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-bold text-gray-400">ID chiến dịch: #{campaignDetails.id}</span>
                                     <span className="text-[10px] font-bold text-gray-400 px-2 py-0.5 rounded bg-gray-100 uppercase">{campaignDetails.categoryName}</span>
                                   </div>
-                                  <button 
+                                  <button
                                     onClick={() => router.push(`/staff/campaigns/${campaignDetails.id}`)}
-                                    className="text-[10px] font-black text-[#446b5f] uppercase hover:underline flex items-center gap-1"
+                                    className="text-[10px] font-black text-[#ff5e14] uppercase hover:underline"
                                   >
-                                    Xem chi tiết <ArrowRight className="h-3 w-3" />
+                                    Xem chi tiết →
                                   </button>
                                 </div>
                               </div>
@@ -990,14 +950,14 @@ export default function FlagsManagementPage() {
 
                         <div className="mt-2 pt-3 border-t border-gray-100 space-y-3">
                            <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#446b5f] uppercase overflow-hidden">
+                              <div className="h-6 w-6 rounded bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase overflow-hidden">
                                  {selectedTarget.flags[0].post.authorAvatarUrl ? (
                                     <img src={selectedTarget.flags[0].post.authorAvatarUrl} alt="" className="w-full h-full object-cover" />
                           ) : (selectedTarget.flags[0].post.authorName?.[0] || 'U')}
                               </div>
                               <p className="text-[12px] font-bold text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
                            </div>
-                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#446b5f]/10 italic">
+                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#ff5e14]/10 italic">
                              {selectedTarget.flags[0].post.content || '(Không có nội dung)'}
                            </p>
                         </div>
@@ -1008,38 +968,35 @@ export default function FlagsManagementPage() {
 
                 {/* Combined Analytics and Reports Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 px-1">
-                  {/* Analytical Comparison Section - Trust & Risk */}
+                  {/* Risk Analytics */}
                   <section>
-                     <div className="h-full bg-[#446b5f]/5 border border-[#446b5f]/10 rounded-lg p-4 overflow-hidden relative group">
-                        <div className="absolute top-4 right-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                           <Info className="h-8 w-8 text-[#446b5f]" />
-                        </div>
+                     <div className="h-full bg-[#ff5e14]/5 border border-[#ff5e14]/10 rounded-lg p-4 overflow-hidden relative">
                         <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4">Chỉ số rủi ro & Tài chính</h4>
-                        
+
                         {selectedTarget.type === 'CAMPAIGN' ? (
                           <div className="space-y-4 relative z-10">
                              <div className="space-y-1">
                                 <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Cường độ báo cáo tài chính</p>
                                 <div className="flex items-center gap-2">
                                    <p className="text-sm font-black text-gray-800">
-                                     {selectedTarget.flags[0].campaign?.raisedAmount && selectedTarget.flags[0].campaign.raisedAmount > 0 
-                                       ? (selectedTarget.totalCount / (selectedTarget.flags[0].campaign.raisedAmount / 1000000)).toFixed(2) 
+                                     {selectedTarget.flags[0].campaign?.raisedAmount && selectedTarget.flags[0].campaign.raisedAmount > 0
+                                       ? (selectedTarget.totalCount / (selectedTarget.flags[0].campaign.raisedAmount / 1000000)).toFixed(2)
                                        : selectedTarget.totalCount}
                                    </p>
-                                   <span className="text-[9px] text-[#446b5f] font-black">BC / 1TR VND</span>
+                                   <span className="text-[9px] text-[#ff5e14] font-black">BC / 1TR VND</span>
                                 </div>
                              </div>
                              <div className="space-y-1">
                                 <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Đánh giá độ tin cậy</p>
                                 <div className="flex items-center gap-2">
                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${
-                                     (selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'bg-rose-500' : 'bg-[#446b5f]'
+                                     (selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'bg-rose-500' : 'bg-[#ff5e14]'
                                    }`}>
                                      {(selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'RỦI RO BẤT THƯỜNG CAO' : 'TIN CẬY'}
                                    </span>
                                 </div>
                              </div>
-                             <div className="pt-2 border-t border-[#446b5f]/10">
+                             <div className="pt-2 border-t border-[#ff5e14]/10">
                                 <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
                                   So sánh số báo cáo với doanh thu (BC/1tr VND) giúp phát hiện các chiến dịch có dấu hiệu bất thường khi chưa đạt được kết quả quyên góp lớn.
                                 </p>
@@ -1060,13 +1017,13 @@ export default function FlagsManagementPage() {
                                 <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Xếp hạng nội dung</p>
                                 <div className="flex items-center gap-2">
                                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${
-                                     (selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'bg-amber-500' : 'bg-[#446b5f]'
+                                     (selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'bg-amber-500' : 'bg-[#ff5e14]'
                                    }`}>
                                       {(selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'CẦN GIÁM SÁT' : 'AN TOÀN'}
                                    </span>
                                 </div>
                              </div>
-                             <div className="pt-2 border-t border-[#446b5f]/10">
+                             <div className="pt-2 border-t border-[#ff5e14]/10">
                                 <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
                                   Tỷ lệ báo cáo dựa trên lượt xem giúp phân loại bài viết có nội dung nhạy cảm nhanh chóng.
                                 </p>
@@ -1075,7 +1032,7 @@ export default function FlagsManagementPage() {
                         )}
                      </div>
                   </section>
-  
+
                   {/* Reports List - Split by Status */}
                   {(() => {
                     const live = groupedTargetsRef.current.find(g => g.key === selectedTarget.key);
@@ -1090,12 +1047,12 @@ export default function FlagsManagementPage() {
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                     const renderFlag = (flag: FlagDto, showCheck: boolean) => (
-                      <div key={flag.id} className="p-3 hover:bg-gray-50 transition-colors group">
+                      <div key={flag.id} className="p-3 hover:bg-gray-50 group">
                         <div className="flex items-start gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2">
-                                <div className="h-5 w-5 rounded bg-[#446b5f]/10 flex items-center justify-center text-[9px] font-bold text-[#446b5f]">
+                                <div className="h-5 w-5 rounded bg-[#ff5e14]/10 flex items-center justify-center text-[9px] font-bold text-[#ff5e14]">
                                   {flag.reporterName?.[0] || 'V'}
                                 </div>
                                 <p className="text-[10px] font-black text-gray-800 uppercase truncate">
@@ -1105,14 +1062,14 @@ export default function FlagsManagementPage() {
                               <p className="text-[8px] font-bold text-gray-400">{formatDate(flag.createdAt)}</p>
                             </div>
                             <p className="text-[11px] font-bold text-gray-600 leading-snug pl-7">
-                              <span className="text-[#446b5f] mr-1 opacity-50">"</span>
+                              <span className="text-[#ff5e14] mr-1 opacity-50">"</span>
                               {flag.reason}
-                              <span className="text-[#446b5f] ml-1 opacity-50">"</span>
+                              <span className="text-[#ff5e14] ml-1 opacity-50">"</span>
                             </p>
                           </div>
                           {showCheck && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => handleReview(flag.id, 'RESOLVED')} className="p-1.5 rounded bg-[#446b5f] text-white hover:bg-[#446b5f]/90 transition-all shadow-sm">
+                            <div className="opacity-0 group-hover:opacity-100">
+                              <button onClick={() => handleReview(flag.id, 'RESOLVED')} className="p-1.5 rounded bg-[#ff5e14] text-white hover:bg-[#ea550c] shadow-sm">
                                 <Check className="h-2.5 w-2.5" />
                               </button>
                             </div>
@@ -1123,7 +1080,6 @@ export default function FlagsManagementPage() {
 
                     return (
                       <div className="flex flex-col gap-3">
-                        {/* Chưa giải quyết */}
                         <section className="rounded-lg border border-amber-200 bg-white shadow-sm overflow-hidden flex flex-col h-[220px]">
                           <div className="bg-amber-50/80 px-4 py-2 border-b border-amber-100 flex justify-between items-center">
                             <h4 className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Chưa giải quyết</h4>
@@ -1142,7 +1098,6 @@ export default function FlagsManagementPage() {
                           </div>
                         </section>
 
-                        {/* Đã giải quyết */}
                         <section className="rounded-lg border border-emerald-200 bg-white shadow-sm overflow-hidden flex flex-col h-[220px]">
                           <div className="bg-emerald-50/80 px-4 py-2 border-b border-emerald-100 flex justify-between items-center">
                             <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Đã giải quyết</h4>
@@ -1165,19 +1120,18 @@ export default function FlagsManagementPage() {
                   })()}
                 </div>
 
-                {/* AI Analysis Integration */}
+                {/* AI Analysis */}
                 <div className="p-1 mt-4">
                   {aiResult ? (
-                    <div className="rounded-lg border shadow-sm animate-in slide-in-from-top-2 duration-500 overflow-hidden bg-[#446b5f]/5 border-[#446b5f]/20">
-                      {/* Header */}
-                      <div className="flex items-center justify-between p-4 border-b border-[#446b5f]/10">
+                    <div className="rounded-lg border shadow-sm overflow-hidden bg-[#ff5e14]/5 border-[#ff5e14]/20">
+                      <div className="flex items-center justify-between p-4 border-b border-[#ff5e14]/10">
                         <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded shadow-sm bg-white/80 border border-[#446b5f]/10">
-                            <Info className="h-4 w-4 text-[#446b5f]" />
+                          <div className="p-1.5 rounded shadow-sm bg-white/80 border border-[#ff5e14]/10">
+                            <Info className="h-4 w-4 text-[#ff5e14]" />
                           </div>
                           <div>
-                            <h5 className="text-[13px] font-black uppercase tracking-widest text-[#446b5f]">Kết quả phân tích AI</h5>
-                            <p className="text-[10px] text-[#446b5f]/60 uppercase tracking-widest font-bold">
+                            <h5 className="text-[13px] font-black uppercase tracking-widest text-[#ff5e14]">Kết quả phân tích AI</h5>
+                            <p className="text-[10px] text-[#ff5e14]/60 uppercase tracking-widest font-bold">
                               Độ rủi ro: {aiResult.riskLevel === 'HIGH' ? 'CAO' : aiResult.riskLevel === 'MEDIUM' ? 'TRUNG BÌNH' : 'THẤP'}
                             </p>
                           </div>
@@ -1188,41 +1142,38 @@ export default function FlagsManagementPage() {
                           }`}>
                             {aiResult.riskLevel === 'HIGH' ? 'RỦI RO CAO' : aiResult.riskLevel === 'MEDIUM' ? 'CẢNH BÁO' : 'AN TOÀN'}
                           </span>
-                          <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-sm bg-[#446b5f]/10 text-[#446b5f] border-[#446b5f]/20">
+                          <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-sm bg-[#ff5e14]/10 text-[#ff5e14] border-[#ff5e14]/20">
                             Điểm đánh giá rủi ro: {aiResult.riskScore}/100
                           </span>
                         </div>
                       </div>
 
                       <div className="p-4 space-y-4 text-[12px]">
-                        {/* Summary */}
-                        <div className="p-3 rounded bg-white/60 border border-[#446b5f]/10">
-                          <p className="text-[13px] font-bold text-[#446b5f] leading-relaxed">{renderLinkedText(aiResult.summary)}</p>
+                        <div className="p-3 rounded bg-white/60 border border-[#ff5e14]/10">
+                          <p className="text-[13px] font-bold text-[#ff5e14] leading-relaxed">{renderLinkedText(aiResult.summary)}</p>
                         </div>
 
-                        {/* Key Findings */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           <div>
-                            <p className="text-[10px] font-black text-[#446b5f]/60 uppercase tracking-widest mb-2">Phát hiện chính</p>
+                            <p className="text-[10px] font-black text-[#ff5e14]/60 uppercase tracking-widest mb-2">Phát hiện chính</p>
                             <div className="space-y-1.5">
                               {aiResult.keyFindings.map((finding, i) => (
-                                <div key={i} className="flex items-start gap-2 p-2 rounded bg-white/50 border border-[#446b5f]/10">
-                                  <div className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#446b5f]/10">
-                                    <span className="text-[9px] font-black text-[#446b5f]">{i + 1}</span>
+                                <div key={i} className="flex items-start gap-2 p-2 rounded bg-white/50 border border-[#ff5e14]/10">
+                                  <div className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#ff5e14]/10">
+                                    <span className="text-[9px] font-black text-[#ff5e14]">{i + 1}</span>
                                   </div>
-                                  <p className="text-[12px] font-medium text-[#446b5f] leading-snug">{renderLinkedText(finding)}</p>
+                                  <p className="text-[12px] font-medium text-[#ff5e14] leading-snug">{renderLinkedText(finding)}</p>
                                 </div>
                               ))}
                             </div>
                           </div>
 
-                          {/* Recommendation */}
-                          <div className="p-4 rounded bg-[#446b5f]/10 border border-[#446b5f]/10">
-                             <p className="text-[10px] font-black text-[#446b5f] uppercase tracking-widest mb-2">Đề xuất hành động</p>
-                             <p className="text-[12px] font-medium text-[#446b5f] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
+                          <div className="p-4 rounded bg-[#ff5e14]/10 border border-[#ff5e14]/10">
+                             <p className="text-[10px] font-black text-[#ff5e14] uppercase tracking-widest mb-2">Đề xuất hành động</p>
+                             <p className="text-[12px] font-medium text-[#ff5e14] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
                              <div className="flex flex-wrap gap-1.5">
                                {aiResult.actionTypes.map((action, i) => (
-                                 <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#446b5f] border-[#446b5f]/20">
+                                 <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#ff5e14] border-[#ff5e14]/20">
                                    {action.replace('_', ' ')}
                                  </span>
                                ))}
@@ -1231,11 +1182,10 @@ export default function FlagsManagementPage() {
                         </div>
                       </div>
 
-                      {/* Footer */}
-                      <div className="px-4 py-3 border-t border-[#446b5f]/10 bg-[#446b5f]/5">
+                      <div className="px-4 py-3 border-t border-[#ff5e14]/10 bg-[#ff5e14]/5">
                         <button
                           onClick={handleAIAnalysis}
-                          className="text-[10px] font-black text-[#d95f5e] hover:text-[#d95f5e]/80 uppercase tracking-widest flex items-center gap-1.5 transition-colors"
+                          className="text-[10px] font-black text-[#ff5e14] hover:text-[#ea550c] uppercase tracking-widest flex items-center gap-1.5"
                         >
                           <Info className="h-3 w-3" />
                           Phân tích lại
@@ -1246,16 +1196,13 @@ export default function FlagsManagementPage() {
                     <button
                       onClick={handleAIAnalysis}
                       disabled={isAnalyzing}
-                      className="w-full h-11 rounded-xl bg-[#d95f5e] text-white flex items-center justify-center gap-3 shadow-xl hover:shadow-[#d95f5e]/20 transition-all active:scale-[0.98] border border-white/10 group overflow-hidden relative"
+                      className="w-full h-11 rounded-xl bg-[#ff5e14] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#ea550c] active:scale-[0.98] border border-[#ff5e14]"
                     >
                       {isAnalyzing ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <>
-                          <div className="absolute inset-0 bg-gradient-to-r from-[#d95f5e]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                          <div className="h-6 w-6 rounded-lg bg-white/10 flex items-center justify-center">
-                            <Info className="h-3 w-3" />
-                          </div>
+                          <Info className="h-4 w-4" />
                           <span className="text-xs font-black uppercase tracking-[0.1em]">Dùng AI để phân tích</span>
                         </>
                       )}
@@ -1267,19 +1214,19 @@ export default function FlagsManagementPage() {
                 <div className="px-2 pb-2 mt-auto pt-4">
                   <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-3">Hành động</h4>
                   <div className="flex flex-wrap items-center gap-2">
-                    <button 
+                    <button
                       onClick={handleMessage}
                       disabled={isStartingChat}
-                      className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
+                      className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm disabled:opacity-50"
                     >
                       {isStartingChat ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageCircle className="h-3 w-3" />}
                       Nhắn tin
                     </button>
 
                     {selectedTarget.type === 'CAMPAIGN' && (
-                      <button 
+                      <button
                         onClick={handleLockCampaign}
-                        className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                        className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm"
                       >
                         <Lock className="h-3 w-3" />
                         Khóa chiến dịch
@@ -1290,14 +1237,14 @@ export default function FlagsManagementPage() {
                       <>
                         <button
                           onClick={handleLockPost}
-                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm"
                         >
                           <Eye className={`h-3 w-3 ${selectedTarget.flags[0]?.post?.isLocked ? 'text-rose-500' : ''}`} />
                           {selectedTarget.flags[0]?.post?.isLocked ? 'Mở khóa bài viết' : 'Khóa bài viết'}
                         </button>
-                        <button 
+                        <button
                           onClick={handleLockComments}
-                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm"
                         >
                           <MessageCircle className={`h-3 w-3 ${selectedTarget.flags[0]?.post?.isLocked ? 'text-rose-500' : ''}`} />
                           {selectedTarget.flags[0]?.post?.isLocked ? 'Mở khóa comment' : 'Khóa comment'}
@@ -1305,7 +1252,6 @@ export default function FlagsManagementPage() {
                       </>
                     )}
 
-                    {/* Only show appointment button if it's a campaign or a post linked to a campaign/expenditure */}
                     {(selectedTarget.type === 'CAMPAIGN' || selectedTarget.flags[0]?.campaignId || (selectedTarget.flags[0]?.post as any)?.campaignId || (selectedTarget.flags[0]?.post as any)?.targetType === 'CAMPAIGN') && (
                       (() => {
                         const targetAppt = appointmentsMap.get(selectedTarget.key);
@@ -1314,24 +1260,20 @@ export default function FlagsManagementPage() {
                           return flagDate > latest ? flagDate : latest;
                         }, 0);
 
-                        // Decision logic: 
-                        // Show "View Detail" if:
-                        // 1. Appointment exists AND (all flags resolved OR appointment is newer than latest flag)
-                        // Otherwise, show "Lên lịch hẹn" (Create Appointment)
                         const showViewDetail = targetAppt && (selectedTarget.pendingCount === 0 || targetAppt.createdAt >= latestFlagDate);
 
                         return showViewDetail ? (
-                          <button 
+                          <button
                             onClick={() => router.push(`/staff/schedule?appointmentId=${targetAppt.id}`)}
-                            className="flex items-center gap-1.5 h-9 px-4 bg-[#446b5f] border border-[#446b5f]/20 rounded-lg text-[11px] font-bold text-white uppercase hover:bg-[#355249] transition-all shadow-md animate-in zoom-in-95 duration-300"
+                            className="flex items-center gap-1.5 h-9 px-4 bg-[#ff5e14] border border-[#ff5e14]/20 rounded-lg text-[11px] font-bold text-white uppercase hover:bg-[#ea550c] shadow-md"
                           >
                             <Clock className="h-3 w-3" />
                             Xem lịch hẹn
                           </button>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => setShowScheduleModal(true)}
-                            className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                            className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm"
                           >
                             <Clock className="h-3 w-3" />
                             Lên lịch hẹn
@@ -1342,23 +1284,23 @@ export default function FlagsManagementPage() {
 
                     {(() => {
                       const isActive = targetUser ? ((targetUser as any).isActive ?? (targetUser as any).is_active) : true;
-                      
+
                       if (!targetUser) {
                         return <div className="flex items-center gap-1.5 h-9 px-4 bg-gray-50 border border-gray-100 rounded-lg animate-pulse w-32" />;
                       }
-                      
+
                       if (isActive === false || isActive === 0) {
                         return (
                           <button
                             onClick={handleUnban}
-                            className="flex items-center gap-1.5 h-9 px-4 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-700 uppercase hover:bg-emerald-100 transition-all shadow-sm"
+                            className="flex items-center gap-1.5 h-9 px-4 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-700 uppercase hover:bg-emerald-100 shadow-sm"
                           >
                             <CheckCircle className="h-3 w-3" />
                             Ngừng đình chỉ tài khoản
                           </button>
                         );
                       }
-                      
+
                       return (
                         <button
                           onClick={() => setBanModal({
@@ -1367,7 +1309,7 @@ export default function FlagsManagementPage() {
                             userName: targetUser.fullName,
                             flagId: selectedTarget.flags[0]?.id ?? 0
                           })}
-                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 transition-all shadow-sm"
+                          className="flex items-center gap-1.5 h-9 px-4 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 uppercase hover:bg-gray-50 shadow-sm"
                         >
                           <Ban className="h-3 w-3" />
                           Đình chỉ tài khoản
@@ -1403,7 +1345,7 @@ export default function FlagsManagementPage() {
                         toast.error('Thao tác thất bại');
                       }
                     }}
-                    className="w-full h-11 rounded-xl bg-[#446b5f] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#355249] transition-all active:scale-[0.98] shadow-lg shadow-[#446b5f]/10"
+                    className="w-full h-11 rounded-xl bg-[#ff5e14] text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#ea550c] active:scale-[0.98] shadow-sm"
                   >
                     <CheckCircle className="h-4 w-4" />
                     {(() => {
@@ -1417,24 +1359,13 @@ export default function FlagsManagementPage() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center rounded-[3rem] border-2 border-dashed border-gray-100 bg-gray-50/30 p-12 text-center group">
-              <div className="relative mb-8">
-                <div className="absolute inset-0 bg-[#446b5f] rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
-                <div className="relative h-24 w-24 rounded-full bg-white border border-gray-100 shadow-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500">
-                  <Flag className="h-10 w-10 text-gray-200" />
-                </div>
-                <div className="absolute -top-2 -right-2 h-8 w-8 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-sm font-black shadow-lg">
-                  !
-                </div>
-              </div>
-              <h3 className="text-lg font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Trung tâm điều hành</h3>
-              <p className="text-xs font-bold text-gray-300 max-w-[280px] leading-relaxed uppercase tracking-widest">
-                Chọn một mục từ danh sách bên trái để kiểm tra các báo cáo vi phạm và thực hiện các biện pháp quản lý.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Empty state when nothing selected */}
+        {!selectedTarget && groupedTargets.length > 0 && (
+          <div className="hidden lg:flex lg:col-span-0" />
+        )}
       </div>
 
       <BanUserModal
@@ -1461,9 +1392,9 @@ export default function FlagsManagementPage() {
             if (selectedTarget && appointmentId) {
               setAppointmentsMap(prev => {
                 const newMap = new Map(prev);
-                newMap.set(selectedTarget.key, { 
-                  id: appointmentId, 
-                  createdAt: Date.now() 
+                newMap.set(selectedTarget.key, {
+                  id: appointmentId,
+                  createdAt: Date.now()
                 });
                 return newMap;
               });

@@ -345,12 +345,12 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {!readOnly && (
-                <div className="bg-[#446b5f]/10 p-3 rounded-lg border-l-4 border-[#446b5f]">
+                <div className="bg-[#ff5e14]/10 p-3 rounded-lg border-l-4 border-[#ff5e14]">
                     <div className="flex gap-2 items-start">
-                        <svg className="w-4 h-4 text-[#446b5f] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-[#ff5e14] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className="text-[11px] text-[#446b5f] font-bold uppercase tracking-tight leading-relaxed">
+                        <p className="text-[11px] text-[#ff5e14] font-bold uppercase tracking-tight leading-relaxed">
                             Hướng dẫn: Chỉ cần tải ảnh CCCD lên, hệ thống sẽ dùng AI tự động trích xuất và điền đầy đủ thông tin bên dưới.
                         </p>
                     </div>
@@ -359,7 +359,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
 
             {/* ── Image upload section ── */}
             <div className="space-y-4 mb-8 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-300">
-                <label className="block text-sm font-bold text-[#446b5f] uppercase tracking-wider">
+                <label className="block text-sm font-bold text-[#ff5e14] uppercase tracking-wider">
                     Tài liệu định danh (Tự động trích xuất)
                 </label>
                 <div className={`grid grid-cols-1 gap-4 ${formData.idType === 'PASSPORT' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
@@ -514,7 +514,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         </div>
                     </div>
                 </div>
-                {uploading && <p className="text-[10px] text-[#446b5f] font-bold animate-pulse text-center">Đang tải và xử lý bằng AI...</p>}
+                {uploading && <p className="text-[10px] text-[#ff5e14] font-bold animate-pulse text-center">Đang tải và xử lý bằng AI...</p>}
                 {errors.images && <p className="text-xs text-red-600 font-semibold text-center">{errors.images}</p>}
             </div>
 
@@ -531,7 +531,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         required
                         value={formData.fullName}
                         onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
                         placeholder="VD: Nguyễn Văn A"
                         disabled={readOnly}
                     />
@@ -546,7 +546,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
                         placeholder="VD: Số 123 Đường ABC, Phường X, Quận Y, TP. Hồ Chí Minh"
                         disabled={readOnly}
                     />
@@ -561,7 +561,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             name="workplace"
                             value={formData.workplace}
                             onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
                             placeholder="VD: Công ty ABC"
                             disabled={readOnly}
                         />
@@ -573,7 +573,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             name="taxId"
                             value={formData.taxId}
                             onChange={handleChange}
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.taxId ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.taxId ? 'border-red-500' : 'border-gray-300'}`}
                             placeholder="VD: 0123456789"
                             maxLength={15}
                             disabled={readOnly}
@@ -597,7 +597,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Loại định danh <span className="text-red-500">*</span></label>
                         <select name="idType" value={formData.idType} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#446b5f] focus:ring-[#446b5f] sm:text-sm border p-2"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
                             disabled={readOnly}>
                             <option value="CCCD">CCCD</option>
                             <option value="PASSPORT">Hộ chiếu (Passport)</option>
@@ -612,7 +612,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                         <input
                             type="text" name="idNumber" required
                             value={formData.idNumber} onChange={handleChange}
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500' : 'border-gray-300'}`}
                             placeholder={formData.idType === 'PASSPORT' ? 'VD: B1234567' : '12 chữ số'}
                             maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
                             disabled={readOnly}
@@ -630,7 +630,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             onChange={(date: Date | null) => handleDateChange('issueDate', date)}
                             dateFormat="dd/MM/yyyy"
                             placeholderText="DD/MM/YYYY"
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500' : 'border-gray-300'}`}
                             showYearDropdown showMonthDropdown dropdownMode="select"
                             maxDate={new Date()} required disabled={readOnly}
                         />
@@ -643,7 +643,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                             onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
                             dateFormat="dd/MM/yyyy"
                             placeholderText="DD/MM/YYYY"
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500' : 'border-gray-300'}`}
+                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500' : 'border-gray-300'}`}
                             showYearDropdown showMonthDropdown dropdownMode="select"
                             minDate={formData.issueDate || undefined} required disabled={readOnly}
                         />
@@ -657,7 +657,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     <input
                         type="text" name="issuePlace" required
                         value={formData.issuePlace} onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#446b5f] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500' : 'border-gray-300'}`}
+                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500' : 'border-gray-300'}`}
                         placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
                         disabled={readOnly}
                     />
@@ -675,7 +675,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     {!readOnly && (
                         <button type="submit"
                             disabled={loading || uploading || fetching || Object.values(errors).some(e => e !== undefined)}
-                            className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#446b5f] text-sm font-black uppercase tracking-widest text-white hover:bg-[#35534a] disabled:opacity-50 disabled:cursor-not-allowed">
+                            className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#ff5e14] text-sm font-black uppercase tracking-widest text-white hover:bg-[#35534a] disabled:opacity-50 disabled:cursor-not-allowed">
                             {loading ? 'Đang xử lý...' : uploading ? 'Đang tải ảnh...' : 'Duyệt & Lưu KYC'}
                         </button>
                     )}

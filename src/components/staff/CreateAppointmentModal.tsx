@@ -161,7 +161,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-white/20">
-                <div className="bg-gradient-to-br from-[#446b5f] to-[#2d4a42] px-6 py-5 flex items-center justify-between">
+                <div className="bg-gradient-to-br from-[#ff5e14] to-[#2d4a42] px-6 py-5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
                             <Calendar className="h-5 w-5 text-white" />
@@ -177,7 +177,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white">
                     <div className="relative">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Người dùng <span className="text-[#446b5f]">*</span></label>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Người dùng <span className="text-[#ff5e14]">*</span></label>
                         <div className="relative">
                             <button
                                 type="button"
@@ -195,14 +195,14 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                                 <ChevronDown className="h-4 w-4 text-gray-400 ml-2 flex-shrink-0" />
                             </button>
                             {showDropdown && (
-                                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-64 overflow-hidden border-t-4 border-t-[#446b5f]">
+                                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-64 overflow-hidden border-t-4 border-t-[#ff5e14]">
                                     <div className="p-3 border-b border-gray-50 bg-gray-50/30">
                                         <input
                                             type="text"
                                             value={searchTerm}
                                             onChange={e => setSearchTerm(e.target.value)}
                                             placeholder="Tìm kiếm chiến dịch..."
-                                            className="w-full px-4 py-2 text-xs border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#446b5f]/5 focus:border-[#446b5f]/30 font-bold shadow-sm"
+                                            className="w-full px-4 py-2 text-xs border border-gray-100 rounded-xl focus:outline-none focus:ring-4 focus:ring-[#ff5e14]/5 focus:border-[#ff5e14]/30 font-bold shadow-sm"
                                             autoFocus
                                         />
                                     </div>
@@ -235,7 +235,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#446b5f]">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Bắt đầu <span className="text-[#ff5e14]">*</span></label>
                             <DatePicker
                                 selected={form.startTime ? new Date(form.startTime) : null}
                                 onChange={(date: Date | null) => {
@@ -269,7 +269,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#446b5f]">*</span></label>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Kết thúc <span className="text-[#ff5e14]">*</span></label>
                             <DatePicker
                                 selected={form.endTime ? new Date(form.endTime) : null}
                                 onChange={(date: Date | null) => setForm(f => ({ ...f, endTime: date ? formatToLocalISO(date) : '' }))}
@@ -307,7 +307,7 @@ export default function CreateAppointmentModal({ staffId, onClose, onCreated, in
                     </div>
                     <div className="flex gap-4 pt-4 border-t border-gray-50">
                         <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition active:scale-95 shadow-sm">Hủy bỏ</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#446b5f] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#446b5f]/20 active:scale-95">
+                        <button type="submit" disabled={loading} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#ff5e14] to-[#5a8075] text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#ff5e14]/20 active:scale-95">
                             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                             {loading ? 'Đang xử lý...' : 'Tạo lịch hẹn'}
                         </button>

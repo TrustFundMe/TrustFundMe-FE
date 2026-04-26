@@ -13,8 +13,7 @@ import {
   ShieldCheck, 
   Flag,
   ChevronLeft,
-  ChevronRight,
-  Menu
+  ChevronRight
 } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -69,8 +68,8 @@ function Sidebar() {
                 />
             </div>
             {isExpanded && (
-              <div className="flex flex-col animate-in fade-in slide-in-from-left-2 duration-500">
-                <span className="font-black text-[13px] uppercase tracking-[0.1em] text-[#446b5f]">TrustFundMe</span>
+              <div className="flex flex-col">
+                <span className="font-black text-[13px] uppercase tracking-[0.1em] text-[#ff5e14]">TrustFundMe</span>
               </div>
             )}
         </div>
@@ -94,7 +93,7 @@ function Sidebar() {
                 ? 'w-full px-4 gap-3' 
                 : 'w-11 justify-center'
               } ${isActive
-                ? 'bg-[#446b5f]/10 text-[#446b5f]'
+                ? 'bg-[#ff5e14]/10 text-[#ff5e14]'
                 : 'text-gray-400 hover:bg-gray-100 hover:text-gray-800'
               }`}
               title={!isExpanded ? item.label : ''}

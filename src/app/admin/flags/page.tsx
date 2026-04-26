@@ -14,7 +14,7 @@ function StatusPill({ status }: { status: string }) {
     case 'PENDING':
       return <span className={`${base} bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />Chờ duyệt</span>;
     case 'RESOLVED':
-      return <span className={`${base} bg-[#446b5f]/10 text-[#446b5f]`}><span className="h-1.5 w-1.5 rounded-full bg-[#446b5f]" />Đã xử lý</span>;
+      return <span className={`${base} bg-[#1A685B]/10 text-[#1A685B]`}><span className="h-1.5 w-1.5 rounded-full bg-[#1A685B]" />Đã xử lý</span>;
     case 'DISMISSED':
       return <span className={`${base} bg-slate-100 text-slate-400`}><span className="h-1.5 w-1.5 rounded-full bg-slate-400" />Từ chối</span>;
     default:
@@ -181,7 +181,7 @@ export default function AdminFlagsPage() {
                       )}
                       {flag.campaignId && (
                         <Link href={`/campaigns-details?id=${flag.campaignId}`} target="_blank" onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-xs text-[#446b5f] hover:underline font-bold ml-1">
+                          className="inline-flex items-center gap-1 text-xs text-[#1A685B] hover:underline font-bold ml-1">
                           Campaign #{flag.campaignId} <ExternalLink className="w-3 h-3" />
                         </Link>
                       )}
@@ -195,7 +195,7 @@ export default function AdminFlagsPage() {
                           <button
                             onClick={() => handleReview(flag.id, 'RESOLVED')}
                             disabled={processingId === flag.id}
-                            className="p-2 rounded-xl text-gray-500 hover:text-[#446b5f] hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
+                            className="p-2 rounded-xl text-gray-500 hover:text-[#1A685B] hover:bg-white hover:shadow-lg transition-all disabled:opacity-50"
                             title="Duyệt (Resolved)"
                           >
                             {processingId === flag.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
@@ -308,7 +308,7 @@ export default function AdminFlagsPage() {
                 <button
                   onClick={() => handleReview(selectedFlag.id, 'RESOLVED')}
                   disabled={processingId === selectedFlag.id}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#446b5f] text-white text-xs font-black uppercase tracking-widest hover:bg-[#355249] transition-all shadow-xl shadow-[#446b5f]/20 active:scale-95 disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#1A685B] text-white text-xs font-black uppercase tracking-widest hover:bg-[#355249] transition-all shadow-xl shadow-[#1A685B]/20 active:scale-95 disabled:opacity-50"
                 >
                   <CheckCircle className="w-5 h-5" />
                   Duyệt báo cáo

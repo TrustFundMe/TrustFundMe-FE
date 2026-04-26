@@ -155,7 +155,7 @@ export default function HistoryTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 flex-1 min-h-0">
-      <div className={`min-h-0 overflow-hidden flex flex-col gap-3 transition-all duration-500 ${selectedTaskId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+      <div className={`min-h-0 overflow-hidden flex flex-col gap-3 ${selectedTaskId ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
         <div className="flex items-center justify-between flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
           <div className="flex items-center gap-2 px-3">
             <History className="h-4 w-4 text-gray-400" />
@@ -231,8 +231,8 @@ export default function HistoryTab() {
                       }}
                       className={`p-1.5 rounded-lg transition-all border shadow-sm ${
                         selectedTaskId === r.id 
-                          ? 'bg-[#446b5f] text-white border-transparent' 
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-[#446b5f]/30 hover:bg-[#446b5f]/5 hover:text-[#446b5f]'
+                          ? 'bg-[#ff5e14] text-white border-transparent' 
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-[#ff5e14]/30 hover:bg-[#ff5e14]/5 hover:text-[#ff5e14]'
                       }`}
                       title="Xem chi tiết"
                     >
@@ -270,7 +270,7 @@ export default function HistoryTab() {
       </div>
 
       {selectedTaskId && (
-        <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar animate-in slide-in-from-right-4 transition-all duration-500">
+        <div className="lg:col-span-4 overflow-auto pb-4 custom-scrollbar">
           <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b border-gray-50 pb-3">
