@@ -3,7 +3,7 @@
 import { ReactNode, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { User, FolderOpen, Heart, CalendarClock, ArrowLeft, MessageCircle, FileCheck } from 'lucide-react';
+import { User, FolderOpen, Heart, CalendarClock, ArrowLeft, MessageCircle, FileCheck, Flag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
@@ -46,6 +46,7 @@ function AccountSidebar() {
             { href: '/account/impact', label: 'Lịch sử quyên góp', icon: Heart },
             { href: '/account/schedule', label: 'Lịch hẹn', icon: CalendarClock },
             { href: '/account/chat', label: 'Trò chuyện', icon: MessageCircle },
+            { href: '/account/flags', label: 'Tố cáo', icon: Flag },
         ];
         if (user?.role === 'FUND_OWNER') {
             items.push({ href: '/account/commitments', label: 'Biên bản cam kết', icon: FileCheck });

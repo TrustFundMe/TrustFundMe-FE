@@ -16,9 +16,10 @@ interface KYCInputFormProps {
     onCancel?: () => void;
     readOnly?: boolean;
     onImageClick?: (url: string) => void;
+    isStaff?: boolean;
 }
 
-export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly, onImageClick }: KYCInputFormProps) {
+export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly, onImageClick, isStaff = true }: KYCInputFormProps) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -228,12 +229,13 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 kycRecord = await kycService.submit(formData.userId, payload);
             }
 
-            // Tự động duyệt vì Staff là người lập/cập nhật thông tin
-            if (kycRecord && kycRecord.id) {
+            // Tự động duyệt nếu là Staff thực hiện, User gửi thì để PENDING (mặc định của server)
+            if (isStaff && kycRecord && kycRecord.id) {
                 await kycService.updateStatus(kycRecord.id, 'APPROVED');
+                toast.success('Gửi và duyệt KYC thành công!');
+            } else {
+                toast.success('Gửi hồ sơ KYC thành công! Vui lòng chờ phê duyệt.');
             }
-
-            toast.success('Gửi và duyệt KYC thành công!');
             onSuccess();
         } catch (error: any) {
             console.error('KYC Submit Error:', error);
@@ -674,9 +676,9 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     )}
                     {!readOnly && (
                         <button type="submit"
-                            disabled={loading || uploading || fetching || Object.values(errors).some(e => e !== undefined)}
+                            disabled={loading || uploading || fetching}
                             className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#ff5e14] text-sm font-black uppercase tracking-widest text-white hover:bg-[#35534a] disabled:opacity-50 disabled:cursor-not-allowed">
-                            {loading ? 'Đang xử lý...' : uploading ? 'Đang tải ảnh...' : 'Duyệt & Lưu KYC'}
+                            {loading ? 'Đang xử lý...' : uploading ? 'Đang tải ảnh...' : isStaff ? 'Duyệt & Lưu KYC' : 'Gửi yêu cầu xác minh'}
                         </button>
                     )}
                 </div>

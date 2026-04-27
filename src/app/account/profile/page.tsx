@@ -1,162 +1,26 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useToast } from '@/components/ui/Toast';
 import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import {
-  User, Mail, Phone, Save, X, Pencil, FolderOpen, Heart, ShieldCheck,
-  CalendarClock, Loader2, ChevronRight, Landmark, CheckCircle2, Flag, Search, Box,
-  Star, ScrollText, Plus, Minus, Clock, MapPin, Calendar, Check, AlertCircle
+  User, Mail, Phone, X, Pencil,
+  Loader2, ChevronRight, Landmark, CheckCircle2,
+  Star, ScrollText, Plus, Minus,
+  Shield, Info, Clock, XCircle, ZoomIn
 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
-import { appointmentService, AppointmentScheduleDto } from '@/services/appointmentService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { BankAccountDto } from '@/types/bankAccount';
-import { flagService, FlagDto } from '@/services/flagService';
 import { trustScoreService } from '@/services/trustScoreService';
-
-// ─── Flags Modal ─────────────────────────────────────────────────────────────
-
-
-
-function FlagsModal({
-  flags,
-  loading,
-  onClose,
-}: {
-  flags: FlagDto[];
-  loading: boolean;
-  onClose: () => void;
-}) {
-  type FlagTab = 'CAMPAIGN' | 'POST';
-  const [tab, setTab] = useState<FlagTab>('CAMPAIGN');
-
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    document.body.style.overflow = 'hidden';
-    return () => { window.removeEventListener('keydown', h); document.body.style.overflow = ''; };
-  }, [onClose]);
-
-  const campaignFlags = flags.filter(f => f.campaignId != null);
-  const postFlags = flags.filter(f => f.postId != null);
-  const list = tab === 'CAMPAIGN' ? campaignFlags : postFlags;
-
-  const renderEmpty = () => (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-red-50">
-        <Flag className="h-7 w-7 text-red-300" />
-      </div>
-      <p className="font-semibold text-gray-500 text-sm">
-        {tab === 'CAMPAIGN' ? 'Chưa có tố cáo chiến dịch nào' : 'Chưa có tố cáo bài viết nào'}
-      </p>
-    </div>
-  );
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
-      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ maxHeight: '90vh', animation: 'apptSlideUp .25s cubic-bezier(.34,1.56,.64,1)' }}
-      >
-        {/* Header */}
-        <div
-          className="relative flex items-center justify-between px-7 pt-6 pb-14"
-          style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)' }}
-        >
-          <div>
-            <h2 className="text-xl font-bold text-white">Tố Cáo Của Tôi</h2>
-            <p className="text-sm text-white/70 mt-0.5">Danh sách tố cáo bạn đã gửi</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="h-9 w-9 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 transition-colors"
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
-          {/* Wave */}
-          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1200 50" preserveAspectRatio="none" style={{ display: 'block', height: '36px' }}>
-            <path d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z" fill="white" />
-          </svg>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 px-7 pt-4 pb-3 border-b border-gray-100 bg-white">
-          {(['CAMPAIGN', 'POST'] as FlagTab[]).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all"
-              style={tab === t
-                ? { background: 'linear-gradient(135deg,#ef4444,#f97316)', color: '#fff' }
-                : { background: '#f3f4f6', color: '#6b7280' }}
-            >
-              <Flag className="h-3.5 w-3.5" />
-              {t === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết Feed'}
-              <span
-                className="px-1.5 py-0.5 rounded-full font-bold text-[10px]"
-                style={tab === t ? { background: 'rgba(255,255,255,0.25)', color: '#fff' } : { background: '#e5e7eb', color: '#374151' }}
-              >
-                {t === 'CAMPAIGN' ? campaignFlags.length : postFlags.length}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-7 py-5 space-y-3">
-          {loading && (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-red-400" />
-            </div>
-          )}
-          {!loading && list.length === 0 && renderEmpty()}
-          {!loading && list.map(flag => {
-            const href = flag.campaignId
-              ? `/campaigns-details?id=${flag.campaignId}`
-              : `/post/${flag.postId}`;
-            const label = flag.campaignId ? 'chiến dịch' : 'bài viết';
-            return (
-              <div key={flag.id} className="rounded-xl border border-gray-100 bg-gray-50 p-4 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  {/* Sent indicator */}
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                    <span className="text-xs font-semibold text-green-600">Tố cáo đã được gửi</span>
-                    <span className="text-xs text-gray-300">·</span>
-                    <span className="text-xs text-gray-400">{new Date(flag.createdAt).toLocaleDateString('vi-VN')}</span>
-                  </div>
-                  {/* Reason */}
-                  <p className="text-sm text-gray-700 truncate" title={flag.reason}>{flag.reason}</p>
-                </div>
-                {/* Link */}
-                <Link
-                  href={href}
-                  className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all"
-                  style={{ background: 'linear-gradient(135deg,#ef4444,#f97316)' }}
-                  onClick={onClose}
-                >
-                  Xem {label}
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { kycService } from '@/services/kycService';
+import KYCInputForm from '@/components/staff/request/KYCInputForm';
+import { KycResponse } from '@/types/kyc';
 
 // ─── Trust Score Logs Modal ─────────────────────────────────────────────────
 
@@ -208,7 +72,7 @@ function TrustScoreLogsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
+      className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-8"
       style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
@@ -347,22 +211,22 @@ function TrustScoreLogsModal({
   );
 }
 
-// ─── Profile Page ─────────────────────────────────────────────────────────────
+// ─── User KYC Modal ──────────────────────────────────────────────────────────
 
-function AppointmentsModal({
-  appointments,
-  loading,
+function UserKYCModal({
+  userId,
+  userName,
   onClose,
-  onStatusChange,
-  highlightId,
+  onSuccess,
+  readOnly,
 }: {
-  appointments: AppointmentScheduleDto[];
-  loading: boolean;
+  userId: number;
+  userName: string;
   onClose: () => void;
-  onStatusChange: (id: number, status: 'CONFIRMED' | 'CANCELLED') => Promise<void>;
-  highlightId?: number | null;
+  onSuccess: () => void;
+  readOnly?: boolean;
 }) {
-  const [updating, setUpdating] = useState<number | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -371,125 +235,74 @@ function AppointmentsModal({
     return () => { window.removeEventListener('keydown', h); document.body.style.overflow = ''; };
   }, [onClose]);
 
-  const handleAction = async (id: number, status: 'CONFIRMED' | 'CANCELLED') => {
-    setUpdating(id);
-    try {
-      await onStatusChange(id, status);
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const sorted = [...appointments].sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8"
-      style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(0,0,0,0.4)' }}
+      className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-8"
+      style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="relative w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-white/20"
-        style={{ maxHeight: '85vh', animation: 'apptSlideUp .3s cubic-bezier(.34,1.56,.64,1)' }}
+        className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300"
+        style={{ maxHeight: '95vh' }}
       >
         {/* Header */}
-        <div className="relative px-8 pt-8 pb-12 bg-gradient-to-br from-[#ff5e14] to-[#ff9114] text-white">
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <h2 className="text-2xl font-black uppercase tracking-tight">Lịch Hẹn Của Tôi</h2>
-              <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-1">Xác nhận hoặc quản lý buổi gặp</p>
-            </div>
-            <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-all">
-              <X className="h-5 w-5" />
-            </button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center gap-3">
+             <div className="h-9 w-9 rounded-xl bg-[#ff5e14] flex items-center justify-center text-white shadow-lg shadow-[#ff5e14]/20">
+                <Shield className="h-5 w-5" />
+             </div>
+             <div>
+               <h2 className="text-base font-black text-gray-800 uppercase tracking-tight">Xác thực danh tính (KYC)</h2>
+               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">Cung cấp giấy tờ để kích hoạt quyền lợi chủ quỹ</p>
+             </div>
           </div>
-          <svg className="absolute bottom-0 left-0 w-full" viewBox="0 0 1200 50" preserveAspectRatio="none" style={{ display: 'block', height: '40px' }}>
-            <path d="M0,30 C150,50 350,8 600,26 C850,44 1050,4 1200,28 L1200,50 L0,50 Z" fill="white" />
-          </svg>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <X className="h-4 w-4 text-gray-500" />
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-4 custom-scrollbar">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="h-10 w-10 animate-spin text-[#ff5e14]" />
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Đang tải lịch hẹn...</p>
-            </div>
-          ) : sorted.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="h-16 w-16 rounded-2xl bg-orange-50 flex items-center justify-center mb-4">
-                <CalendarClock className="h-8 w-8 text-orange-200" />
-              </div>
-              <p className="text-sm font-bold text-gray-500">Bạn chưa có lịch hẹn nào</p>
-            </div>
-          ) : (
-            sorted.map(appt => {
-              const isHighlight = highlightId === appt.id;
-              const isPending = appt.status === 'PENDING';
-              const start = new Date(appt.startTime);
-              const dateStr = start.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-              const timeStr = start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-
-              return (
-                <div 
-                  key={appt.id}
-                  className={`group relative rounded-2xl border transition-all duration-300 p-5 ${isHighlight ? 'bg-orange-50/50 border-orange-200 shadow-lg ring-2 ring-orange-100 scale-[1.02]' : 'bg-gray-50/30 border-gray-100 hover:border-gray-200 hover:bg-white hover:shadow-md'}`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                          appt.status === 'CONFIRMED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          appt.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-100' :
-                          appt.status === 'COMPLETED' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                          'bg-amber-50 text-amber-600 border-amber-100 animate-pulse'
-                        }`}>
-                          {appt.status === 'PENDING' ? (appt.createdByRole === 'ROLE_USER' ? 'Đang chờ Staff xác nhận' : 'Chờ bạn xác nhận') : 
-                           appt.status === 'CONFIRMED' ? 'Chuẩn bị gặp' : 
-                           appt.status === 'CANCELLED' ? 'Đã hủy' : 'Đã hoàn thành'}
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-400">#{appt.id}</span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-[#ff5e14]" /><span className="text-xs font-bold text-gray-700">{dateStr}</span></div>
-                        <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-[#ff5e14]" /><span className="text-xs font-bold text-gray-700">{timeStr}</span></div>
-                      </div>
-
-                      <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-gray-400" /><span className="text-xs font-medium text-gray-600 line-clamp-1">{appt.location || 'Địa điểm chưa xác định'}</span></div>
-                      <p className="text-xs text-gray-500 italic line-clamp-2">{appt.purpose || 'Không có mô tả mục đích'}</p>
-                    </div>
-
-                    {isPending && (
-                      <div className="flex flex-col gap-2 shrink-0">
-                        {appt.createdByRole !== 'ROLE_USER' && (
-                          <button
-                            onClick={() => handleAction(appt.id, 'CONFIRMED')}
-                            disabled={updating != null}
-                            className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ff5e14] text-white text-[10px] font-black uppercase tracking-widest shadow-md shadow-orange-100 hover:bg-[#e04332] transition-all disabled:opacity-50"
-                          >
-                            {updating === appt.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                            Xác nhận
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleAction(appt.id, 'CANCELLED')}
-                          disabled={updating != null}
-                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all disabled:opacity-50"
-                        >
-                          {appt.createdByRole === 'ROLE_STAFF' ? 'Từ chối' : 'Hủy yêu cầu'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          )}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          <KYCInputForm
+            userId={userId}
+            userName={userName}
+            onSuccess={() => {
+              onSuccess();
+              onClose();
+            }}
+            onCancel={onClose}
+            isStaff={false}
+            onImageClick={setLightboxImage}
+            readOnly={readOnly}
+          />
         </div>
+
+        {/* Lightbox */}
+        {lightboxImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer animate-in fade-in duration-200"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button className="absolute top-6 right-6 text-white hover:text-gray-300 transition-colors">
+              <X className="w-8 h-8" />
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Full size"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+// ─── Profile Page ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   return (
@@ -510,23 +323,16 @@ function ProfileContent() {
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
-  // Appointments state
-  const [showAppts, setShowAppts] = useState(false);
-  const [myAppts, setMyAppts] = useState<AppointmentScheduleDto[]>([]);
-  const [apptsLoading, setApptsLoading] = useState(false);
-  const [highlightApptId, setHighlightApptId] = useState<number | null>(null);
-
-  const searchParams = useSearchParams();
-
-  // Flags state
-  const [showFlags, setShowFlags] = useState(false);
-  const [myFlags, setMyFlags] = useState<FlagDto[]>([]);
-  const [flagsLoading, setFlagsLoading] = useState(false);
 
   // Trust Score state
   const [trustScore, setTrustScore] = useState<number | null>(null);
   const [trustScoreLoading, setTrustScoreLoading] = useState(false);
   const [showTrustScoreLogs, setShowTrustScoreLogs] = useState(false);
+
+  // KYC state
+  const [kycData, setKycData] = useState<KycResponse | null>(null);
+  const [kycLoading, setKycLoading] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -576,55 +382,7 @@ function ProfileContent() {
   }, [user?.id]);
 
 
-  const fetchFlags = useCallback(async () => {
-    setFlagsLoading(true);
-    try {
-      const data = await flagService.getMyFlags(0, 100);
-      setMyFlags(data);
-    } catch {
-      setMyFlags([]);
-    } finally {
-      setFlagsLoading(false);
-    }
-  }, []);
 
-  const openFlags = () => { setShowFlags(true); fetchFlags(); };
-
-  // Fetch Appointments
-  const fetchAppts = useCallback(async () => {
-    if (!user?.id) return;
-    setApptsLoading(true);
-    try {
-      const data = await appointmentService.getByDonor(user.id);
-      setMyAppts(data);
-    } catch {
-      setMyAppts([]);
-    } finally {
-      setApptsLoading(false);
-    }
-  }, [user?.id]);
-
-  const handleApptStatusChange = async (id: number, status: 'CONFIRMED' | 'CANCELLED') => {
-    try {
-      const updated = await appointmentService.updateStatus(id, status);
-      setMyAppts(prev => prev.map(a => a.id === id ? updated : a));
-      toast(status === 'CONFIRMED' ? 'Đã xác nhận lịch hẹn' : 'Đã từ chối lịch hẹn', 'success');
-    } catch (err: any) {
-      toast(err.response?.data?.message || 'Không thể cập nhật trạng thái', 'error');
-    }
-  };
-
-  // Handle query params for specific appointment
-  useEffect(() => {
-    const apptId = searchParams.get('appointmentId');
-    if (apptId) {
-      setHighlightApptId(Number(apptId));
-      setShowAppts(true);
-      fetchAppts();
-    }
-  }, [searchParams, fetchAppts]);
-
-  const openAppts = () => { setShowAppts(true); fetchAppts(); setHighlightApptId(null); };
 
   // Fetch trust score
   useEffect(() => {
@@ -638,6 +396,25 @@ function ProfileContent() {
         })
         .finally(() => setTrustScoreLoading(false));
     }
+  }, [user?.id]);
+
+  // Fetch KYC Data
+  const fetchKycData = async () => {
+    if (user?.id) {
+      setKycLoading(true);
+      try {
+        const data = await kycService.getByUserId(user.id);
+        setKycData(data);
+      } catch (err) {
+        console.error('Failed to fetch KYC:', err);
+      } finally {
+        setKycLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchKycData();
   }, [user?.id]);
 
   const handleEdit = () => {
@@ -774,45 +551,14 @@ function ProfileContent() {
 
   if (!user) return null;
 
-  // Quick access "Lịch Hẹn" button
-  const LichHenBtn = () => (
-    <button
-      onClick={openAppts}
-      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 group w-full text-left"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#ff5e14]/10 group-hover:bg-[#ff5e14]/15 transition-colors relative">
-        <CalendarClock className="h-5 w-5 text-[#ff5e14]" strokeWidth={2} />
-        {/* Unconfirmed indicator */}
-        {myAppts.some(a => a.status === 'PENDING') && (
-          <span className="absolute -top-1 -right-1 h-3 w-3 bg-[#ff5e14] border-2 border-white rounded-full animate-bounce" />
-        )}
-      </div>
-      <span className="text-sm font-medium text-gray-700 flex-1">Lịch Hẹn</span>
-      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#ff5e14] transition-colors" />
-    </button>
-  );
-
-  // Quick access "Tố Cáo" button
-  const MyFlagsBtn = () => (
-    <button
-      onClick={openFlags}
-      className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 group w-full text-left"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 group-hover:bg-red-100 transition-colors">
-        <Flag className="h-5 w-5 text-red-400" strokeWidth={2} />
-      </div>
-      <span className="text-sm font-medium text-gray-700 flex-1">Tố Cáo Của Tôi</span>
-      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-red-400 transition-colors" />
-    </button>
-  );
 
   return (
-    <div className="h-full bg-[#f8fafe] flex items-center justify-center overflow-hidden p-6">
+    <div className="h-screen bg-[#f8fafe] flex items-center justify-center p-6 overflow-hidden">
       {/* ── Main Single Card ── */}
-      <div className="w-full max-w-4xl bg-white rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.05)] border border-gray-100 overflow-hidden flex flex-col md:flex-row h-fit animate-in fade-in zoom-in duration-500">
+      <div className="w-full max-w-5xl bg-white rounded-[1.5rem] shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden flex flex-col md:flex-row h-fit animate-in fade-in duration-700">
 
         {/* LEFT SECTION: Basic Info & Avatar */}
-        <div className="md:w-2/5 p-10 bg-gray-50/50 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
+        <div className="md:w-2/5 p-6 bg-gray-50/50 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
           <div className="relative mb-6">
             <AvatarUploader
               onUpload={handleAvatarUpload}
@@ -821,7 +567,7 @@ function ProfileContent() {
               acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
             >
               <div className="relative cursor-pointer group">
-                <Avatar className="h-32 w-32 ring-8 ring-white shadow-xl group-hover:scale-105 transition-transform duration-300">
+                <Avatar className="h-24 w-24 ring-8 ring-white shadow-xl group-hover:scale-105 transition-transform duration-300">
                   <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
                   <AvatarFallback className="bg-white text-3xl font-bold text-gray-400">
                     {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
@@ -834,72 +580,45 @@ function ProfileContent() {
             </AvatarUploader>
           </div>
 
-          <h2 className="text-2xl font-black text-gray-900 mb-1 uppercase tracking-tight">
+          <h2 className="text-xl font-bold text-gray-900 mb-0.5 tracking-tight">
             {user.fullName || 'Thành viên'}
           </h2>
-          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">
-            Hội viên TrustFundMe
+          <p className="text-gray-400 text-[10px] font-medium uppercase tracking-[0.2em]">
+            TrustFundMe Member
           </p>
 
           {/* Premium Trust Score Section */}
-          <div className="w-full mt-3 px-8">
-            <div className="bg-white rounded-[2rem] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-amber-100/40 relative overflow-hidden group">
-              {/* Background Glow */}
-              <div className="absolute -right-2 -top-2 w-16 h-16 bg-amber-400/5 rounded-full blur-xl group-hover:bg-amber-400/10 transition-all duration-500" />
-              
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
-                  <Star className="h-5 w-5 text-amber-500" fill="currentColor" fillOpacity={0.2} />
+          <div className="w-full mt-4 px-6">
+            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 relative">
+              <div className="flex flex-col items-center">
+                <div className="text-[10px] font-bold text-black uppercase tracking-widest mb-1">Độ uy tín</div>
+                <div className="text-3xl font-light text-black">
+                   {trustScoreLoading ? '...' : trustScore}
                 </div>
-                
-                {trustScoreLoading ? (
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className="h-6 w-16 bg-gray-100 animate-pulse rounded-md" />
-                    <div className="h-2.5 w-24 bg-gray-50 animate-pulse rounded-sm" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-2xl font-black text-gray-900 leading-none">
-                        {trustScore ?? 0}
-                      </span>
-                      <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tighter">đ</span>
-                    </div>
-                    <p className="text-[9px] font-bold text-gray-400 mt-0.5 uppercase tracking-widest">
-                      Độ Uy Tín
-                    </p>
-                    
-                    <button 
-                      onClick={() => setShowTrustScoreLogs(true)}
-                      className="mt-3 flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wider transition-all"
-                    >
-                      <ScrollText className="h-2.5 w-2.5" />
-                      Biến động
-                      <ChevronRight className="h-2.5 w-2.5" />
-                    </button>
-                  </>
-                )}
+                <button 
+                  onClick={() => setShowTrustScoreLogs(true)}
+                  className="mt-2 text-[9px] font-bold text-gray-600 hover:text-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                >
+                  Lịch sử <ChevronRight className="h-2.5 w-2.5" />
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="w-full space-y-4">
+          <div className="w-full mt-6 space-y-3">
             {!isEditing && (
               <button
                 onClick={handleEdit}
-                className="w-full py-3.5 bg-gray-900 text-white rounded-2xl text-sm font-bold shadow-lg hover:bg-black transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 border border-black text-black rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
               >
-                <Pencil className="h-4 w-4" />
-                Sửa hồ sơ
+                Cập nhật thông tin
               </button>
             )}
-            <LichHenBtn />
-            <MyFlagsBtn />
           </div>
         </div>
 
         {/* RIGHT SECTION: Details & Bank */}
-        <div className="flex-1 p-10 flex flex-col justify-center">
+        <div className="flex-1 p-6 flex flex-col justify-center">
           {isEditing ? (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -945,58 +664,74 @@ function ProfileContent() {
               </div>
             </form>
           ) : (
-            <div className="space-y-10">
-              <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2.5">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-500">
-                    <Mail className="h-5 w-5" />
-                  </div>
+                  <Mail className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-gray-400">Email cá nhân</p>
-                    <p className="text-sm font-bold text-gray-700">{user.email}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Email</p>
+                    <p className="text-sm font-semibold text-black">{user.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500">
-                    <Phone className="h-5 w-5" />
-                  </div>
+                  <Phone className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-gray-400">Số điện thoại</p>
-                    <p className="text-sm font-bold text-gray-700">{user.phoneNumber || '—'}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Số điện thoại</p>
+                    <p className="text-sm font-semibold text-black">{user.phoneNumber || '—'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-500">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </div>
+                  <CheckCircle2 className="h-4 w-4 text-gray-400" />
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-gray-400">Xác minh tài khoản</p>
-                    <p className="text-sm font-bold text-gray-700">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Xác minh</p>
+                    <p className="text-sm font-semibold text-black">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
                   </div>
                 </div>
-              </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100 transition-all hover:bg-gray-100/50">
+                    <div className="flex items-center gap-4">
+                      <Shield className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <p className="text-[9px] uppercase font-bold text-black tracking-widest">Hồ sơ KYC</p>
+                        <p className="text-sm font-semibold text-black">
+                          {kycLoading ? '...' : 
+                            kycData?.status === 'APPROVED' ? 'Đã phê duyệt' : 
+                            kycData?.status === 'PENDING' ? 'Đang chờ duyệt' : 
+                            kycData?.status === 'REJECTED' ? 'Bị từ chối' : 'Chưa cập nhật'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {!kycLoading && (
+                      <button 
+                        onClick={() => setShowKycModal(true)}
+                        className="text-[9px] font-bold text-gray-500 hover:text-black uppercase tracking-widest transition-colors border-b border-transparent hover:border-black"
+                      >
+                        {kycData?.status === 'APPROVED' ? 'Xem chi tiết' : 'Xác thực'}
+                      </button>
+                    )}
+                  </div>
+                </div>
 
               {/* Bank Summary Area */}
-              <div className="pt-8 border-t border-gray-100">
+              <div className="pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold text-gray-400 flex items-center gap-2">
-                    <Landmark className="h-3.5 w-3.5" /> THÔNG TIN THANH TOÁN
+                  <h3 className="text-xs font-bold text-black flex items-center gap-2 uppercase tracking-widest">
+                    <Landmark className="h-3.5 w-3.5" /> Tài khoản ngân hàng
                   </h3>
-                  {bankAccount && <span className="text-[10px] font-black text-green-500 bg-green-50 px-2.5 py-1 rounded-full">ACTIVE</span>}
+                  {bankAccount && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-widest border border-green-100">Đang hoạt động</span>}
                 </div>
 
                 {bankAccount ? (
-                  <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-6 text-white shadow-2xl relative overflow-hidden flex items-center justify-between">
-                    <div className="relative z-10">
-                      <p className="text-[10px] font-bold text-white/40 mb-1">{bankAccount.bankCode}</p>
-                      <p className="text-base font-mono tracking-widest mb-3">{bankAccount.accountNumber}</p>
-                      <p className="text-[10px] font-bold uppercase">{bankAccount.accountHolderName}</p>
+                  <div className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold text-black tracking-widest mb-0.5 uppercase">{bankAccount.bankCode}</p>
+                      <p className="text-base font-mono text-black font-bold tracking-wider mb-0.5">{bankAccount.accountNumber}</p>
+                      <p className="text-[10px] font-bold text-black uppercase tracking-widest">{bankAccount.accountHolderName}</p>
                     </div>
-                    <div className="h-10 w-10 flex items-center justify-center bg-white/10 rounded-full">
-                      <Landmark className="h-5 w-5 text-white/50" />
-                    </div>
+                    <Landmark className="h-4 w-4 text-gray-400" />
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-2xl p-6 border border-dashed border-gray-200 text-center">
@@ -1010,21 +745,23 @@ function ProfileContent() {
         </div>
       </div>
 
-      {/* ── Flags Modal ── */}
-      {showFlags && (
-        <FlagsModal
-          flags={myFlags}
-          loading={flagsLoading}
-          onClose={() => setShowFlags(false)}
-        />
-      )}
-
       {/* ── Trust Score Logs Modal ── */}
       {showTrustScoreLogs && user?.id && (
         <TrustScoreLogsModal
           userId={Number(user.id)}
           userName={user.fullName || 'Người dùng'}
           onClose={() => setShowTrustScoreLogs(false)}
+        />
+      )}
+
+      {/* ── User KYC Modal ── */}
+      {showKycModal && user?.id && (
+        <UserKYCModal
+          userId={Number(user.id)}
+          userName={user.fullName || 'Người dùng'}
+          onClose={() => setShowKycModal(false)}
+          onSuccess={fetchKycData}
+          readOnly={kycData?.status === 'APPROVED'}
         />
       )}
     </div>
