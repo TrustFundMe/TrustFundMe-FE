@@ -8,7 +8,7 @@ import { campaignService } from '@/services/campaignService';
 import { mediaService, MediaUploadResponse } from '@/services/mediaService';
 import { paymentService } from '@/services/paymentService';
 import { feedPostService } from '@/services/feedPostService';
-import { Expenditure, ExpenditureItem } from '@/types/expenditure';
+import { Expenditure, ExpenditureItem, ExpenditureCatology } from '@/types/expenditure';
 
 export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, authLoading: boolean) {
     const router = useRouter();
@@ -16,6 +16,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
     const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
     const [campaign, setCampaign] = useState<any | null>(null);
     const [items, setItems] = useState<ExpenditureItem[]>([]);
+    const [categories, setCategories] = useState<ExpenditureCatology[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [posts, setPosts] = useState<any[]>([]);
@@ -59,9 +60,13 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
                 const campaignData = await campaignService.getById(expData.campaignId);
                 setCampaign(campaignData);
 
-                const itemsData = await expenditureService.getItems(id);
+                const [itemsData, catData] = await Promise.all([
+                    expenditureService.getItems(id),
+                    expenditureService.getCategories(id).catch(() => [])
+                ]);
                 const safeItems = Array.isArray(itemsData) ? itemsData : [];
                 setItems(safeItems);
+                setCategories(Array.isArray(catData) ? catData : []);
 
                 setUpdateItems(safeItems.map(item => ({
                     id: item.id,
@@ -249,7 +254,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
     };
 
     return {
-        expenditure, campaign, items, loading, error, posts, fetchData,
+        expenditure, campaign, items, categories, loading, error, posts, fetchData,
         isUpdateModalOpen, setIsUpdateModalOpen, updateItems, setUpdateItems, updating,
         itemMedia, itemMediaLoading, itemUploadState, setItemUploadState, galleryModalItemId, setGalleryModalItemId,
         donationSummary, loadingDonationSummary,

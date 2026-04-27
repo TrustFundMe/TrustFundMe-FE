@@ -1,4 +1,4 @@
-import { Expenditure, CreateExpenditureRequest, ExpenditureItem, CreateExpenditureItemRequest, ExpenditureTransaction } from '@/types/expenditure';
+import { Expenditure, CreateExpenditureRequest, ExpenditureItem, ExpenditureCatology, CreateExpenditureItemRequest, ExpenditureTransaction } from '@/types/expenditure';
 import { api as axiosInstance } from '@/config/axios';
 import axios from 'axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
@@ -21,6 +21,11 @@ export const expenditureService = {
 
     getItems: async (id: string | number): Promise<ExpenditureItem[]> => {
         const response = await axiosInstance.get(`/api/expenditures/${id}/items`);
+        return response.data;
+    },
+
+    getCategories: async (id: string | number): Promise<ExpenditureCatology[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/${id}/categories`);
         return response.data;
     },
     getItemsByCampaignId: async (campaignId: string | number): Promise<ExpenditureItem[]> => {

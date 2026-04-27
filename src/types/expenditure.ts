@@ -27,6 +27,8 @@ export interface ExpenditureItem {
     price: number;
     expectedPrice: number;
     note?: string;
+    catologyId?: number;
+    catologyName?: string;
     createdAt?: string;
     updatedAt?: string;
     /** Hình ảnh minh chứng cho item này (loaded separately) */
@@ -67,10 +69,31 @@ export interface CreateExpenditureItemRequest {
     note?: string;
 }
 
+export interface CreateExpenditureCatologyRequest {
+    name: string;
+    description?: string;
+    withdrawalCondition?: string;
+    items: CreateExpenditureItemRequest[];
+}
+
+export interface ExpenditureCatology {
+    id: number;
+    expenditureId: number;
+    name: string;
+    description?: string;
+    expectedAmount: number;
+    actualAmount: number;
+    withdrawalCondition?: string;
+    items: ExpenditureItem[];
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export interface CreateExpenditureRequest {
     campaignId: number;
     evidenceDueAt?: string;
     evidenceStatus?: string;
     plan?: string;
-    items: CreateExpenditureItemRequest[];
+    items?: CreateExpenditureItemRequest[];
+    categories?: CreateExpenditureCatologyRequest[];
 }

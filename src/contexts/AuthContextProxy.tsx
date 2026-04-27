@@ -19,6 +19,8 @@ interface BEUserInfo {
   gender?: string;
   dob?: string;
   address?: string;
+  cvUrl?: string;
+  trustScore?: number;
 }
 
 interface AuthContextType {

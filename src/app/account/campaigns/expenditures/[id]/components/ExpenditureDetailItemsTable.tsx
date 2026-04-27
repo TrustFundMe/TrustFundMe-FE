@@ -2,11 +2,13 @@
 
 import * as React from 'react';
 import { Fragment, useState } from 'react';
-import { Receipt, Download, Package, ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import { Receipt, Download, Package, ImageIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight } from 'lucide-react';
 import { ItemDonorsModal } from './ItemDonorsModal';
+import { ExpenditureCatology } from '@/types/expenditure';
 
 interface ExpenditureDetailItemsTableProps {
     items: any[];
+    categories?: ExpenditureCatology[];
     campaign: any;
     itemMedia: Record<number, any[]>;
     donationSummary: Record<number, number>;
@@ -44,11 +46,126 @@ const ProgressCircle = ({ percent }: { percent: number }) => {
     );
 };
 
+const ItemRow: React.FC<{
+    item: any; idx: number; campaign: any; itemMedia: Record<number, any[]>;
+    donationSummary: Record<number, number>; isEvidenceSubmitted: boolean;
+    setGalleryModalItemId: (id: number | null) => void; loadItemMedia: (id: number) => void;
+    setDonorModalItem: (v: {id: number, name: string} | null) => void;
+}> = ({ item, idx, campaign, itemMedia, donationSummary, isEvidenceSubmitted, setGalleryModalItemId, loadItemMedia, setDonorModalItem }) => {
+    const media = itemMedia[item.id] || [];
+    const planTotal = (item.quantity || 0) * (item.expectedPrice || 0);
+    const progress = campaign?.type === 'AUTHORIZED'
+        ? ((item.actualQuantity || 0) / (item.quantity || 1)) * 100
+        : ((donationSummary[item.id] || 0) / (item.quantity || 1)) * 100;
+    const priceDiff = (item.price || 0) - (item.expectedPrice || 0);
+    const priceColorClass = priceDiff > 0 ? "text-rose-500" : (priceDiff < 0 ? "text-[#065F46]" : "text-[#1E293B]");
+
+    return (
+        <tr className="hover:bg-[#F8FAFC] transition-colors">
+            <td className="px-2 py-2 text-center border-r border-[#E2E8F0] text-xs font-black text-[#64748B]">{idx + 1}</td>
+            <td className="px-2 py-2 border-r border-[#E2E8F0]">
+                <div className="flex items-center gap-3">
+                    <div className="min-w-0">
+                        <div className="text-[14px] font-bold text-[#1E293B] truncate">{item.category}</div>
+                        {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-0.5">{item.note}</div>}
+                    </div>
+                </div>
+            </td>
+            <td className="px-2 py-2 text-center border-r border-[#E2E8F0]">
+                <button
+                    onClick={() => { setGalleryModalItemId(item.id); loadItemMedia(item.id); }}
+                    className="px-2.5 py-1 rounded-lg border border-[#E2E8F0] hover:border-[#065F46]/40 hover:bg-[#065F46]/5 transition-all bg-white text-[10px] font-black text-[#065F46] uppercase tracking-wider whitespace-nowrap"
+                >
+                    {media.length > 0 ? `Xem (${media.length})` : 'Xem'}
+                </button>
+            </td>
+            {campaign?.type === 'AUTHORIZED' ? (
+                <>
+                    <td className="px-2 py-2 text-center text-[14px] text-[#64748B] border-r border-[#E2E8F0]">
+                        {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[15px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
+                    </td>
+                    <td className="px-2 py-2 text-center text-base font-black text-blue-500 border-r border-[#E2E8F0]">
+                        {new Intl.NumberFormat('vi-VN').format(planTotal)} đ
+                    </td>
+                    <td className="px-2 py-2 text-center text-[14px] text-[#64748B] border-r border-[#E2E8F0]">
+                        {isEvidenceSubmitted ? (
+                            <>
+                                {(item.actualQuantity || 0)} <span className="mx-1">x</span>
+                                <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[15px]`}>
+                                    {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
+                                    {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
+                                    {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-[12px] font-bold text-slate-400">Chưa cập nhật</span>
+                        )}
+                    </td>
+                    <td className="px-4 py-2">
+                        <div className="flex items-center justify-between gap-4 w-full">
+                            <div className="flex-1 h-6 bg-[#065F46]/15 rounded-full overflow-hidden shadow-inner border border-black/5">
+                                <div className="h-full rounded-full bg-[#065F46]" style={{ width: `${Math.min(progress, 100)}%` }}></div>
+                            </div>
+                            <span className="text-lg font-black text-[#065F46] tabular-nums leading-none min-w-[60px] text-right">
+                                {Math.round(progress)}%
+                            </span>
+                        </div>
+                    </td>
+                </>
+            ) : (
+                <>
+                    <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
+                        {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
+                    </td>
+                    <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
+                        <span className="font-medium text-[#1E293B] text-[12px]">{(donationSummary[item.id] || 0)}</span> <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
+                    </td>
+                    <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
+                        {isEvidenceSubmitted ? (
+                            <>
+                                <span className="font-bold text-[#1E293B] text-[12px]">{(item.actualQuantity || 0)}</span> <span className="mx-1">x</span>
+                                <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[12px]`}>
+                                    {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
+                                    {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
+                                    {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-[10px] font-bold text-slate-400">Chưa cập nhật</span>
+                        )}
+                    </td>
+                    <td className="px-4 py-2 border-r border-[#E2E8F0]">
+                        <div className="flex items-center justify-between gap-3 w-full">
+                            <div className="flex-1 h-4 bg-[#065F46]/15 rounded-full overflow-hidden shadow-inner border border-black/5">
+                                <div className="h-full rounded-full bg-[#065F46]" style={{ width: `${Math.min(progress, 100)}%` }}></div>
+                            </div>
+                            <span className="text-sm font-black text-[#065F46] tabular-nums leading-none min-w-[45px] text-right">
+                                {Math.round(progress)}%
+                            </span>
+                        </div>
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                        <button
+                            onClick={() => setDonorModalItem({ id: item.id, name: item.category })}
+                            className="text-[10px] text-[#1E293B] font-bold hover:underline opacity-80 flex mx-auto items-center"
+                        >
+                            Xem danh sách
+                        </button>
+                    </td>
+                </>
+            )}
+        </tr>
+    );
+};
+
 const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = ({
-    items, campaign, itemMedia, donationSummary, handleExportItems,
+    items, categories, campaign, itemMedia, donationSummary, handleExportItems,
     setGalleryModalItemId, loadItemMedia, totalPlan, totalActual, totalReceived, expenditure
 }) => {
     const [donorModalItem, setDonorModalItem] = useState<{id: number, name: string} | null>(null);
+    const [collapsedCats, setCollapsedCats] = useState<Record<number, boolean>>({});
+    const hasCategories = categories && categories.length > 0;
+    const toggleCat = (catId: number) => setCollapsedCats(prev => ({ ...prev, [catId]: !prev[catId] }));
 
     const tongQuyenGop = items.reduce((sum, item) => sum + ((donationSummary[item.id] || 0) * (item.expectedPrice || 0)), 0);
     const rutThem = Math.max(totalReceived - tongQuyenGop, 0);
@@ -121,119 +238,40 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-[#E2E8F0]">
-                        {items.map((item, idx) => {
-                            const media = itemMedia[item.id] || [];
-                            const planTotal = (item.quantity || 0) * (item.expectedPrice || 0);
-                            const actualTotal = (item.actualQuantity || 0) * (item.price || 0);
-                            const progress = campaign?.type === 'AUTHORIZED'
-                                ? ((item.actualQuantity || 0) / (item.quantity || 1)) * 100
-                                : ((donationSummary[item.id] || 0) / (item.quantity || 1)) * 100;
-                            
-                            const priceDiff = (item.price || 0) - (item.expectedPrice || 0);
-                            const priceColorClass = priceDiff > 0 ? "text-rose-500" : (priceDiff < 0 ? "text-[#065F46]" : "text-[#1E293B]");
-
-                            return (
-                                <Fragment key={item.id}>
-                                    <tr className="hover:bg-[#F8FAFC] transition-colors">
-                                        <td className="px-2 py-2 text-center border-r border-[#E2E8F0] text-xs font-black text-[#64748B]">{idx + 1}</td>
-                                        <td className="px-2 py-2 border-r border-[#E2E8F0]">
-                                            <div className="flex items-center gap-3">
-                                                <div className="min-w-0">
-                                                    <div className="text-[14px] font-bold text-[#1E293B] truncate">{item.category}</div>
-                                                    {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-0.5">{item.note}</div>}
+                        {hasCategories ? (
+                            categories!.map((cat) => {
+                                const catItems = items.filter(item => item.catologyId === cat.id);
+                                const isCollapsed = collapsedCats[cat.id];
+                                const colSpan = campaign?.type === 'AUTHORIZED' ? 7 : 8;
+                                return (
+                                    <Fragment key={`cat-${cat.id}`}>
+                                        <tr
+                                            className="bg-orange-50/60 cursor-pointer hover:bg-orange-100/60 transition-colors"
+                                            onClick={() => toggleCat(cat.id)}
+                                        >
+                                            <td colSpan={colSpan} className="px-3 py-2">
+                                                <div className="flex items-center gap-2">
+                                                    {isCollapsed ? <ChevronRight className="w-3.5 h-3.5 text-orange-500" /> : <ChevronDown className="w-3.5 h-3.5 text-orange-500" />}
+                                                    <span className="text-xs font-black text-[#1E293B] uppercase tracking-wide">{cat.name}</span>
+                                                    {cat.description && <span className="text-[10px] text-[#64748B] italic">— {cat.description}</span>}
+                                                    <span className="ml-auto text-xs font-bold text-orange-600 tabular-nums">
+                                                        {new Intl.NumberFormat('vi-VN').format(cat.expectedAmount || 0)} đ
+                                                    </span>
+                                                    <span className="text-[10px] text-[#64748B]">({catItems.length} hạng mục)</span>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-2 py-2 text-center border-r border-[#E2E8F0]">
-                                            <button
-                                                onClick={() => {
-                                                    setGalleryModalItemId(item.id);
-                                                    loadItemMedia(item.id);
-                                                }}
-                                                className="px-2.5 py-1 rounded-lg border border-[#E2E8F0] hover:border-[#065F46]/40 hover:bg-[#065F46]/5 transition-all bg-white text-[10px] font-black text-[#065F46] uppercase tracking-wider whitespace-nowrap"
-                                            >
-                                                {media.length > 0 ? `Xem (${media.length})` : 'Xem'}
-                                            </button>
-                                        </td>
-                                        {campaign?.type === 'AUTHORIZED' ? (
-                                            <>
-                                                <td className="px-2 py-2 text-center text-[14px] text-[#64748B] border-r border-[#E2E8F0]">
-                                                    {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[15px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
-                                                </td>
-                                                <td className="px-2 py-2 text-center text-base font-black text-blue-500 border-r border-[#E2E8F0]">
-                                                    {new Intl.NumberFormat('vi-VN').format(planTotal)} đ
-                                                </td>
-                                                <td className="px-2 py-2 text-center text-[14px] text-[#64748B] border-r border-[#E2E8F0]">
-                                                    {isEvidenceSubmitted ? (
-                                                        <>
-                                                            {(item.actualQuantity || 0)} <span className="mx-1">x</span> 
-                                                            <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[15px]`}>
-                                                                {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
-                                                                {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
-                                                                {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-[12px] font-bold text-slate-400">Chưa cập nhật</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2">
-                                                    <div className="flex items-center justify-between gap-4 w-full">
-                                                        <div className="flex-1 h-6 bg-[#065F46]/15 rounded-full overflow-hidden shadow-inner border border-black/5">
-                                                            <div className="h-full rounded-full bg-[#065F46] " style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                                                        </div>
-                                                        <span className="text-lg font-black text-[#065F46] tabular-nums leading-none min-w-[60px] text-right">
-                                                            {Math.round(progress)}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
-                                                    {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
-                                                </td>
-                                                <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
-                                                    <span className="font-medium text-[#1E293B] text-[12px]">{(donationSummary[item.id] || 0)}</span> <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
-                                                </td>
-                                                <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
-                                                    {isEvidenceSubmitted ? (
-                                                        <>
-                                                            <span className="font-bold text-[#1E293B] text-[12px]">{(item.actualQuantity || 0)}</span> <span className="mx-1">x</span>
-                                                            <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[12px]`}>
-                                                                {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
-                                                                {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
-                                                                {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-slate-400">Chưa cập nhật</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2 border-r border-[#E2E8F0]">
-                                                    <div className="flex items-center justify-between gap-3 w-full">
-                                                        <div className="flex-1 h-4 bg-[#065F46]/15 rounded-full overflow-hidden shadow-inner border border-black/5">
-                                                            <div className="h-full rounded-full bg-[#065F46] " style={{ width: `${Math.min(progress, 100)}%` }}></div>
-                                                        </div>
-                                                        <span className="text-sm font-black text-[#065F46] tabular-nums leading-none min-w-[45px] text-right">
-                                                            {Math.round(progress)}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-2 py-2 text-center">
-                                                    <button 
-                                                        onClick={() => setDonorModalItem({ id: item.id, name: item.category })}
-                                                        className="text-[10px] text-[#1E293B] font-bold hover:underline opacity-80 flex mx-auto items-center"
-                                                    >
-                                                        Xem danh sách
-                                                    </button>
-                                                </td>
-                                            </>
-                                        )}
-                                    </tr>
-                                </Fragment>
-                            );
-                        })}
+                                            </td>
+                                        </tr>
+                                        {!isCollapsed && catItems.map((item, idx) => (
+                                            <ItemRow key={item.id} item={item} idx={idx} campaign={campaign} itemMedia={itemMedia} donationSummary={donationSummary} isEvidenceSubmitted={isEvidenceSubmitted} setGalleryModalItemId={setGalleryModalItemId} loadItemMedia={loadItemMedia} setDonorModalItem={setDonorModalItem} />
+                                        ))}
+                                    </Fragment>
+                                );
+                            })
+                        ) : (
+                            items.map((item, idx) => (
+                                <ItemRow key={item.id} item={item} idx={idx} campaign={campaign} itemMedia={itemMedia} donationSummary={donationSummary} isEvidenceSubmitted={isEvidenceSubmitted} setGalleryModalItemId={setGalleryModalItemId} loadItemMedia={loadItemMedia} setDonorModalItem={setDonorModalItem} />
+                            ))
+                        )}
                     </tbody>
                     <tfoot className="sticky bottom-0 z-20 bg-[#F1F5F9] border-t-2 border-[#E2E8F0] shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
                         <tr className="font-black text-[#1E293B]">

@@ -9,8 +9,8 @@ import { campaignService } from '@/services/campaignService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { CampaignDto } from '@/types/campaign';
 import { BankAccountDto } from '@/types/bankAccount';
-import { CreateExpenditureRequest, CreateExpenditureItemRequest } from '@/types/expenditure';
-import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { CreateExpenditureRequest, CreateExpenditureItemRequest, CreateExpenditureCatologyRequest } from '@/types/expenditure';
+import { ArrowLeft, Plus, Trash2, Save, AlertCircle, CreditCard, ExternalLink, Upload, Download, FileSpreadsheet, ChevronDown, ChevronRight, FolderPlus } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
@@ -43,12 +43,18 @@ function CreateExpenditureContent() {
 
     const [plan, setPlan] = useState('Đang tải...');
     const [evidenceDueAt, setEvidenceDueAt] = useState('');
-    const [items, setItems] = useState<CreateExpenditureItemRequest[]>([
-        { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }
+
+    interface CategoryState extends CreateExpenditureCatologyRequest {
+        collapsed: boolean;
+    }
+    const [categories, setCategories] = useState<CategoryState[]>([
+        { name: '', description: '', withdrawalCondition: '', items: [{ category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }
     ]);
+
     const [showImportModal, setShowImportModal] = useState(false);
     const [importing, setImporting] = useState(false);
     const [importPreview, setImportPreview] = useState<CreateExpenditureItemRequest[] | null>(null);
+    const [importTargetCatIndex, setImportTargetCatIndex] = useState(0);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -128,6 +134,7 @@ function CreateExpenditureContent() {
     };
 
     const handleExportItems = () => {
+        const items = getAllItems();
         if (items.length === 0) {
             toast.error('Không có hạng mục nào để xuất');
             return;
@@ -239,38 +246,76 @@ function CreateExpenditureContent() {
 
     const handleApplyImport = () => {
         if (!importPreview || importPreview.length === 0) return;
-        // Merge: thay thế items hiện tại bằng dữ liệu từ file
         const normalized = importPreview.map(item => ({
             ...item,
             price: 0,
             expectedPrice: item.expectedPrice,
             quantity: item.quantity,
         }));
-        setItems(normalized);
+        const newCats = [...categories];
+        newCats[importTargetCatIndex] = { ...newCats[importTargetCatIndex], items: normalized };
+        setCategories(newCats);
         setShowImportModal(false);
         setImportPreview(null);
-        toast.success(`Đã áp dụng ${normalized.length} hạng mục từ file Excel`);
+        toast.success(`Đã áp dụng ${normalized.length} hạng mục từ file Excel vào danh mục "${newCats[importTargetCatIndex].name || 'Chưa đặt tên'}"`);
     };
 
-    const handleItemChange = (index: number, field: keyof CreateExpenditureItemRequest, value: string | number) => {
-        const newItems = [...items];
-        newItems[index] = { ...newItems[index], [field]: value };
-        setItems(newItems);
+    // ── Category handlers ──
+    const addCategory = () => {
+        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }]);
     };
 
-    const addItem = () => {
-        setItems([...items, { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }]);
-    };
-
-    const removeItem = (index: number) => {
-        if (items.length > 1) {
-            const newItems = items.filter((_, i) => i !== index);
-            setItems(newItems);
+    const removeCategory = (catIndex: number) => {
+        if (categories.length > 1) {
+            setCategories(categories.filter((_, i) => i !== catIndex));
         }
     };
 
+    const updateCategory = (catIndex: number, field: string, value: string) => {
+        const newCats = [...categories];
+        newCats[catIndex] = { ...newCats[catIndex], [field]: value };
+        setCategories(newCats);
+    };
+
+    const toggleCategory = (catIndex: number) => {
+        const newCats = [...categories];
+        newCats[catIndex] = { ...newCats[catIndex], collapsed: !newCats[catIndex].collapsed };
+        setCategories(newCats);
+    };
+
+    // ── Item handlers (within a category) ──
+    const handleItemChange = (catIndex: number, itemIndex: number, field: keyof CreateExpenditureItemRequest, value: string | number) => {
+        const newCats = [...categories];
+        const newItems = [...newCats[catIndex].items];
+        newItems[itemIndex] = { ...newItems[itemIndex], [field]: value };
+        newCats[catIndex] = { ...newCats[catIndex], items: newItems };
+        setCategories(newCats);
+    };
+
+    const addItem = (catIndex: number) => {
+        const newCats = [...categories];
+        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }] };
+        setCategories(newCats);
+    };
+
+    const removeItem = (catIndex: number, itemIndex: number) => {
+        const newCats = [...categories];
+        if (newCats[catIndex].items.length > 1) {
+            newCats[catIndex] = { ...newCats[catIndex], items: newCats[catIndex].items.filter((_, i) => i !== itemIndex) };
+            setCategories(newCats);
+        }
+    };
+
+    const getAllItems = (): CreateExpenditureItemRequest[] => {
+        return categories.flatMap(cat => cat.items);
+    };
+
+    const calculateCategoryTotal = (catIndex: number) => {
+        return categories[catIndex].items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.expectedPrice)), 0);
+    };
+
     const calculateTotal = () => {
-        return items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.expectedPrice)), 0);
+        return categories.reduce((sum, cat) => sum + cat.items.reduce((s, item) => s + (Number(item.quantity) * Number(item.expectedPrice)), 0), 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -287,20 +332,26 @@ function CreateExpenditureContent() {
             return;
         }
 
-        if (items.some(item => !item.category || item.quantity <= 0 || item.expectedPrice < 0)) {
+        if (categories.some(cat => !cat.name.trim())) {
+            toast.error('Vui lòng nhập tên cho tất cả danh mục.');
+            return;
+        }
+
+        const allItems = getAllItems();
+        if (allItems.some(item => !item.category || item.quantity <= 0 || item.expectedPrice < 0)) {
             toast.error('Vui lòng kiểm tra lại thông tin các hạng mục (Tên, Số lượng > 0, Đơn giá >= 0).');
             return;
         }
 
-        if (items.some(item => item.category.length > 50)) {
+        if (allItems.some(item => item.category.length > 50)) {
             toast.error('Tên hàng hóa / dịch vụ không được vượt quá 50 ký tự.');
             return;
         }
-        if (items.some(item => Number(item.quantity) > 10000)) {
+        if (allItems.some(item => Number(item.quantity) > 10000)) {
             toast.error('Số lượng dự kiến không được vượt quá 10.000.');
             return;
         }
-        if (items.some(item => (item.note || '').length > 100)) {
+        if (allItems.some(item => (item.note || '').length > 100)) {
             toast.error('Ghi chú không được vượt quá 100 ký tự.');
             return;
         }
@@ -342,11 +393,16 @@ function CreateExpenditureContent() {
                 plan: plan,
                 evidenceDueAt: evidenceDueAt ? new Date(evidenceDueAt).toISOString() : undefined,
                 evidenceStatus: campaign?.type === 'ITEMIZED' ? 'PENDING_REVIEW' : 'PENDING',
-                items: items.map(item => ({
-                    ...item,
-                    quantity: Number(item.quantity),
-                    price: 0, // Default Actual Price to 0
-                    expectedPrice: Number(item.expectedPrice)
+                categories: categories.map(cat => ({
+                    name: cat.name,
+                    description: cat.description,
+                    withdrawalCondition: cat.withdrawalCondition,
+                    items: cat.items.map(item => ({
+                        ...item,
+                        quantity: Number(item.quantity),
+                        price: 0,
+                        expectedPrice: Number(item.expectedPrice)
+                    }))
                 }))
             };
 
@@ -443,16 +499,15 @@ function CreateExpenditureContent() {
                             ⚠️ Nếu giá thị trường thay đổi, chi tiêu <strong>không được vượt quá</strong> số tiền quyên góp cho từng mục.
                         </div>
 
-                        {/* Items list */}
-                        <div className="bg-white rounded flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 340px)' }}>
-                            {/* Items header */}
-                            <div className="px-3 py-1.5 border-b border-gray-200 flex justify-between items-center shrink-0">
-                                <h2 className="text-sm font-medium text-gray-900">Chi tiết</h2>
+                        {/* Categories with items (accordion) */}
+                        <div className="flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
+                            {/* Global toolbar */}
+                            <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-1.5">
                                     <button
                                         type="button"
                                         onClick={handleDownloadTemplate}
-                                        className="inline-flex items-center px-2.5 py-1 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-orange-500"
+                                        className="inline-flex items-center px-2.5 py-1 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50"
                                         title="Tải file mẫu Excel"
                                     >
                                         <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> Tải mẫu
@@ -460,151 +515,210 @@ function CreateExpenditureContent() {
                                     <button
                                         type="button"
                                         onClick={handleExportItems}
-                                        className="inline-flex items-center px-2.5 py-1 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-orange-500"
+                                        className="inline-flex items-center px-2.5 py-1 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50"
                                         title="Xuất Excel hạng mục"
                                     >
                                         <Download className="w-3.5 h-3.5 mr-1" /> Xuất Excel
                                     </button>
-                                    <label className="inline-flex items-center px-2.5 py-1 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-orange-500 cursor-pointer">
-                                        {importing ? (
-                                            <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-gray-400 mr-1"></div>
-                                        ) : (
-                                            <Upload className="w-3.5 h-3.5 mr-1 text-gray-500" />
-                                        )} Nhập
-                                        <input
-                                            type="file"
-                                            accept=".xlsx,.xls"
-                                            className="hidden"
-                                            onChange={handleImportFile}
-                                        />
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={addItem}
-                                        className="inline-flex items-center px-2.5 py-1 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-orange-500"
-                                    >
-                                        <Plus className="w-3.5 h-3.5 mr-1" /> Thêm
-                                    </button>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={addCategory}
+                                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200"
+                                >
+                                    <FolderPlus className="w-3.5 h-3.5 mr-1" /> Thêm danh mục
+                                </button>
                             </div>
 
-                            {/* Scrollable table */}
-                            <div className="flex-1 overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 sticky top-0 z-10">
-                                        <tr>
-                                            <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700 w-5">STT</th>
-                                            <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700 w-44">Tên hàng hóa / Dịch vụ</th>
-                                            <th className="px-2 py-1.5 text-right text-sm font-bold text-gray-700 w-16">SL Dự Kiến</th>
-                                            <th className="px-2 py-1.5 text-right text-sm font-bold text-gray-700 w-24">Giá Dự Kiến (VNĐ)</th>
-                                            <th className="px-2 py-1.5 text-right text-sm font-bold text-gray-700 w-24">Thành tiền (VNĐ)</th>
-                                            <th className="px-2 py-1.5 text-left text-sm font-bold text-gray-700 w-28">Ghi chú</th>
-                                            <th className="px-2 py-1.5 text-center text-sm font-bold text-gray-700 w-8"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {items.map((item, index) => (
-                                            <tr key={index} className="border-b border-gray-100">
-                                                <td className="px-2 py-1 text-gray-400 text-center">{index + 1}</td>
-                                                <td className="px-2 py-1">
-                                                    <input
-                                                        type="text"
-                                                        maxLength={50}
-                                                        className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
-                                                        placeholder="Tên sản phẩm..."
-                                                        value={item.category}
-                                                        onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                                                        required
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-1">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max={10000}
-                                                        className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 text-right"
-                                                        value={item.quantity}
-                                                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                        required
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-1">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="1"
-                                                        className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 text-right"
-                                                        value={item.expectedPrice}
-                                                        onChange={(e) => handleItemChange(index, 'expectedPrice', e.target.value)}
-                                                        required
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-1 text-right font-semibold text-orange-600 text-sm">
-                                                    {new Intl.NumberFormat('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(
-                                                        Number(item.quantity) * Number(item.expectedPrice)
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-1">
-                                                    <input
-                                                        type="text"
-                                                        maxLength={100}
-                                                        className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
-                                                        placeholder="Ghi chú..."
-                                                        value={item.note || ''}
-                                                        onChange={(e) => handleItemChange(index, 'note', e.target.value)}
-                                                    />
-                                                </td>
-                                                <td className="px-2 py-1 text-center">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeItem(index)}
-                                                        disabled={items.length === 1}
-                                                        className={`p-1.5 rounded-full hover:bg-red-50 text-red-400 hover:text-red-500 transition-colors ${items.length === 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
-                                                        title="Xóa hạng mục"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            {categories.map((cat, catIndex) => (
+                                <div key={catIndex} className="bg-white rounded overflow-hidden border border-gray-200">
+                                    {/* Category header (accordion toggle) */}
+                                    <div
+                                        className="px-3 py-2 bg-gray-50 flex items-center gap-2 cursor-pointer select-none"
+                                        onClick={() => toggleCategory(catIndex)}
+                                    >
+                                        {cat.collapsed ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                className="flex-1 rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 font-medium"
+                                                placeholder="Tên danh mục (VD: Thực phẩm, Di chuyển...)"
+                                                value={cat.name}
+                                                onChange={(e) => { e.stopPropagation(); updateCategory(catIndex, 'name', e.target.value); }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                required
+                                            />
+                                            <span className="text-xs font-semibold text-orange-600 whitespace-nowrap">
+                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(calculateCategoryTotal(catIndex))}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-gray-400">{cat.items.length} hạng mục</span>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); removeCategory(catIndex); }}
+                                            disabled={categories.length === 1}
+                                            className={`p-1 rounded-full hover:bg-red-50 text-red-400 hover:text-red-500 transition-colors ${categories.length === 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                            title="Xóa danh mục"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
 
-                            {/* Sticky footer */}
-                            <div className="px-3 py-1.5 border-t border-gray-200 shrink-0">
-                                <div className="flex justify-end items-center gap-2">
-                                    <span className="text-sm font-bold text-gray-500">Tổng cộng:</span>
-                                    <span className="text-lg font-bold text-orange-600">
-                                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(calculateTotal())}
-                                    </span>
+                                    {/* Category body (collapsible) */}
+                                    {!cat.collapsed && (
+                                        <div>
+                                            {/* Category description */}
+                                            <div className="px-3 py-1.5 border-b border-gray-100 flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    className="flex-1 rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-xs border p-1"
+                                                    placeholder="Mô tả danh mục (tùy chọn)"
+                                                    value={cat.description || ''}
+                                                    onChange={(e) => updateCategory(catIndex, 'description', e.target.value)}
+                                                />
+                                            </div>
+
+                                            {/* Items toolbar */}
+                                            <div className="px-3 py-1 border-b border-gray-100 flex justify-end items-center gap-1.5">
+                                                <label className="inline-flex items-center px-2 py-0.5 border border-gray-300 text-xs font-medium rounded text-gray-600 bg-white hover:bg-gray-50 cursor-pointer">
+                                                    {importing ? (
+                                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-1"></div>
+                                                    ) : (
+                                                        <Upload className="w-3 h-3 mr-1 text-gray-500" />
+                                                    )} Nhập Excel
+                                                    <input
+                                                        type="file"
+                                                        accept=".xlsx,.xls"
+                                                        className="hidden"
+                                                        onChange={(e) => { setImportTargetCatIndex(catIndex); handleImportFile(e); }}
+                                                    />
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addItem(catIndex)}
+                                                    className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200"
+                                                >
+                                                    <Plus className="w-3 h-3 mr-1" /> Thêm hạng mục
+                                                </button>
+                                            </div>
+
+                                            {/* Items table */}
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-5">STT</th>
+                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Tên hàng hóa / Dịch vụ</th>
+                                                        <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-16">SL</th>
+                                                        <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Đơn giá (VNĐ)</th>
+                                                        <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Thành tiền</th>
+                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-28">Ghi chú</th>
+                                                        <th className="px-2 py-1.5 w-8"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {cat.items.map((item, itemIndex) => (
+                                                        <tr key={itemIndex} className="border-b border-gray-100">
+                                                            <td className="px-2 py-1 text-gray-400 text-center text-xs">{itemIndex + 1}</td>
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="text"
+                                                                    maxLength={50}
+                                                                    className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
+                                                                    placeholder="Tên sản phẩm..."
+                                                                    value={item.category}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'category', e.target.value)}
+                                                                    required
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max={10000}
+                                                                    className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 text-right"
+                                                                    value={item.quantity}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'quantity', e.target.value)}
+                                                                    required
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="1"
+                                                                    className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 text-right"
+                                                                    value={item.expectedPrice}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'expectedPrice', e.target.value)}
+                                                                    required
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-right font-semibold text-orange-600 text-xs">
+                                                                {new Intl.NumberFormat('vi-VN').format(Number(item.quantity) * Number(item.expectedPrice))}
+                                                            </td>
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="text"
+                                                                    maxLength={100}
+                                                                    className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
+                                                                    placeholder="Ghi chú..."
+                                                                    value={item.note || ''}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'note', e.target.value)}
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeItem(catIndex, itemIndex)}
+                                                                    disabled={cat.items.length === 1}
+                                                                    className={`p-1 rounded-full hover:bg-red-50 text-red-400 hover:text-red-500 transition-colors ${cat.items.length === 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                                                                    title="Xóa hạng mục"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="mt-2 flex justify-end gap-2">
-                                    <Link
-                                        href={`/account/campaigns/expenditures?campaignId=${campaignId}`}
-                                        className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                                    >
-                                        Hủy bỏ
-                                    </Link>
-                                    <button
-                                        type="button"
-                                        onClick={handleSubmit}
-                                        disabled={submitting}
-                                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50"
-                                    >
-                                        {submitting ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                                Đang lưu...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="w-4 h-4 mr-2" />
-                                                Lưu khoản chi
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
+                            ))}
+                        </div>
+
+                        {/* Footer: Total + Actions */}
+                        <div className="bg-white rounded px-3 py-2">
+                            <div className="flex justify-end items-center gap-2">
+                                <span className="text-sm font-bold text-gray-500">Tổng cộng:</span>
+                                <span className="text-lg font-bold text-orange-600">
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(calculateTotal())}
+                                </span>
+                            </div>
+                            <div className="mt-2 flex justify-end gap-2">
+                                <Link
+                                    href={`/account/campaigns/expenditures?campaignId=${campaignId}`}
+                                    className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                                >
+                                    Hủy bỏ
+                                </Link>
+                                <button
+                                    type="button"
+                                    onClick={handleSubmit}
+                                    disabled={submitting}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50"
+                                >
+                                    {submitting ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            Đang lưu...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4 mr-2" />
+                                            Lưu khoản chi
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
 

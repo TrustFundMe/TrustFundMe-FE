@@ -16,7 +16,7 @@ export default function ExpenditureDetailPage() {
     const id = params?.id as string;
     const { isAuthenticated, loading: authLoading } = useAuth();
     const {
-        expenditure, campaign, items, loading, error, posts,
+        expenditure, campaign, items, categories, loading, error, posts,
         itemMedia, galleryModalItemId, setGalleryModalItemId,
         donationSummary, handleExportItems, loadItemMedia,
         handleItemMediaUpload, handleDeleteItemMedia, handleItemFileChange, itemUploadState
@@ -90,8 +90,9 @@ export default function ExpenditureDetailPage() {
                 </div>
 
                 {/* Main Table */}
-                <ExpenditureDetailItemsTable 
+                <ExpenditureDetailItemsTable
                     items={items}
+                    categories={categories}
                     campaign={campaign}
                     itemMedia={itemMedia}
                     donationSummary={donationSummary}

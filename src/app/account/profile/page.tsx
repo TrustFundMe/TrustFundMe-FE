@@ -10,7 +10,7 @@ import {
   User, Mail, Phone, X, Pencil,
   Loader2, ChevronRight, Landmark, CheckCircle2,
   Star, ScrollText, Plus, Minus,
-  Shield, Info, Clock, XCircle, ZoomIn
+  Shield, Info, Clock, XCircle, ZoomIn, FileDown
 } from 'lucide-react';
 import { Suspense } from 'react';
 import { api } from '@/config/axios';
@@ -321,6 +321,7 @@ function ProfileContent() {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cvUploading, setCvUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
 
@@ -337,6 +338,9 @@ function ProfileContent() {
   // Form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [dob, setDob] = useState(user?.dob || '');
+  const [address, setAddress] = useState(user?.address || '');
+  const [cvUrl, setCvUrl] = useState(user?.cvUrl || '');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -355,6 +359,9 @@ function ProfileContent() {
       setEmail(user.email || '');
       setPhone(user.phoneNumber || '');
       setAvatarPreview(user.avatarUrl || null);
+      setDob(user.dob || '');
+      setAddress(user.address || '');
+      setCvUrl(user.cvUrl || '');
     }
   }, [user]);
 
@@ -423,6 +430,9 @@ function ProfileContent() {
     setLastName(parts.slice(1).join(' ') || '');
     setPhone(user?.phoneNumber || '');
     setAvatarPreview(user?.avatarUrl ?? null);
+    setDob(user?.dob || '');
+    setAddress(user?.address || '');
+    setCvUrl(user?.cvUrl || '');
 
     // Sync bank state with current bankAccount
     if (bankAccount) {
@@ -514,6 +524,8 @@ function ProfileContent() {
       const fullName = `${trFirstName} ${trLastName}`.trim();
       const profileRes = await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), {
         fullName,
+        address: address || undefined,
+        cvUrl: cvUrl || undefined,
         phoneNumber: trPhone || undefined
       });
       updateUser({
@@ -553,13 +565,13 @@ function ProfileContent() {
 
 
   return (
-    <div className="h-screen bg-[#f8fafe] flex items-center justify-center p-6 overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafe] flex items-center justify-center p-6 md:p-8 overflow-auto">
       {/* ── Main Single Card ── */}
-      <div className="w-full max-w-5xl bg-white rounded-[1.5rem] shadow-[0_1px_3px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden flex flex-col md:flex-row h-fit animate-in fade-in duration-700">
+      <div className="w-full max-w-4xl bg-white rounded-[2rem] shadow-[0_2px_20px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden flex flex-col md:flex-row h-fit animate-in fade-in zoom-in-95 duration-700">
 
         {/* LEFT SECTION: Basic Info & Avatar */}
-        <div className="md:w-2/5 p-6 bg-gray-50/50 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
-          <div className="relative mb-6">
+        <div className="md:w-[320px] p-8 bg-gray-50/40 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100 shrink-0">
+          <div className="relative mb-4 scale-90">
             <AvatarUploader
               onUpload={handleAvatarUpload}
               onError={(m) => { if (m?.trim()) toast(m, 'error'); }}
@@ -567,176 +579,262 @@ function ProfileContent() {
               acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
             >
               <div className="relative cursor-pointer group">
-                <Avatar className="h-24 w-24 ring-8 ring-white shadow-xl group-hover:scale-105 transition-transform duration-300">
+                <Avatar className="h-20 w-20 ring-4 ring-white shadow-lg group-hover:scale-105 transition-transform duration-300">
                   <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
-                  <AvatarFallback className="bg-white text-3xl font-bold text-gray-400">
+                  <AvatarFallback className="bg-white text-2xl font-bold text-gray-400">
                     {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-1 right-1 bg-[#ff715e] p-2.5 rounded-full shadow-lg border-4 border-white">
-                  <Pencil className="h-4.5 w-4.5 text-white" />
+                <div className="absolute bottom-0.5 right-0.5 bg-[#ff715e] p-2 rounded-full shadow-lg border-2 border-white">
+                  <Pencil className="h-3.5 w-3.5 text-white" />
                 </div>
               </div>
             </AvatarUploader>
           </div>
 
-          <h2 className="text-xl font-bold text-gray-900 mb-0.5 tracking-tight">
+          <h2 className="text-lg font-bold text-gray-900 mb-0.5 tracking-tight">
             {user.fullName || 'Thành viên'}
           </h2>
-          <p className="text-gray-400 text-[10px] font-medium uppercase tracking-[0.2em]">
-            TrustFundMe Member
-          </p>
-
-          {/* Premium Trust Score Section */}
-          <div className="w-full mt-4 px-6">
-            <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 relative">
-              <div className="flex flex-col items-center">
-                <div className="text-[10px] font-bold text-black uppercase tracking-widest mb-1">Độ uy tín</div>
-                <div className="text-3xl font-light text-black">
-                   {trustScoreLoading ? '...' : trustScore}
-                </div>
+          
+          <div className="pt-5 border-t border-gray-100 mt-6 w-full">
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex flex-col items-center">
+              <p className="text-[9px] font-bold text-black uppercase tracking-[0.2em] mb-2">Trust Score</p>
+              <div className="flex items-center gap-3">
+                <span className="text-4xl font-black text-black leading-none">{user.trustScore ?? 0}</span>
                 <button 
                   onClick={() => setShowTrustScoreLogs(true)}
-                  className="mt-2 text-[9px] font-bold text-gray-600 hover:text-black uppercase tracking-widest transition-colors flex items-center gap-1"
+                  className="px-3 py-1 bg-black text-white text-[8px] font-bold uppercase tracking-widest rounded-full hover:bg-gray-800 transition-all shadow-sm"
                 >
-                  Lịch sử <ChevronRight className="h-2.5 w-2.5" />
+                  Lịch sử
                 </button>
               </div>
             </div>
-          </div>
-
-          <div className="w-full mt-6 space-y-3">
-            {!isEditing && (
-              <button
-                onClick={handleEdit}
-                className="w-full py-3 border border-black text-black rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
-              >
-                Cập nhật thông tin
-              </button>
-            )}
+            
+            <button
+              onClick={handleEdit}
+              className="w-full mt-5 py-3 border border-black text-[11px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all rounded-xl"
+            >
+              Cập nhật hồ sơ
+            </button>
           </div>
         </div>
 
         {/* RIGHT SECTION: Details & Bank */}
         <div className="flex-1 p-6 flex flex-col justify-center">
           {isEditing ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Họ</label>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold text-black ml-1">Họ</label>
                   <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Tên</label>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase font-bold text-black ml-1">Tên</label>
                   <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} required
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Số điện thoại</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-black ml-1">Số điện thoại</label>
                 <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                  className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" placeholder="+84 ..." />
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" placeholder="+84 ..." />
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
-                <h3 className="text-xs font-bold text-gray-400 flex items-center gap-2">
-                  <Landmark className="h-4 w-4" /> THÔNG TIN NGÂN HÀNG
+              <div className="pt-4 border-t border-gray-100 flex flex-col gap-3.5">
+                <h3 className="text-[11px] font-bold text-black flex items-center gap-2 uppercase">
+                  <Landmark className="h-4 w-4" /> Ngân hàng
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <input type="text" placeholder="Mã ngân hàng" value={bankCode} onChange={e => setBankCode(e.target.value)}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" />
                   <input type="text" placeholder="Số tài khoản" value={accountNumber} onChange={e => setAccountNumber(e.target.value)}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none" />
+                    className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" />
                 </div>
                 <input type="text" placeholder="Tên chủ thẻ" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)}
-                  className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3 text-sm focus:ring-2 focus:ring-[#ff715e]/20 transition-all outline-none uppercase" />
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none uppercase" />
               </div>
 
-              <div className="flex gap-3 pt-6">
-                <button type="submit" disabled={saving} className="flex-1 bg-[#ff715e] text-white py-4 rounded-2xl text-sm font-bold shadow-xl shadow-red-100 hover:bg-[#e04332] transition-all disabled:opacity-50">
-                  {saving ? <Loader2 className="h-5 w-5 animate-spin mx-auto text-white" /> : 'Lưu tất cả'}
+              <div className="flex gap-2 pt-4">
+                <button type="submit" disabled={saving} className="flex-1 bg-[#ff715e] text-white py-2.5 rounded-xl text-xs font-bold hover:bg-[#e04332] transition-all disabled:opacity-50">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin mx-auto text-white" /> : 'Lưu tất cả'}
                 </button>
-                <button type="button" onClick={() => setIsEditing(false)} className="px-8 py-4 bg-gray-100 text-gray-600 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all">
+                <button type="button" onClick={() => setIsEditing(false)} className="px-6 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition-all">
                   Hủy
                 </button>
               </div>
             </form>
           ) : (
-            <div className="space-y-4">
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-4">
-                  <Mail className="h-4 w-4 text-gray-600" />
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-y-3.5">
+                <div className="flex items-center gap-4 py-1">
+                  <Mail className="h-4 w-4 text-black" />
                   <div>
-                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Email</p>
-                    <p className="text-sm font-semibold text-black">{user.email}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Email</p>
+                    <p className="text-[15px] font-semibold text-black leading-none">{user.email}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-4">
-                  <Phone className="h-4 w-4 text-gray-600" />
+ 
+                <div className="flex items-center gap-4 py-1">
+                  <Phone className="h-4 w-4 text-black" />
                   <div>
-                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Số điện thoại</p>
-                    <p className="text-sm font-semibold text-black">{user.phoneNumber || '—'}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Số điện thoại</p>
+                    <p className="text-[15px] font-semibold text-black leading-none">{user.phoneNumber || '—'}</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-4">
-                  <CheckCircle2 className="h-4 w-4 text-gray-400" />
+ 
+                <div className="flex items-center gap-4 py-1">
+                  <CheckCircle2 className="h-4 w-4 text-black" />
                   <div>
-                    <p className="text-[9px] uppercase font-bold text-black tracking-widest">Xác minh</p>
-                    <p className="text-sm font-semibold text-black">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
+                    <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Xác minh</p>
+                    <p className="text-[15px] font-semibold text-black leading-none">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
                   </div>
                 </div>
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100 transition-all hover:bg-gray-100/50">
+ 
+                {/* Compact KYC Row */}
+                <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-1">
+                  <div className="flex items-center gap-4">
+                    <Shield className="h-4 w-4 text-black" />
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Hồ sơ KYC</p>
+                      <p className="text-sm font-bold text-black leading-none">
+                        {kycLoading ? '...' : 
+                          kycData?.status === 'APPROVED' ? 'Đã phê duyệt' : 
+                          kycData?.status === 'PENDING' ? 'Đang chờ duyệt' : 
+                          kycData?.status === 'REJECTED' ? 'Bị từ chối' : 'Chưa cập nhật'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {!kycLoading && (
+                    <button 
+                      onClick={() => setShowKycModal(true)}
+                      className="w-24 py-2 bg-white border border-black text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center shrink-0"
+                    >
+                      {kycData?.status === 'APPROVED' ? 'Chi tiết' : 'Xác thực'}
+                    </button>
+                  )}
+                </div>
+ 
+                {/* Compact CV Row */}
+                <div className="flex flex-col py-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-4">
-                      <Shield className="h-4 w-4 text-gray-500" />
+                      <ScrollText className="h-4 w-4 text-black" />
                       <div>
-                        <p className="text-[9px] uppercase font-bold text-black tracking-widest">Hồ sơ KYC</p>
-                        <p className="text-sm font-semibold text-black">
-                          {kycLoading ? '...' : 
-                            kycData?.status === 'APPROVED' ? 'Đã phê duyệt' : 
-                            kycData?.status === 'PENDING' ? 'Đang chờ duyệt' : 
-                            kycData?.status === 'REJECTED' ? 'Bị từ chối' : 'Chưa cập nhật'}
+                        <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Hồ sơ năng lực (CV)</p>
+                        <p className="text-sm font-bold text-black leading-none">
+                          {user.cvUrl ? 'Đã tải lên' : 'Chưa cập nhật'}
                         </p>
                       </div>
                     </div>
-                    
-                    {!kycLoading && (
-                      <button 
-                        onClick={() => setShowKycModal(true)}
-                        className="text-[9px] font-bold text-gray-500 hover:text-black uppercase tracking-widest transition-colors border-b border-transparent hover:border-black"
-                      >
-                        {kycData?.status === 'APPROVED' ? 'Xem chi tiết' : 'Xác thực'}
-                      </button>
-                    )}
+   
+                    <div className="flex items-center gap-2">
+                      {user.cvUrl && (
+                        <a 
+                          href={user.cvUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="w-24 py-2 bg-gray-50 text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all border border-transparent hover:border-black flex items-center justify-center shrink-0"
+                        >
+                          Xem CV
+                        </a>
+                      )}
+                      
+                      <label className="cursor-pointer">
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept=".pdf,.doc,.docx"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            
+                            setCvUploading(true);
+                            try {
+                              const { supabase } = await import('@/lib/supabaseClient');
+                            
+                              const removeAccents = (str: string) => {
+                                return str.normalize('NFD')
+                                  .replace(/[\u0300-\u036f]/g, '')
+                                  .replace(/đ/g, 'd')
+                                  .replace(/Đ/g, 'D')
+                                  .replace(/[^a-zA-Z0-9\s_-]/g, '');
+                              };
+
+                              const dateStr = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+                              const rawFullName = user.fullName?.trim() || 'User';
+                              const safeFullName = removeAccents(rawFullName).replace(/\s+/g, '_');
+                              const fileName = `${safeFullName}_${dateStr}.${file.name.split('.').pop()}`;
+                              const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SHARED_SUPABASE_BUCKET || 'TrustFundMe';
+                              const { error: uploadError } = await supabase.storage.from(bucketName).upload(`cvs/${fileName}`, file);
+                              if (uploadError) throw uploadError;
+                              
+                              const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(`cvs/${fileName}`);
+                              
+                              await api.put(API_ENDPOINTS.USERS.BY_ID(Number(user.id)), {
+                                fullName: user.fullName,
+                                cvUrl: publicUrl
+                              });
+                              
+                              updateUser({ cvUrl: publicUrl });
+                              toast('Tải lên CV thành công!', 'success');
+                            } catch (error: any) {
+                              toast('Lỗi tải lên CV: ' + (error.message || 'Unknown error'), 'error');
+                            } finally {
+                              setCvUploading(false);
+                            }
+                          }}
+                          disabled={cvUploading}
+                        />
+                        <span className={`w-24 py-2 bg-white border border-black text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center shrink-0 ${cvUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                          {cvUploading ? (
+                            <div className="flex items-center gap-1.5">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <span>...</span>
+                            </div>
+                          ) : (
+                            user.cvUrl ? 'Đổi CV' : 'Tải lên'
+                          )}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Template Links */}
+                  <div className="ml-8 flex flex-wrap gap-2">
+                    <a 
+                      href="/templates/Mau_CV_Thien_Nguyen.docx" 
+                      download 
+                      className="px-3 py-1.5 bg-gray-50 text-[8px] font-bold text-black uppercase tracking-widest rounded-md hover:bg-gray-200 transition-all flex items-center gap-1.5"
+                    >
+                      <FileDown className="h-3 w-3" /> Mẫu Word
+                    </a>
                   </div>
                 </div>
-
+              </div>
+ 
               {/* Bank Summary Area */}
-              <div className="pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-bold text-black flex items-center gap-2 uppercase tracking-widest">
-                    <Landmark className="h-3.5 w-3.5" /> Tài khoản ngân hàng
+              <div className="pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h3 className="text-[11px] font-bold text-black flex items-center gap-2 uppercase tracking-widest">
+                    <Landmark className="h-3.5 w-3.5" /> Ngân hàng
                   </h3>
-                  {bankAccount && <span className="text-[9px] font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full uppercase tracking-widest border border-green-100">Đang hoạt động</span>}
+                  {bankAccount && <span className="text-[9px] font-bold text-black uppercase tracking-widest">Đang hoạt động</span>}
                 </div>
-
+ 
                 {bankAccount ? (
-                  <div className="bg-gray-50/50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-black tracking-widest mb-0.5 uppercase">{bankAccount.bankCode}</p>
-                      <p className="text-base font-mono text-black font-bold tracking-wider mb-0.5">{bankAccount.accountNumber}</p>
-                      <p className="text-[10px] font-bold text-black uppercase tracking-widest">{bankAccount.accountHolderName}</p>
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
+                    <div className="px-1">
+                      <p className="text-[9px] font-bold text-black opacity-40 tracking-widest mb-1 uppercase">{bankAccount.bankCode}</p>
+                      <p className="text-sm font-mono text-black font-bold tracking-tight leading-none mb-1">{bankAccount.accountNumber}</p>
+                      <p className="text-[10px] font-bold text-black opacity-40 uppercase tracking-widest leading-none">{bankAccount.accountHolderName}</p>
                     </div>
-                    <Landmark className="h-4 w-4 text-gray-400" />
                   </div>
                 ) : (
-                  <div className="bg-gray-50 rounded-2xl p-6 border border-dashed border-gray-200 text-center">
-                    <p className="text-xs text-gray-400 italic mb-3">Chưa có thông tin ngân hàng</p>
-                    <button onClick={handleEdit} className="text-xs font-bold text-[#ff715e] hover:underline">Thêm ngay</button>
+                  <div className="py-2 text-center">
+                    <button onClick={handleEdit} className="text-[9px] font-bold text-[#ff715e] uppercase tracking-widest">Thêm ngân hàng</button>
                   </div>
                 )}
               </div>
