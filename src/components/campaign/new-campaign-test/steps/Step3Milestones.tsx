@@ -360,39 +360,36 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     {idx + 1}
               </span>
               <div className="p-3">
-                <div className="grid gap-2.5 md:grid-cols-[1fr_1.35fr_auto] md:items-start">
-                  <div className="space-y-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[#202426]">Tên đợt <span className="text-red-500">*</span></p>
+                      <p className="text-sm font-semibold text-[#202426]">
+                        Tên đợt <span className="text-red-500">*</span>
+                      </p>
                       <div className="text-xs font-bold text-brand tabular-nums">
                         Tổng: {formatVnd(milSum)} đ
                       </div>
                     </div>
                     <input
-                      className={`${inCls} w-full font-semibold ${showErrors && !m.title.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
+                      className={`${inCls} w-full font-semibold ${
+                        showErrors && !m.title.trim()
+                          ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100'
+                          : ''
+                      }`}
                       value={m.title}
                       placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
                       spellCheck={false}
                       onChange={(e) => updateMilestone(m.id, { title: e.target.value })}
                     />
-                    {showErrors && !m.title.trim() && <p className="text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-[#202426]">Mô tả đợt</p>
-                    <textarea
-                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
-                      rows={3}
-                      placeholder="Mô tả ngắn mục tiêu và công việc chính..."
-                      value={m.description}
-                      spellCheck={false}
-                      onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                    />
+                    {showErrors && !m.title.trim() && (
+                      <p className="text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>
+                    )}
                   </div>
                   <button
                     type="button"
                     disabled={state.milestones.length <= 1}
                     onClick={() => removeMilestone(m.id)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#9aa5b1] ring-1 ring-[#d9e0e7] transition hover:bg-[#fff1f1] hover:text-[#dc2626] hover:ring-[#fecaca] disabled:cursor-not-allowed disabled:opacity-35 md:mt-6"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#9aa5b1] ring-1 ring-[#d9e0e7] transition hover:bg-[#fff1f1] hover:text-[#dc2626] hover:ring-[#fecaca] disabled:cursor-not-allowed disabled:opacity-35 mt-[22px]"
                     aria-label="Xóa mốc"
                   >
                     <TrashIcon />
@@ -409,9 +406,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                       value={m.startDate || ''}
                       onChange={(e) => updateMilestone(m.id, { startDate: e.target.value })}
                     />
-                    {showErrors && !m.startDate && <p className="text-xs font-semibold text-red-600">Vui lòng chọn ngày bắt đầu.</p>}
-                    {showErrors && m.startDate && m.startDate < today && <p className="text-xs font-semibold text-red-600">Ngày bắt đầu không được trong quá khứ.</p>}
-                    {showErrors && m.startDate && campaignStart && m.startDate < campaignStart && <p className="text-xs font-semibold text-amber-600">Ngày bắt đầu đợt trước ngày bắt đầu chiến dịch ({campaignStart}).</p>}
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-[#202426]">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
@@ -422,9 +416,31 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                       value={m.endDate || ''}
                       onChange={(e) => updateMilestone(m.id, { endDate: e.target.value })}
                     />
-                    {showErrors && !m.endDate && <p className="text-xs font-semibold text-red-600">Vui lòng chọn ngày kết thúc.</p>}
-                    {showErrors && m.endDate && m.startDate && m.endDate <= m.startDate && <p className="text-xs font-semibold text-red-600">Ngày kết thúc phải sau ngày bắt đầu.</p>}
-                    {showErrors && m.endDate && campaignEnd && m.endDate > campaignEnd && <p className="text-xs font-semibold text-amber-600">Ngày kết thúc đợt sau ngày kết thúc chiến dịch ({campaignEnd}).</p>}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[#202426]">Mô tả đợt</p>
+                    <textarea
+                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
+                      rows={2}
+                      placeholder="Mục tiêu chính..."
+                      value={m.description}
+                      spellCheck={false}
+                      onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[#202426]">Điều kiện giải ngân</p>
+                    <textarea
+                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
+                      rows={2}
+                      placeholder="Ví dụ: Hoàn tất báo cáo đợt cũ..."
+                      value={m.releaseCondition}
+                      spellCheck={false}
+                      onChange={(e) => updateMilestone(m.id, { releaseCondition: e.target.value })}
+                    />
                   </div>
                 </div>
 
