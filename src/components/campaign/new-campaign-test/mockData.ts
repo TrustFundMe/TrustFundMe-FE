@@ -168,6 +168,7 @@ export const seedState: NewCampaignTestState = {
       description: 'Mua và phân phối nhu yếu phẩm tại khu vực ngập sâu.',
       plannedAmount: 350000000,
       releaseCondition: 'Hoàn tất checklist hồ sơ và xác nhận tuyến vận chuyển.',
+      categories: [],
     },
     {
       id: 'm2',
@@ -175,6 +176,7 @@ export const seedState: NewCampaignTestState = {
       description: 'Bổ sung hàng hóa và mở rộng thêm huyện bị cô lập.',
       plannedAmount: 300000000,
       releaseCondition: 'Đợt 1 đã có báo cáo và staff xác minh chứng từ.',
+      categories: [],
     },
     {
       id: 'm3',
@@ -182,6 +184,7 @@ export const seedState: NewCampaignTestState = {
       description: 'Hoàn tất phân phối và tổng hợp chứng từ công khai.',
       plannedAmount: 350000000,
       releaseCondition: 'Đợt 2 đã VERIFIED và kế hoạch cuối kỳ được duyệt.',
+      categories: [],
     },
   ],
   bankInfo: {

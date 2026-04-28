@@ -94,7 +94,38 @@ export const expenditureService = {
         return response.data;
     },
 
-    /** Nhập hạng mục chi tiêu từ Excel – trả về danh sách items */
+    /** Nhập toàn bộ mốc và hạng mục chi tiêu từ Excel */
+    importBulkFromExcel: async (file: File): Promise<{
+        success: boolean;
+        message?: string;
+        data?: any[];
+        error?: string;
+    }> => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await axiosInstance.post(`/api/expenditures/import-bulk`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return {
+                success: true,
+                message: response.data?.message,
+                data: response.data?.data,
+            };
+        } catch (error: any) {
+            const status = error?.response?.status;
+            const data = error?.response?.data;
+            let msg = 'Lỗi khi nhập dữ liệu từ Excel';
+            if (status === 400) msg = data?.error || 'File không hợp lệ, vui lòng dùng đúng file mẫu';
+            else if (status === 500) msg = 'Lỗi máy chủ khi xử lý file';
+            else msg = data?.error || error?.message || msg;
+            return { success: false, error: msg };
+        }
+    },
+
     importItemsFromExcel: async (file: File): Promise<{
         success: boolean;
         message?: string;
@@ -104,7 +135,6 @@ export const expenditureService = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         try {
             const response = await axiosInstance.post(`/api/expenditures/import`, formData, {
                 headers: {

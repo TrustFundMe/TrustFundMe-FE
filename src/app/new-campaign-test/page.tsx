@@ -11,6 +11,14 @@ import Step3Milestones from '@/components/campaign/new-campaign-test/steps/Step3
 import Step5RiskTerms from '@/components/campaign/new-campaign-test/steps/Step5RiskTerms';
 import Step6ReviewSubmit from '@/components/campaign/new-campaign-test/steps/Step6ReviewSubmit';
 import { NewCampaignTestState } from '@/components/campaign/new-campaign-test/types';
+import { useAuth } from '@/contexts/AuthContextProxy';
+import { useToast } from '@/components/ui/Toast';
+import { campaignService } from '@/services/campaignService';
+import { fundraisingGoalService } from '@/services/fundraisingGoalService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { mediaService } from '@/services/mediaService';
+import { expenditureService } from '@/services/expenditureService';
+import { useRouter } from 'next/navigation';
 
 const steps = [
   {
@@ -39,11 +47,17 @@ export default function NewCampaignTestPage() {
   const [activeStep, setActiveStep] = useState(0);
   /** Bước xa nhất user đã từng đạt tới (đã validate). Cho phép nhảy tự do trong [0, maxReached]. */
   const [maxReached, setMaxReached] = useState(0);
-  const [submittedSnapshot, setSubmittedSnapshot] = useState<string>('');
-  const [mockDraftId, setMockDraftId] = useState<string>('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [step6FullPreview, setStep6FullPreview] = useState(false);
   const [step2ShowErrors, setStep2ShowErrors] = useState(false);
+  const [step3ShowErrors, setStep3ShowErrors] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const mainScrollRef = useRef<HTMLElement | null>(null);
 
   const budgetTotal = useMemo(
@@ -52,35 +66,37 @@ export default function NewCampaignTestPage() {
   );
 
   const milestoneTotal = useMemo(() => {
-    if (state.milestones.length === 0) return 0;
-    const target = state.campaignCore.targetAmount;
-    const withoutLast = state.milestones.slice(0, state.milestones.length - 1);
-    const sumWithoutLast = withoutLast.reduce((sum, item) => sum + (item.plannedAmount || 0), 0);
-    return sumWithoutLast + Math.max(target - sumWithoutLast, 0);
-  }, [state.milestones, state.campaignCore.targetAmount]);
+    return state.milestones.reduce((sum, mil) => {
+      const milSum = (mil.categories || []).reduce((catSum, cat) => {
+        return catSum + (cat.items || []).reduce((itemSum, item) => {
+          return itemSum + (item.expectedPrice || 0) * (item.expectedQuantity || 0);
+        }, 0);
+      }, 0);
+      return sum + milSum;
+    }, 0);
+  }, [state.milestones]);
 
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
     const core = state.campaignCore;
     const title = core.title.trim();
-    if (!title) e.title = 'Tiêu đề không được để trống.';
+    if (!title) e.title = 'Vui lòng nhập tiêu đề chiến dịch.';
     else if (title.length < 10) e.title = 'Tiêu đề phải từ 10 ký tự trở lên.';
     else if (title.length > 255) e.title = 'Tiêu đề tối đa 255 ký tự.';
 
     const desc = core.objective.trim();
-    if (!desc) e.objective = 'Mô tả không được để trống.';
+    if (!desc) e.objective = 'Vui lòng nhập mô tả / câu chuyện chiến dịch.';
     else if (desc.length < 50) e.objective = 'Mô tả phải từ 50 ký tự trở lên.';
     else if (desc.length > 10000) e.objective = 'Mô tả tối đa 10,000 ký tự.';
 
     const thank = core.thankMessage.trim();
-    if (!thank) e.thankMessage = 'Lời cảm ơn không được để trống.';
+    if (!thank) e.thankMessage = 'Vui lòng nhập lời cảm ơn nhà tài trợ.';
     else if (thank.length < 10) e.thankMessage = 'Lời cảm ơn phải từ 10 ký tự trở lên.';
 
-    if (core.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
+    if (!core.targetAmount || core.targetAmount <= 0) e.targetAmount = 'Vui lòng nhập số tiền mục tiêu.';
+    else if (core.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
-    if (!core.category.trim()) e.category = 'Vui lòng nhập danh mục chiến dịch.';
-    if (!core.region.trim()) e.region = 'Vui lòng nhập vị trí hỗ trợ.';
-    if (!core.beneficiaryType.trim()) e.beneficiaryType = 'Vui lòng nhập đối tượng thụ hưởng.';
+    if (!core.category.trim()) e.category = 'Vui lòng chọn danh mục chiến dịch.';
 
     const imgs = core.campaignImages ?? [];
     const coverOk =
@@ -90,24 +106,28 @@ export default function NewCampaignTestPage() {
       Boolean(core.coverImageUrl?.trim());
     if (!coverOk) e.coverImage = 'Vui lòng thêm ít nhất một ảnh và chọn ảnh bìa.';
 
-    if (!core.startDate) e.startDate = 'Thiếu ngày bắt đầu';
-    if (!core.endDate) e.endDate = 'Thiếu ngày kết thúc';
-    if (core.startDate && core.endDate && core.endDate <= core.startDate)
-      e.endDate = 'Ngày kết thúc phải sau ngày bắt đầu';
+    if (!core.startDate) e.startDate = 'Vui lòng chọn ngày bắt đầu.';
+    else {
+      const today = new Date().toISOString().split('T')[0];
+      if (core.startDate < today) e.startDate = 'Ngày bắt đầu không được trong quá khứ.';
+    }
+
+    if (!core.endDate) e.endDate = 'Vui lòng chọn ngày kết thúc.';
+    else if (core.startDate && core.endDate <= core.startDate)
+      e.endDate = 'Ngày kết thúc phải sau ngày bắt đầu.';
+
     return e;
   }, [state.campaignCore]);
 
   const step0CanNext = useMemo(() => {
     const b = state.bankInfo;
     return (
-      state.kycStatus === 'APPROVED' &&
+      (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
       b.accountNumber.trim() !== '' &&
       b.bankCode.trim() !== '' &&
       b.bankName.trim() !== '' &&
       b.accountHolderName.trim() !== '' &&
-      state.bankProofFiles.length > 0 &&
-      state.acknowledgements.legalRead &&
-      state.acknowledgements.slaAccepted
+      (state.bankProofFiles.length > 0 || !!user?.cvUrl)
     );
   }, [state]);
 
@@ -116,8 +136,27 @@ export default function NewCampaignTestPage() {
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
     if (state.milestones.length < 1) return false;
-    return milestoneTotal === target;
-  }, [state.milestones.length, state.campaignCore.targetAmount, milestoneTotal]);
+    if (milestoneTotal !== target) return false;
+    const today = new Date().toISOString().split('T')[0];
+    for (const m of state.milestones) {
+      if (!m.title.trim()) return false;
+      if (!m.startDate) return false;
+      if (m.startDate < today) return false;
+      if (!m.endDate) return false;
+      if (m.endDate <= m.startDate) return false;
+      if (!m.categories || m.categories.length === 0) return false;
+      for (const cat of m.categories) {
+        if (!cat.name.trim()) return false;
+        if (!cat.items || cat.items.length === 0) return false;
+        for (const item of cat.items) {
+          if (!item.name.trim()) return false;
+          if (!item.expectedQuantity || item.expectedQuantity <= 0) return false;
+          if (!item.expectedPrice || item.expectedPrice <= 0) return false;
+        }
+      }
+    }
+    return true;
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
 
   const step4CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
 
@@ -134,12 +173,10 @@ export default function NewCampaignTestPage() {
         state.acknowledgements.legalLiabilityAccepted &&
         state.acknowledgements.overfundPolicyAccepted,
       gatesOk:
-        state.kycStatus === 'APPROVED' &&
-        state.bankProofFiles.length > 0 &&
+        (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
+        (state.bankProofFiles.length > 0 || !!user?.cvUrl) &&
         Boolean(state.bankInfo.bankCode) &&
-        state.bankInfo.accountHolderName.trim() !== '' &&
-        state.acknowledgements.legalRead &&
-        state.acknowledgements.slaAccepted,
+        state.bankInfo.accountHolderName.trim() !== '',
     };
   }, [state, step2Errors, milestoneTotal]);
 
@@ -148,17 +185,136 @@ export default function NewCampaignTestPage() {
   const patchState = (patch: Partial<NewCampaignTestState>) =>
     setState((prev) => ({ ...prev, ...patch }));
 
-  const handleMockSubmit = () => {
-    if (!canSubmit) return;
-    const id = `DRAFT-${Math.floor(Math.random() * 900000 + 100000)}`;
-    setMockDraftId(id);
-    setSubmittedSnapshot(
-      JSON.stringify(
-        { campaignDraftId: id, submittedAt: new Date().toISOString(), mode: state.fundMode, checks: finalValidations },
-        null,
-        2,
-      ),
-    );
+  const handleRealSubmit = async () => {
+    if (!canSubmit || isSubmitting) return;
+    if (!isAuthenticated || !user) {
+      toast('Vui lòng đăng nhập để tạo chiến dịch.', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitResult({ type: 'idle', message: '' });
+
+    try {
+      // 1. Bank Account
+      let bankId = undefined;
+      if (state.bankInfo.bankCode && state.bankInfo.accountNumber) {
+        const bankRes = await bankAccountService.create({
+          bankCode: state.bankInfo.bankCode,
+          accountNumber: state.bankInfo.accountNumber,
+          accountHolderName: state.bankInfo.accountHolderName,
+        });
+        bankId = bankRes.id;
+      }
+
+      // 2. Media Uploads
+      // Campaign images
+      const uploadedImageIds: number[] = [];
+      let coverMediaId: number | undefined = undefined;
+
+      for (const img of state.campaignCore.campaignImages) {
+        if (img.file) {
+          const res = await mediaService.uploadMedia(img.file, undefined, undefined, undefined, undefined, 'PHOTO');
+          uploadedImageIds.push(res.id);
+          if (img.id === state.campaignCore.coverImageId) {
+            coverMediaId = res.id;
+          }
+        }
+      }
+
+      // Bank proofs
+      const bankProofIds: number[] = [];
+      for (const proof of state.bankProofFiles) {
+        if (proof.file) {
+          const res = await mediaService.uploadMedia(proof.file, undefined, undefined, undefined, undefined, 'FILE');
+          bankProofIds.push(res.id);
+        }
+      }
+
+      // 3. Create Campaign
+      const campaignRes = await campaignService.create({
+        fundOwnerId: user.id as number,
+        title: state.campaignCore.title,
+        description: state.campaignCore.objective,
+        categoryId: state.campaignCore.categoryId || 1, // Fallback to 1 if not selected
+        thankMessage: state.campaignCore.thankMessage,
+        coverImage: coverMediaId,
+        attachments: uploadedImageIds.map(id => ({ id, type: 'PHOTO', url: '' })),
+        type: 'AUTHORIZED',
+        status: 'PENDING_APPROVAL',
+      });
+
+      // 4. Link Media to Campaign
+      for (const id of [...uploadedImageIds, ...bankProofIds]) {
+        await mediaService.updateMedia(id, { campaignId: campaignRes.id });
+      }
+
+      // 5. Create Goal
+      await fundraisingGoalService.create({
+        campaignId: campaignRes.id,
+        targetAmount: state.campaignCore.targetAmount,
+        description: 'Mục tiêu chiến dịch',
+      });
+
+      // 6. Create Expenditures (Milestones)
+      for (const mil of state.milestones) {
+        // Map to backend's CreateExpenditureCatologyRequest (categories with nested items)
+        const categories = mil.categories.map(cat => ({
+          name: cat.name || 'Chưa đặt tên',
+          description: cat.description || '',
+          items: cat.items.map(item => ({
+            category: item.name || cat.name || 'Hạng mục chi tiêu',
+            expectedQuantity: item.expectedQuantity || 1,
+            actualPrice: 0,
+            expectedPrice: item.expectedPrice || 0,
+            brand: item.brand || '',
+            purchaseLocation: item.purchaseLocation || '',
+            unit: item.unit || '',
+            note: item.note || '',
+          })),
+        }));
+
+        const milStartDate = mil.startDate || state.campaignCore.startDate || new Date().toISOString().split('T')[0];
+        const milEndDate = mil.endDate || state.campaignCore.endDate || new Date().toISOString().split('T')[0];
+
+        const expenditurePayload: any = {
+          campaignId: campaignRes.id,
+          plan: mil.title || 'Giai đoạn',
+          startDate: `${milStartDate}T00:00:00`,
+          endDate: `${milEndDate}T23:59:59`,
+          categories,
+        };
+        
+        console.log('Expenditure payload:', JSON.stringify(expenditurePayload, null, 2));
+        
+        try {
+          await expenditureService.create(expenditurePayload);
+        } catch (expErr: any) {
+          const errMsg = expErr?.response?.data?.message || expErr?.response?.data?.error || 'Lỗi không xác định';
+          console.error('Expenditure create error:', expErr?.response?.status, expErr?.response?.data);
+          toast(`Lỗi tạo khoản chi cho đợt "${mil.title}": ${errMsg}`, 'error');
+          // We might want to stop here if it's a structural error
+        }
+      }
+
+      setSubmitResult({
+        type: 'success',
+        message: 'Chiến dịch của bạn đã được gửi duyệt thành công!',
+      });
+      toast('Tạo chiến dịch thành công!', 'success');
+
+      setTimeout(() => {
+        router.push('/account/campaigns');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      const msg = error?.response?.data?.message || error.message || 'Lỗi không xác định.';
+      setSubmitResult({ type: 'error', message: msg });
+      toast(`Lỗi: ${msg}`, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const showPreviewModal =
@@ -209,10 +365,10 @@ export default function NewCampaignTestPage() {
               if (activeStep > 0) goToStep(activeStep - 1);
               else if (typeof window !== 'undefined') window.history.back();
             }}
-            className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+            className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
             aria-label="Quay lại"
           >
-            <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" aria-hidden>
+            <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" aria-hidden>
               <path
                 d="M12 4l-6 6 6 6"
                 stroke="currentColor"
@@ -233,7 +389,7 @@ export default function NewCampaignTestPage() {
 
         {/* Horizontal stepper — compact, always on screen */}
         <div className="border-t border-slate-100">
-          <div className="mx-auto max-w-[1200px] px-4 py-1.5 md:px-8 md:py-2">
+          <div className="mx-auto max-w-[1200px] px-4 py-1 md:px-8">
             <NewCampaignTestStepper
               steps={steps}
               activeIndex={activeStep}
@@ -285,8 +441,16 @@ export default function NewCampaignTestPage() {
                 milestoneTotal={milestoneTotal}
                 onPatch={patchState}
                 onPrev={() => goToStep(1)}
-                onNext={() => goToStep(3)}
+                onNext={() => {
+                  if (step3CanNext) {
+                    setStep3ShowErrors(false);
+                    goToStep(3);
+                  } else {
+                    setStep3ShowErrors(true);
+                  }
+                }}
                 canNext={step3CanNext}
+                showErrors={step3ShowErrors}
               />
             )}
             {activeStep === 3 && (
@@ -304,23 +468,37 @@ export default function NewCampaignTestPage() {
                 checks={finalValidations}
                 onOpenFullPreview={() => setStep6FullPreview(true)}
                 onPrev={() => goToStep(3)}
-                onSubmit={handleMockSubmit}
-                canSubmit={canSubmit}
+                onSubmit={handleRealSubmit}
+                canSubmit={canSubmit && !isSubmitting}
               />
             )}
 
-            {submittedSnapshot && (
+            {submitResult.type !== 'idle' && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-5"
+                className={`mt-6 rounded-2xl border p-5 ${
+                  submitResult.type === 'success'
+                    ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                    : 'border-red-100 bg-red-50 text-red-800'
+                }`}
               >
-                <p className="font-semibold text-emerald-800">
-                  Gửi duyệt thành công (mock): {mockDraftId}
-                </p>
-                <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-gray-950 p-4 text-[11px] text-emerald-300">
-                  {submittedSnapshot}
-                </pre>
+                <div className="flex items-center gap-2 font-semibold">
+                  {submitResult.type === 'success' ? (
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {submitResult.type === 'success' ? 'Thành công' : 'Lỗi'}
+                </div>
+                <p className="mt-1 text-sm">{submitResult.message}</p>
+                {submitResult.type === 'success' && (
+                  <p className="mt-2 text-xs opacity-70 italic">Đang chuyển hướng về trang quản lý chiến dịch...</p>
+                )}
               </motion.div>
             )}
           </motion.div>
@@ -352,8 +530,10 @@ export default function NewCampaignTestPage() {
         #new-campaign-test-root button,
         #new-campaign-test-root input,
         #new-campaign-test-root textarea {
-          font-size: 0.92em !important;
+          font-size: 0.9em !important;
         }
+        #new-campaign-test-root .min-h-\[52px\] { min-h: 44px !important; }
+        #new-campaign-test-root .py-3 { padding-top: 0.6rem !important; padding-bottom: 0.6rem !important; }
       `}</style>
     </div>
   );

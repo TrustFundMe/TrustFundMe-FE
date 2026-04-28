@@ -68,7 +68,10 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     const checkExistingKYC = async (uid: string) => {
         setFetching(true);
         try {
-            const data = await kycService.getByUserId(uid);
+            // Use getMyKyc for non-staff (avoids 500/403 on /api/kyc/user/{id})
+            const data = isStaff
+                ? await kycService.getByUserId(uid)
+                : await kycService.getMyKyc();
             if (data) {
                 setFormData({
                     userId: String(data.userId),
@@ -92,7 +95,6 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
         } catch (error: any) {
             console.log('No existing KYC or error:', error.response?.status);
             setIsUpdate(false);
-            // If error, ensure we keep the clean state set in useEffect
         } finally {
             setFetching(false);
         }

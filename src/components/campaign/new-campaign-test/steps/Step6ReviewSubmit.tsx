@@ -42,14 +42,14 @@ export default function Step6ReviewSubmit({
   canSubmit,
 }: Props) {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
+    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
       <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 6 — Tóm tắt & Gửi duyệt</h2>
       <p className="mt-1 text-sm text-gray-500">
         Kiểm tra thông tin, ký xác nhận điện tử, sau đó gửi hồ sơ chờ Staff duyệt.
       </p>
 
       {/* Summary card */}
-      <div className="mt-6 flex gap-4 rounded-xl bg-gray-50 p-4">
+      <div className="mt-5 flex gap-3 rounded-xl bg-gray-50 p-3">
         <div className="h-20 w-28 shrink-0 overflow-hidden rounded-xl bg-gray-200">
           {state.campaignCore.coverImageUrl ? (
             <img
@@ -78,6 +78,8 @@ export default function Step6ReviewSubmit({
             <span>·</span>
             <span>{state.budgetLines.length} hạng mục</span>
             <span>·</span>
+            <span>{state.milestones.reduce((s, m) => s + (m.categories?.length || 0), 0)} danh mục chi tiêu</span>
+            <span>·</span>
             <span>{state.campaignCore.region}</span>
           </div>
         </div>
@@ -101,7 +103,7 @@ export default function Step6ReviewSubmit({
       </div>
 
       {/* Validation checklist */}
-      <div className="mt-6 rounded-xl bg-gray-50 p-4">
+      <div className="mt-5 rounded-xl bg-gray-50 p-3">
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
           Kiểm tra tự động trước khi gửi
         </p>
@@ -118,6 +120,36 @@ export default function Step6ReviewSubmit({
           ))}
         </div>
       </div>
+
+      {/* Milestone categories review */}
+      {state.milestones.some((m) => m.categories && m.categories.length > 0) && (
+        <div className="mt-6 rounded-xl bg-gray-50 p-4">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+            Danh mục chi tiêu theo mốc giải ngân
+          </p>
+          <div className="space-y-3">
+            {state.milestones.map((m) => {
+              if (!m.categories || m.categories.length === 0) return null;
+              return (
+                <div key={m.id}>
+                  <p className="text-sm font-semibold text-gray-700">{m.title}</p>
+                  {m.categories.map((cat) => (
+                    <div key={cat.id} className="ml-4 mt-1">
+                      <p className="text-xs font-semibold text-gray-600">
+                        {cat.name || '(Chưa đặt tên)'}
+                        <span className="ml-2 font-normal text-gray-400">— {cat.items.length} hạng mục</span>
+                        <span className="ml-2 font-bold text-orange-500 tabular-nums">
+                          {cat.items.reduce((s, i) => s + (Number(i.expectedQuantity) || 0) * (Number(i.expectedPrice) || 0), 0).toLocaleString('vi-VN')} đ
+                        </span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <motion.button

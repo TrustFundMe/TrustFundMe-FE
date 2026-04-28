@@ -410,7 +410,7 @@ function ProfileContent() {
     if (user?.id) {
       setKycLoading(true);
       try {
-        const data = await kycService.getByUserId(user.id);
+        const data = await kycService.getMyKyc();
         setKycData(data);
       } catch (err) {
         console.error('Failed to fetch KYC:', err);

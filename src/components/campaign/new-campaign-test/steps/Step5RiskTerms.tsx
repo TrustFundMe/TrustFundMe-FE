@@ -52,14 +52,14 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
   };
 
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
+    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
       <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 5 — Điều khoản quản trị rủi ro</h2>
       <p className="mt-1 text-sm text-gray-500">Đọc và chấp nhận vô điều kiện trước khi gửi duyệt hồ sơ.</p>
 
       {/* Document container */}
       <div
         onScroll={handleScroll}
-        className="relative mt-6 max-h-[500px] overflow-y-auto rounded-xl bg-white p-6 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_24px_-4px_rgba(0,0,0,0.08)] md:p-8"
+        className="relative mt-5 max-h-[460px] overflow-y-auto rounded-xl bg-white p-5 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_4px_24px_-4px_rgba(0,0,0,0.08)] md:p-6"
       >
         {/* Doc header */}
         <div className="mb-6 border-b border-gray-100 pb-5 text-center">
