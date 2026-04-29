@@ -8,16 +8,19 @@ export interface BankAccountDto {
     status: string;
     createdAt: string;
     updatedAt: string;
+    webhookKey?: string;
 }
 
 export interface CreateBankAccountRequest {
     bankCode: string;
     accountNumber: string;
     accountHolderName: string;
+    webhookKey?: string;
 }
 
 export interface UpdateBankAccountRequest {
     bankCode: string;
     accountNumber: string;
     accountHolderName: string;
+    webhookKey?: string;
 }

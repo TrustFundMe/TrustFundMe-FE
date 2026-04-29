@@ -22,9 +22,9 @@ const cardContents = [
       "Bạn không chỉ là người ủng hộ mà còn là người giám sát. Cơ chế bỏ phiếu theo trọng số giúp cộng đồng duyệt các khoản chi lớn, tạo nên một hệ sinh thái thiện nguyện dân chủ và công bằng.",
   },  
   {
-    title: "Ghi nhận trên Blockchain",
+    title: "Nhật ký giao dịch bất biến nội bộ",
     description:
-      "Mỗi giao dịch được ghi lại trên blockchain, khó có thể sửa đổi, phục vụ kiểm toán và truy vết minh bạch.",
+      "Mọi giao dịch được lưu vết theo dòng thời gian trên hệ thống để phục vụ kiểm toán, truy xuất lịch sử và đối soát minh bạch.",
   },
   {
     title: "100% minh bạch dòng tiền",

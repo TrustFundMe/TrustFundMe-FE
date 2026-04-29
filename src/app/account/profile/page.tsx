@@ -349,6 +349,7 @@ function ProfileContent() {
   const [bankCode, setBankCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
+  const [webhookKey, setWebhookKey] = useState('');
   const [isBankLoading, setIsBankLoading] = useState(false);
 
   useEffect(() => {
@@ -377,6 +378,7 @@ function ProfileContent() {
           setBankCode(mainBank.bankCode);
           setAccountNumber(mainBank.accountNumber);
           setAccountHolderName(mainBank.accountHolderName);
+          setWebhookKey(mainBank.webhookKey || '');
         }
       } catch (err) {
         console.error('Failed to fetch bank account:', err);
@@ -443,6 +445,7 @@ function ProfileContent() {
       setBankCode('');
       setAccountNumber('');
       setAccountHolderName('');
+      setWebhookKey('');
     }
 
     setIsEditing(true);
@@ -538,7 +541,8 @@ function ProfileContent() {
         const bankPayload = {
           bankCode: trBankCode,
           accountNumber: trAccNum,
-          accountHolderName: trAccName.toUpperCase() // Always uppercase for banking
+          accountHolderName: trAccName.toUpperCase(), // Always uppercase for banking
+          webhookKey: webhookKey.trim() || undefined
         };
 
         if (bankAccount) {
@@ -654,6 +658,8 @@ function ProfileContent() {
                 </div>
                 <input type="text" placeholder="Tên chủ thẻ" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)}
                   className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none uppercase" />
+                <input type="text" placeholder="apiwwebhook (Casso Secure Token)" value={webhookKey} onChange={e => setWebhookKey(e.target.value)}
+                  className="w-full bg-gray-50 border-none rounded-xl px-4 py-2.5 text-sm focus:ring-1 focus:ring-black/5 transition-all outline-none" />
               </div>
 
               <div className="flex gap-2 pt-4">

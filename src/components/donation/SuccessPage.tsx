@@ -18,38 +18,33 @@ export default function SuccessPage({ campaign, amount }: SuccessPageProps) {
         : 'https://images.unsplash.com/photo-1532629345422-7515f3d16bb8?q=80&w=2070&auto=format&fit=crop';
 
     return (
-        <div className="relative min-h-screen w-full flex items-center justify-center p-4 bg-gray-900 font-sans" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-            {/* Background with Black Overlay */}
+        <div className="relative min-h-screen w-full flex items-center justify-center p-4 bg-[#eef5f3] font-sans" style={{ fontFamily: 'var(--font-dm-sans)' }}>
             <div
                 className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: `url(${bgImage})`,
+                    backgroundImage: `linear-gradient(180deg, rgba(15,93,81,0.1) 0%, rgba(255,255,255,0.96) 45%), url(${bgImage})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                 }}
-            >
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-            </div>
+            />
 
-            {/* Main Content Card - Darker glass effect */}
-            <div className="relative z-10 w-full max-w-2xl bg-black/40 backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-700">
-                <div className="p-10 md:p-14 text-center text-white">
-                    <h1 className="text-5xl md:text-6xl font-black mb-4 tracking-tight text-white">Cảm Ơn Bạn!</h1>
-                    <p className="text-lg md:text-xl font-bold text-[#fbbf24] mb-10 tracking-wide max-w-xl mx-auto italic">
-                        {campaign?.thankMessage || 'Sự đóng góp của bạn có ý nghĩa vô cùng lớn với thế giới và chúng tôi.'}
+            <div className="relative z-10 w-full max-w-2xl rounded-[2rem] border border-[#d6e8e3] bg-white shadow-[0_12px_40px_-20px_rgba(15,93,81,0.35)] overflow-hidden">
+                <div className="p-8 md:p-12 text-center">
+                    <span className="inline-flex rounded-full bg-[#e9f6f1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#0f5d51]">
+                        Donation Success
+                    </span>
+                    <h1 className="mt-4 text-4xl md:text-5xl font-black tracking-tight text-[#103d36]">Cảm ơn bạn!</h1>
+                    <p className="mt-4 text-base md:text-lg font-semibold text-[#0f5d51] max-w-xl mx-auto">
+                        {campaign?.thankMessage || 'Khoản đóng góp của bạn đã được ghi nhận thành công và đúng chiến dịch.'}
                     </p>
 
-                    <div className="max-w-lg mx-auto mb-10 space-y-6">
-                        <p className="text-sm md:text-base text-gray-300 leading-relaxed font-medium">
-                            Chúng tôi vô cùng trân trọng sự tin tưởng của bạn. Khoản quyên góp{' '}
-                            <span className="font-bold text-white">
-                                {amount.toLocaleString('vi-VN')}₫
-                            </span>{' '}
-                            đã được nhận thành công.
+                    <div className="max-w-lg mx-auto mt-8 mb-8 space-y-4 rounded-2xl border border-[#e2efeb] bg-[#f7fbfa] p-5">
+                        <p className="text-sm md:text-base text-[#32564f] leading-relaxed font-medium">
+                            Chúng tôi rất trân trọng sự tin tưởng của bạn. Khoản quyên góp{' '}
+                            <span className="font-bold text-[#0f5d51]">{amount.toLocaleString('vi-VN')}₫</span> đã được xác nhận.
                         </p>
-
-                        <p className="text-[11px] text-gray-400 font-medium pt-4">
-                            Nếu bạn có bất kỳ thắc mắc nào, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của TrustFundMe.
+                        <p className="text-xs text-[#4f6f69]">
+                            Bạn có thể theo dõi tiến độ sử dụng quỹ tại trang chi tiết chiến dịch.
                         </p>
                     </div>
 
@@ -61,9 +56,9 @@ export default function SuccessPage({ campaign, amount }: SuccessPageProps) {
                                 router.push(campaign ? `/campaigns-details?id=${campaign.id}` : '/');
                             }
                         }}
-                        className="px-8 py-3 bg-[#fbbf24] hover:bg-[#f59e0b] text-black font-extrabold rounded-lg transition-all hover:scale-105 active:scale-95 shadow-lg text-xs uppercase tracking-wider"
+                        className="px-8 py-3 bg-[#0f5d51] hover:bg-[#0c4f45] text-white font-bold rounded-lg transition-colors text-sm uppercase tracking-wider"
                     >
-                        {campaign?.id === 1 ? 'Quay về Quỹ Chung' : (campaign ? 'Quay về chiến dịch' : 'Quay về trang chủ')}
+                        {campaign?.id === 1 ? 'Quay về quỹ chung' : (campaign ? 'Quay về chiến dịch' : 'Quay về trang chủ')}
                     </button>
                 </div>
             </div>
