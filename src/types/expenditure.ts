@@ -22,6 +22,7 @@ export interface ExpenditureItem {
     expenditureId: number;
     category: string;
     quantity: number;
+    expectedQuantity?: number;
     quantityLeft?: number;
     actualQuantity?: number;
     price: number;
@@ -29,6 +30,9 @@ export interface ExpenditureItem {
     note?: string;
     catologyId?: number;
     catologyName?: string;
+    unit?: string;
+    brand?: string;
+    purchaseLocation?: string;
     createdAt?: string;
     updatedAt?: string;
     /** Hình ảnh minh chứng cho item này (loaded separately) */

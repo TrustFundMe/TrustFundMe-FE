@@ -21,6 +21,8 @@ interface DetectedItem {
     marketUnitPrice?: number;
     marketPriceRange?: string;
     unit?: string;
+    evidenceUrls?: string[];
+    statusMessage?: string;
 }
 
 interface AIAnalysisResult {
@@ -248,7 +250,8 @@ export default function AIAnalysisModal({
                                     <thead className="bg-[#F8FAFC] border-b border-slate-200">
                                         <tr>
                                             <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
-                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa / Ghi chú</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hiệu / Đơn vị / Nơi mua</th>
                                             <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
                                                 {mode === 'plan' ? 'Kế hoạch (Dự kiến)' : 'Hệ thống (Database)'}
                                             </th>
@@ -266,7 +269,9 @@ export default function AIAnalysisModal({
                                                 return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                             });
 
-                                            const sysVal = sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+                                            const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
+                                            const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
+                                            const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
                                             const diff = sysVal - item.total;
                                             const isMatch = Math.abs(diff) < 500;
 
@@ -275,11 +280,18 @@ export default function AIAnalysisModal({
                                                     <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
+                                                        {sysItem?.note && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.note}</div>}
+                                                    </td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="text-[10px] font-bold text-slate-700">
+                                                            {sysItem?.brand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem?.unit || '-'}
+                                                        </div>
+                                                        <div className="text-[9px] text-slate-500 font-medium mt-0.5">{sysItem?.purchaseLocation || '-'}</div>
                                                     </td>
                                                     <td className="px-3 py-3 text-center border-r border-slate-50">
                                                         <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
                                                         <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                                                            {sysItem ? (mode === 'plan' ? `${sysItem.quantity} x ${fmtNum(sysItem.expectedPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
+                                                            {sysItem ? (mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
@@ -287,12 +299,30 @@ export default function AIAnalysisModal({
                                                             {fmtVND(item.total)}
                                                         </div>
                                                         <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                                                            {mode === 'plan' && item.marketPriceRange ? (
-                                                                <span className="bg-blue-50 px-1 rounded">Khoảng: {item.marketPriceRange}</span>
-                                                            ) : (
-                                                                `${item.quantity} x ${fmtNum(item.unitPrice)}`
-                                                            )}
+                                                            {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
                                                         </div>
+                                                        {item.statusMessage && (
+                                                            <div className={`mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase inline-block border ${item.statusMessage === 'Sản phẩm không tồn tại'
+                                                                    ? 'bg-rose-50 text-rose-600 border-rose-200'
+                                                                    : item.statusMessage === 'Giá bất thường'
+                                                                        ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                                                        : item.statusMessage === 'Thiếu thông tin phân loại'
+                                                                            ? 'bg-slate-50 text-slate-600 border-slate-200'
+                                                                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                                                }`}>
+                                                                {item.statusMessage}
+                                                            </div>
+                                                        )}
+                                                        {item.evidenceUrls && item.evidenceUrls.length > 0 && (
+                                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                                {item.evidenceUrls.map((url, uidx) => (
+                                                                    <a key={uidx} href={url} target="_blank" rel="noopener noreferrer"
+                                                                        className="inline-flex items-center text-[8px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-800 px-1 py-0.5 rounded border border-indigo-100 transition-colors">
+                                                                        [{uidx + 1}] Nguồn AI tìm được
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
                                                         <div className={`font-black text-[10px] tabular-nums ${isMatch ? 'text-emerald-500' : 'text-rose-600'}`}>
@@ -311,14 +341,16 @@ export default function AIAnalysisModal({
                                                     const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
                                                     return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                                 });
-                                                return acc + (sysItem ? (mode === 'plan' ? (sysItem.quantity * sysItem.expectedPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
+                                                const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
+                                                const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
+                                                return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
                                             }, 0);
                                             const totalAI = detected.reduce((acc, item) => acc + item.total, 0);
                                             const diffTotal = totalSys - totalAI;
 
                                             return (
                                                 <tr className="font-black text-slate-800">
-                                                    <td colSpan={2} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
+                                                    <td colSpan={3} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
                                                         <span>Tổng cộng đối soát:</span>
                                                     </td>
                                                     <td className="px-3 py-3 text-center border-r border-slate-200 text-blue-700 text-xs tabular-nums">{fmtVND(totalSys)}</td>

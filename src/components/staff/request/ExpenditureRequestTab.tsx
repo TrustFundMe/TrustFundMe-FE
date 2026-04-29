@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-    Search, Filter, ChevronDown, ChevronUp, 
-    CheckCircle, AlertCircle, Clock, 
+import {
+    Search, Filter, ChevronDown, ChevronUp,
+    CheckCircle, AlertCircle, Clock,
     HandCoins, Search as SearchIcon, X,
     LayoutDashboard, Sparkles, Loader2, Info, ShoppingBag,
     ShieldCheck, AlertTriangle, ShieldAlert
@@ -24,21 +24,21 @@ const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('vi-VN');
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
-    'PENDING':              { label: 'Chờ duyệt',    color: '#f59e0b', bg: '#fffbeb' },
-    'PENDING_REVIEW':       { label: 'Chờ duyệt',    color: '#f59e0b', bg: '#fffbeb' },
-    'APPROVED':             { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
-    'WITHDRAWAL_REQUESTED': { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
-    'CLOSED':               { label: 'Đã duyệt',     color: '#10b981', bg: '#ecfdf5' },
-    'REJECTED':             { label: 'Từ chối',     color: '#ef4444', bg: '#fef2f2' },
-    'DISBURSED':            { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
-    'COMPLETED':            { label: 'Hoàn tất',     color: '#059669', bg: '#f0fdf4' },
+    'PENDING': { label: 'Chờ duyệt', color: '#f59e0b', bg: '#fffbeb' },
+    'PENDING_REVIEW': { label: 'Chờ duyệt', color: '#f59e0b', bg: '#fffbeb' },
+    'APPROVED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
+    'WITHDRAWAL_REQUESTED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
+    'CLOSED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
+    'REJECTED': { label: 'Từ chối', color: '#ef4444', bg: '#fef2f2' },
+    'DISBURSED': { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
+    'COMPLETED': { label: 'Hoàn tất', color: '#059669', bg: '#f0fdf4' },
 };
 
 const EVIDENCE_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-    'NOT_SUBMITTED': { label: 'Chưa nộp MC',    color: '#94a3b8', bg: '#f8fafc' },
-    'SUBMITTED':     { label: 'Đã nộp — chờ', color: '#f59e0b', bg: '#fffbeb' },
-    'APPROVED':      { label: 'MC hợp lệ',       color: '#10b981', bg: '#ecfdf5' },
-    'REJECTED':      { label: 'MC không hợp lệ', color: '#ef4444', bg: '#fef2f2' },
+    'NOT_SUBMITTED': { label: 'Chưa nộp MC', color: '#94a3b8', bg: '#f8fafc' },
+    'SUBMITTED': { label: 'Đã nộp — chờ', color: '#f59e0b', bg: '#fffbeb' },
+    'APPROVED': { label: 'MC hợp lệ', color: '#10b981', bg: '#ecfdf5' },
+    'REJECTED': { label: 'MC không hợp lệ', color: '#ef4444', bg: '#fef2f2' },
 };
 
 const CAM_TYPE: Record<string, string> = { 'AUTHORIZED': 'Ủy Quyền', 'ITEMIZED': 'Vật Phẩm' };
@@ -57,42 +57,84 @@ const ExpenditureStatusPill = ({ expStatus }: { expStatus: string }) => {
     );
 };
 
-const ItemTable = ({
-    items,
+const CategoryTable = ({
+    categories,
 }: {
-    items: ExpenditureItem[];
+    categories: any[];
 }) => {
-    const totalPlan = items.reduce((s, i) => s + (i.quantity || 0) * (i.expectedPrice || 0), 0);
+    const totalPlan = categories.reduce((s, c) => s + (c.expectedAmount || 0), 0);
 
     return (
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'auto' }}>
-            <thead className="sticky top-0 bg-[#F1F5F9] z-10 border-b border-gray-200">
+            <thead className="sticky top-0 bg-[#F1F5F9] z-10 border-b border-gray-200 shadow-sm">
                 <tr>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase w-10 text-center border-r border-gray-200">#</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Hàng hóa</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase text-right">Dự kiến chi (SL x ĐG)</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase w-10 text-center border-r border-gray-200">STT</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%]">Danh mục</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%] text-right bg-orange-50/50">Tổng dự kiến danh mục</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Hàng hóa / Ghi chú</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng / Đơn / Tại</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase text-right">Dự kiến chi (Số lượng x Đơn giá)</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-                {items.length > 0 ? items.map((i, idx) => (
-                    <tr key={i.id || idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-2 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-100">{idx + 1}</td>
-                        <td className="py-2 px-3 border-r border-gray-100">
-                            <div className="text-[11px] font-bold text-gray-800 uppercase leading-none">{i.category || 'Hàng hóa'}</div>
-                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">{i.note || 'Chi tiêu phục vụ chiến dịch'}</div>
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                            <div className="text-[11px] font-black text-[#ff5e14]">{fmtNum(i.quantity * i.expectedPrice)}</div>
-                            <div className="text-[9px] text-gray-400 font-bold mt-0.5">{i.quantity} x {fmtNum(i.expectedPrice)}</div>
-                        </td>
-                    </tr>
-                )) : (
-                    <tr><td colSpan={3} className="py-10 text-center text-[10px] font-bold text-gray-300 uppercase">Trống</td></tr>
+                {categories.length > 0 ? categories.map((cat: any, cIdx: number) => {
+                    const rowSpan = cat.items && cat.items.length > 0 ? cat.items.length : 1;
+                    return (
+                        <React.Fragment key={cat.id || cIdx}>
+                            {!cat.items || cat.items.length === 0 ? (
+                                <tr className="hover:bg-gray-50 transition-colors">
+                                    <td className="py-2 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-100">-</td>
+                                    <td className="py-2 px-3 border-r border-gray-100 bg-orange-50/10">
+                                        <div className="text-[11px] font-black text-gray-800 uppercase">{cat.name}</div>
+                                    </td>
+                                    <td className="py-2 px-3 border-r border-gray-100 bg-orange-50/10 text-right">
+                                        <div className="text-[10px] font-bold text-[#ff5e14]">{fmtNum(cat.expectedAmount || 0)} đ</div>
+                                    </td>
+                                    <td colSpan={3} className="py-2 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
+                                </tr>
+                            ) : (
+                                cat.items.map((i: any, idx: number) => {
+                                    const expectedQty = i.expectedQuantity ?? i.quantity;
+                                    return (
+                                        <tr key={i.id || idx} className="hover:bg-gray-50 transition-colors">
+                                            <td className="py-2 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-100">{idx + 1}</td>
+                                            {idx === 0 && (
+                                                <td rowSpan={rowSpan} className="py-2 px-3 border-r border-gray-100 bg-orange-50/10 align-top">
+                                                    <div className="text-[11px] font-black text-gray-800 uppercase leading-snug">{cat.name}</div>
+                                                </td>
+                                            )}
+                                            {idx === 0 && (
+                                                <td rowSpan={rowSpan} className="py-2 px-3 border-r border-gray-100 bg-orange-50/10 align-top text-right">
+                                                    <div className="text-[10px] font-bold text-white bg-gradient-to-r from-orange-500 to-[#ff5e14] px-1.5 py-1 rounded shadow-sm inline-block">
+                                                        {fmtNum(cat.expectedAmount || 0)} đ
+                                                    </div>
+                                                </td>
+                                            )}
+                                            <td className="py-2 px-3 border-r border-gray-100">
+                                                <div className="text-[11px] font-bold text-gray-800 uppercase leading-none mb-1">{i.category || 'Hàng hóa'}</div>
+                                                {i.note && <div className="text-[9px] text-gray-500 font-medium">{i.note}</div>}
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100">
+                                                <div className="text-[10px] font-bold text-gray-700">{i.brand || '-'} <span className="font-normal text-gray-400">/</span> {i.unit || '-'}</div>
+                                                <div className="text-[9px] text-gray-500 font-medium mt-0.5">{i.purchaseLocation || '-'}</div>
+                                            </td>
+                                            <td className="py-2 px-3 text-right">
+                                                <div className="text-[11px] font-black text-gray-800">{fmtNum(expectedQty * i.expectedPrice)}</div>
+                                                <div className="text-[9px] text-gray-400 font-bold mt-0.5">{expectedQty} x {fmtNum(i.expectedPrice)}</div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
+                        </React.Fragment>
+                    );
+                }) : (
+                    <tr><td colSpan={6} className="py-10 text-center text-[10px] font-bold text-gray-300 uppercase">Trống</td></tr>
                 )}
             </tbody>
             <tfoot className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
                 <tr className="font-black text-gray-800">
-                    <td colSpan={2} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng kế hoạch:</td>
+                    <td colSpan={5} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng kế hoạch:</td>
                     <td className="py-2.5 px-3 text-right text-xs text-[#ff5e14]">{fmtNum(totalPlan)} đ</td>
                 </tr>
             </tfoot>
@@ -104,7 +146,7 @@ const ItemTable = ({
 
 function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, campaignData: any, onUpdate: any }) {
     const [open, setOpen] = useState(false);
-    const [items, setItems] = useState<ExpenditureItem[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
     const [analyzingAI, setAnalyzingAI] = useState(false);
@@ -112,22 +154,23 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const [showReject, setShowReject] = useState(false);
 
     const loadItems = useCallback(async () => {
-        if (!open || items.length) return;
+        if (!open || categories.length) return;
         setLoading(true);
         try {
-            const fetchedItems = await expenditureService.getItems(exp.id);
-            setItems(fetchedItems);
+            const fetchedCategories = await expenditureService.getCategories(exp.id);
+            setCategories(fetchedCategories);
             // Load donation summary for ITEMIZED campaigns
-            if (campaignData?.campaignType !== 'AUTHORIZED' && fetchedItems.length > 0) {
+            const allItems: any[] = fetchedCategories.flatMap(c => c.items || []);
+            if (campaignData?.campaignType !== 'AUTHORIZED' && allItems.length > 0) {
                 try {
-                    const summary = await paymentService.getDonationSummary(fetchedItems.map((i: ExpenditureItem) => i.id));
+                    const summary = await paymentService.getDonationSummary(allItems.map((i: any) => i.id));
                     const map: Record<number, number> = {};
                     summary.forEach((s: any) => { map[s.expenditureItemId] = s.donatedQuantity; });
                     setDonationSummary(map);
                 } catch { /* ignore */ }
             }
         } finally { setLoading(false); }
-    }, [open, exp.id, items.length, campaignData?.campaignType]);
+    }, [open, exp.id, categories.length, campaignData?.campaignType]);
 
     useEffect(() => { loadItems(); }, [loadItems]);
 
@@ -144,7 +187,8 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const handleAIAnalyze = async () => {
         try {
             setAnalyzingAI(true);
-            setAiResult(await expenditureService.analyzeWithAI(campaignData, exp, items));
+            const allItems = categories.flatMap(c => c.items || []);
+            setAiResult(await expenditureService.analyzeWithAI(campaignData, exp, allItems));
         } catch (e: any) { toast.error(e.response?.data?.error || 'Lỗi AI'); } finally { setAnalyzingAI(false); }
     };
 
@@ -171,42 +215,43 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
 
             {open && (
                 <div className="p-3 pt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                        <div className="lg:col-span-8 space-y-3">
-                            <div className="bg-white rounded-lg border border-gray-100 overflow-hidden min-h-[100px] max-h-[300px] overflow-y-auto custom-scrollbar">
-                                {loading ? <div className="p-10 text-center text-[10px] font-bold text-gray-300 animate-pulse uppercase">Đang tải...</div>
-                                    : items.length ? <ItemTable items={items} />
+                    <div className="space-y-3">
+                        <div className="bg-white rounded-lg border border-gray-100 overflow-hidden min-h-[100px] max-h-[350px] overflow-y-auto custom-scrollbar">
+                            {loading ? <div className="p-10 text-center text-[10px] font-bold text-gray-300 animate-pulse uppercase">Đang tải...</div>
+                                : categories.length ? <CategoryTable categories={categories} />
                                     : <div className="p-10 text-center text-[10px] font-bold text-gray-300 uppercase">Không có dữ liệu</div>}
-                            </div>
                         </div>
-                        <div className="lg:col-span-4 space-y-3">
-                            {exp.accountNumber && (
-                                <div className="bg-[#ff5e14] rounded-lg p-2.5 text-white">
-                                    <p className="text-[9px] font-bold uppercase opacity-60 mb-1">Thụ hưởng</p>
-                                    <p className="text-[11px] font-bold tracking-wider leading-none mb-1">{exp.accountNumber}</p>
-                                    <p className="text-[10px] opacity-90 truncate">{exp.accountHolderName} • {exp.bankCode}</p>
-                                </div>
-                            )}
 
-                            <div className="space-y-1.5">
-                                <button onClick={handleAIAnalyze} disabled={analyzingAI} className="w-full h-8 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-bold uppercase flex items-center justify-center gap-2 border border-emerald-100 hover:bg-emerald-100 transition-colors">
-                                    {analyzingAI ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} PHÂN TÍCH AI
+                        <div className="flex flex-col sm:flex-row gap-3 items-stretch justify-between bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
+                            <div className="flex-1 max-w-sm">
+                                {exp.accountNumber && (
+                                    <div className="bg-white border-l-4 border-[#ff5e14] rounded shadow-sm p-2 text-gray-800 h-full flex flex-col justify-center">
+                                        <p className="text-[9px] font-bold uppercase text-gray-400 mb-0.5 tracking-widest">Thụ hưởng</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[11px] font-black tracking-wider leading-none text-[#ff5e14]">{exp.accountNumber}</p>
+                                            <p className="text-[10px] font-semibold text-gray-600 truncate flex-1">{exp.accountHolderName} • {exp.bankCode}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 justify-end sm:justify-start">
+                                <button onClick={handleAIAnalyze} disabled={analyzingAI} className="h-9 px-4 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase flex items-center justify-center gap-2 border border-emerald-100 hover:bg-emerald-100 transition-colors whitespace-nowrap">
+                                    {analyzingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} PHÂN TÍCH AI
                                 </button>
-                                <div className="flex gap-1.5">
-                                    {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
-                                        <>
-                                            <button onClick={() => setShowReject(true)} className="flex-1 h-8 rounded-lg border border-rose-100 text-rose-500 text-[10px] font-bold uppercase hover:bg-rose-50 transition-colors">TỪ CHỐI</button>
-                                            <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="flex-[2] h-8 rounded-lg bg-[#ff5e14] text-white text-[10px] font-bold uppercase hover:bg-[#345249] transition-colors shadow-sm">DUYỆT CHI TIÊU</button>
-                                        </>
-                                    )}
-                                </div>
+                                {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
+                                    <>
+                                        <button onClick={() => setShowReject(true)} className="h-9 px-4 rounded-lg border border-rose-100 text-rose-500 text-[10px] font-black uppercase hover:bg-rose-50 transition-colors whitespace-nowrap">TỪ CHỐI</button>
+                                        <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="h-9 px-6 rounded-lg bg-[#ff5e14] text-white text-[10px] font-black uppercase hover:bg-[#e05313] transition-colors shadow-sm whitespace-nowrap">DUYỆT CHI TIÊU</button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             )}
             {showReject && <RejectModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
-            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={items} mode="plan" exp={exp} onClose={() => setAiResult(null)} />}
+            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={categories.flatMap(c => c.items || [])} mode="plan" exp={exp} onClose={() => setAiResult(null)} />}
         </div>
     );
 }
@@ -219,7 +264,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
     const [filtered, setFiltered] = useState<any[]>([]);
     const [selected, setSelected] = useState<any | null>(null);
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL'); 
+    const [statusFilter, setStatusFilter] = useState('ALL');
     const [loading, setLoading] = useState(true);
 
     const loadData = useCallback(async () => {
@@ -229,7 +274,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
             // 1. Get staff tasks
             const tasks = await campaignService.getTasksByStaff(user.id);
             const expTasks = tasks.filter((t: any) => t.type === 'EXPENDITURE');
-            
+
             if (expTasks.length === 0) {
                 setGrouped([]);
                 setFiltered([]);
