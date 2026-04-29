@@ -64,7 +64,7 @@ export default function DonationGeneralLayout({
                 {/* Header */}
                 <div className="w-full max-w-md">
                     <div className="flex items-center gap-2 mb-2 justify-center">
-                        <div className="w-5 h-1.5 bg-[#dc2626] rounded-full"></div>
+                        <div className="w-5 h-1.5 bg-brand rounded-full"></div>
                         <span className="text-xs font-black uppercase tracking-[3px] text-gray-400">
                             {campaign?.type?.toUpperCase() === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Quỹ ủy quyền'}
                         </span>
@@ -102,7 +102,7 @@ export default function DonationGeneralLayout({
                 <div className="space-y-3">
                     {!isGuest && (
                         <label className="flex items-center gap-3 cursor-pointer group">
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'bg-brand border-brand' : 'border-gray-300 bg-white'}`}>
                                 {isAnonymous && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                             </div>
                             <input type="checkbox" className="hidden" checked={isAnonymous} onChange={e => onAnonymousChange(e.target.checked)} />
@@ -111,12 +111,12 @@ export default function DonationGeneralLayout({
                     )}
 
                     <label className="flex items-center gap-3 cursor-pointer group">
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAgreed ? 'bg-[#dc2626] border-[#dc2626]' : 'border-gray-300 bg-white'}`}>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${isAgreed ? 'bg-brand border-brand' : 'border-gray-300 bg-white'}`}>
                             {isAgreed && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                         </div>
                         <input type="checkbox" className="hidden" checked={isAgreed} onChange={e => onAgreedChange(e.target.checked)} />
                         <span className="text-sm font-medium text-gray-600">
-                            Tôi đồng ý với <span onClick={(e) => { e.preventDefault(); onShowTerms(); }} className="text-[#dc2626] underline hover:text-red-700">điều khoản & cam kết</span>
+                            Tôi đồng ý với <span onClick={(e) => { e.preventDefault(); onShowTerms(); }} className="text-brand underline hover:text-brand-hover">điều khoản & cam kết</span>
                         </span>
                     </label>
                 </div>
@@ -125,7 +125,7 @@ export default function DonationGeneralLayout({
                 <button
                     disabled={submitting || totalAmount === 0 || !isAgreed}
                     onClick={onSubmit}
-                    className="w-full bg-black text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-black/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-brand text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-hover transition-all active:scale-[0.98] shadow-lg shadow-brand/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                     {submitting ? 'Đang xử lý...' : 'Thanh toán ngay'}
                 </button>

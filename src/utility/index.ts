@@ -106,21 +106,24 @@ export function useScrollTop(): void {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const scrollUp = document.querySelector<HTMLElement>(".scroll-up");
+    if (!scrollUp) return;
     const scrollPath =
       document.querySelector<SVGPathElement>(".scroll-up path");
-    if (!scrollUp || !scrollPath) return;
-    const pathLength = scrollPath.getTotalLength();
-    scrollPath.style.transition = "none";
-    scrollPath.style.strokeDasharray = `${pathLength} ${pathLength}`;
-    scrollPath.style.strokeDashoffset = `${pathLength}`;
-    scrollPath.getBoundingClientRect();
-    scrollPath.style.transition = "stroke-dashoffset 10ms linear";
+    const pathLength = scrollPath?.getTotalLength?.() || 0;
+    if (scrollPath && pathLength > 0) {
+      scrollPath.style.transition = "none";
+      scrollPath.style.strokeDasharray = `${pathLength} ${pathLength}`;
+      scrollPath.style.strokeDashoffset = `${pathLength}`;
+      scrollPath.getBoundingClientRect();
+      scrollPath.style.transition = "stroke-dashoffset 10ms linear";
+    }
     const updateScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const scrollHeight = pathLength - (scrollTop * pathLength) / docHeight;
-      scrollPath.style.strokeDashoffset = `${scrollHeight}`;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      const docHeight = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      if (scrollPath && pathLength > 0) {
+        const scrollHeight = pathLength - (scrollTop * pathLength) / docHeight;
+        scrollPath.style.strokeDashoffset = `${scrollHeight}`;
+      }
       scrollUp.classList.toggle("active-scroll", scrollTop > 50);
     };
     updateScroll();

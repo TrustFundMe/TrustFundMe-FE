@@ -219,7 +219,7 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                         <h4 style={{ marginBottom: 0, fontSize: 20, fontWeight: 700 }}>Thống Kê Giao Dịch</h4>
                         <Link
                             href={`/account/campaigns/transactions?campaignId=${campaignId}`}
-                            className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#F84D43] text-white text-[11px] font-black uppercase tracking-wider hover:bg-red-600 transition-all shadow-sm shadow-red-100"
+                            className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#ff5e14] text-white text-[11px] font-black uppercase tracking-wider hover:bg-[#ea550c] transition-all shadow-sm shadow-orange-100"
                         >
                             Xem biến động số dư
                         </Link>

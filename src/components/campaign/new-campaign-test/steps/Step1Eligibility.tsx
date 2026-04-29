@@ -372,73 +372,6 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                 Thay đổi tài khoản
               </Link>
             </div>
-<<<<<<< HEAD
-=======
-          </div>
-        </SectionBlock>
-
-        <SectionBlock step="3" title="Hồ sơ năng lực thiện nguyện">
-          <div className="mb-3 rounded-xl border border-orange-100 bg-orange-50/60 px-3.5 py-2.5">
-            <p className="text-sm leading-relaxed text-gray-800">
-              Hồ sơ chứng minh năng lực là yếu tố <strong>bắt buộc</strong> để xét duyệt độ uy tín.
-              Tải biểu mẫu bên dưới, điền đầy đủ các phần (thông tin cá nhân, khảo sát kinh nghiệm thiện nguyện, lịch sử hoạt động), xuất ra PDF và tải lên.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <a
-                href="/templates/Mau_CV_Thien_Nguyen.docx"
-                download
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-hover"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                  <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                  <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
-                </svg>
-                Tải biểu mẫu Hồ sơ Năng Lực (Word)
-              </a>
-            </div>
-          </div>
-
-          <LabeledField
-            label="Tải lên hồ sơ năng lực"
-            hint="Upload file PDF đã điền đầy đủ theo biểu mẫu trên. Hỗ trợ PNG, JPG cho ảnh bằng khen/giấy xác nhận."
-          >
-            <div
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={onDrop}
-              onClick={addBankProof}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  addBankProof();
-                }
-              }}
-              className="flex min-h-[120px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white px-4 py-8 shadow-sm transition-colors hover:border-brand hover:bg-orange-50/50 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-100"
-            >
-            <svg className="h-9 w-9 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
-              <path d="M12 16V8m0 0l-3 3m3-3l3 3" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M4 16.5A3.5 3.5 0 007.5 20h9A3.5 3.5 0 0020 16.5v-.04" strokeLinecap="round" />
-            </svg>
-            <p className="mt-1.5 text-sm font-semibold text-gray-700">Kéo thả tệp hoặc bấm để tải lên</p>
-            <p className="mt-0.5 text-xs text-gray-500">PDF, PNG, JPG — tối đa 10MB/tệp</p>
-          </div>
-          </LabeledField>
-          {state.bankProofFiles.length > 0 ? (
-            <ul className="mt-4 space-y-2">
-              {state.bankProofFiles.map((f) => (
-                <motion.li
-                  key={f.id}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex justify-between gap-2 border-b border-gray-100 py-2 text-base text-gray-900"
-                >
-                  <span className="truncate font-medium">{f.name}</span>
-                  <span className="shrink-0 text-gray-600">{f.sizeKb} KB</span>
-                </motion.li>
-              ))}
-            </ul>
->>>>>>> 21155da85a53d52b5b24a6bf00939309b1a62cc1
           ) : (
             <div className="space-y-4">
               <LabeledField
@@ -678,12 +611,29 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
         </SectionBlock>
       </div>
 
-      <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
+      <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+        <div className="flex items-center gap-2 text-xs font-semibold">
+          {canNext ? (
+            <>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white">
+                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              </span>
+              <span className="text-brand">Đã hoàn tất — sẵn sàng tiếp tục</span>
+            </>
+          ) : (
+            <>
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-gray-400">
+                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" /></svg>
+              </span>
+              <span className="text-gray-400">Vui lòng hoàn tất các mục bên trên</span>
+            </>
+          )}
+        </div>
         <button
           type="button"
           disabled={!canNext}
           onClick={onNext}
-          className="rounded-lg bg-black px-8 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          className="rounded-full bg-brand px-7 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
         >
           Tiếp tục
         </button>

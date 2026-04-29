@@ -50,7 +50,7 @@ function FundInfoPopup({
 
                     {/* Header */}
                     <div className="flex items-center gap-2 mb-3">
-                        <Info className="h-5 w-5 text-[#F84D43] shrink-0" />
+                        <Info className="h-5 w-5 text-[#ff5e14] shrink-0" />
                         <h4 className="text-base font-bold text-slate-900">{title}</h4>
                     </div>
 
@@ -62,7 +62,7 @@ function FundInfoPopup({
                         <ul className="space-y-2">
                             {details.map((item, i) => (
                                 <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#F84D43] shrink-0" />
+                                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-[#ff5e14] shrink-0" />
                                     {item}
                                 </li>
                             ))}

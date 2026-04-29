@@ -96,7 +96,7 @@ const HeroSection = ({ title, subtitle, actions, images, className }: HeroSectio
         <motion.div
           className="flex flex-col items-center text-center lg:items-start lg:text-left"
           variants={containerVariants}
-          initial="hidden"
+          initial={false}
           animate="visible"
         >
           <motion.h1
@@ -174,7 +174,7 @@ const HeroSection = ({ title, subtitle, actions, images, className }: HeroSectio
         <motion.div
           className="relative h-[400px] w-full sm:h-[500px]"
           variants={containerVariants}
-          initial="hidden"
+          initial={false}
           animate="visible"
         >
           {/* Images - Scattered collage layout like reference image */}

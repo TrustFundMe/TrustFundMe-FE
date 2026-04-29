@@ -177,8 +177,8 @@ export default function CampaignImageSlider({
                       background:
                         i === index
                           ? dotIsVideo
-                            ? "#F84D43"
-                            : "#F84D43"
+                            ? "#ff5e14"
+                            : "#ff5e14"
                           : "rgba(255,255,255,0.7)",
                       transition: "all 180ms ease",
                       display: "inline-block",

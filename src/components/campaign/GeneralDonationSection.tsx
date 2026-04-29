@@ -113,7 +113,7 @@ export const GeneralDonationSection = () => {
         return (
             <div className="w-full py-40 flex items-center justify-center bg-[#F9FBFC]">
                 <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-[#F84D43]" />
+                    <Loader2 className="h-10 w-10 animate-spin text-[#ff5e14]" />
                     <p className="text-slate-400 font-medium animate-pulse">Đang tải thông tin quỹ...</p>
                 </div>
             </div>
@@ -132,12 +132,12 @@ export const GeneralDonationSection = () => {
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
                         >
-                            <p className="text-[#F84D43] text-[12px] font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                <span className="w-6 h-[2px] bg-[#F84D43]"></span>
+                            <p className="text-[#ff5e14] text-[12px] font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                <span className="w-6 h-[2px] bg-[#ff5e14]"></span>
                                 Trao gửi yêu thương
                                 <Link
                                     href="/account/campaigns/transactions?campaignId=1"
-                                    className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#F84D43] text-white hover:bg-red-600 transition-all shadow-md shadow-red-100 group"
+                                    className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#ff5e14] text-white hover:bg-[#ea550c] transition-all shadow-md shadow-orange-100 group"
                                 >
                                     <BarChart className="w-3.5 h-3.5 text-white" />
                                     <span className="text-[10px] font-black uppercase tracking-wider">Xem biến động số dư</span>
@@ -153,7 +153,7 @@ export const GeneralDonationSection = () => {
                             <div className="space-y-6">
                                 <div className="flex items-start gap-4">
                                     <div className="h-12 w-12 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
-                                        <MapPin className="h-6 w-6 text-[#F84D43]" />
+                                        <MapPin className="h-6 w-6 text-[#ff5e14]" />
                                     </div>
                                     <div className="pt-1">
                                         <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-widest mb-0.5">Địa chỉ</h4>
@@ -163,7 +163,7 @@ export const GeneralDonationSection = () => {
 
                                 <div className="flex items-start gap-4">
                                     <div className="h-12 w-12 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
-                                        <Phone className="h-6 w-6 text-[#F84D43]" />
+                                        <Phone className="h-6 w-6 text-[#ff5e14]" />
                                     </div>
                                     <div className="pt-1">
                                         <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-widest mb-0.5">Điện thoại</h4>
@@ -173,7 +173,7 @@ export const GeneralDonationSection = () => {
 
                                 <div className="flex items-start gap-4">
                                     <div className="h-12 w-12 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-100">
-                                        <Mail className="h-6 w-6 text-[#F84D43]" />
+                                        <Mail className="h-6 w-6 text-[#ff5e14]" />
                                     </div>
                                     <div className="pt-1">
                                         <h4 className="font-bold text-slate-900 uppercase text-[10px] tracking-widest mb-0.5">Email</h4>
@@ -196,7 +196,7 @@ export const GeneralDonationSection = () => {
                             {/* Header Section */}
                             <div className="text-center mb-6">
                                 <div className="flex items-center justify-center gap-2 mb-2">
-                                    <span className="w-5 h-[4px] rounded-full bg-[#F84D43]"></span>
+                                    <span className="w-5 h-[4px] rounded-full bg-[#ff5e14]"></span>
                                     <span className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">
                                         {getFundTypeLabel(campaign?.type)}
                                     </span>
@@ -213,7 +213,7 @@ export const GeneralDonationSection = () => {
                                                 type="button"
                                                 onClick={() => setSelectedAmount(amt)}
                                                 className={`py-2 px-1 rounded-lg text-xs font-bold transition-all duration-300 border-2 ${selectedAmount === amt
-                                                    ? "bg-[#F84D43] border-[#F84D43] text-white shadow-md shadow-red-100 scale-105"
+                                                    ? "bg-[#ff5e14] border-[#ff5e14] text-white shadow-md shadow-orange-100 scale-105"
                                                     : "bg-white border-slate-50 text-slate-400 hover:border-slate-100"
                                                     }`}
                                             >
@@ -224,7 +224,7 @@ export const GeneralDonationSection = () => {
 
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                                            <span className="text-[#F84D43] text-xl font-bold">đ</span>
+                                            <span className="text-[#ff5e14] text-xl font-bold">đ</span>
                                         </div>
                                         <input
                                             type="text"
@@ -265,7 +265,7 @@ export const GeneralDonationSection = () => {
                                             step="5"
                                             value={tipPercent}
                                             onChange={(e) => setTipPercent(Number(e.target.value))}
-                                            className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#F84D43]"
+                                            className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#ff5e14]"
                                         />
                                         <div className="flex justify-between px-1 mt-1.5 text-[8px] font-bold text-slate-300">
                                             <span>0%</span>
@@ -309,7 +309,7 @@ export const GeneralDonationSection = () => {
                                                     name="payment"
                                                     checked={paymentMethod === method.id}
                                                     onChange={() => setPaymentMethod(method.id)}
-                                                    className="w-3.5 h-3.5 accent-[#F84D43]"
+                                                    className="w-3.5 h-3.5 accent-[#ff5e14]"
                                                 />
                                             </label>
                                         ))}
@@ -326,7 +326,7 @@ export const GeneralDonationSection = () => {
                                                 onChange={() => setIsAnonymous(!isAnonymous)}
                                                 className="peer hidden"
                                             />
-                                            <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#F84D43] peer-checked:border-[#F84D43] transition-all"></div>
+                                            <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#ff5e14] peer-checked:border-[#ff5e14] transition-all"></div>
                                             <svg className="absolute top-0.5 left-0.5 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
@@ -343,14 +343,14 @@ export const GeneralDonationSection = () => {
                                                     onChange={() => setAgreed(!agreed)}
                                                     className="peer hidden"
                                                 />
-                                                <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#F84D43] peer-checked:border-[#F84D43] transition-all"></div>
+                                                <div className="w-5 h-5 border-2 border-slate-200 rounded-md peer-checked:bg-[#ff5e14] peer-checked:border-[#ff5e14] transition-all"></div>
                                                 <svg className="absolute top-0.5 left-0.5 w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                                 </svg>
                                             </div>
                                         </label>
                                         <p className="text-xs font-bold text-slate-600">
-                                            Tôi đồng ý với <button type="button" onClick={() => setShowTerms(true)} className="text-[#F84D43] underline hover:text-red-600 transition-colors">điều khoản & cam kết</button>
+                                            Tôi đồng ý với <button type="button" onClick={() => setShowTerms(true)} className="text-[#ff5e14] underline hover:text-[#ea550c] transition-colors">điều khoản & cam kết</button>
                                         </p>
                                     </div>
                                 </div>
@@ -380,7 +380,7 @@ export const GeneralDonationSection = () => {
                 <DialogContent className="max-w-5xl">
                     <DialogHeader className="pb-2">
                         <DialogTitle className="text-xl font-black text-slate-900 flex items-center gap-3">
-                            <span className="w-1.5 h-6 bg-[#F84D43] rounded-full"></span>
+                            <span className="w-1.5 h-6 bg-[#ff5e14] rounded-full"></span>
                             Cam Kết Đồng Hành Cùng Quỹ Chung
                         </DialogTitle>
                     </DialogHeader>
@@ -393,7 +393,7 @@ export const GeneralDonationSection = () => {
 
                         <div className="space-y-3 pt-0.5">
                             <div className="flex gap-4">
-                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
+                                <div className="h-5 w-5 rounded-full bg-orange-50 text-[#ff5e14] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</div>
                                 <div>
                                     <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Sứ mệnh điều tiết</h5>
                                     <p className="text-xs">Quỹ Chung là nguồn lực dự phòng chiến lược. Platform nắm toàn quyền quyết định điều tiết, hỗ trợ hoặc thu hồi nguồn vốn giữa các chiến dịch dựa trên mức độ ưu tiên và tính cấp thiết.</p>
@@ -401,7 +401,7 @@ export const GeneralDonationSection = () => {
                             </div>
 
                             <div className="flex gap-4">
-                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</div>
+                                <div className="h-5 w-5 rounded-full bg-orange-50 text-[#ff5e14] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</div>
                                 <div>
                                     <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Minh bạch và Trách nhiệm</h5>
                                     <p className="text-xs">Chúng tôi cam kết sử dụng nguồn lực này tối ưu và công bằng nhất. Mọi sự chuyển dịch ngân sách đều hướng tới mục tiêu duy nhất: Tận dụng triệt để mọi đồng tiền của cộng đồng để không ai bị bỏ lại phía sau.</p>
@@ -409,7 +409,7 @@ export const GeneralDonationSection = () => {
                             </div>
 
                             <div className="flex gap-4">
-                                <div className="h-5 w-5 rounded-full bg-red-50 text-[#F84D43] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</div>
+                                <div className="h-5 w-5 rounded-full bg-orange-50 text-[#ff5e14] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</div>
                                 <div>
                                     <h5 className="font-bold text-slate-900 text-xs mb-0.5 uppercase tracking-wider">Niềm tin trọn vẹn</h5>
                                     <p className="text-xs">Bạn trao cho chúng tôi quyền đại diện để đưa ra những quyết định tài chính nhanh chóng và hiệu quả nhất trong những tình huống ngặt nghèo mà quy trình gây quỹ thông thường không thể đáp ứng kịp.</p>
@@ -417,7 +417,7 @@ export const GeneralDonationSection = () => {
                             </div>
                         </div>
 
-                        <p className="pt-2 text-center font-bold text-[#F84D43] text-xs italic">
+                        <p className="pt-2 text-center font-bold text-[#ff5e14] text-xs italic">
                             Cảm ơn bạn đã tin tưởng và cùng chúng tôi viết tiếp những câu truyện về lòng nhân ái.
                         </p>
                     </DialogBody>
@@ -431,7 +431,7 @@ export const GeneralDonationSection = () => {
                         </Button>
                         <Button
                             onClick={handleAgree}
-                            className="flex-1 bg-[#F84D43] hover:bg-red-600 text-white font-bold uppercase tracking-widest text-[10px] h-9 shadow-md shadow-red-100"
+                            className="flex-1 bg-[#ff5e14] hover:bg-[#ea550c] text-white font-bold uppercase tracking-widest text-[10px] h-9 shadow-md shadow-orange-100"
                         >
                             Tôi đồng ý và tiếp tục
                         </Button>

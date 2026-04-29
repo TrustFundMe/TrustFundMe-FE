@@ -17,7 +17,7 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
         >
             {/* Radio Circle */}
             <div
-                className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center shrink-0 transition-colors cursor-pointer ${isSelected ? 'border-[#dc2626]' : 'border-gray-300'
+                className={`w-5 h-5 rounded-full border-2 mr-4 flex items-center justify-center shrink-0 transition-colors cursor-pointer ${isSelected ? 'border-brand' : 'border-gray-300'
                     }`}
                 onClick={(e) => {
                     e.stopPropagation();
@@ -25,7 +25,7 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
                     else onSelect(quantity || 1);
                 }}
             >
-                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" />}
+                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
             </div>
 
             {/* Content */}
@@ -34,13 +34,13 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
                         <div className="font-bold text-gray-900 text-sm">
                             {item.name}
                         </div>
-                        <div className="font-black text-[#dc2626] text-sm">
+                        <div className="font-black text-brand text-sm">
                             — {item.price.toLocaleString('vi-VN')} ₫
                         </div>
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-500 line-clamp-1">{item.description}</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap bg-red-50 text-red-600">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap bg-orange-50 text-brand">
                             Còn lại: {item.quantityLeft}
                         </span>
                     </div>
@@ -51,7 +51,7 @@ export default function ItemRow({ item, quantity, isSelected, onSelect, onQuanti
                 {isSelected && (
                     <button
                         onClick={onDeselect}
-                        className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl font-bold transition-all shadow-sm shadow-red-100"
+                        className="w-9 h-9 flex items-center justify-center bg-orange-50 text-brand hover:bg-orange-100 rounded-2xl font-bold transition-all shadow-sm shadow-orange-100"
                         title="Bỏ chọn"
                     >
                         <X className="w-5 h-5" />

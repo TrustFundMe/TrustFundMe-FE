@@ -52,11 +52,11 @@ export default function PaymentSummary({ amount, tipPercent, onTipChange, compac
                         type="range" min="0" max="30" step="5"
                         value={tipPercent}
                         onChange={(e) => onTipChange(Number(e.target.value))}
-                        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#dc2626] z-10 relative"
+                        className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#ff5e14] z-10 relative"
                     />
                     <div className="absolute top-1/2 left-0 w-full -translate-y-1/2 flex justify-between px-[2px] pointer-events-none">
                         {[0, 5, 10, 15, 20, 25, 30].map((step) => (
-                            <div key={step} className={`w-1 h-1 rounded-full ${step <= tipPercent ? 'bg-[#dc2626]' : 'bg-gray-300'}`} />
+                            <div key={step} className={`w-1 h-1 rounded-full ${step <= tipPercent ? 'bg-brand' : 'bg-gray-300'}`} />
                         ))}
                     </div>
                 </div>

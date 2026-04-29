@@ -61,7 +61,7 @@ export default function DonateForm({
               }
             }}
             style={{
-              border: amount === v && !customAmount ? "2px solid #F84D43" : undefined,
+              border: amount === v && !customAmount ? "2px solid #ff5e14" : undefined,
             }}
           >
             {v}
@@ -78,7 +78,7 @@ export default function DonateForm({
             if (e.key === "Enter") setCustomAmount("1");
           }}
           style={{
-            border: customAmount ? "2px solid #F84D43" : undefined,
+            border: customAmount ? "2px solid #ff5e14" : undefined,
           }}
         >
           custom

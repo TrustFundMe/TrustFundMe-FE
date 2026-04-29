@@ -15,7 +15,7 @@ export default function RecentDonors({ donors }: RecentDonorsProps) {
                             <div className="w-1.5 h-1.5 rounded-full bg-gray-200"></div>
                             <div className="font-bold text-gray-700">{donor.name}</div>
                         </div>
-                        <div className="font-bold text-[#dc2626] text-right">{donor.amount.toLocaleString('vi-VN')}</div>
+                        <div className="font-bold text-brand text-right">{donor.amount.toLocaleString('vi-VN')}</div>
                     </div>
                 ))}
             </div>

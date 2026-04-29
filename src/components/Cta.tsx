@@ -47,42 +47,49 @@ export const Cta1 = () => {
 
 export const Cta2 = () => {
   return (
-    <section className="cta-banner-section-3 fix py-16 md:py-20 lg:py-24">
+    <section className="cta-banner-section-3 fix py-14 md:py-18 lg:py-20">
       <div className="container">
-        <div className="cta-banner-wrapper-3">
-          <div className="section-title mb-0">
-            <span className="sub-title text-white wow fadeInUp">
-              <i className="far fa-heart" /> Tham gia TrustFundMe
+        <div
+          className="rounded-[2rem] border border-white/20 px-6 py-8 md:px-10 md:py-10"
+          style={{
+            background: "linear-gradient(135deg, #f84d43 0%, #ff6a1f 55%, #ff7b3a 100%)",
+          }}
+        >
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] md:items-end">
+            <div>
+              <span className="inline-flex items-center rounded-full bg-white/18 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white">
+                Tham gia TrustFundMe
             </span>
-            <h2 className="mt-char-animation text-white">
-              Bắt đầu tạo ra <br /> khác biệt ngay hôm nay
-            </h2>
-          </div>
-          <form
-            action="#"
-            id="contact-form"
-            method="POST"
-            className="newsletter-items"
-          >
-            <div className="form-clt wow fadeInUp" data-wow-delay=".7s">
-              <input
-                type="text"
-                name="email"
-                id="email"
-                placeholder="Nhập email của bạn"
-              />
-              <button
-                className="theme-btn wow fadeInUp"
-                data-wow-delay=".9s"
-                type="submit"
-              >
-                <span>
-                  Bắt đầu ngay{' '}
+              <h2 className="mt-3 text-white font-black leading-[1.08] text-3xl md:text-[44px] tracking-tight">
+                Bắt đầu tạo ra khác biệt ngay hôm nay
+              </h2>
+              <p className="mt-3 max-w-[56ch] text-sm md:text-base text-white/85">
+                Theo dõi minh bạch từng khoản đóng góp, từng đợt chi tiêu và tác động thực tế của cộng đồng.
+              </p>
+            </div>
+
+            <form action="#" id="contact-form" method="POST" className="w-full">
+              <label htmlFor="email" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.16em] text-white/90">
+                Nhận cập nhật qua email
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="email"
+                  name="email"
+                  id="email"
+                  placeholder="Nhập email của bạn"
+                  className="h-12 w-full rounded-full border border-white/35 bg-white/95 px-4 text-sm font-semibold text-[#1f2937] outline-none placeholder:text-slate-400"
+                />
+                <button
+                  className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-[#1a685b] px-5 text-sm font-extrabold text-white transition-colors hover:bg-[#145246]"
+                  type="submit"
+                >
+                  Bắt đầu ngay
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 20 20"
                     fill="none"
-                    className="inline-block h-4 w-4 align-[-0.125em]"
+                    className="ml-2 h-4 w-4"
                   >
                     <path
                       d="M4 10h12M10 4l6 6-6 6"
@@ -92,10 +99,10 @@ export const Cta2 = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                </span>
-              </button>
-            </div>
-          </form>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </section>

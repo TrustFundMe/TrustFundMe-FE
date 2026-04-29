@@ -12,28 +12,6 @@ import { useRouter } from 'next/navigation';
 // Lighter red for the sidebar
 const SIDEBAR_COLOR = '#2d3a30';
 
-/**
- * ConcaveCorner creates the "reverse curve" effect where the red sidebar
- * meets the white active tab/content area.
- */
-const ConcaveCorner = ({ position }: { position: 'top' | 'bottom' }) => (
-    <div
-        className="absolute right-0 w-6 h-6 pointer-events-none"
-        style={{
-            [position === 'top' ? 'bottom' : 'top']: '100%',
-            backgroundColor: '#ffffff' // Pure white to match content
-        }}
-    >
-        <svg viewBox="0 0 24 24" fill={SIDEBAR_COLOR} xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            {position === 'top' ? (
-                <path d="M0 0 H24 Q24 24 0 24 Z" />
-            ) : (
-                <path d="M0 24 H24 Q24 0 0 0 Z" />
-            )}
-        </svg>
-    </div>
-);
-
 function AccountSidebar() {
     const pathname = usePathname();
     const router = useRouter();
@@ -75,23 +53,17 @@ function AccountSidebar() {
 
                     return (
                         <div key={item.href} className="relative">
-                            {/* Concave bridge ABOVE active tab */}
-                            {isActive && <ConcaveCorner position="top" />}
-
                             <Link
                                 href={item.href}
-                                className={`relative flex items-center gap-3 pl-8 pr-4 py-3 text-sm font-bold transition-all duration-200 ${isActive
-                                    ? 'bg-white text-[#1E293B] rounded-l-[2rem] shadow-sm border-[#E2E8F0]'
-                                    : 'text-white/80 hover:text-white hover:bg-white/10 rounded-l-[1.5rem] ml-2'
+                                className={`relative flex items-center gap-3 pl-8 pr-4 py-3 text-sm font-bold rounded-l-[2rem] overflow-hidden transition-colors duration-150 ${isActive
+                                    ? 'bg-white text-[#1E293B] ml-2'
+                                    : 'text-white/80 hover:text-white hover:bg-white/10 ml-2'
                                     }`}
                                 style={isActive ? { backgroundColor: '#ffffff' } : {}}
                             >
                                 <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#1E293B]' : 'text-white/60'}`} />
                                 <span className={isActive ? 'text-[#1E293B]' : 'text-white'}>{item.label}</span>
                             </Link>
-
-                            {/* Concave bridge BELOW active tab */}
-                            {isActive && <ConcaveCorner position="bottom" />}
                         </div>
                     );
                 })}

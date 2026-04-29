@@ -40,17 +40,20 @@ export default function CampaignHeader({
 
   return (
     <div className="causes-details-items">
-      <div style={{ marginBottom: 10 }}>
-        <div className="mb-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div style={{ marginTop: 10, marginBottom: 14 }}>
+        <div
+          className="d-flex align-items-center justify-content-between flex-wrap gap-2"
+          style={{ marginBottom: 12 }}
+        >
           <span
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              padding: "8px 12px",
+              padding: "7px 12px",
               borderRadius: 9999,
               border: "1px solid rgba(0,0,0,0.10)",
-              background: "rgba(248, 77, 67, 0.08)",
+              background: "rgba(255, 94, 20, 0.08)",
               fontWeight: 700,
               letterSpacing: 0.2,
             }}
@@ -68,10 +71,10 @@ export default function CampaignHeader({
 
         <h2
           style={{
-            marginBottom: 0,
+            marginBottom: 2,
             fontFamily: "var(--font-dm-sans)",
             fontWeight: 800,
-            lineHeight: 1.15,
+            lineHeight: 1.12,
             fontSize: 34,
           }}
         >
@@ -95,17 +98,17 @@ export default function CampaignHeader({
                 className="flex items-center gap-3 px-4 py-3 rounded-xl border border-black/8 bg-gray-50 hover:bg-gray-100 transition-all text-left group"
               >
                 <div className="w-9 h-9 rounded-lg bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <FileText className="h-4 w-4 text-[#dc2626]" />
+                  <FileText className="h-4 w-4 text-brand" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-black group-hover:text-[#dc2626] transition-colors truncate">
+                  <p className="text-xs font-black text-black group-hover:text-brand transition-colors truncate">
                     {file.name || "Tệp đính kèm"}
                   </p>
                   <p className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
                     Tải xuống để xem
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-black/20 group-hover:text-[#dc2626] transition-colors shrink-0" />
+                <ExternalLink className="h-4 w-4 text-black/20 group-hover:text-brand transition-colors shrink-0" />
               </button>
             ))}
           </div>

@@ -2,6 +2,15 @@
 
 import Image from "next/image";
 import { useMemo } from "react";
+import {
+  DotsHorizontalIcon,
+  FileIcon,
+  ArrowRightIcon,
+  HeartIcon,
+  ChatBubbleIcon,
+  Share2Icon,
+  BookmarkIcon,
+} from "@radix-ui/react-icons";
 import type { CampaignPost, CampaignPostAttachment } from "./types";
 
 function MediaArea({
@@ -17,9 +26,9 @@ function MediaArea({
         style={{
           width: "100%",
           height,
-          borderRadius: 12,
+          borderRadius: 10,
           overflow: "hidden",
-          background: "#f2f2f2",
+          background: "#f1f5f9",
         }}
       >
         <Image
@@ -39,59 +48,66 @@ function MediaArea({
       style={{
         width: "100%",
         height,
-        border: "1px solid rgba(0,0,0,0.08)",
-        borderRadius: 12,
-        padding: 14,
-        background: "#fff",
+        border: "1px solid rgba(15,23,42,0.08)",
+        borderRadius: 10,
+        padding: 12,
+        background: "#f8fafc",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 12,
+        gap: 10,
       }}
     >
-      <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div
-          className="d-flex align-items-center justify-content-center"
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 12,
-            background: "rgba(0,0,0,0.05)",
-            flex: "0 0 auto",
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            background: "#fff",
+            border: "1px solid rgba(15,23,42,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
           }}
         >
-          <i className="far fa-file" style={{ opacity: 0.75 }} />
+          <FileIcon style={{ width: 14, height: 14, opacity: 0.5 }} />
         </div>
 
         <div style={{ minWidth: 0 }}>
           <div
-            className="fw-bold"
             style={{
-              lineHeight: 1.15,
+              fontSize: 12,
+              fontWeight: 700,
+              lineHeight: 1.2,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
+              color: "#0f172a",
             }}
           >
             {attachment.name ?? "Tệp đính kèm"}
           </div>
-          <div className="text-sm" style={{ opacity: 0.6 }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
             Nhấn để tải / xem
           </div>
         </div>
       </div>
 
       <div
-        className="d-flex align-items-center justify-content-center"
         style={{
-          width: 34,
-          height: 34,
-          borderRadius: 9999,
-          background: "rgba(0,0,0,0.05)",
-          flex: "0 0 auto",
+          width: 28,
+          height: 28,
+          borderRadius: "50%",
+          background: "rgba(15,23,42,0.04)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
         }}
       >
-        <i className="far fa-arrow-right" style={{ opacity: 0.7 }} />
+        <ArrowRightIcon style={{ width: 12, height: 12, opacity: 0.5 }} />
       </div>
     </div>
   );
@@ -108,91 +124,103 @@ function PostCard({
   const hasText = Boolean(post.content?.trim());
   const hasMedia = Boolean(attachment);
 
-  const mediaHeight = hasText && hasMedia ? 130 : 160;
-
   return (
     <button
       type="button"
       onClick={() => onOpen?.(post.id)}
-      className="w-100"
       style={{
+        width: "100%",
         textAlign: "left",
-        borderRadius: 14,
+        borderRadius: 12,
         background: "#fff",
-        border: "1px solid rgba(0,0,0,0.10)",
-        boxShadow: "0 8px 22px rgba(0,0,0,0.06)",
+        border: "1px solid rgba(15,23,42,0.08)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         padding: 0,
+        cursor: "pointer",
+        transition: "border-color 200ms, box-shadow 200ms",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = "rgba(15,23,42,0.16)";
+        e.currentTarget.style.boxShadow = "0 2px 8px rgba(15,23,42,0.06)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = "rgba(15,23,42,0.08)";
+        e.currentTarget.style.boxShadow = "none";
       }}
     >
-      <div style={{ padding: 14, flex: "0 0 auto" }}>
-        <div className="d-flex align-items-center justify-content-between gap-3">
-          <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+      {/* Author row */}
+      <div style={{ padding: "12px 14px 0", flex: "0 0 auto" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 9999,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
                 overflow: "hidden",
-                flex: "0 0 auto",
-                background: "rgba(0,0,0,0.05)",
+                flexShrink: 0,
+                background: "#f1f5f9",
               }}
             >
               <Image
                 src={post.author.avatar}
                 alt={post.author.name}
-                width={40}
-                height={40}
+                width={36}
+                height={36}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>
 
             <div style={{ minWidth: 0 }}>
               <div
-                className="fw-bold"
                 style={{
-                  lineHeight: 1.1,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  color: "#0f172a",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  maxWidth: 220,
+                  maxWidth: 200,
                 }}
               >
                 {post.author.name}
               </div>
-              <div className="text-sm" style={{ opacity: 0.6 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, lineHeight: 1.3 }}>
                 {post.createdAt}
               </div>
             </div>
           </div>
 
-          <span style={{ opacity: 0.6, padding: 6 }}>
-            <i className="far fa-ellipsis-h" />
+          <span style={{ opacity: 0.4, padding: 4, flexShrink: 0 }}>
+            <DotsHorizontalIcon style={{ width: 14, height: 14 }} />
           </span>
         </div>
 
-        {hasText ? (
+        {/* Post content text */}
+        {hasText && (
           <div
             style={{
               marginTop: 10,
-              fontSize: 14,
-              lineHeight: 1.55,
-              color: "#202426",
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: "#334155",
               overflow: "hidden",
               display: "-webkit-box",
-              WebkitLineClamp: hasMedia ? 2 : 5,
+              WebkitLineClamp: hasMedia ? 2 : 4,
               WebkitBoxOrient: "vertical",
             }}
           >
             {post.content}
           </div>
-        ) : null}
+        )}
       </div>
 
-      {hasMedia ? (
-        <div style={{ padding: "0 14px 12px 14px", flex: "0 0 auto" }}>
+      {/* Media / attachment */}
+      {hasMedia && (
+        <div style={{ padding: "10px 14px", flex: "0 0 auto" }}>
           {attachment?.type === "file" ? (
             <a
               href={attachment.url}
@@ -201,42 +229,44 @@ function PostCard({
               onClick={(e) => e.stopPropagation()}
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <MediaArea attachment={attachment} height={mediaHeight} />
+              <MediaArea attachment={attachment} height={56} />
             </a>
           ) : (
-            <MediaArea attachment={attachment!} height={mediaHeight} />
+            <MediaArea attachment={attachment!} height={140} />
           )}
         </div>
-      ) : null}
+      )}
 
+      {/* Footer actions */}
       <div
-        className="d-flex align-items-center justify-content-between"
         style={{
-          padding: "10px 14px",
-          borderTop: "1px solid rgba(0,0,0,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "8px 14px",
+          borderTop: "1px solid rgba(15,23,42,0.06)",
           flex: "0 0 auto",
-          opacity: 0.85,
-          background: "#fff",
+          background: "#fafbfc",
         }}
       >
-        <div className="d-flex align-items-center gap-3">
-          <div className="d-flex align-items-center gap-2" style={{ fontSize: 13 }}>
-            <i className="far fa-thumbs-up" />
-            <span>{post.likeCount.toLocaleString()}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+            <HeartIcon style={{ width: 14, height: 14 }} />
+            <span>{post.likeCount}</span>
           </div>
 
-          <div className="d-flex align-items-center gap-2" style={{ fontSize: 13 }}>
-            <i className="far fa-comment" />
-            <span>{post.comments.length.toLocaleString()}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+            <ChatBubbleIcon style={{ width: 14, height: 14 }} />
+            <span>{post.comments.length}</span>
           </div>
 
-          <span style={{ opacity: 0.75 }}>
-            <i className="far fa-share-square" />
+          <span style={{ opacity: 0.4 }}>
+            <Share2Icon style={{ width: 13, height: 13 }} />
           </span>
         </div>
 
-        <span style={{ opacity: 0.75 }}>
-          <i className="far fa-bookmark" />
+        <span style={{ opacity: 0.4 }}>
+          <BookmarkIcon style={{ width: 13, height: 13 }} />
         </span>
       </div>
     </button>
@@ -263,7 +293,7 @@ export default function PostsFeed({
   }, [posts, campaignCreatorId]);
 
   return (
-    <div className="d-flex flex-column" style={{ gap: 14 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {displayed.map((post) => (
         <PostCard key={post.id} post={post} onOpen={onOpenPost} />
       ))}

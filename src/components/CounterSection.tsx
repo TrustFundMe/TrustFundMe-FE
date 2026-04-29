@@ -89,8 +89,7 @@ export const CounterSection1 = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: item.delay }}
-              className="wow fadeInUp"
-              data-wow-delay={item.delay + "s"}
+              className=""
             >
               <div className="text-center">
                 <h2 className="!text-4xl md:!text-5xl lg:!text-6xl !leading-tight font-bold text-white whitespace-nowrap">

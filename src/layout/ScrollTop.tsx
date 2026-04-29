@@ -1,5 +1,6 @@
 "use client";
 import { useScrollTop } from "@/utility";
+import { ChevronUpIcon } from "@radix-ui/react-icons";
 const ScrollTop = () => {
   useScrollTop();
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -11,6 +12,9 @@ const ScrollTop = () => {
   };
   return (
     <div className="scroll-up" onClick={handleClick}>
+      <span className="scroll-up-icon" aria-hidden>
+        <ChevronUpIcon />
+      </span>
       <svg
         className="scroll-circle svg-content"
         width="100%"

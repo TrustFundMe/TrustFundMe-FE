@@ -3,11 +3,12 @@
 import DanboxLayout from '@/layout/DanboxLayout';
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { XCircle } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
 import CampaignDonateCard from '@/components/campaign/CampaignDonateCard';
 import CampaignHeader from '@/components/campaign/CampaignHeader';
-import CampaignAnalyticsChart from '@/components/campaign/CampaignAnalyticsChart';
+import MilestoneTimeline from '@/components/campaign/MilestoneTimeline';
 import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import DonorsModal from '@/components/campaign/DonorsModal';
@@ -18,6 +19,7 @@ import { feedPostService } from '@/services/feedPostService';
 import type { FeedPostDto } from '@/types/feedPost';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { campaignService } from '@/services/campaignService';
+import { expenditureService } from '@/services/expenditureService';
 import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -26,6 +28,10 @@ import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymen
 import { flagService } from '@/services/flagService';
 import { trustScoreService } from '@/services/trustScoreService';
 import toast from 'react-hot-toast';
+
+const CampaignAnalyticsChart = dynamic(() => import('@/components/campaign/CampaignAnalyticsChart'), {
+  ssr: false,
+});
 
 const mapCampaignDtoToUi = (
   dto: CampaignDto,
@@ -95,6 +101,14 @@ function mapFeedPostDtoToCampaignPost(dto: FeedPostDto): CampaignPost {
   };
 }
 
+function formatVnDateRange(startDate?: string | null, endDate?: string | null, fallback?: string) {
+  if (!startDate && !endDate) return fallback || '';
+  const start = startDate ? new Date(startDate).toLocaleDateString('vi-VN') : '';
+  const end = endDate ? new Date(endDate).toLocaleDateString('vi-VN') : '';
+  if (start && end) return `${start} - ${end}`;
+  return start || end || fallback || '';
+}
+
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -116,22 +130,10 @@ function CampaignDetailsInner() {
   const [posts, setPosts] = useState<CampaignPost[]>([]);
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   const comments = useMemo(() => [...mockComments], []);
-  const displayPlans = useMemo<CampaignPlan[]>(() => {
-    if (plans.length > 0) return plans;
-    const goalAmount = progress?.goalAmount || campaign?.goalAmount || 0;
-    return [
-      {
-        id: 'mock-plan-khoi-tao',
-        title: 'Kế hoạch triển khai đang cập nhật',
-        amount: goalAmount > 0 ? goalAmount : 0,
-        description: 'Chiến dịch chưa khai báo milestone chi tiết. Đội ngũ đang hoàn thiện lộ trình để cộng đồng theo dõi minh bạch.',
-        date: new Date().toLocaleDateString('vi-VN'),
-        status: 'PENDING',
-      },
-    ];
-  }, [plans, progress?.goalAmount, campaign?.goalAmount]);
+  const displayPlans = useMemo<CampaignPlan[]>(() => plans, [plans]);
 
   useEffect(() => {
     let mounted = true;
@@ -152,18 +154,55 @@ function CampaignDetailsInner() {
           campaignService.getExpendituresByCampaignId(campaignId)
         ]);
 
-        // Map expenditures to CampaignPlan
-        const mappedPlans: CampaignPlan[] = (expenditures || [])
-          .map((exp: any) => ({
-            id: String(exp.id),
-            title: `Đợt chi tiêu: ${exp.plan || 'Chi tiết chi tiêu'}`,
-            amount: exp.totalAmount || exp.totalExpectedAmount || 0,
-            description: exp.plan || '',
-            date: exp.disbursedAt 
-              ? new Date(exp.disbursedAt).toLocaleDateString('vi-VN') 
-              : (exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('vi-VN') : ''),
-            status: exp.status
+        const categoryEntries = await Promise.all(
+          (expenditures || []).map(async (exp: any) => {
+            try {
+              const categories = await expenditureService.getCategories(exp.id);
+              return [exp.id as number, categories as any[]] as const;
+            } catch {
+              return [exp.id as number, [] as any[]] as const;
+            }
+          }),
+        );
+        const categoryMap = new Map<number, any[]>(categoryEntries);
+
+        const mappedPlans: CampaignPlan[] = (expenditures || []).map((exp: any) => {
+          const rawCategories = (exp.categories && exp.categories.length > 0)
+            ? exp.categories
+            : (categoryMap.get(exp.id) || []);
+          const normalizedCategories = rawCategories.map((cat: any) => ({
+            id: cat.id,
+            name: cat.name || 'Nhóm hạng mục',
+            description: cat.description || '',
+            expectedAmount: cat.expectedAmount || 0,
+            actualAmount: cat.actualAmount || 0,
+            items: (cat.items || []).map((item: any) => ({
+              id: item.id,
+              name: item.category || item.name || 'Hạng mục',
+              expectedQuantity: item.quantity || item.expectedQuantity || 0,
+              expectedPrice: item.expectedPrice || 0,
+              actualQuantity: item.actualQuantity || 0,
+              price: item.price || 0,
+              note: item.note || '',
+            })),
           }));
+          const totalItems = normalizedCategories.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0);
+
+          const firstCategoryDescription =
+            normalizedCategories.find((cat: any) => (cat.description || '').trim())?.description || '';
+          return {
+            id: String(exp.id),
+            title: exp.plan || 'Milestone',
+            amount: exp.totalExpectedAmount || exp.totalAmount || 0,
+            description: firstCategoryDescription,
+            date: formatVnDateRange(exp.startDate, exp.endDate, exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('vi-VN') : ''),
+            status: exp.status,
+            startDate: exp.startDate || '',
+            endDate: exp.endDate || '',
+            totalItems,
+            categories: normalizedCategories,
+          };
+        });
 
         if (!mounted) return;
         setPlans(mappedPlans);
@@ -325,8 +364,8 @@ function CampaignDetailsInner() {
                 maxWidth: 1200,
                 margin: '0 auto',
                 display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
-                gap: 48,
+                gridTemplateColumns: 'minmax(0, 1.45fr) minmax(0, 0.95fr)',
+                gap: 30,
                 alignItems: 'start',
               }}
             >
@@ -338,7 +377,7 @@ function CampaignDetailsInner() {
                   <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
                 </div>
               </div>
-              <div style={{ minWidth: 0, marginTop: 86 }}>
+              <div style={{ minWidth: 0, marginTop: 16 }}>
                 <div className="animate-pulse space-y-6">
                   <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
                   <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>
@@ -390,8 +429,8 @@ function CampaignDetailsInner() {
               maxWidth: 1200,
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
-              gap: 48,
+              gridTemplateColumns: 'minmax(0, 1.45fr) minmax(0, 0.95fr)',
+              gap: 30,
               alignItems: 'start',
             }}
           >
@@ -451,11 +490,62 @@ function CampaignDetailsInner() {
                 </div>
               )}
 
-              <CampaignAnalyticsChart campaignId={campaign.id} />
+              <MilestoneTimeline
+                plans={displayPlans}
+                raisedAmount={progress?.raisedAmount || campaign.raisedAmount || 0}
+              />
+              <div
+                style={{
+                  border: '1px solid rgba(15,23,42,0.10)',
+                  borderRadius: 16,
+                  background: '#fff',
+                  padding: '16px 20px',
+                  marginBottom: 14,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsStatsOpen((v) => !v)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>Thống Kê Giao Dịch</span>
+                  <span
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      background: '#f1f5f9',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 11,
+                      color: '#64748b',
+                      transition: 'transform 200ms',
+                      transform: isStatsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                  >
+                    ▼
+                  </span>
+                </button>
+                {isStatsOpen ? (
+                  <div style={{ marginTop: 12 }}>
+                    <CampaignAnalyticsChart campaignId={campaign.id} />
+                  </div>
+                ) : null}
+              </div>
             </div>
 
-            <div style={{ minWidth: 0, marginTop: 86 }}>
-              <div className="casues-sidebar-wrapper">
+            <div style={{ minWidth: 0, marginTop: 16 }}>
+              <div className="casues-sidebar-wrapper campaign-detail-sidebar">
                 <div style={{ marginBottom: 18 }}>
                   {campaign.status === 'DISABLED' ? (
                     <div className="p-8 rounded-3xl bg-red-50 border-2 border-red-200 border-dashed text-center space-y-4 animate-pulse">
@@ -479,6 +569,7 @@ function CampaignDetailsInner() {
                       raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
                       goalAmount={progress?.goalAmount || campaign.goalAmount}
                       progressPercentage={progress?.progressPercentage || 0}
+                      donorCount={progress?.donorCount || 0}
                       recentDonors={recentDonors}
                       onDonate={(amount) => {
                         const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
@@ -495,26 +586,9 @@ function CampaignDetailsInner() {
                 </div>
 
                 <div style={{ marginBottom: 18 }}>
-                  {plans.length === 0 && (
-                    <div
-                      style={{
-                        marginBottom: 10,
-                        borderRadius: 12,
-                        border: '1px solid #f0d7a1',
-                        background: '#fff8e8',
-                        padding: '10px 12px',
-                        color: '#7c5a1d',
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }}
-                    >
-                      Chưa có milestone chính thức. Đang hiển thị bản kế hoạch tạm để người ủng hộ nắm tiến độ.
-                    </div>
-                  )}
                   <PlansList
                     plans={displayPlans}
                     onOpenPlan={(planId) => {
-                      if (planId.startsWith('mock-plan-')) return;
                       router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
                     }}
                   />
@@ -522,31 +596,33 @@ function CampaignDetailsInner() {
 
                 <div
                   style={{
-                    border: '1px solid rgba(0,0,0,0.10)',
-                    borderRadius: 16,
-                    padding: 16,
+                    border: '1px solid rgba(15,23,42,0.10)',
+                    borderRadius: 14,
+                    padding: '16px 14px',
                     background: '#fff',
                   }}
                 >
                   <div
-                    className="d-flex align-items-center justify-content-between"
-                    style={{ marginBottom: 14 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      marginBottom: 12,
+                    }}
                   >
-                    <div className="widget-title" style={{ marginBottom: 0 }}>
-                      <h4 style={{ marginBottom: 0 }}>
-                        Bài viết{postsTotal > 0 ? ` (${postsTotal})` : ''}
-                      </h4>
-                    </div>
+                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                      Bài viết{postsTotal > 0 ? ` (${postsTotal})` : ''}
+                    </h4>
 
                     {postsTotal > 4 && (
                       <button
                         type="button"
-                        className="text-sm"
                         style={{
                           border: 'none',
                           background: 'transparent',
                           padding: 0,
-                          color: '#0F5D51',
+                          fontSize: 12,
+                          color: '#ff5e14',
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
@@ -558,7 +634,7 @@ function CampaignDetailsInner() {
                   </div>
 
                   {posts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '16px 0', opacity: 0.5, fontSize: 14 }}>
+                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8', fontSize: 13 }}>
                       Chưa có bài viết nào
                     </div>
                   ) : (
@@ -586,7 +662,14 @@ function CampaignDetailsInner() {
             }
 
             section :global(.casues-sidebar-wrapper) {
-              margin-top: 24px;
+              margin-top: 10px;
+            }
+          }
+
+          @media (min-width: 992px) {
+            section :global(.campaign-detail-sidebar) {
+              position: sticky;
+              top: 92px;
             }
           }
 

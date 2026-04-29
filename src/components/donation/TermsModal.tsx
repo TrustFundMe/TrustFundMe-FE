@@ -14,7 +14,7 @@ export default function TermsModal({ onClose }: TermsModalProps) {
                     <p>3. Trong trường hợp chiến dịch bị hủy, số tiền sẽ được hoàn trả hoặc chuyển sang quỹ chung.</p>
                     <p>4. Bằng việc quyên góp, bạn đồng ý với các điều khoản sử dụng và chính sách bảo mật của TrustFundMe.</p>
                 </div>
-                <button onClick={onClose} className="mt-6 w-full py-3 bg-[#dc2626] text-white rounded-xl font-bold">Tôi đã hiểu</button>
+                <button onClick={onClose} className="mt-6 w-full py-3 bg-brand text-white rounded-xl font-bold">Tôi đã hiểu</button>
             </div>
         </div>
     );

@@ -44,6 +44,25 @@ export type CampaignPlan = {
   description: string;
   date: string;
   status?: string;
+  startDate?: string;
+  endDate?: string;
+  totalItems?: number;
+  categories?: {
+    id?: number;
+    name: string;
+    description?: string;
+    expectedAmount?: number;
+    actualAmount?: number;
+    items: {
+      id?: number;
+      name: string;
+      expectedQuantity?: number;
+      expectedPrice?: number;
+      actualQuantity?: number;
+      price?: number;
+      note?: string;
+    }[];
+  }[];
 };
 
 export type CampaignMedia = {

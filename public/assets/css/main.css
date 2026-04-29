@@ -123,9 +123,11 @@
 ============================================================================= */
 .scroll-up {
   cursor: pointer;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50px;
-  z-index: 99;
+  z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transform: translateY(15px);
@@ -135,17 +137,14 @@
   height: 50px;
   width: 50px;
   transition: all 0.4s ease-in-out;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(15, 23, 42, 0.14);
 }
 
 .scroll-up::after {
   position: absolute;
-  font-family: "Font Awesome 5 Pro";
-  content: "\f176";
+  content: "";
   text-align: center;
-  line-height: 50px;
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--theme-2);
   left: 0;
   top: 0;
   height: 50px;
@@ -154,6 +153,38 @@
   display: block;
   z-index: 1;
   transition: all 0.4s ease-in-out;
+}
+
+.scroll-up::before {
+  content: "↑";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -52%);
+  z-index: 2;
+  color: var(--theme-2);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.scroll-up .scroll-up-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  color: var(--theme-2);
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scroll-up .scroll-up-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .scroll-up svg path {

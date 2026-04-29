@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 
 function CircularProgress({ value }: { value: number }) {
-  const size = 72;
+  const size = 84;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -11,14 +13,14 @@ function CircularProgress({ value }: { value: number }) {
   const dashOffset = circumference * (1 - progress / 100);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "nowrap" }}>
-      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-        <svg width={size} height={size} style={{ display: "block" }}>
+    <div className="flex items-center gap-3">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="block">
           <circle
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="rgba(0,0,0,0.10)"
+            stroke="rgba(17,24,39,0.1)"
             strokeWidth={strokeWidth}
             fill="transparent"
           />
@@ -26,7 +28,7 @@ function CircularProgress({ value }: { value: number }) {
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="#F84D43"
+            stroke="#ff5e14"
             strokeWidth={strokeWidth}
             fill="transparent"
             strokeLinecap="round"
@@ -36,29 +38,14 @@ function CircularProgress({ value }: { value: number }) {
           />
         </svg>
 
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            fontSize: 16,
-            color: "#202426",
-          }}
-        >
+        <div className="absolute inset-0 flex items-center justify-center text-base font-extrabold text-slate-800">
           {progress}%
         </div>
       </div>
 
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 700, lineHeight: 1.2 }}>
-          Tiến trình gây quỹ
-        </div>
-        <div style={{ opacity: 0.65, fontSize: 13 }}>
-          Trạng thái gây quỹ hiện tại
-        </div>
+      <div className="min-w-0">
+        <div className="text-[15px] font-bold leading-tight text-slate-900">Tiến trình gây quỹ</div>
+        <div className="text-xs text-slate-500">Trạng thái gây quỹ hiện tại</div>
       </div>
     </div>
   );
@@ -74,8 +61,8 @@ function formatTimeAgo(dateString: string) {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
 
-    return date.toLocaleDateString('vi-VN');
-  } catch (e) {
+    return date.toLocaleDateString("vi-VN");
+  } catch {
     return dateString;
   }
 }
@@ -84,6 +71,7 @@ export default function CampaignDonateCard({
   raisedAmount,
   goalAmount,
   progressPercentage,
+  donorCount = 0,
   recentDonors = [],
   onDonate,
   onMoreDonorsClick,
@@ -91,72 +79,66 @@ export default function CampaignDonateCard({
   raisedAmount: number;
   goalAmount: number;
   progressPercentage: number;
+  donorCount?: number;
   recentDonors?: any[];
   onDonate: (amount: number) => void;
   onMoreDonorsClick?: () => void;
 }) {
-  const progress = progressPercentage;
+  const progress = Math.max(0, Math.min(100, progressPercentage || 0));
+  const remainingAmount = Math.max(0, goalAmount - raisedAmount);
 
   const [amount, setAmount] = useState<number>(50000);
+  const quickAmounts = useMemo(() => [50000, 100000, 200000, 500000], []);
+  const normalizedAmount = Math.max(0, amount || 0);
 
   return (
-    <div
-      className="single-sidebar-widgets"
-      style={{
-        marginTop: 24,
-        marginBottom: 24,
-        border: "1px solid rgba(0,0,0,0.10)",
-        borderRadius: 16,
-      }}
-    >
-      <div style={{ padding: 16 }}>
-        <CircularProgress value={progress} />
+    <div className="single-sidebar-widgets mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
+      <div className="p-3.5 md:p-4">
+        <div className="rounded-xl border border-[rgba(15,23,42,0.10)] bg-slate-50/70 p-2.5">
+          <CircularProgress value={progress} />
+        </div>
 
-        {/* Quick-amount buttons */}
-        <div
-          style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
-        >
-          {[50000, 100000, 200000, 500000].map((v) => (
+        <div className="mt-2.5 rounded-xl border border-[rgba(15,23,42,0.10)] bg-white px-3 py-2.5">
+          <div className="d-flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Mục tiêu chiến dịch</p>
+              <p className="mt-1 truncate text-[15px] font-extrabold text-slate-900">{goalAmount.toLocaleString("vi-VN")} VNĐ</p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+              {progress}%
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-[rgba(15,23,42,0.10)] bg-slate-50 px-2.5 py-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Đã góp</p>
+              <p className="mt-0.5 truncate text-xs font-extrabold text-slate-900">{raisedAmount.toLocaleString("vi-VN")} VNĐ</p>
+            </div>
+            <div className="rounded-lg border border-[rgba(15,23,42,0.10)] bg-slate-50 px-2.5 py-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Lượt ủng hộ</p>
+              <p className="mt-0.5 truncate text-xs font-extrabold text-slate-900">{donorCount.toLocaleString("vi-VN")}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {quickAmounts.map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setAmount(v)}
-              style={{
-                border: "1px solid rgba(0,0,0,0.10)",
-                background: amount === v ? "rgba(248, 77, 67, 0.10)" : "#fff",
-                borderRadius: 9999,
-                padding: "8px 12px",
-                fontWeight: 700,
-                fontSize: "12px",
-              }}
+              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                amount === v
+                  ? "border-[#ff5e14]/40 bg-[#ff5e14]/10 text-[#a3471a]"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+              }`}
             >
               {v >= 1000 ? `${v / 1000}k` : v}
             </button>
           ))}
         </div>
 
-        {/* Input amount + Donate button — same row, no wrap */}
-        <div
-          style={{
-            marginTop: 10,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <div
-            style={{
-              flex: "1 1 auto",
-              minWidth: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              border: "1px solid rgba(0,0,0,0.10)",
-              borderRadius: 9999,
-              padding: "6px 10px",
-              background: "#fff",
-            }}
-          >
+        <div className="mt-2.5 flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2">
             <input
               type="text"
               value={amount.toLocaleString("vi-VN")}
@@ -164,127 +146,74 @@ export default function CampaignDonateCard({
                 const rawValue = e.target.value.replace(/\./g, "").replace(/\D/g, "");
                 setAmount(Number(rawValue) || 0);
               }}
-              style={{
-                border: "none",
-                outline: "none",
-                width: "100%",
-                background: "transparent",
-                textAlign: "right",
-                fontWeight: 700,
-              }}
+              className="w-full bg-transparent text-right text-sm font-bold text-slate-900 outline-none"
             />
-            <span style={{ opacity: 0.7, fontWeight: 700, fontSize: "12px" }}>VNĐ</span>
+            <span className="text-[11px] font-bold text-slate-500">VNĐ</span>
           </div>
 
-          <button
+          <motion.button
             type="button"
-            onClick={() => onDonate(amount)}
-            style={{
-              border: "none",
-              borderRadius: 9999,
-              padding: "10px 18px",
-              background: "#202426",
-              color: "#fff",
-              fontWeight: 800,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => onDonate(normalizedAmount)}
+            className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-[#ff5e14] px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#ea550c]"
           >
-            Donate
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
-            </svg>
-          </button>
+            Quyên góp
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5">
+              <ArrowRightIcon className="h-3.5 w-3.5" />
+            </span>
+          </motion.button>
         </div>
 
-        <div
-          style={{ marginTop: 12, opacity: 0.75, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap", gap: 8 }}
-        >
-          <div style={{ whiteSpace: "nowrap" }}>
-            <span style={{ fontWeight: 800 }}>{raisedAmount.toLocaleString()} VNĐ</span> đã quyên góp
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500">
+          <div>
+            Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
           </div>
-          <div style={{ whiteSpace: "nowrap" }}>
-            Mục tiêu: <span style={{ fontWeight: 800 }}>{goalAmount.toLocaleString()} VNĐ</span>
+          <div>
+            Tỷ lệ: <span className="font-extrabold text-slate-700">{progress}%</span>
           </div>
         </div>
 
-        {/* Recent Donors Section */}
-        <div style={{ marginTop: 24, borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap", gap: 8, marginBottom: 15 }}>
-            <h5 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: "#202426", whiteSpace: "nowrap" }}>Người vừa ủng hộ</h5>
+        <div className="mt-3 border-t border-[rgba(15,23,42,0.10)] pt-3">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <h5 className="m-0 whitespace-nowrap text-sm font-extrabold text-slate-900">Người vừa ủng hộ</h5>
             <button
               type="button"
               onClick={onMoreDonorsClick}
-              style={{
-                fontSize: 12,
-                color: "#F84D43",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                padding: "4px 8px",
-                borderRadius: "6px",
-                transition: "background 0.2s"
-              }}
-              className="hover:bg-red-50"
+              className="rounded-md px-2 py-1 text-xs font-bold text-[#ff5e14] transition-colors hover:bg-orange-50"
             >
               Xem thêm
             </button>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex flex-col gap-2.5">
             {recentDonors.length === 0 ? (
-              <div className="text-center py-4 text-sm text-gray-400 italic">Chưa có người ủng hộ nào</div>
+              <div className="rounded-xl border border-dashed border-[rgba(15,23,42,0.12)] py-4 text-center text-sm italic text-slate-400">
+                Chưa có người ủng hộ nào
+              </div>
             ) : (
               recentDonors.map((donor, i) => (
-                <div key={i} className="d-flex align-items-center gap-3" style={{
-                  padding: "8px",
-                  borderRadius: "12px",
-                  transition: "background 0.2s",
-                  cursor: "default"
-                }}>
-                  <div style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    overflow: "hidden",
-                    background: "#eee",
-                    flexShrink: 0
-                  }}>
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl border border-[rgba(15,23,42,0.10)] bg-slate-50/60 p-2.5"
+                >
+                  <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-200">
                     <img
                       src={donor.donorAvatar || "/assets/img/defaul.jpg"}
                       alt={donor.donorName}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      className="h-full w-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/assets/img/defaul.jpg";
                       }}
                     />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#202426", marginBottom: 2 }}>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 text-xs font-bold text-slate-900">
                       {donor.anonymous ? "Người ủng hộ ẩn danh" : donor.donorName}
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(0,0,0,0.5)" }}>
-                      {formatTimeAgo(donor.createdAt)}
-                    </div>
+                    <div className="text-[11px] text-slate-500">{formatTimeAgo(donor.createdAt)}</div>
                   </div>
-                  <div style={{ textAlign: "right", fontWeight: 800, fontSize: 13, color: "#1A685B" }}>
-                    +{donor.amount.toLocaleString()} đ
+                  <div className="text-right text-xs font-extrabold text-[#ff5e14]">
+                    +{donor.amount.toLocaleString("vi-VN")} đ
                   </div>
                 </div>
               ))

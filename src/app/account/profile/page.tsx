@@ -571,7 +571,7 @@ function ProfileContent() {
 
         {/* LEFT SECTION: Basic Info & Avatar */}
         <div className="md:w-[320px] p-8 bg-gray-50/40 flex flex-col items-center text-center border-b md:border-b-0 md:border-r border-gray-100 shrink-0">
-          <div className="relative mb-4 scale-90">
+          <div className="relative mb-6">
             <AvatarUploader
               onUpload={handleAvatarUpload}
               onError={(m) => { if (m?.trim()) toast(m, 'error'); }}
@@ -579,14 +579,14 @@ function ProfileContent() {
               acceptedTypes={['jpeg', 'jpg', 'png', 'webp', 'gif']}
             >
               <div className="relative cursor-pointer group">
-                <Avatar className="h-20 w-20 ring-4 ring-white shadow-lg group-hover:scale-105 transition-transform duration-300">
+                <Avatar className="h-40 w-40 ring-4 ring-white shadow-lg group-hover:scale-105 transition-transform duration-300">
                   <AvatarImage src={avatarPreview ?? user?.avatarUrl ?? undefined} alt="Avatar" />
-                  <AvatarFallback className="bg-white text-2xl font-bold text-gray-400">
+                  <AvatarFallback className="bg-white text-3xl font-bold text-gray-400">
                     {user.fullName?.split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-0.5 right-0.5 bg-[#ff715e] p-2 rounded-full shadow-lg border-2 border-white">
-                  <Pencil className="h-3.5 w-3.5 text-white" />
+                <div className="absolute bottom-1 right-1 bg-[#ff715e] p-2.5 rounded-full shadow-lg border-2 border-white">
+                  <Pencil className="h-4 w-4 text-white" />
                 </div>
               </div>
             </AvatarUploader>

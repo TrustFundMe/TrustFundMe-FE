@@ -1,56 +1,93 @@
 "use client";
 
-import { About2 } from "@/components/About";
-import { CounterSection1 } from "@/components/CounterSection";
-import { Team2 } from "@/components/Team";
+import Image from "next/image";
+import Link from "next/link";
 import DanboxLayout from "@/layout/DanboxLayout";
 
 const AboutPage = () => {
   return (
     <DanboxLayout header={4}>
-      <div className="relative min-h-screen bg-[#f7fbfa]">
-        <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#dcefea] to-transparent pointer-events-none" />
-
-        <div className="relative z-10 pt-24">
-          <section className="container mx-auto px-4 py-16 md:py-20">
-            <div className="mx-auto max-w-4xl rounded-[2rem] border border-[#d8e9e4] bg-white p-8 md:p-12 shadow-[0_10px_30px_-20px_rgba(15,93,81,0.3)]">
-              <span className="inline-block rounded-full bg-[#e9f6f1] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#0f5d51]">
-                Về TrustFundMe
-              </span>
-              <h1 className="mt-4 text-4xl md:text-6xl font-black tracking-tight text-[#103d36]">
-                Nền tảng gây quỹ minh bạch cho cộng đồng
-              </h1>
-              <p className="mt-5 text-base md:text-lg leading-relaxed text-[#32564f]">
-                TrustFundMe kết nối người cần giúp đỡ, chủ chiến dịch và nhà hảo tâm trên cùng một nền tảng.
-                Chúng tôi tập trung vào minh bạch dòng tiền, tiến độ theo mốc và trải nghiệm quyên góp rõ ràng để
-                mọi đóng góp tạo ra tác động thực tế.
-              </p>
+      <div className="min-h-screen bg-[#f8fafe]">
+        <section className="container mx-auto px-4 pt-24 pb-10 md:pt-28 md:pb-14">
+          <div className="rounded-[2rem] border border-[rgba(15,23,42,0.12)] bg-white p-7 md:p-10">
+            <span className="inline-flex rounded-full bg-[#fff0e8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#d14f1b]">
+              Về TrustFundMe
+            </span>
+            <h1 className="mt-4 text-4xl md:text-6xl font-black tracking-tight text-[#111827] leading-[1.06]">
+              Nền tảng gây quỹ minh bạch cho cộng đồng Việt
+            </h1>
+            <p className="mt-5 max-w-[72ch] text-[15px] md:text-[17px] leading-relaxed text-[#4b5563]">
+              TrustFundMe giúp kết nối người cần giúp đỡ, chủ chiến dịch và nhà hảo tâm trên cùng một nền tảng.
+              Mọi khoản đóng góp, mọi đợt chi tiêu và từng cập nhật tiến độ đều được hiển thị rõ để cộng đồng theo dõi.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                href="/campaigns"
+                className="inline-flex h-11 items-center rounded-full bg-[#111827] px-6 text-sm font-extrabold text-white transition-colors hover:bg-[#1f2937]"
+              >
+                Xem chiến dịch
+              </Link>
+              <Link
+                href="/campaign-creation"
+                className="inline-flex h-11 items-center rounded-full border border-[#111827] bg-white px-6 text-sm font-extrabold text-[#111827] transition-colors hover:bg-[#f3f4f6]"
+              >
+                Tạo chiến dịch
+              </Link>
             </div>
-          </section>
+          </div>
+        </section>
 
-          <section className="py-8 md:py-14">
-            <div className="container mx-auto px-4 text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-black text-[#103d36]">
-                Đồng hành cùng những người tạo tác động
+        <section className="container mx-auto px-4 pb-10 md:pb-14">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {[
+              { title: "Minh bạch dòng tiền", value: "100%", desc: "Khoản đóng góp, giải ngân và số dư được hiển thị rõ ràng." },
+              { title: "Theo dõi theo mốc", value: "Theo thời gian thực", desc: "Mỗi milestone đều có tiến độ và hồ sơ chi tiêu tương ứng." },
+              { title: "Tập trung tác động thật", value: "Dữ liệu trước, cảm tính sau", desc: "Ưu tiên quyết định dựa trên thông tin và bằng chứng." },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-[1.25rem] border border-[rgba(15,23,42,0.12)] bg-white p-5"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#6b7280]">{item.title}</p>
+                <p className="mt-2 text-2xl font-black text-[#111827]">{item.value}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#4b5563]">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="container mx-auto px-4 pb-12 md:pb-16">
+          <div className="rounded-[2rem] border border-[rgba(15,23,42,0.12)] bg-white p-6 md:p-8">
+            <div className="mb-5">
+              <h2 className="text-2xl md:text-3xl font-black text-[#111827] tracking-tight">
+                Câu chuyện và hoạt động cộng đồng
               </h2>
-              <p className="mt-3 text-[#4f6f69] max-w-3xl mx-auto">
-                Chúng tôi giúp bạn tìm, theo dõi và ủng hộ các chiến dịch uy tín bằng dữ liệu rõ ràng thay vì lời hứa chung chung.
+              <p className="mt-2 text-sm md:text-base text-[#4b5563]">
+                Hình ảnh hoạt động thực tế giúp nhà hảo tâm thấy rõ chiến dịch đang triển khai ra sao.
               </p>
             </div>
-            <div className="relative z-10">
-              <Team2 />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[
+                "/assets/img/about/05.jpg",
+                "/assets/img/about/06.jpg",
+                "/assets/img/about/07.jpg",
+              ].map((src, idx) => (
+                <div
+                  key={src}
+                  className="overflow-hidden rounded-[1.25rem] border border-[rgba(15,23,42,0.12)] bg-[#f3f4f6]"
+                >
+                  <Image
+                    src={src}
+                    alt={`Hoạt động cộng đồng ${idx + 1}`}
+                    width={900}
+                    height={650}
+                    className="h-[260px] w-full object-cover"
+                  />
+                </div>
+              ))}
             </div>
-          </section>
-
-          <section className="relative z-10 space-y-14 pb-16">
-            <div className="bg-white/90 border-y border-[#d8e9e4]">
-              <About2 containerClass="section-padding pb-0" />
-            </div>
-            <div className="container mx-auto px-4">
-              <CounterSection1 />
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </DanboxLayout>
   );

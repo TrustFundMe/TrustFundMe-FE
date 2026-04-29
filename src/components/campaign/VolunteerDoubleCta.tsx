@@ -39,7 +39,7 @@ export function VolunteerDoubleCta() {
                     </p>
                     <Link
                         href="/contact"
-                        className="inline-flex items-center justify-center bg-[#1A685B] text-white font-bold py-3 px-8 rounded-full shadow-md hover:bg-[#155449] transition-all font-dm-sans"
+                        className="inline-flex items-center justify-center bg-[#ea550c] text-white font-bold py-3 px-8 rounded-full shadow-md hover:bg-[#155449] transition-all font-dm-sans"
                     >
                         Xem
                     </Link>

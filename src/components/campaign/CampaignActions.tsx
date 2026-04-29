@@ -301,7 +301,7 @@ export default function CampaignActions({
               gap: 6,
               border: `1px solid ${flagged ? "rgba(248,77,67,0.3)" : "rgba(0,0,0,0.08)"}`,
               background: flagged ? "rgba(248,77,67,0.08)" : "#fff",
-              color: flagged ? "#F84D43" : "#888",
+              color: flagged ? "#ff5e14" : "#888",
               padding: "10px 14px",
               borderRadius: 9999,
               lineHeight: 1,

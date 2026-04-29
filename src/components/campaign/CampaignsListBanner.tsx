@@ -19,7 +19,7 @@ export default function CampaignsListBanner({
   return (
     <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
       <div>
-        <p className="text-sm font-bold uppercase tracking-wide text-[#F84D43]">
+        <p className="text-sm font-bold uppercase tracking-wide text-[#ff5e14]">
           {categoryTitle}
         </p>
         <h1 className="mt-3 text-4xl md:text-5xl font-extrabold text-slate-900 leading-tight">
@@ -30,7 +30,7 @@ export default function CampaignsListBanner({
         <div className="mt-6">
           <Link
             href={backHref}
-            className="inline-flex items-center justify-center rounded-full bg-[#1A685B] px-6 py-3 text-sm font-bold text-white hover:bg-[#F84D43] transition-colors"
+            className="inline-flex items-center justify-center rounded-full bg-[#ea550c] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff5e14] transition-colors"
           >
             {backLabel}
           </Link>

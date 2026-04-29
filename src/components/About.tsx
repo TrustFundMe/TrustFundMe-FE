@@ -138,7 +138,15 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
     },
   ];
   return (
-    <section className={`about-section-2 fix ${containerClass}`}>
+    <section className={`about-section-2 fix relative ${containerClass}`}>
+      {/* Solid orange bar under the image row */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0"
+        style={{
+          height: '120px',
+          background: 'var(--theme-2)',
+        }}
+      />
       <div className="container">
         <div className="section-title text-center" style={{ display: 'none' }}>
           <span className="sub-title color-2 wow fadeInUp">
@@ -151,7 +159,7 @@ export const About2 = ({ containerClass }: { containerClass?: string }) => {
             <span>lives</span> of Hadjara, Umu, Natalia
           </h2>
         </div>
-        <div className="row">
+        <div className="row relative z-10 mt-3 md:mt-5">
           {aboutImages.map((item, index) => (
             <div
               key={index}

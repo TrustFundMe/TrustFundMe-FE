@@ -11,8 +11,6 @@ import {
   Users,
   Gamepad2,
   Waves,
-  Stethoscope,
-  School,
   Milk,
   Package,
 } from "lucide-react";
@@ -25,15 +23,12 @@ import "swiper/css";
 import "swiper/css/navigation";
 
 import CampaignCard, { type CampaignCardItem } from "@/components/campaign/CampaignCard";
-import { useToast } from "@/components/ui/Toast";
 
 import { campaignCategoryService } from "@/services/campaignCategoryService";
 import { campaignService } from "@/services/campaignService";
 import type { CampaignCategory, CampaignDto } from "@/types/campaign";
 import { withFallbackImage } from "@/lib/image";
-import { FundTypeSection } from "./FundTypeSection";
 import { TopFundOwnersSection } from "./TopFundOwnersSection";
-import { GeneralDonationSection } from "./GeneralDonationSection";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }> | string> = {
   // English
@@ -79,6 +74,7 @@ function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignC
     id: dto.id.toString(),
     title: dto.title,
     type: dto.type || dto.categoryName || dto.category || "Chung",
+    fundDetail: dto.description?.trim() || dto.categoryName || dto.category || undefined,
     raised: dto.balance || 0,
     goal: targetAmount,
     image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.png"),
@@ -128,7 +124,7 @@ function FeaturedBlock({
         className="mb-4"
         variants={featuredBlockItem}
       >
-        <p className="text-sm font-semibold uppercase tracking-wide text-[#F84D43]">
+        <p className="text-sm font-semibold uppercase tracking-wide text-[#ff5e14]">
           {title}
         </p>
         <p className="mt-1 text-slate-600 text-sm md:text-base max-w-xl line-clamp-2">
@@ -136,7 +132,7 @@ function FeaturedBlock({
         </p>
       </motion.div>
       <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
       >
         {visible.map((item) => (
@@ -168,9 +164,9 @@ const CategoryCard = ({
     <button
       type="button"
       onClick={() => onClick(id)}
-      className="group flex flex-col items-center justify-center gap-3 py-6 px-6 hover:bg-slate-50 border-b-2 border-transparent hover:border-[#F84D43] transition-all duration-300 min-w-[120px] md:min-w-[140px]"
+      className="group flex flex-col items-center justify-center gap-3 py-6 px-6 hover:bg-slate-50 border-b-2 border-transparent hover:border-[#ff5e14] transition-all duration-300 min-w-[120px] md:min-w-[140px]"
     >
-      <div className="text-slate-400 group-hover:text-[#F84D43] transition-all duration-300 transform group-hover:scale-110">
+      <div className="text-slate-400 group-hover:text-[#ff5e14] transition-all duration-300 transform group-hover:scale-110">
         {resolvedUrl ? (
           <img
             src={resolvedUrl}
@@ -192,29 +188,57 @@ export function CampaignCategoriesSection() {
   const [categories, setCategories] = useState<CampaignCategory[]>([]);
   const [categoryCampaigns, setCategoryCampaigns] = useState<Record<number, CampaignCardItem[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const prevRef = useRef<HTMLButtonElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
 
-  const { toast } = useToast();
-
   useEffect(() => {
-    const fetchCategories = async () => {
+    let cancelled = false;
+
+    const fetchAll = async () => {
       try {
         setError(null);
-        const data = await campaignCategoryService.getAll();
-        setCategories(data);
+
+        // 1. Fetch categories — hiện category bar ngay
+        const cats = await campaignCategoryService.getAll();
+        if (cancelled) return;
+        setCategories(cats);
+        setLoading(false);
+
+        // 2. Fetch campaigns per category song song — fill vào sau
+        const campaignMap: Record<number, CampaignCardItem[]> = {};
+        await Promise.all(
+          cats.map(async (cat) => {
+            try {
+              const dtos = await campaignService.getByCategory(cat.id);
+              const approvedDtos = dtos.filter((dto) => dto.status === "APPROVED");
+              campaignMap[cat.id] = approvedDtos.map((dto) => {
+                const goalAmount = dto.activeGoal?.isActive ? (dto.activeGoal.targetAmount || 0) : 0;
+                return mapDtoToCardItem(dto, goalAmount);
+              });
+            } catch (e) {
+              console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
+            }
+          })
+        );
+
+        if (cancelled) return;
+        setCategoryCampaigns(campaignMap);
       } catch (e) {
         console.error("Failed to fetch categories:", e);
-        setError("Không thể tải danh sách danh mục.");
+        if (!cancelled) {
+          setError("Không thể tải danh sách danh mục.");
+          setLoading(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoadingCampaigns(false);
       }
     };
-    fetchCategories();
 
-    // Handle anchor scroll on mount
+    fetchAll();
+
     const hash = window.location.hash;
     if (hash) {
       setTimeout(() => {
@@ -223,47 +247,11 @@ export function CampaignCategoriesSection() {
         if (el) {
           el.scrollIntoView({ behavior: 'smooth' });
         }
-      }, 800); // Wait for components to render
+      }, 800);
     }
+
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (categories.length === 0) return;
-
-    const fetchCampaigns = async () => {
-      const newCampaigns = { ...categoryCampaigns };
-      let changed = false;
-
-      await Promise.all(
-        categories.map(async (cat) => {
-          if (!newCampaigns[cat.id]) {
-            try {
-              const dtos = await campaignService.getByCategory(cat.id);
-              const approvedDtos = dtos.filter((dto) => dto.status === "APPROVED");
-              const mapped = await Promise.all(approvedDtos.map(async (dto) => {
-                let goalAmount = 0;
-                try {
-                  const activeGoal = await campaignService.getActiveGoalByCampaignId(dto.id);
-                  if (activeGoal) goalAmount = activeGoal.targetAmount;
-                } catch (err) { }
-                return mapDtoToCardItem(dto, goalAmount);
-              }));
-              newCampaigns[cat.id] = mapped;
-              changed = true;
-            } catch (e) {
-              console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
-            }
-          }
-        })
-      );
-
-      if (changed) {
-        setCategoryCampaigns(newCampaigns);
-      }
-    };
-
-    fetchCampaigns();
-  }, [categories]);
 
   const handleCategoryClick = (categoryId: string) => {
     const el = document.getElementById(categoryId);
@@ -276,7 +264,7 @@ export function CampaignCategoriesSection() {
   if (loading && categories.length === 0) {
     return (
       <div className="py-12 text-center bg-white border-b border-slate-100 shadow-sm">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#F84D43] border-r-transparent"></div>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#ff5e14] border-r-transparent"></div>
         <p className="mt-4 text-slate-500 font-medium tracking-wide">Đang tải danh mục...</p>
       </div>
     );
@@ -288,7 +276,7 @@ export function CampaignCategoriesSection() {
         <p className="text-red-500 font-medium">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="inline-flex items-center justify-center rounded-xl bg-[#F84D43] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#1A685B]"
+          className="inline-flex items-center justify-center rounded-xl bg-[#ff5e14] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#ea550c]"
         >
           Thử lại
         </button>
@@ -307,7 +295,7 @@ export function CampaignCategoriesSection() {
             <div className="absolute top-1/2 -translate-y-1/2 left-2 z-20 pointer-events-none hidden md:block">
               <button
                 ref={prevRef}
-                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#F84D43] transition-colors duration-300"
+                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#ff5e14] transition-colors duration-300"
               >
                 <ChevronLeft className="h-8 w-8" />
               </button>
@@ -315,7 +303,7 @@ export function CampaignCategoriesSection() {
             <div className="absolute top-1/2 -translate-y-1/2 right-2 z-20 pointer-events-none hidden md:block">
               <button
                 ref={nextRef}
-                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#F84D43] transition-colors duration-300"
+                className="pointer-events-auto h-10 w-10 flex items-center justify-center text-slate-300 hover:text-[#ff5e14] transition-colors duration-300"
               >
                 <ChevronRight className="h-8 w-8" />
               </button>
@@ -376,34 +364,51 @@ export function CampaignCategoriesSection() {
         </div>
       </div>
 
-      <div className="mt-8">
-        <FundTypeSection />
-      </div>
-
-      <TopFundOwnersSection />
-
       {/* Category-based Campaign Blocks */}
       <div className="container mx-auto px-4 mt-16 space-y-16">
-        {categories.map(({ id, name, description }) => {
-          const all = categoryCampaigns[id] ?? [];
-          if (all.length === 0) return null;
+        {loadingCampaigns ? (
+          <div className="space-y-12">
+            {[1, 2].map((i) => (
+              <div key={i}>
+                <div className="h-4 w-32 rounded bg-slate-200 animate-pulse mb-2" />
+                <div className="h-3 w-64 rounded bg-slate-100 animate-pulse mb-5" />
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
+                      <div className="h-40 bg-slate-100 animate-pulse" />
+                      <div className="p-4 space-y-2">
+                        <div className="h-3 w-16 rounded bg-slate-100 animate-pulse" />
+                        <div className="h-4 w-3/4 rounded bg-slate-200 animate-pulse" />
+                        <div className="h-2 w-full rounded-full bg-slate-100 animate-pulse mt-3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          categories.map(({ id, name, description }) => {
+            const all = categoryCampaigns[id] ?? [];
+            if (all.length === 0) return null;
 
-          const visible = all.slice(0, 5);
+            const visible = all.slice(0, 5);
 
-          return (
-            <FeaturedBlock
-              key={id}
-              id={id.toString()}
-              title={name}
-              description={description || ""}
-              visible={visible}
-            />
-          );
-        })}
+            return (
+              <FeaturedBlock
+                key={id}
+                id={id.toString()}
+                title={name}
+                description={description || ""}
+                visible={visible}
+              />
+            );
+          })
+        )}
       </div>
 
       <div className="mt-24">
-        <GeneralDonationSection />
+        <TopFundOwnersSection />
       </div>
     </section>
   );

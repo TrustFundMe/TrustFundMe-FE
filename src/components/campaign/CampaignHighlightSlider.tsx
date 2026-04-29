@@ -149,12 +149,12 @@ export default function CampaignHighlightSlider({
                 </div>
                 <div className="mt-1.5 flex h-2.5 w-full overflow-hidden rounded-full bg-white/20">
                   <div
-                    className="h-full bg-[#F84D43] transition-[width] duration-300"
+                    className="h-full bg-[#ff5e14] transition-[width] duration-300"
                     style={{ width: percent(disagreeRatio) }}
                     aria-label={`Disagree ${percent(disagreeRatio)}`}
                   />
                   <div
-                    className="h-full bg-[#1A685B] transition-[width] duration-300"
+                    className="h-full bg-[#ea550c] transition-[width] duration-300"
                     style={{ width: percent(agreeRatio) }}
                     aria-label={`Agree ${percent(agreeRatio)}`}
                   />
@@ -180,7 +180,7 @@ export default function CampaignHighlightSlider({
                   transition={{ duration: 0.25 }}
                   className="absolute inset-0 p-5 md:p-6 flex flex-col justify-center"
                 >
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#F84D43]">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#ff5e14]">
                     {current.subtitle}
                   </p>
                   <h2 className="mt-2 text-lg md:text-xl font-extrabold text-slate-900 line-clamp-2">
@@ -192,7 +192,7 @@ export default function CampaignHighlightSlider({
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
                       href="/campaigns/campaignsList"
-                      className="inline-flex items-center justify-center rounded-full bg-[#F84D43] px-4 py-2 text-sm font-bold text-white hover:bg-[#1A685B] transition-colors"
+                      className="inline-flex items-center justify-center rounded-full bg-[#ff5e14] px-4 py-2 text-sm font-bold text-white hover:bg-[#ea550c] transition-colors"
                     >
                       View
                     </Link>

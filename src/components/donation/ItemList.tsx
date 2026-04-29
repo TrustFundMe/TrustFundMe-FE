@@ -32,13 +32,13 @@ export default function ItemList({
         <div className="flex-1 flex flex-col min-h-0">
             <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-2">Vật phẩm quy đổi</h3>
 
-            <div className="mb-3 p-3 bg-red-50/50 border border-red-100 text-[#dc2626] text-xs leading-relaxed rounded-lg">
+            <div className="mb-3 p-3 bg-orange-50/50 border border-orange-100 text-brand text-xs leading-relaxed rounded-lg">
                 <span className="font-bold"> 2 Cách quyên góp:</span>
-                <ul className="list-disc pl-4 mt-1 space-y-0 text-red-600/80">
-                    <li><span className="font-bold text-red-700">Cách 1:</span> Nhập số tiền ở trên, hệ thống sẽ tự lọc các vật phẩm phù hợp.</li>
-                    <li><span className="font-bold text-red-700">Cách 2:</span> Chọn trực tiếp vật phẩm bên dưới, tổng tiền sẽ tự cộng dồn.</li>
+                <ul className="list-disc pl-4 mt-1 space-y-0 text-brand/80">
+                    <li><span className="font-bold text-brand">Cách 1:</span> Nhập số tiền ở trên, hệ thống sẽ tự lọc các vật phẩm phù hợp.</li>
+                    <li><span className="font-bold text-brand">Cách 2:</span> Chọn trực tiếp vật phẩm bên dưới, tổng tiền sẽ tự cộng dồn.</li>
                 </ul>
-                <div className="mt-2 pt-2 border-t border-red-100 text-orange-600 font-medium">
+                <div className="mt-2 pt-2 border-t border-orange-100 text-brand font-medium">
                     ⚠️ Có thể điều chỉnh số lượng trước hoặc sau khi chọn.
                 </div>
             </div>

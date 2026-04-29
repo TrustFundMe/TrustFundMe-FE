@@ -22,16 +22,16 @@ export default function PaymentMethods({ selected, onChange, compact = false }: 
                         key={m.id}
                         onClick={() => onChange(m.id)}
                         className={`relative flex items-center justify-between ${compact ? "p-3 px-4" : "p-3 px-4"} rounded-xl border cursor-pointer transition-all ${selected === m.id
-                            ? 'bg-white border-[#dc2626] shadow-sm z-10'
+                            ? 'bg-white border-brand shadow-sm z-10'
                             : 'bg-transparent border-gray-200 hover:bg-white hover:border-gray-300'
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <m.icon className={`w-5 h-5 ${selected === m.id ? 'text-[#dc2626]' : 'text-gray-400'}`} />
+                            <m.icon className={`w-5 h-5 ${selected === m.id ? 'text-brand' : 'text-gray-400'}`} />
                             <span className={`text-xs font-bold ${selected === m.id ? 'text-gray-900' : 'text-gray-500'}`}>{m.label}</span>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected === m.id ? 'border-[#dc2626]' : 'border-gray-300'}`}>
-                            {selected === m.id && <div className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" />}
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected === m.id ? 'border-brand' : 'border-gray-300'}`}>
+                            {selected === m.id && <div className="w-2.5 h-2.5 rounded-full bg-brand" />}
                         </div>
                     </div>
                 ))}

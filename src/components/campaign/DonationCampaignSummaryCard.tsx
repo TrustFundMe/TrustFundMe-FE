@@ -41,7 +41,7 @@ export default function DonationCampaignSummaryCard({
               width: `${progress}%`,
               height: '100%',
               borderRadius: 9999,
-              background: '#F84D43',
+              background: '#ff5e14',
             }}
           />
         </div>
