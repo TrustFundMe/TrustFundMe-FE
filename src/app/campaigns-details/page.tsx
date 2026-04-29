@@ -118,6 +118,20 @@ function CampaignDetailsInner() {
   const postsLoadedRef = useRef(false);
 
   const comments = useMemo(() => [...mockComments], []);
+  const displayPlans = useMemo<CampaignPlan[]>(() => {
+    if (plans.length > 0) return plans;
+    const goalAmount = progress?.goalAmount || campaign?.goalAmount || 0;
+    return [
+      {
+        id: 'mock-plan-khoi-tao',
+        title: 'Kế hoạch triển khai đang cập nhật',
+        amount: goalAmount > 0 ? goalAmount : 0,
+        description: 'Chiến dịch chưa khai báo milestone chi tiết. Đội ngũ đang hoàn thiện lộ trình để cộng đồng theo dõi minh bạch.',
+        date: new Date().toLocaleDateString('vi-VN'),
+        status: 'PENDING',
+      },
+    ];
+  }, [plans, progress?.goalAmount, campaign?.goalAmount]);
 
   useEffect(() => {
     let mounted = true;
@@ -481,9 +495,26 @@ function CampaignDetailsInner() {
                 </div>
 
                 <div style={{ marginBottom: 18 }}>
+                  {plans.length === 0 && (
+                    <div
+                      style={{
+                        marginBottom: 10,
+                        borderRadius: 12,
+                        border: '1px solid #f0d7a1',
+                        background: '#fff8e8',
+                        padding: '10px 12px',
+                        color: '#7c5a1d',
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Chưa có milestone chính thức. Đang hiển thị bản kế hoạch tạm để người ủng hộ nắm tiến độ.
+                    </div>
+                  )}
                   <PlansList
-                    plans={plans}
+                    plans={displayPlans}
                     onOpenPlan={(planId) => {
+                      if (planId.startsWith('mock-plan-')) return;
                       router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
                     }}
                   />
