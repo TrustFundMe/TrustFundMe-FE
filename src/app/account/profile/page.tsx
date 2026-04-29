@@ -21,6 +21,7 @@ import { trustScoreService } from '@/services/trustScoreService';
 import { kycService } from '@/services/kycService';
 import KYCInputForm from '@/components/staff/request/KYCInputForm';
 import { KycResponse } from '@/types/kyc';
+import UnifiedVerificationModal from '@/components/profile/UnifiedVerificationModal';
 
 // ─── Trust Score Logs Modal ─────────────────────────────────────────────────
 
@@ -334,6 +335,7 @@ function ProfileContent() {
   const [kycData, setKycData] = useState<KycResponse | null>(null);
   const [kycLoading, setKycLoading] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
+  const [showUnifiedModal, setShowUnifiedModal] = useState(false);
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -681,7 +683,7 @@ function ProfileContent() {
                     <p className="text-[15px] font-semibold text-black leading-none">{user.email}</p>
                   </div>
                 </div>
- 
+
                 <div className="flex items-center gap-4 py-1">
                   <Phone className="h-4 w-4 text-black" />
                   <div>
@@ -689,7 +691,7 @@ function ProfileContent() {
                     <p className="text-[15px] font-semibold text-black leading-none">{user.phoneNumber || '—'}</p>
                   </div>
                 </div>
- 
+
                 <div className="flex items-center gap-4 py-1">
                   <CheckCircle2 className="h-4 w-4 text-black" />
                   <div>
@@ -697,152 +699,45 @@ function ProfileContent() {
                     <p className="text-[15px] font-semibold text-black leading-none">{user.verified ? 'Đã kích hoạt' : 'Chưa xác minh'}</p>
                   </div>
                 </div>
- 
-                {/* Compact KYC Row */}
-                <div className="flex items-center justify-between py-3 border-t border-gray-100 mt-1">
-                  <div className="flex items-center gap-4">
-                    <Shield className="h-4 w-4 text-black" />
-                    <div>
-                      <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Hồ sơ KYC</p>
-                      <p className="text-sm font-bold text-black leading-none">
-                        {kycLoading ? '...' : 
-                          kycData?.status === 'APPROVED' ? 'Đã phê duyệt' : 
-                          kycData?.status === 'PENDING' ? 'Đang chờ duyệt' : 
-                          kycData?.status === 'REJECTED' ? 'Bị từ chối' : 'Chưa cập nhật'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {!kycLoading && (
-                    <button 
-                      onClick={() => setShowKycModal(true)}
-                      className="w-24 py-2 bg-white border border-black text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center shrink-0"
-                    >
-                      {kycData?.status === 'APPROVED' ? 'Chi tiết' : 'Xác thực'}
-                    </button>
-                  )}
-                </div>
- 
-                {/* Compact CV Row */}
-                <div className="flex flex-col py-3 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <ScrollText className="h-4 w-4 text-black" />
-                      <div>
-                        <p className="text-[9px] uppercase font-bold text-black tracking-widest leading-none mb-1.5">Hồ sơ năng lực (CV)</p>
-                        <p className="text-sm font-bold text-black leading-none">
-                          {user.cvUrl ? 'Đã tải lên' : 'Chưa cập nhật'}
-                        </p>
+
+                {/* Unified CTA Button */}
+                <div className="mt-4 pt-6 border-t border-gray-100">
+                  <div 
+                    onClick={() => setShowUnifiedModal(true)}
+                    className="w-full group relative z-20 overflow-hidden p-6 rounded-[2rem] bg-black text-white transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:-translate-y-1 active:scale-[0.98] cursor-pointer"
+                  >
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all duration-700"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex items-center gap-5">
+                        <div className="h-14 w-14 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 group-hover:rotate-6 transition-transform duration-500">
+                          <Shield className="h-7 w-7 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className="text-[15px] font-black uppercase tracking-tight mb-1 transition-colors whitespace-nowrap">
+                            {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount ? 'Quản lý hồ sơ xác thực' : 'Xác thực danh tính ngay'}
+                          </h3>
+                          <p className="text-[9px] font-bold text-gray-400 max-w-[280px] leading-relaxed uppercase tracking-widest">
+                            {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount 
+                              ? 'Xem và cập nhật thông tin định danh & ngân hàng của bạn'
+                              : 'Xác thực ngay để có thể mở quỹ thiện nguyện cho riêng bạn'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col items-center md:items-end gap-2.5 shrink-0">
+                        <div className="px-5 py-2 rounded-xl bg-white text-black text-[9px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:bg-gray-200 transition-all whitespace-nowrap">
+                          {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount ? 'Xem chi tiết' : 'Bắt đầu ngay'} 
+                          <ChevronRight className="h-3 w-3" />
+                        </div>
+                        <div className="flex gap-1.5">
+                          <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${kycData?.status === 'APPROVED' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
+                          <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${user.cvUrl ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
+                          <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${bankAccount ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
+                        </div>
                       </div>
                     </div>
-   
-                    <div className="flex items-center gap-2">
-                      {user.cvUrl && (
-                        <a 
-                          href={user.cvUrl} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-24 py-2 bg-gray-50 text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all border border-transparent hover:border-black flex items-center justify-center shrink-0"
-                        >
-                          Xem CV
-                        </a>
-                      )}
-                      
-                      <label className="cursor-pointer">
-                        <input 
-                          type="file" 
-                          className="hidden" 
-                          accept=".pdf,.doc,.docx"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            
-                            setCvUploading(true);
-                            try {
-                              const { supabase } = await import('@/lib/supabaseClient');
-                            
-                              const removeAccents = (str: string) => {
-                                return str.normalize('NFD')
-                                  .replace(/[\u0300-\u036f]/g, '')
-                                  .replace(/đ/g, 'd')
-                                  .replace(/Đ/g, 'D')
-                                  .replace(/[^a-zA-Z0-9\s_-]/g, '');
-                              };
-
-                              const dateStr = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
-                              const rawFullName = user.fullName?.trim() || 'User';
-                              const safeFullName = removeAccents(rawFullName).replace(/\s+/g, '_');
-                              const fileName = `${safeFullName}_${dateStr}.${file.name.split('.').pop()}`;
-                              const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SHARED_SUPABASE_BUCKET || 'TrustFundMe';
-                              const { error: uploadError } = await supabase.storage.from(bucketName).upload(`cvs/${fileName}`, file);
-                              if (uploadError) throw uploadError;
-                              
-                              const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(`cvs/${fileName}`);
-                              
-                              await api.put(API_ENDPOINTS.USERS.BY_ID(Number(user.id)), {
-                                fullName: user.fullName,
-                                cvUrl: publicUrl
-                              });
-                              
-                              updateUser({ cvUrl: publicUrl });
-                              toast('Tải lên CV thành công!', 'success');
-                            } catch (error: any) {
-                              toast('Lỗi tải lên CV: ' + (error.message || 'Unknown error'), 'error');
-                            } finally {
-                              setCvUploading(false);
-                            }
-                          }}
-                          disabled={cvUploading}
-                        />
-                        <span className={`w-24 py-2 bg-white border border-black text-[9px] font-bold text-black uppercase tracking-widest rounded-lg hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center shrink-0 ${cvUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                          {cvUploading ? (
-                            <div className="flex items-center gap-1.5">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              <span>...</span>
-                            </div>
-                          ) : (
-                            user.cvUrl ? 'Đổi CV' : 'Tải lên'
-                          )}
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Template Links */}
-                  <div className="ml-8 flex flex-wrap gap-2">
-                    <a 
-                      href="/templates/Mau_CV_Thien_Nguyen.docx" 
-                      download 
-                      className="px-3 py-1.5 bg-gray-50 text-[8px] font-bold text-black uppercase tracking-widest rounded-md hover:bg-gray-200 transition-all flex items-center gap-1.5"
-                    >
-                      <FileDown className="h-3 w-3" /> Mẫu Word
-                    </a>
                   </div>
                 </div>
-              </div>
- 
-              {/* Bank Summary Area */}
-              <div className="pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-2.5">
-                  <h3 className="text-[11px] font-bold text-black flex items-center gap-2 uppercase tracking-widest">
-                    <Landmark className="h-3.5 w-3.5" /> Ngân hàng
-                  </h3>
-                  {bankAccount && <span className="text-[9px] font-bold text-black uppercase tracking-widest">Đang hoạt động</span>}
-                </div>
- 
-                {bankAccount ? (
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
-                    <div className="px-1">
-                      <p className="text-[9px] font-bold text-black opacity-40 tracking-widest mb-1 uppercase">{bankAccount.bankCode}</p>
-                      <p className="text-sm font-mono text-black font-bold tracking-tight leading-none mb-1">{bankAccount.accountNumber}</p>
-                      <p className="text-[10px] font-bold text-black opacity-40 uppercase tracking-widest leading-none">{bankAccount.accountHolderName}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-2 text-center">
-                    <button onClick={handleEdit} className="text-[9px] font-bold text-[#ff715e] uppercase tracking-widest">Thêm ngân hàng</button>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -866,6 +761,21 @@ function ProfileContent() {
           onClose={() => setShowKycModal(false)}
           onSuccess={fetchKycData}
           readOnly={kycData?.status === 'APPROVED'}
+        />
+      )}
+
+      {/* ── Unified Verification Modal ── */}
+      {showUnifiedModal && (
+        <UnifiedVerificationModal
+          userId={user.id}
+          userName={user.fullName || 'Người dùng'}
+          onClose={() => setShowUnifiedModal(false)}
+          onSuccess={() => {
+            fetchKycData();
+          }}
+          kycData={kycData}
+          bankAccount={bankAccount}
+          cvUrl={user.cvUrl || ''}
         />
       )}
     </div>

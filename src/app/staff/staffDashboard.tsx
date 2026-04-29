@@ -19,6 +19,7 @@ import {
   Pencil,
   Bell,
   Zap,
+  Fingerprint
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useRouter } from 'next/navigation';
@@ -259,8 +260,8 @@ export default function StaffDashboard() {
 
       kycList.slice(0, 10).forEach((kyc: any) => {
         newAlerts.push({
-          id: `kyc-${kyc.id}`, title: `Xác thực KYC: ${kyc.fullName || 'Người dùng'}`,
-          time: 'Định danh', category: 'KYC', color: 'orange', tab: 'KYC', targetId: kyc.userId,
+          id: `kyc-${kyc.id}`, title: `Xác thực danh tính: ${kyc.fullName || 'Người dùng'}`,
+          time: 'Định danh', category: 'Danh tính', color: 'orange', tab: 'KYC', targetId: kyc.userId,
         });
       });
 
@@ -318,7 +319,7 @@ export default function StaffDashboard() {
   const getTaskLabel = (type: string) => {
     switch (type) {
       case 'CAMPAIGN': return 'Chiến dịch';
-      case 'KYC': return 'KYC';
+      case 'KYC': return 'Danh tính';
       case 'EXPENDITURE': return 'Chi tiêu';
       case 'EVIDENCE': return 'Minh chứng';
       case 'SUPPORT': return 'Hỗ trợ';
@@ -328,7 +329,7 @@ export default function StaffDashboard() {
 
   const getTaskRoute = (type: string) => {
     switch (type) {
-      case 'KYC': return '/staff/request?tab=KYC';
+      case 'KYC': return '/staff/kyc';
       case 'CAMPAIGN': return '/staff/request?tab=CAMPAIGN';
       case 'EXPENDITURE': return '/staff/request?tab=EXPENDITURE';
       case 'EVIDENCE': return '/staff/request?tab=EVIDENCE';
@@ -339,7 +340,7 @@ export default function StaffDashboard() {
 
   const getTaskIcon = (type: string) => {
     switch (type) {
-      case 'KYC': return ShieldCheck;
+      case 'KYC': return Fingerprint;
       case 'CAMPAIGN': return FileCheck;
       case 'EXPENDITURE': return Receipt;
       case 'EVIDENCE': return ClipboardList;
@@ -520,7 +521,7 @@ export default function StaffDashboard() {
               </div>
               <div className="space-y-1.5">
                 {[
-                  { icon: ShieldCheck, label: 'Duyệt KYC mới', href: '/staff/request?tab=KYC' },
+                  { icon: Fingerprint, label: 'Duyệt danh tính mới', href: '/staff/kyc' },
                   { icon: FileCheck, label: 'Duyệt Chiến dịch', href: '/staff/request?tab=CAMPAIGN' },
                   { icon: Receipt, label: 'Kiểm tra Khoản chi', href: '/staff/request?tab=EXPENDITURE' },
                   { icon: Flag, label: 'Xem Báo cáo', href: '/staff/flags' },

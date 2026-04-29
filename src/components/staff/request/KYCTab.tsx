@@ -147,7 +147,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                 }`}
             >
-              {s === 'ALL' ? 'Tất cả' : s === 'NO_KYC' ? 'Chưa KYC' : statusConfig[s as KycStatus]?.label || s}
+              {s === 'ALL' ? 'Tất cả' : s === 'NO_KYC' ? 'Chưa định danh' : statusConfig[s as KycStatus]?.label || s}
             </button>
           ))}
         </div>
@@ -178,7 +178,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                   <th className="px-4 py-2 text-left border-r border-white/5">NGƯỜI DÙNG</th>
                   <th className={`px-4 py-2 text-left border-r border-white/5 ${showKycForm ? 'hidden xl:table-cell' : ''}`}>EMAIL</th>
                   <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden' : ''}`} title="Căn Cước Công Dân">SỐ CCCD</th>
-                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`} title="Know Your Customer (Xác thực danh tính)">XÁC THỰC KYC</th>
+                  <th className={`px-4 py-2 border-r border-white/5 text-center ${showKycForm ? 'hidden xl:table-cell' : ''}`} title="Know Your Customer (Xác thực danh tính)">XÁC THỰC DANH TÍNH</th>
                   <th className="px-4 py-2 border-r border-white/5 text-center">TRẠNG THÁI</th>
                   <th className="px-4 py-2 text-center last:rounded-tr-xl">THAO TÁC</th>
                 </tr>
@@ -249,7 +249,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-50 text-red-600 border border-white whitespace-nowrap">
                               <XCircle className="h-3 w-3" />
-                              Chưa KYC
+                              Chưa định danh
                             </span>
                           )}
                         </td>
@@ -268,7 +268,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                             className={`p-1.5 rounded-lg transition-all shadow-sm ${
                               isSelected ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-600 hover:bg-[#ff5e14] hover:text-white'
                             }`}
-                            title={kycStatus === 'APPROVED' ? 'Xem chi tiết' : 'Nhập KYC'}
+                            title={kycStatus === 'APPROVED' ? 'Xem chi tiết' : 'Nhập danh tính'}
                           >
                             {kycStatus === 'APPROVED' ? <Eye className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </button>
@@ -313,7 +313,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
                    <Shield className="h-4 w-4" />
                 </div>
                 <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">
-                  {selectedUser?.kycStatus === 'APPROVED' ? 'Thông tin xác thực (KYC)' : 'Thiết lập xác thực KYC'}
+                  {selectedUser?.kycStatus === 'APPROVED' ? 'Thông tin xác thực danh tính' : 'Thiết lập xác thực danh tính'}
                 </h2>
              </div>
              <button 
@@ -348,7 +348,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-gray-300 opacity-50 space-y-3">
                    <UserPlus className="h-12 w-12" />
-                   <p className="text-[10px] font-black uppercase tracking-widest">Chọn người dùng để nhập KYC</p>
+                   <p className="text-[10px] font-black uppercase tracking-widest">Chọn người dùng để nhập danh tính</p>
                 </div>
               )}
            </div>

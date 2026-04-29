@@ -7,7 +7,7 @@ import { aiService } from '@/services/aiService';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { ZoomIn } from 'lucide-react';
+import { ZoomIn, Shield } from 'lucide-react';
 
 interface KYCInputFormProps {
     userId?: number | string;
@@ -17,9 +17,12 @@ interface KYCInputFormProps {
     readOnly?: boolean;
     onImageClick?: (url: string) => void;
     isStaff?: boolean;
+    onDataChange?: (data: any) => void;
+    hideSubmitButton?: boolean;
+    initialData?: any;
 }
 
-export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly, onImageClick, isStaff = true }: KYCInputFormProps) {
+export default function KYCInputForm({ userId, userName, onSuccess, onCancel, readOnly, onImageClick, isStaff = true, onDataChange, hideSubmitButton, initialData }: KYCInputFormProps) {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -50,20 +53,28 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     };
 
     // ── Form state — includes all OCR fields ──
-    const [formData, setFormData] = useState(initialFormState);
+    const [formData, setFormData] = useState(initialData || initialFormState);
 
     useEffect(() => {
-        if (userId) {
+        // Sync to parent whenever formData changes
+        onDataChange?.(formData);
+    }, [formData, onDataChange]);
+
+    useEffect(() => {
+        // Only run initialization/fetch if we don't have preserved state (initialData)
+        if (userId && !initialData) {
             // Reset to clean state for new user
-            setFormData({
+            const newState = {
                 ...initialFormState,
                 userId: String(userId),
                 fullName: userName || ''
-            });
+            };
+            setFormData(newState);
+            // onDataChange will be triggered by the sync effect
             setErrors({});
             checkExistingKYC(String(userId));
         }
-    }, [userId, userName]);
+    }, [userId, userName, initialData]);
 
     const checkExistingKYC = async (uid: string) => {
         setFetching(true);
@@ -73,7 +84,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 ? await kycService.getByUserId(uid)
                 : await kycService.getMyKyc();
             if (data) {
-                setFormData({
+                const loadedData = {
                     userId: String(data.userId),
                     fullName: data.fullName || '',
                     address: data.address || '',
@@ -87,8 +98,10 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                     idImageFront: data.idImageFront || '',
                     idImageBack: data.idImageBack || '',
                     selfieImage: data.selfieImage || ''
-                });
+                };
+                setFormData(loadedData);
                 setIsUpdate(true);
+                onDataChange?.(loadedData);
             } else {
                 setIsUpdate(false);
             }
@@ -156,7 +169,9 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const updated = { ...formData, [name]: value };
+        setFormData(updated);
+        onDataChange?.(updated);
         if (name === 'fullName') {
             const err = validateFullName(value);
             setErrors(prev => ({ ...prev, fullName: err }));
@@ -174,6 +189,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     const handleDateChange = (name: 'issueDate' | 'expiryDate', date: Date | null) => {
         const updated = { ...formData, [name]: date };
         setFormData(updated);
+        onDataChange?.(updated);
         const issueDate = name === 'issueDate' ? date : updated.issueDate;
         const expiryDate = name === 'expiryDate' ? date : updated.expiryDate;
         const dateErrors = validateDates(issueDate, expiryDate);
@@ -347,344 +363,232 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {!readOnly && (
-                <div className="bg-[#ff5e14]/10 p-3 rounded-lg border-l-4 border-[#ff5e14]">
-                    <div className="flex gap-2 items-start">
-                        <svg className="w-4 h-4 text-[#ff5e14] shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-[11px] text-[#ff5e14] font-bold uppercase tracking-tight leading-relaxed">
-                            Hướng dẫn: Chỉ cần tải ảnh CCCD lên, hệ thống sẽ dùng AI tự động trích xuất và điền đầy đủ thông tin bên dưới.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Image upload section ── */}
-            <div className="space-y-4 mb-8 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-300">
-                <label className="block text-sm font-bold text-[#ff5e14] uppercase tracking-wider">
-                    Tài liệu định danh (Tự động trích xuất)
-                </label>
-                <div className={`grid grid-cols-1 gap-4 ${formData.idType === 'PASSPORT' ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-                    {/* Front ID */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
-                            {formData.idType === 'PASSPORT' ? 'Trang ảnh Hộ chiếu'
-                                : formData.idType === 'DRIVER_LICENSE' ? 'Mặt trước Bằng lái xe' : 'Mặt trước CCCD'}
-                        </p>
-                        <div className="space-y-3">
-                            <input type="file" id="idImageFront" accept="image/*"
-                                onChange={(e) => handleFileUpload(e, 'idImageFront')}
-                                className="hidden"
-                                disabled={uploading || readOnly} />
-
-                            {formData.idImageFront ? (
-                                <div className="relative group">
-                                    <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.idImageFront)}>
-                                        <img
-                                            src={formData.idImageFront}
-                                            alt="Front ID"
-                                            className="h-28 w-full object-cover rounded-xl border border-gray-100 shadow-sm"
-                                            onError={() => setFormData(prev => ({ ...prev, idImageFront: '' }))}
-                                        />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-all">
-                                            <ZoomIn className="w-6 h-6 text-white" />
-                                        </div>
-                                    </div>
-                                    {/* Nút Xóa */}
-                                    {!readOnly && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setFormData(prev => ({ ...prev, idImageFront: '' }));
-                                            }}
-                                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
-                                            title="Xóa ảnh"
-                                        >
-                                            <span className="text-[12px] font-black">×</span>
-                                        </button>
-                                    )}
-                                </div>
-                            ) : (
-                                <label htmlFor="idImageFront" className="h-28 w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-                                        <span className="text-gray-400 text-lg">+</span>
-                                    </div>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase">Tải lên</span>
-                                </label>
-                            )}
+        <form onSubmit={handleSubmit} className="w-full">
+            <div className="grid grid-cols-12 gap-3">
+                {/* ── Left Column: Image Uploads (Compact Sidebar) ── */}
+                <div className="col-span-5 space-y-2">
+                    <div className="bg-gray-50 rounded-2xl p-3 border border-gray-100">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="h-6 w-6 rounded-lg bg-black flex items-center justify-center text-white">
+                                <Shield className="h-3.5 w-3.5" />
+                            </div>
+                            <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest">Giấy tờ tùy thân</p>
                         </div>
-                    </div>
-
-                    {/* Back ID */}
-                    {formData.idType !== 'PASSPORT' && (
-                        <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
-                                {formData.idType === 'DRIVER_LICENSE' ? 'Mặt sau Bằng lái xe' : 'Mặt sau CCCD'}
-                            </p>
-                            <div className="space-y-3">
-                                <input type="file" id="idImageBack" accept="image/*"
-                                    onChange={(e) => handleFileUpload(e, 'idImageBack')}
-                                    className="hidden"
-                                    disabled={uploading || readOnly} />
-
-                                {formData.idImageBack ? (
-                                    <div className="relative group">
-                                        <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.idImageBack)}>
-                                            <img
-                                                src={formData.idImageBack}
-                                                alt="Back ID"
-                                                className="h-28 w-full object-cover rounded-xl border border-gray-100 shadow-sm"
-                                                onError={() => setFormData(prev => ({ ...prev, idImageBack: '' }))}
-                                            />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-xl flex items-center justify-center transition-all">
-                                                <ZoomIn className="w-6 h-6 text-white" />
-                                            </div>
-                                        </div>
-                                        {/* Nút Xóa */}
-                                        {!readOnly && (
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setFormData(prev => ({ ...prev, idImageBack: '' }));
-                                                }}
-                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
-                                                title="Xóa ảnh"
-                                            >
-                                                <span className="text-[12px] font-black">×</span>
-                                            </button>
+                        
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                            {/* Front Image */}
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-gray-400 uppercase text-center">Mặt trước</p>
+                                <div className="relative">
+                                    <div className="aspect-[3/2] bg-white rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group shadow-sm">
+                                        {formData.idImageFront ? (
+                                            <>
+                                                <img src={formData.idImageFront} alt="Front" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                    <button type="button" onClick={() => onImageClick?.(formData.idImageFront)} className="p-1.5 bg-white rounded-lg shadow-xl hover:scale-110 transition-transform">
+                                                        <ZoomIn className="w-4 h-4 text-black" />
+                                                    </button>
+                                                </div>
+                                            </ >
+                                        ) : (
+                                            <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center hover:bg-gray-50 transition-all">
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'idImageFront')} disabled={readOnly || uploading} />
+                                                <span className="text-gray-300 text-xl font-light">+</span>
+                                            </label>
                                         )}
                                     </div>
-                                ) : (
-                                    <label htmlFor="idImageBack" className="h-28 w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-all">
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-                                            <span className="text-gray-400 text-lg">+</span>
-                                        </div>
-                                        <span className="text-[9px] font-bold text-gray-400 uppercase">Tải lên</span>
-                                    </label>
+                                    {!readOnly && formData.idImageFront && (
+                                        <button type="button" onClick={() => setFormData(p => ({...p, idImageFront: ''}))} className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center border-2 border-white shadow-lg z-10 hover:bg-red-600 transition-colors">×</button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Back Image */}
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-gray-400 uppercase text-center">Mặt sau</p>
+                                <div className="relative">
+                                    <div className="aspect-[3/2] bg-white rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group shadow-sm">
+                                        {formData.idImageBack ? (
+                                            <>
+                                                <img src={formData.idImageBack} alt="Back" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                    <button type="button" onClick={() => onImageClick?.(formData.idImageBack)} className="p-1.5 bg-white rounded-lg shadow-xl hover:scale-110 transition-transform">
+                                                        <ZoomIn className="w-4 h-4 text-black" />
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center hover:bg-gray-50 transition-all">
+                                                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'idImageBack')} disabled={readOnly || uploading} />
+                                                <span className="text-gray-300 text-xl font-light">+</span>
+                                            </label>
+                                        )}
+                                    </div>
+                                    {!readOnly && formData.idImageBack && (
+                                        <button type="button" onClick={() => setFormData(p => ({...p, idImageBack: ''}))} className="absolute -top-2 -right-2 h-6 w-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center border-2 border-white shadow-lg z-10 hover:bg-red-600 transition-colors">×</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Selfie Image */}
+                        <div className="pt-2 border-t border-gray-100 flex flex-col items-center">
+                            <p className="text-[9px] font-black text-gray-400 uppercase mb-1.5">Ảnh chân dung (Selfie)</p>
+                            <div className="relative">
+                                <div className="h-20 w-20 bg-white rounded-full border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden group shadow-sm">
+                                    {formData.selfieImage ? (
+                                        <>
+                                            <img src={formData.selfieImage} alt="Selfie" className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                                <button type="button" onClick={() => onImageClick?.(formData.selfieImage)} className="p-1.5 bg-white rounded-lg shadow-xl hover:scale-110 transition-transform">
+                                                    <ZoomIn className="w-4 h-4 text-black" />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center hover:bg-gray-50 transition-all">
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'selfieImage')} disabled={readOnly || uploading} />
+                                            <span className="text-gray-300 text-xl font-light">+</span>
+                                        </label>
+                                    )}
+                                </div>
+                                {!readOnly && formData.selfieImage && (
+                                    <button type="button" onClick={() => setFormData(p => ({...p, selfieImage: ''}))} className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center border-2 border-white shadow-lg z-10 hover:bg-red-600 transition-colors">×</button>
                                 )}
                             </div>
                         </div>
+
+                        {uploading && (
+                            <div className="mt-2 p-2 bg-[#ff5e14]/5 rounded-lg">
+                                <p className="text-[9px] text-[#ff5e14] font-black animate-pulse text-center uppercase tracking-widest leading-tight">Hệ thống đang trích xuất dữ liệu...</p>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {!readOnly && (
+                        <div className="p-1.5 bg-emerald-50 rounded-xl border border-emerald-100">
+                            <p className="text-[8px] font-bold text-emerald-700 leading-tight italic text-center">
+                                Tip: Chỉ cần tải ảnh giấy tờ lên, hệ thống sẽ tự động điền các thông tin cho bạn.
+                            </p>
+                        </div>
                     )}
+                </div>
 
-                    {/* Selfie */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Ảnh chân dung</p>
-                        <div className="space-y-3">
-                            <input type="file" id="selfieImage" accept="image/*"
-                                onChange={(e) => handleFileUpload(e, 'selfieImage')}
-                                className="hidden"
-                                disabled={uploading || readOnly} />
+                {/* ── Right Column: Form Data (Dense Grid) ── */}
+                <div className="col-span-7 bg-gray-50/30 rounded-3xl p-3 border border-gray-100 self-start">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {/* Họ và tên */}
+                        <div className="col-span-2">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Họ và tên (Theo giấy tờ) <span className="text-red-500">*</span></label>
+                            <input
+                                type="text" name="fullName" required value={formData.fullName} onChange={handleChange} disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.fullName ? 'border-red-500' : ''}`}
+                                placeholder="VD: NGUYỄN VĂN A"
+                            />
+                            {errors.fullName && <p className="mt-0.5 text-[10px] text-red-500 font-bold">{errors.fullName}</p>}
+                        </div>
 
-                            {formData.selfieImage ? (
-                                <div className="relative group mx-auto w-fit">
-                                    <div className="relative cursor-pointer" onClick={() => onImageClick?.(formData.selfieImage)}>
-                                        <img
-                                            src={formData.selfieImage}
-                                            alt="Selfie"
-                                            className="h-28 w-28 object-cover rounded-full border-2 border-white shadow-md ring-4 ring-gray-50"
-                                            onError={() => setFormData(prev => ({ ...prev, selfieImage: '' }))}
-                                        />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 rounded-full flex items-center justify-center transition-all">
-                                            <ZoomIn className="w-6 h-6 text-white" />
-                                        </div>
-                                    </div>
-                                    {/* Nút Xóa */}
-                                    {!readOnly && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setFormData(prev => ({ ...prev, selfieImage: '' }));
-                                            }}
-                                            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
-                                            title="Xóa ảnh"
-                                        >
-                                            <span className="text-[12px] font-black">×</span>
-                                        </button>
-                                    )}
-                                </div>
-                            ) : (
-                                <label htmlFor="selfieImage" className="h-28 w-28 mx-auto flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-full hover:bg-gray-50 cursor-pointer transition-all">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-1">
-                                        <span className="text-gray-400 text-lg">+</span>
-                                    </div>
-                                    <span className="text-[9px] font-bold text-gray-400 uppercase text-center px-2">Tải lên chân dung</span>
-                                </label>
-                            )}
+                        {/* Địa chỉ cư trú */}
+                        <div className="col-span-2">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Địa chỉ thường trú <span className="text-red-500">*</span></label>
+                            <input
+                                type="text" name="address" value={formData.address} onChange={handleChange} disabled={readOnly}
+                                className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none"
+                                placeholder="Địa chỉ ghi trên giấy tờ tùy thân"
+                            />
+                        </div>
+
+                        {/* Nơi làm việc */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Nơi làm việc</label>
+                            <input
+                                type="text" name="workplace" value={formData.workplace} onChange={handleChange} disabled={readOnly}
+                                className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none"
+                                placeholder="Tên cơ quan, tổ chức..."
+                            />
+                        </div>
+
+                        {/* Mã số thuế */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Mã số thuế</label>
+                            <input
+                                type="text" name="taxId" value={formData.taxId} onChange={handleChange} disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.taxId ? 'border-red-500' : ''}`}
+                                placeholder="10 hoặc 13 chữ số"
+                            />
+                        </div>
+
+                        {/* Loại định danh */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Loại định danh <span className="text-red-500">*</span></label>
+                            <select name="idType" value={formData.idType} onChange={handleChange} disabled={readOnly}
+                                className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none appearance-none cursor-pointer">
+                                <option value="CCCD">Căn cước công dân (CCCD)</option>
+                                <option value="PASSPORT">Hộ chiếu (Passport)</option>
+                                <option value="DRIVER_LICENSE">Bằng lái xe</option>
+                            </select>
+                        </div>
+
+                        {/* Số định danh */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Số định danh <span className="text-red-500">*</span></label>
+                            <input
+                                type="text" name="idNumber" required value={formData.idNumber} onChange={handleChange} disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.idNumber ? 'border-red-500' : ''}`}
+                                placeholder="VD: 012345678901"
+                            />
+                            {errors.idNumber && <p className="mt-0.5 text-[10px] text-red-500 font-bold">{errors.idNumber}</p>}
+                        </div>
+
+                        {/* Ngày cấp */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Ngày cấp <span className="text-red-500">*</span></label>
+                            <DatePicker
+                                selected={formData.issueDate} onChange={(date: Date | null) => handleDateChange('issueDate', date)}
+                                dateFormat="dd/MM/yyyy" placeholderText="DD/MM/YYYY" disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.issueDate ? 'border-red-500' : ''}`}
+                                showYearDropdown showMonthDropdown dropdownMode="select" maxDate={new Date()}
+                            />
+                        </div>
+
+                        {/* Ngày hết hạn */}
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Ngày hết hạn <span className="text-red-500">*</span></label>
+                            <DatePicker
+                                selected={formData.expiryDate} onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
+                                dateFormat="dd/MM/yyyy" placeholderText="DD/MM/YYYY" disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.expiryDate ? 'border-red-500' : ''}`}
+                                showYearDropdown showMonthDropdown dropdownMode="select" minDate={formData.issueDate || undefined}
+                            />
+                        </div>
+
+                        {/* Nơi cấp */}
+                        <div className="col-span-2">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-0.5">Nơi cấp <span className="text-red-500">*</span></label>
+                            <input
+                                type="text" name="issuePlace" required value={formData.issuePlace} onChange={handleChange} disabled={readOnly}
+                                className={`w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none ${errors.issuePlace ? 'border-red-500' : ''}`}
+                                placeholder="Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
+                            />
                         </div>
                     </div>
                 </div>
-                {uploading && <p className="text-[10px] text-[#ff5e14] font-bold animate-pulse text-center">Đang tải và xử lý bằng AI...</p>}
-                {errors.images && <p className="text-xs text-red-600 font-semibold text-center">{errors.images}</p>}
             </div>
 
-            {/* ── OCR fields from document ── */}
-            <div className="space-y-4">
-                {/* Họ và tên (theo giấy tờ) — priority field */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Họ và tên <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        name="fullName"
-                        required
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.fullName ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="VD: Nguyễn Văn A"
-                        disabled={readOnly}
-                    />
-                    {errors.fullName && <p className="mt-1 text-xs text-red-600">{errors.fullName}</p>}
-                </div>
-
-                {/* Địa chỉ thường trú */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Địa chỉ cư trú <span className="text-red-500">*</span></label>
-                    <input
-                        type="text"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
-                        placeholder="VD: Số 123 Đường ABC, Phường X, Quận Y, TP. Hồ Chí Minh"
-                        disabled={readOnly}
-                    />
-                </div>
-
-                {/* Nơi làm việc + Mã số thuế */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Nơi làm việc</label>
-                        <input
-                            type="text"
-                            name="workplace"
-                            value={formData.workplace}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
-                            placeholder="VD: Công ty ABC"
-                            disabled={readOnly}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Mã số thuế (nếu có)</label>
-                        <input
-                            type="text"
-                            name="taxId"
-                            value={formData.taxId}
-                            onChange={handleChange}
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.taxId ? 'border-red-500' : 'border-gray-300'}`}
-                            placeholder="VD: 0123456789"
-                            maxLength={15}
-                            disabled={readOnly}
-                        />
-                        {(errors as any).taxId && <p className="mt-1 text-xs text-red-600">{(errors as any).taxId}</p>}
-                    </div>
-                </div>
-
-                {/* Read-only summary for approved KYC */}
-                {readOnly && (formData.address || formData.workplace || formData.taxId) && (
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Thông tin bổ sung từ OCR</p>
-                        {formData.address && <p className="text-xs text-gray-600"><span className="font-bold">Địa chỉ:</span> {formData.address}</p>}
-                        {formData.workplace && <p className="text-xs text-gray-600"><span className="font-bold">Nơi làm việc:</span> {formData.workplace}</p>}
-                        {formData.taxId && <p className="text-xs text-gray-600"><span className="font-bold">Mã số thuế:</span> {formData.taxId}</p>}
-                    </div>
-                )}
-
-                {/* Loại định danh + Số định danh */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Loại định danh <span className="text-red-500">*</span></label>
-                        <select name="idType" value={formData.idType} onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#ff5e14] focus:ring-[#ff5e14] sm:text-sm border p-2"
-                            disabled={readOnly}>
-                            <option value="CCCD">CCCD</option>
-                            <option value="PASSPORT">Hộ chiếu (Passport)</option>
-                            <option value="DRIVER_LICENSE">Bằng lái xe</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                            {formData.idType === 'PASSPORT' ? 'Số hộ chiếu'
-                                : formData.idType === 'DRIVER_LICENSE' ? 'Số bằng lái xe' : 'Số CCCD/CMND'} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text" name="idNumber" required
-                            value={formData.idNumber} onChange={handleChange}
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.idNumber ? 'border-red-500' : 'border-gray-300'}`}
-                            placeholder={formData.idType === 'PASSPORT' ? 'VD: B1234567' : '12 chữ số'}
-                            maxLength={formData.idType === 'PASSPORT' ? 9 : 12}
-                            disabled={readOnly}
-                        />
-                        {errors.idNumber && <p className="mt-1 text-xs text-red-600">{errors.idNumber}</p>}
-                    </div>
-                </div>
-
-                {/* Ngày cấp + Ngày hết hạn */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Ngày cấp <span className="text-red-500">*</span></label>
-                        <DatePicker
-                            selected={formData.issueDate}
-                            onChange={(date: Date | null) => handleDateChange('issueDate', date)}
-                            dateFormat="dd/MM/yyyy"
-                            placeholderText="DD/MM/YYYY"
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.issueDate ? 'border-red-500' : 'border-gray-300'}`}
-                            showYearDropdown showMonthDropdown dropdownMode="select"
-                            maxDate={new Date()} required disabled={readOnly}
-                        />
-                        {errors.issueDate && <p className="mt-1 text-xs text-red-600">{errors.issueDate}</p>}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Ngày hết hạn <span className="text-red-500">*</span></label>
-                        <DatePicker
-                            selected={formData.expiryDate}
-                            onChange={(date: Date | null) => handleDateChange('expiryDate', date)}
-                            dateFormat="dd/MM/yyyy"
-                            placeholderText="DD/MM/YYYY"
-                            className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.expiryDate ? 'border-red-500' : 'border-gray-300'}`}
-                            showYearDropdown showMonthDropdown dropdownMode="select"
-                            minDate={formData.issueDate || undefined} required disabled={readOnly}
-                        />
-                        {errors.expiryDate && <p className="mt-1 text-xs text-red-600">{errors.expiryDate}</p>}
-                    </div>
-                </div>
-
-                {/* Nơi cấp */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Nơi cấp <span className="text-red-500">*</span></label>
-                    <input
-                        type="text" name="issuePlace" required
-                        value={formData.issuePlace} onChange={handleChange}
-                        className={`mt-1 block w-full rounded-md shadow-sm focus:ring-[#ff5e14] sm:text-sm border p-2 ${errors.issuePlace ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="VD: Cục Cảnh sát ĐKQL cư trú và DLQG về dân cư"
-                        disabled={readOnly}
-                    />
-                    {errors.issuePlace && <p className="mt-1 text-xs text-red-600">{errors.issuePlace}</p>}
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
+            {/* Submit buttons (only if not hidden by parent) */}
+            {!hideSubmitButton && !readOnly && (
+                <div className="mt-4 flex justify-end gap-3">
                     {onCancel && (
-                        <button type="button" onClick={onCancel}
-                            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40"
-                            disabled={uploading || loading || fetching}>
+                        <button type="button" onClick={onCancel} className="px-6 py-2 border border-gray-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all">
                             Đóng
                         </button>
                     )}
-                    {!readOnly && (
-                        <button type="submit"
-                            disabled={loading || uploading || fetching}
-                            className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-[#ff5e14] text-sm font-black uppercase tracking-widest text-white hover:bg-[#35534a] disabled:opacity-50 disabled:cursor-not-allowed">
-                            {loading ? 'Đang xử lý...' : uploading ? 'Đang tải ảnh...' : isStaff ? 'Duyệt & Lưu KYC' : 'Gửi yêu cầu xác minh'}
-                        </button>
-                    )}
+                    <button type="submit" disabled={loading || uploading || fetching}
+                        className="px-10 py-2 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all shadow-xl disabled:opacity-50">
+                        {loading ? 'Đang xử lý...' : isStaff ? 'Duyệt & Lưu' : 'Gửi yêu cầu xác minh'}
+                    </button>
                 </div>
-            </div>
+            )}
         </form>
     );
 }
