@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useRef, useState } from 'react';
 import { CampaignImage, NewCampaignTestState } from '../types';
+import CategorySelector from '../parts/CategorySelector';
 
 interface Props {
   state: NewCampaignTestState;
@@ -23,7 +24,7 @@ function newImageId(): string {
 function inputClass(fieldKey: string, errors: Record<string, string>, showErrors: boolean) {
   const err = Boolean(showErrors && errors[fieldKey]);
   return [
-    'w-full rounded-xl border-2 bg-white px-3 py-2.5 text-sm text-gray-800 outline-none transition duration-150',
+    'w-full rounded-xl border-2 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition duration-150',
     err
       ? 'border-red-200 bg-red-50/50 focus:border-red-400 focus:ring-2 focus:ring-red-100'
       : 'border-gray-200 bg-white focus:border-brand focus:bg-white focus:ring-2 focus:ring-orange-100',
@@ -83,7 +84,7 @@ export default function Step2CampaignForm({
     const additions: CampaignImage[] = [];
     for (const file of list) {
       if (!file.type.startsWith('image/')) continue;
-      additions.push({ id: newImageId(), url: URL.createObjectURL(file) });
+      additions.push({ id: newImageId(), url: URL.createObjectURL(file), file });
     }
     if (!additions.length) return;
     const merged = [...images, ...additions];
@@ -117,7 +118,7 @@ export default function Step2CampaignForm({
   };
 
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-5">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 2 — Nội dung chiến dịch</h2>
@@ -159,6 +160,7 @@ export default function Step2CampaignForm({
               <input
                 className={inputClass('startDate', errors, showErrors)}
                 type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={core.startDate}
                 onChange={(e) => onPatchCore({ startDate: e.target.value })}
               />
@@ -167,34 +169,19 @@ export default function Step2CampaignForm({
               <input
                 className={inputClass('endDate', errors, showErrors)}
                 type="date"
+                min={core.startDate || new Date().toISOString().split('T')[0]}
                 value={core.endDate}
                 onChange={(e) => onPatchCore({ endDate: e.target.value })}
               />
             </Field>
             <Field label="Danh mục" required error={errors.category} showErrors={showErrors}>
-              <input
-                className={inputClass('category', errors, showErrors)}
-                value={core.category}
-                onChange={(e) => onPatchCore({ category: e.target.value })}
-              />
-            </Field>
-            <Field label="Vị trí hỗ trợ" required error={errors.region} showErrors={showErrors}>
-              <input
-                className={inputClass('region', errors, showErrors)}
-                value={core.region}
-                onChange={(e) => onPatchCore({ region: e.target.value })}
+              <CategorySelector
+                categoryId={core.categoryId}
+                onChange={(id, name) => onPatchCore({ categoryId: id, category: name })}
+                error={showErrors && errors.category}
               />
             </Field>
           </div>
-
-          <Field label="Đối tượng thụ hưởng" required error={errors.beneficiaryType} showErrors={showErrors}>
-            <input
-              className={inputClass('beneficiaryType', errors, showErrors)}
-              value={core.beneficiaryType}
-              onChange={(e) => onPatchCore({ beneficiaryType: e.target.value })}
-            />
-          </Field>
-
           <Field label="Câu chuyện / mục tiêu gây quỹ" required error={errors.objective} showErrors={showErrors}>
             <textarea
               rows={4}
@@ -214,7 +201,7 @@ export default function Step2CampaignForm({
           </Field>
         </div>
 
-        <div className={`mt-5 lg:mt-0 ${coverErr ? 'rounded-2xl ring-2 ring-red-200' : ''} lg:rounded-xl lg:bg-gray-50/60 lg:p-3 lg:ring-1 lg:ring-gray-100`}>
+        <div className={`mt-4 lg:mt-0 ${coverErr ? 'rounded-2xl ring-2 ring-red-200' : ''} lg:rounded-xl lg:bg-gray-50/60 lg:p-2.5 lg:ring-1 lg:ring-gray-100`}>
           <label className="mb-1.5 block text-sm font-semibold text-gray-800">
             Ảnh chiến dịch <span className="text-red-600">*</span>
           </label>

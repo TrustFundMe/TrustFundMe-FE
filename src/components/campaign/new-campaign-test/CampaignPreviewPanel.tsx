@@ -101,17 +101,24 @@ export default function CampaignPreviewPanel({ state, budgetTotal, milestoneTota
                   {state.milestones.length === 0 ? (
                     <p className="text-xs text-zinc-600">Không dùng milestone (quỹ linh hoạt) hoặc thêm ở bước trước.</p>
                   ) : (
-                    state.milestones.map((m, index) => (
-                      <div key={m.id} className="flex min-w-0 items-center">
-                        <div className="w-40 shrink-0 rounded-xl border border-zinc-200/90 bg-zinc-50/60 p-2.5">
-                          <p className="line-clamp-2 text-xs font-medium text-zinc-950">{m.title}</p>
-                          <p className="mt-1 text-[11px] text-zinc-600">{m.plannedAmount.toLocaleString('vi-VN')} đ</p>
+                    state.milestones.map((m, index) => {
+                      const milSum = (m.categories || []).reduce((sum, cat) => {
+                        return sum + (cat.items || []).reduce((itemSum, item) => {
+                          return itemSum + (item.expectedPrice || 0) * (item.expectedQuantity || 0);
+                        }, 0);
+                      }, 0);
+                      return (
+                        <div key={m.id} className="flex min-w-0 items-center">
+                          <div className="w-40 shrink-0 rounded-xl border border-zinc-200/90 bg-zinc-50/60 p-2.5">
+                            <p className="line-clamp-2 text-xs font-medium text-zinc-950">{m.title}</p>
+                            <p className="mt-1 text-[11px] text-zinc-600">{milSum.toLocaleString('vi-VN')} đ</p>
+                          </div>
+                          {index < state.milestones.length - 1 ? (
+                            <div className="mx-1 h-px w-5 shrink-0 self-center bg-zinc-300" />
+                          ) : null}
                         </div>
-                        {index < state.milestones.length - 1 ? (
-                          <div className="mx-1 h-px w-5 shrink-0 self-center bg-zinc-300" />
-                        ) : null}
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

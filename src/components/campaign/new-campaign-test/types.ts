@@ -15,11 +15,13 @@ export interface CredibilityFile {
   id: string;
   name: string;
   sizeKb: number;
+  file?: File;
 }
 
 export interface CampaignImage {
   id: string;
   url: string;
+  file?: File;
 }
 
 export interface CampaignCore {
@@ -29,6 +31,7 @@ export interface CampaignCore {
   startDate: string;
   endDate: string;
   category: string;
+  categoryId?: number;
   region: string;
   beneficiaryType: string;
   thankMessage: string;
@@ -51,12 +54,36 @@ export interface BudgetLine {
   notes: string;
 }
 
+export interface MilestoneCategoryItem {
+  id: string;
+  name: string;
+  expectedQuantity: number;
+  actualQuantity: number;
+  expectedPrice: number;
+  actualPrice: number;
+  brand: string;
+  purchaseLocation: string;
+  unit: string;
+  note?: string;
+}
+
+export interface MilestoneCategory {
+  id: string;
+  name: string;
+  description: string;
+  balance: number;
+  items: MilestoneCategoryItem[];
+}
+
 export interface Milestone {
   id: string;
   title: string;
   description: string;
   plannedAmount: number;
   releaseCondition: string;
+  startDate?: string;
+  endDate?: string;
+  categories: MilestoneCategory[];
 }
 
 export interface BankInfo {

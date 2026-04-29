@@ -33,6 +33,7 @@ export default function Step4Milestones({ state, milestoneTotal, onPatch, onPrev
           description: 'Mô tả chặng giải ngân',
           plannedAmount: 0,
           releaseCondition: 'Điều kiện duyệt rút tiền',
+          categories: [],
         },
       ],
     });

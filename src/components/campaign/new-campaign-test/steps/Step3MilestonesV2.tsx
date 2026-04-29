@@ -91,8 +91,9 @@ export default function Step3MilestonesV2({ state, onPatch, onPrev, onNext }: Pr
           id: newId,
           title: `Đợt ${state.milestones.length + 1}`,
           description: '',
-          plannedAmount: 0, // legacy field — Bước 4 vẫn dùng
+          plannedAmount: 0,
           releaseCondition: '',
+          categories: [],
         },
       ],
     });

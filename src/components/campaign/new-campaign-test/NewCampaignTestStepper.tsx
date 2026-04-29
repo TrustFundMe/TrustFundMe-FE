@@ -41,9 +41,9 @@ export default function NewCampaignTestStepper({
                 onClick={() => canClick && onJump(idx)}
                 disabled={!canClick && !active}
                 title={step.title}
-                className={`group relative w-full overflow-hidden rounded-2xl border px-3 py-2.5 text-left transition-all ${
+                className={`group relative w-full overflow-hidden rounded-xl border px-2.5 py-1.5 text-left transition-all ${
                   active
-                    ? 'border-orange-200 bg-orange-50 shadow-[0_10px_24px_-18px_rgba(249,115,22,0.7)]'
+                    ? 'border-orange-200 bg-orange-50 shadow-[0_4px_12px_-6px_rgba(249,115,22,0.5)]'
                     : done
                       ? 'border-emerald-200 bg-emerald-50/60'
                       : 'border-slate-200 bg-white'
@@ -51,7 +51,7 @@ export default function NewCampaignTestStepper({
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold leading-none tabular-nums transition-colors ${
+                    className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold leading-none tabular-nums transition-colors ${
                       done
                         ? 'border-emerald-500 bg-emerald-500 text-white'
                         : active
@@ -62,7 +62,7 @@ export default function NewCampaignTestStepper({
                     {idx + 1}
                   </span>
                   <span
-                    className={`min-w-0 truncate whitespace-nowrap text-xs font-semibold leading-none ${
+                    className={`min-w-0 truncate whitespace-nowrap text-[11px] font-bold leading-none ${
                       active ? 'text-orange-700' : done ? 'text-emerald-700' : 'text-slate-700'
                     }`}
                   >

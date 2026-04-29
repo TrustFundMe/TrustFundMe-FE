@@ -94,6 +94,8 @@ export interface CreateExpenditureRequest {
     evidenceDueAt?: string;
     evidenceStatus?: string;
     plan?: string;
+    startDate?: string;
+    endDate?: string;
     items?: CreateExpenditureItemRequest[];
     categories?: CreateExpenditureCatologyRequest[];
 }
