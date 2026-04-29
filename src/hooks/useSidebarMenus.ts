@@ -29,7 +29,7 @@ const fallbackMenus: ModuleGroup[] = [
             {
                 id: 100,
                 title: "Dashboard",
-                url: "/admin",
+                url: "/admin/dashboard",
                 icon: "dashboard",
                 moduleGroupId: 1,
                 displayOrder: 1,
@@ -136,6 +136,17 @@ const fallbackMenus: ModuleGroup[] = [
                 createdAt: "",
                 updatedAt: "",
             },
+            {
+                id: 110,
+                title: "Dòng tiền",
+                url: "/admin/cash-flow",
+                icon: "dollar-sign",
+                moduleGroupId: 1,
+                displayOrder: 11,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
         ],
         createdAt: "",
         updatedAt: "",
@@ -181,6 +192,7 @@ export function useSidebarMenus() {
         (url?: string) => {
             if (!url || !pathname) return false;
             if (url === '/admin') return pathname === '/admin';
+            if (url === '/admin/dashboard') return pathname === '/admin/dashboard';
             return pathname === url || pathname.startsWith(url + "/");
         },
         [pathname]

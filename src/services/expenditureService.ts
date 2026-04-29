@@ -166,14 +166,41 @@ export const expenditureService = {
         return response.data;
     },
 
-    /** Phân tích chi tiêu bằng AI */
+    /** Kiểm toán chi tiêu bằng hệ thống AI Perplexity (Backend) */
     analyzeWithAI: async (campaign: any, expenditure: any, items: any[]): Promise<any> => {
-        const response = await axios.post(`${process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:7000'}/api/analyze-expenditure`, {
-            campaign,
-            expenditure,
-            items
-        });
-        return response.data;
+        const response = await axiosInstance.post(`/api/expenditures/${expenditure.id}/audit`);
+        const data = response.data;
+
+        const mappedDetectedItems = (data.items || []).map((item: any) => ({
+            name: item.itemName,
+            plannedCategory: item.itemName,
+            quantity: item.quantity || 1,
+            unitPrice: item.marketPrice,
+            total: (item.marketPrice || 0) * (item.quantity || 1),
+            matchStatus: item.isSuspicious ? 'MISMATCHED' : 'MATCHED',
+            marketPriceRange: item.evidenceUrls && item.evidenceUrls.length > 0
+                ? 'Nguồn đối chứng minh bạch: ' : '',
+            evidenceUrls: item.evidenceUrls || [],
+        }));
+
+        return {
+            expenditureId: expenditure.id,
+            riskScore: data.requiresAttention ? 85 : 15,
+            riskLevel: data.requiresAttention ? 'HIGH' : 'LOW',
+            summary: data.summary,
+            recommendation: data.requiresAttention
+                ? 'Phân tích AI phát hiện nghi vấn kê khống hoặc chênh lệch giá lớn so với thị trường.'
+                : 'Mức giá hợp lý, phù hợp với số liệu giá cả thực tế trên thị trường.',
+            redFlags: data.requiresAttention
+                ? ['Hệ thống AI (Perplexity) phát hiện báo giá bất thường.']
+                : [],
+            spendingAnalysis: [],
+            confidence: 'HIGH',
+            vendorInfo: {
+                name: 'Thẩm định tự động hoá bằng AI (Perplexity)'
+            },
+            detectedItems: mappedDetectedItems
+        };
     },
 
     /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */

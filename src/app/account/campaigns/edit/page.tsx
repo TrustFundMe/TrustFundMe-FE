@@ -38,7 +38,13 @@ interface CampaignState {
     coverImageId?: number;
     coverImageFile?: File;
     attachments: Attachment[];
-    bankAccount: any | null;
+    bankAccount: {
+        id?: number;
+        bankCode: string;
+        accountNumber: string;
+        accountHolderName: string;
+        webhookKey: string;
+    };
 }
 
 function formatApiError(err: unknown): string {
@@ -80,11 +86,11 @@ function EditCampaignForm() {
             try {
                 setLoading(true);
                 const campaignId = parseInt(id);
-                const [data, cats, goal, bankAccounts, mediaRes] = await Promise.all([
+                const [data, cats, goal, campaignBankAccount, mediaRes] = await Promise.all([
                     campaignService.getById(campaignId) as Promise<CampaignDto>,
                     campaignCategoryService.getAll(),
                     campaignService.getActiveGoalByCampaignId(campaignId),
-                    bankAccountService.getMyBankAccounts(),
+                    bankAccountService.getByCampaignId(campaignId).catch(() => null),
                     mediaService.getMediaByCampaignId(campaignId)
                 ]);
 
@@ -112,7 +118,12 @@ function EditCampaignForm() {
                         mediaType: m.mediaType,
                         isLocal: false
                     })),
-                    bankAccount: bankAccounts.length > 0 ? bankAccounts[0] : null
+                    bankAccount: campaignBankAccount || {
+                        bankCode: '',
+                        accountNumber: '',
+                        accountHolderName: '',
+                        webhookKey: ''
+                    }
                 });
             } catch (error) {
                 console.error(error);
@@ -242,6 +253,21 @@ function EditCampaignForm() {
             const existingGoals = await fundraisingGoalService.getByCampaignId(campaignId);
             if (existingGoals.length > 0) {
                 await fundraisingGoalService.update(existingGoals[0].id, { targetAmount: campaign.targetAmount });
+            }
+
+            // 6. Update/Create Bank Account
+            const bankPayload = {
+                bankCode: campaign.bankAccount.bankCode,
+                accountNumber: campaign.bankAccount.accountNumber,
+                accountHolderName: campaign.bankAccount.accountHolderName,
+                webhookKey: campaign.bankAccount.webhookKey,
+                campaignId: campaignId
+            };
+
+            if (campaign.bankAccount.id) {
+                await bankAccountService.update(campaign.bankAccount.id, bankPayload);
+            } else {
+                await bankAccountService.create(bankPayload);
             }
 
             const successMsg = initialStatus === 'REJECTED'
@@ -414,13 +440,44 @@ function EditCampaignForm() {
                         </FormSectionCard>
 
                         <FormSectionCard title="Tài khoản nhận quỹ" className="shadow-none border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-gray-50 rounded-lg text-gray-400">
-                                    <Landmark className="w-5 h-5" />
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Ngân hàng (Mã định danh)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Ví dụ: VPB, VCB, MB..."
+                                        value={campaign.bankAccount.bankCode}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, bankAccount: { ...p.bankAccount, bankCode: e.target.value } }) : null)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-100 focus:ring-1 focus:ring-orange-500 outline-none text-xs font-semibold"
+                                    />
                                 </div>
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-gray-900 text-sm truncate">{campaign.bankAccount?.accountHolderName || 'Chưa thiết lập'}</h4>
-                                    <p className="text-gray-500 text-[10px] tabular-nums">{campaign.bankAccount?.bankCode} • {campaign.bankAccount?.accountNumber}</p>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Số tài khoản</label>
+                                    <input
+                                        type="text"
+                                        value={campaign.bankAccount.accountNumber}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, bankAccount: { ...p.bankAccount, accountNumber: e.target.value } }) : null)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-100 focus:ring-1 focus:ring-orange-500 outline-none text-xs font-semibold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Tên chủ tài khoản</label>
+                                    <input
+                                        type="text"
+                                        value={campaign.bankAccount.accountHolderName}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, bankAccount: { ...p.bankAccount, accountHolderName: e.target.value.toUpperCase() } }) : null)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-100 focus:ring-1 focus:ring-orange-500 outline-none text-xs font-semibold"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1.5">Mã Webhook (Casso Webhook V2)</label>
+                                    <input
+                                        type="password"
+                                        value={campaign.bankAccount.webhookKey}
+                                        onChange={(e) => setCampaign(p => p ? ({ ...p, bankAccount: { ...p.bankAccount, webhookKey: e.target.value } }) : null)}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-100 focus:ring-1 focus:ring-orange-500 outline-none text-xs font-semibold"
+                                        placeholder="Để trống nếu không thay đổi"
+                                    />
                                 </div>
                             </div>
                         </FormSectionCard>

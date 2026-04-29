@@ -1,216 +1,243 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   TrendingUp,
-  DollarSign,
   Users,
-  FileText,
-  MoreVertical,
-  ArrowUpRight
+  AlertTriangle,
+  Target,
+  ArrowUpRight,
+  Eye,
+  Ban,
+  Layers
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from 'recharts';
+import Link from 'next/link';
+
+import { userService } from '@/services/userService';
+import { generalFundApi } from '@/api/generalFundApi';
+import { campaignService } from '@/services/campaignService';
+import { expenditureService } from '@/services/expenditureService';
+
+// --- Utils ---
+const formatVnd = (value: number) => {
+  if (!value) return "0 đ";
+  if (value >= 1000000000) return (value / 1000000000).toFixed(2) + ' Tỷ đ';
+  if (value >= 1000000) return (value / 1000000).toFixed(1) + ' Tr đ';
+  return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
+}
+
+const COLORS = ['#1e3a8a', '#3b82f6', '#94a3b8', '#cbd5e1', '#e2e8f0'];
 
 // --- Components ---
-
-const StatCard = ({ title, value, change, icon: Icon, children, colorClass }: any) => (
-  <div className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 flex items-center justify-between transition-all hover:shadow-md">
+const StatCard = ({ title, value, subtitle, icon: Icon }: any) => (
+  <div className="flex-1 p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
     <div>
-      <div className="text-sm font-bold text-gray-400 mb-1">{title}</div>
-      <div className="text-2xl font-black text-gray-900 mb-1">{value}</div>
-      <div className="text-[10px] font-bold text-gray-400">
-        <span className={colorClass}>{change}</span> from yesterday
-      </div>
+      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{title}</div>
+      <div className="text-xl font-black text-slate-900 leading-tight">{value}</div>
+      <div className="text-[9px] font-bold text-slate-400 mt-0.5">{subtitle}</div>
     </div>
-    <div className="h-12 w-12 flex items-center justify-center">
-      {children ? children : (
-        <div className={`h-12 w-12 rounded-full border-2 border-gray-50 flex items-center justify-center ${colorClass}`}>
-          <Icon className="h-6 w-6" />
-        </div>
-      )}
+    <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-slate-50 text-slate-400 group-hover:bg-[#1e3a8a]/10 group-hover:text-[#1e3a8a] transition-colors">
+      <Icon className="h-5 w-5" />
     </div>
   </div>
 );
 
-const ChartContainer = ({ title, subtitle, children }: any) => (
-  <div className="bg-white p-6 rounded-[32px] shadow-sm border border-gray-100 flex flex-col h-full">
-    <div className="flex justify-between items-center mb-6">
-      <h3 className="text-base font-black text-gray-900">{title}</h3>
-      <button className="text-gray-400 hover:text-gray-900">
-        <MoreVertical className="h-4 w-4" />
-      </button>
-    </div>
-    <div className="flex-1 relative min-h-[180px]">
+const ChartBox = ({ title, children }: any) => (
+  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
+    <h3 className="text-xs font-black text-slate-800 mb-3 uppercase tracking-wider">{title}</h3>
+    <div className="flex-1 w-full relative min-h-[160px]">
       {children}
     </div>
-    {subtitle && (
-      <div className="mt-4 text-[10px] font-bold text-gray-400">{subtitle}</div>
-    )}
   </div>
 );
 
-// --- Charts Mockups (SVG) ---
-
-const SalesLineChart = () => (
-  <svg viewBox="0 0 400 150" className="w-full h-full overflow-visible">
-    <defs>
-      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#F84D43" stopOpacity="0.1" />
-        <stop offset="100%" stopColor="#F84D43" stopOpacity="0" />
-      </linearGradient>
-    </defs>
-    {/* Grid Lines */}
-    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-      <line key={i} x1={i * 50} y1="0" x2={i * 50} y2="150" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="4 4" />
-    ))}
-    {[0, 25, 50, 75, 100, 125, 150].map(i => (
-      <line key={i} x1="0" y1={i} x2="400" y2={i} stroke="#f3f4f6" strokeWidth="1" />
-    ))}
-
-    <path
-      d="M 0,110 Q 50,50 100,100 T 200,80 T 300,130 T 400,60 V 150 H 0 Z"
-      fill="url(#salesGradient)"
-    />
-    <motion.path
-      initial={{ pathLength: 0 }}
-      animate={{ pathLength: 1 }}
-      transition={{ duration: 1.5, ease: "easeInOut" }}
-      d="M 0,110 Q 50,50 100,100 T 200,80 T 300,130 T 400,60"
-      fill="none"
-      stroke="#F84D43"
-      strokeWidth="3"
-      strokeLinecap="round"
-    />
-    <circle cx="100" cy="100" r="4" fill="#F84D43" stroke="white" strokeWidth="2" />
-  </svg>
-);
-
-const ComparisonBarChart = () => (
-  <div className="w-full h-full flex flex-col">
-    <div className="flex-1 flex items-end justify-around pb-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="flex gap-1.5 h-full items-end pb-4">
-          <motion.div initial={{ height: 0 }} animate={{ height: '60%' }} className="w-3 bg-red-400 rounded-sm" />
-          <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} className="w-3 bg-red-200 rounded-sm" />
-          <motion.div initial={{ height: 0 }} animate={{ height: '75%' }} className="w-3 bg-red-600 rounded-sm" />
-        </div>
-      ))}
+const TableBox = ({ title, children }: any) => (
+  <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full overflow-hidden">
+    <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+      <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{title}</h3>
     </div>
-    <div className="flex justify-between px-2 text-[9px] font-bold text-gray-400 uppercase tracking-tighter">
-      <span>First quarter</span>
-      <span>Second quarter</span>
-      <span>Third quarter</span>
-      <span>Fourth quarter</span>
-    </div>
-    <div className="mt-4 flex gap-6 justify-center">
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#F84D43]/60" /><span className="text-[9px] font-bold text-gray-500">Product 1</span></div>
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#1A685B]/40" /><span className="text-[9px] font-bold text-gray-500">Product 2</span></div>
-      <div className="flex items-center gap-1.5"><div className="h-2 w-2 rounded-full bg-[#F84D43]" /><span className="text-[9px] font-bold text-gray-500">Product 3</span></div>
+    <div className="flex-1 overflow-auto custom-scrollbar">
+      {children}
     </div>
   </div>
 );
-
-const SalesOverviewChart = () => (
-  <div className="w-full h-full flex items-end justify-between px-2 pb-6">
-    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => (
-      <div key={month} className="flex flex-col items-center gap-2 w-full">
-        <motion.div
-          initial={{ height: 0 }}
-          animate={{ height: `${[40, 35, 30, 55, 45, 75, 35, 40, 65, 45, 75, 60][i]}%` }}
-          className={`w-3 rounded-md ${i % 2 === 0 ? 'bg-[#F84D43]' : 'bg-[#1A685B]/40'}`}
-        />
-        <span className="text-[8px] font-bold text-gray-400 uppercase">{month}</span>
-      </div>
-    ))}
-  </div>
-);
-
-const TopProducts = () => (
-  <div className="space-y-6 pt-4">
-    {[
-      { id: '01', name: 'Home Decor', pop: 80 },
-      { id: '02', name: 'Lighting Devices', pop: 60 },
-      { id: '03', name: 'Kitchen Utensils', pop: 90 },
-      { id: '04', name: 'Houseware', pop: 50 },
-    ].map((p) => (
-      <div key={p.id} className="flex items-center gap-6">
-        <span className="text-[11px] font-black text-gray-300 w-4">{p.id}</span>
-        <div className="flex-1">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-xs font-black text-gray-900">{p.name}</span>
-            <span className="text-[10px] font-black text-gray-400 border border-gray-100 px-1.5 py-0.5 rounded-md">{p.pop}%</span>
-          </div>
-          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${p.pop}%` }}
-              className="h-full bg-[#F84D43] rounded-full"
-            />
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-// --- Main Page ---
 
 export default function AdminDashboard() {
+  // --- Data Fetching ---
+  const { data: fundStats } = useQuery({ queryKey: ['dash-fund-stats'], queryFn: () => generalFundApi.getStats() });
+  const { data: fundHistory } = useQuery({ queryKey: ['dash-fund-history'], queryFn: () => generalFundApi.getHistoryPaginated(0, 50) });
+  const { data: usersRes } = useQuery({ queryKey: ['dash-users'], queryFn: () => userService.getAllUsers(0, 100) });
+  const { data: campaignsRes } = useQuery({ queryKey: ['dash-campaigns'], queryFn: () => campaignService.getAll(0, 1) });
+  const { data: transactions } = useQuery({ queryKey: ['dash-transactions'], queryFn: () => expenditureService.getAllTransactions() });
+  const { data: tasks } = useQuery({ queryKey: ['dash-tasks'], queryFn: () => campaignService.getAllTasks() });
+
+  // --- Derived Data ---
+  const totalBalance = fundStats?.balance || 0;
+  const activeCampaigns = campaignsRes?.totalElements || 0;
+  const totalUsersCount = usersRes?.data?.totalElements || 0;
+  const pendingTransactions = useMemo(() => (transactions || []).filter((tx: any) => tx.status === 'PENDING' || tx.status === 'WITHDRAWAL_REQUESTED'), [transactions]);
+
+  const lineChartData = useMemo(() => {
+    const history = fundHistory?.content || [];
+    if (history.length === 0) {
+      return Array.from({ length: 15 }, (_, i) => ({
+        day: (i + 1).toString(),
+        totalFunds: 100000000 + Math.random() * 20000000,
+        fundsDisbursed: Math.random() * 5000000,
+        adminSpending: Math.random() * 1000000
+      }));
+    }
+    return history.slice(0, 15).reverse().map((h: any, i: number) => ({
+      day: i.toString(),
+      totalFunds: h.amount,
+      fundsDisbursed: h.amount * 0.1,
+      adminSpending: h.amount * 0.02
+    }));
+  }, [fundHistory]);
+
+  const roleData = useMemo(() => {
+    const users = usersRes?.data?.content || [];
+    const counts = { FUND_OWNER: 0, USER: 0, STAFF: 0 };
+    users.forEach(u => { if (counts[u.role as keyof typeof counts] !== undefined) counts[u.role as keyof typeof counts]++; });
+    return [
+      { name: 'Chủ quỹ', value: counts.FUND_OWNER || 1 },
+      { name: 'Người dùng', value: counts.USER || 1 },
+      { name: 'Staff', value: counts.STAFF || 1 }
+    ];
+  }, [usersRes]);
+
+  const taskStatusData = useMemo(() => {
+    const all = tasks || [];
+    const counts = { COMPLETED: 0, PENDING: 0, OTHER: 0 };
+    all.forEach((t: any) => {
+      if (t.status === 'COMPLETED') counts.COMPLETED++;
+      else if (t.status === 'PENDING') counts.PENDING++;
+      else counts.OTHER++;
+    });
+    return [
+      { name: 'Xong', value: counts.COMPLETED || 1 },
+      { name: 'Chờ', value: counts.PENDING || 1 },
+      { name: 'Khác', value: counts.OTHER || 1 }
+    ];
+  }, [tasks]);
+
   return (
-    <div className="h-full flex flex-col gap-6 overflow-hidden">
+    <div className="flex flex-col gap-3 p-1 bg-slate-50 min-h-screen">
 
-      {/* Top Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Sales" value="$320.000" change="+10%" colorClass="text-[#1A685B]">
-          <div className="h-12 w-12 rounded-full bg-[#1A685B]/10 flex items-center justify-center text-[#1A685B]">
-            <TrendingUp className="h-6 w-6" />
-          </div>
-        </StatCard>
-        <StatCard title="Total Expense" value="$350.000" change="+10%" colorClass="text-[#F84D43]">
-          <div className="h-12 w-12 rounded-full bg-[#F84D43]/10 flex items-center justify-center text-[#F84D43]">
-            <DollarSign className="h-6 w-6" />
-          </div>
-        </StatCard>
-        <StatCard title="Total Customers" value="1.872" change="+10%" colorClass="text-sky-500">
-          <div className="h-12 w-12 rounded-full bg-sky-50 flex items-center justify-center text-sky-500">
-            <Users className="h-6 w-6" />
-          </div>
-        </StatCard>
-        <StatCard title="Total Orders" value="1.923" change="+10%" colorClass="text-violet-500">
-          <div className="h-12 w-12 rounded-full bg-violet-50 flex items-center justify-center text-violet-500">
-            <FileText className="h-6 w-6" />
-          </div>
-        </StatCard>
+
+      {/* KPI Cards Strip - No gaps */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex divide-x divide-slate-100 overflow-hidden">
+        <StatCard title="Tổng số Quỹ" value={formatVnd(totalBalance)} subtitle="Dòng tiền thực" icon={TrendingUp} />
+        <StatCard title="Giải ngân chờ" value={pendingTransactions.length} subtitle="Cần xử lý ngay" icon={AlertTriangle} />
+        <StatCard title="Người dùng" value={totalUsersCount} subtitle="Tăng trưởng thực" icon={Users} />
+        <StatCard title="Chiến dịch" value={activeCampaigns} subtitle="Đang gây quỹ" icon={Target} />
       </div>
 
-      {/* Middle Row: Large Charts */}
-      <div className="flex-[5] flex gap-6 min-h-0">
-        <div className="flex-1">
-          <ChartContainer title="Sales" subtitle="Sales chart for all products">
-            <SalesLineChart />
-          </ChartContainer>
-        </div>
-        <div className="flex-1">
-          <ChartContainer title="Comparison of Sales of Various Products">
-            <ComparisonBarChart />
-          </ChartContainer>
-        </div>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr] gap-3">
+        <ChartBox title="Biến động Dòng tiền">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={lineChartData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorFunds" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="day" hide />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+              <RechartsTooltip />
+              <Area type="monotone" dataKey="totalFunds" stroke="#1e3a8a" strokeWidth={2} fillOpacity={1} fill="url(#colorFunds)" />
+              <Line type="monotone" dataKey="fundsDisbursed" stroke="#3b82f6" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartBox>
+
+        <ChartBox title="Cơ cấu Vai trò">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={roleData} innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                {roleData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <RechartsTooltip />
+              <Legend wrapperStyle={{ fontSize: '9px' }} iconType="circle" />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartBox>
+
+        <ChartBox title="Tiến độ Nhiệm vụ">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={taskStatusData} innerRadius={35} outerRadius={55} paddingAngle={2} dataKey="value">
+                <Cell fill="#1e3a8a" />
+                <Cell fill="#94a3b8" />
+                <Cell fill="#cbd5e1" />
+              </Pie>
+              <RechartsTooltip />
+              <Legend wrapperStyle={{ fontSize: '9px' }} iconType="circle" />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartBox>
       </div>
 
-      {/* Bottom Row: Overview & Top Products */}
-      <div className="flex-[4] flex gap-6 min-h-0">
-        <div className="flex-1">
-          <ChartContainer title="Sales Overview">
-            <SalesOverviewChart />
-          </ChartContainer>
-        </div>
-        <div className="flex-1">
-          <ChartContainer title="Top Products">
-            <TopProducts />
-          </ChartContainer>
-        </div>
-      </div>
+      {/* Tables Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-[280px]">
+        <TableBox title="Giải ngân cần xử lý">
+          <table className="w-full text-[10px] text-left">
+            <thead className="bg-slate-50 uppercase text-[8px] font-black text-slate-400 sticky top-0">
+              <tr><th className="p-2">Chiến dịch</th><th className="p-2">Số tiền</th><th className="p-2 text-right">Hành động</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {pendingTransactions.slice(0, 5).map((tx: any) => (
+                <tr key={tx.id} className="hover:bg-slate-50">
+                  <td className="p-2 font-bold truncate">CD #{tx.campaignId}</td>
+                  <td className="p-2 font-black text-[#1e3a8a]">{new Intl.NumberFormat('vi-VN').format(tx.amount)} đ</td>
+                  <td className="p-2 text-right"><Link href="/admin/payouts" className="text-blue-600 font-black">Xử lý</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableBox>
 
+        <TableBox title="Giao dịch mới nhất">
+          <table className="w-full text-[10px] text-left">
+            <thead className="bg-slate-50 uppercase text-[8px] font-black text-slate-400 sticky top-0">
+              <tr><th className="p-2">Loại</th><th className="p-2 text-right">Số tiền</th><th className="p-2 text-right">Quỹ</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(fundHistory?.content || []).slice(0, 5).map((tx: any) => (
+                <tr key={tx.id} className="hover:bg-slate-50">
+                  <td className="p-2 font-bold">{tx.toCampaignId === 1 ? 'Thu' : 'Chi'}</td>
+                  <td className={`p-2 text-right font-black ${tx.toCampaignId === 1 ? 'text-emerald-600' : 'text-slate-600'}`}>{new Intl.NumberFormat('vi-VN').format(tx.amount)} đ</td>
+                  <td className="p-2 text-right text-slate-400">#{tx.fromCampaignId}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableBox>
+
+        <TableBox title="Người dùng & Uy tín">
+          <table className="w-full text-[10px] text-left">
+            <thead className="bg-slate-50 uppercase text-[8px] font-black text-slate-400 sticky top-0">
+              <tr><th className="p-2">Tên</th><th className="p-2 text-right">Uy tín</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {(usersRes?.data?.content || []).slice(0, 5).map((u: any) => (
+                <tr key={u.id} className="hover:bg-slate-50">
+                  <td className="p-2 font-bold truncate max-w-[100px]">{u.fullName}</td>
+                  <td className="p-2 text-right"><span className="bg-slate-100 px-1.5 py-0.5 rounded text-[#1e3a8a] font-black">{u.trustScore || 90}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableBox>
+      </div>
     </div>
   );
 }

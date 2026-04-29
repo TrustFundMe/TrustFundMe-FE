@@ -38,4 +38,9 @@ export const bankAccountService = {
         });
         return res.data.exists;
     },
+    
+    async getByCampaignId(campaignId: number): Promise<BankAccountDto> {
+        const res = await api.get<BankAccountDto>(`${API_ENDPOINTS.BANK_ACCOUNTS.BASE}/campaign/${campaignId}`);
+        return res.data;
+    },
 };

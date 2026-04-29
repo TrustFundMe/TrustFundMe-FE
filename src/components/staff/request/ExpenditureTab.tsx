@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
     Search, ChevronDown, ChevronRight, AlertCircle,
@@ -23,20 +23,20 @@ const fmtDate = (s?: string | null) =>
     s ? new Date(s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : <span className="text-gray-300 font-medium italic text-[10px]">Chưa cập nhật</span>;
 
 const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING:              { label: 'Chờ duyệt',    color: '#d97706', bg: '#fef3c7' },
-    PENDING_REVIEW:       { label: 'Chờ duyệt',    color: '#d97706', bg: '#fef3c7' },
-    APPROVED:             { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
-    CLOSED:               { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
-    WITHDRAWAL_REQUESTED: { label: 'Đã duyệt',     color: '#16a34a', bg: '#dcfce7' },
-    REJECTED:             { label: 'Từ chối',     color: '#dc2626', bg: '#fee2e2' },
-    DISBURSED:            { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
+    PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
+    PENDING_REVIEW: { label: 'Chờ duyệt', color: '#d97706', bg: '#fef3c7' },
+    APPROVED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
+    CLOSED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
+    WITHDRAWAL_REQUESTED: { label: 'Đã duyệt', color: '#16a34a', bg: '#dcfce7' },
+    REJECTED: { label: 'Từ chối', color: '#dc2626', bg: '#fee2e2' },
+    DISBURSED: { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
 };
 
 const EVIDENCE_STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-    PENDING:      { label: 'Chờ bằng chứng',       color: '#d97706', bg: '#fef3c7' },
-    SUBMITTED:    { label: 'Đã nộp — chờ duyệt', color: '#2563eb', bg: '#dbeafe' },
-    VERIFIED:     { label: 'Đã xác nhận',         color: '#16a34a', bg: '#dcfce7' },
-    REJECTED:     { label: 'Bằng chứng sai',       color: '#dc2626', bg: '#fee2e2' },
+    PENDING: { label: 'Chờ bằng chứng', color: '#d97706', bg: '#fef3c7' },
+    SUBMITTED: { label: 'Đã nộp — chờ duyệt', color: '#2563eb', bg: '#dbeafe' },
+    VERIFIED: { label: 'Đã xác nhận', color: '#16a34a', bg: '#dcfce7' },
+    REJECTED: { label: 'Bằng chứng sai', color: '#dc2626', bg: '#fee2e2' },
 };
 
 const CAM_TYPE: Record<string, string> = { AUTHORIZED: 'Quỹ Ủy Quyền', ITEMIZED: 'Quỹ Vật Phẩm', TARGET: 'Quỹ Mục Tiêu' };
@@ -108,7 +108,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
     { exp: Expenditure; index: number; campaignType?: string | null; onModalToggle?: (open: boolean) => void }) {
     const [open, setOpen] = useState(index === 0);
     const [exp, setExp] = useState<Expenditure>(initialExp);
-    const [items, setItems] = useState<ExpenditureItem[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
 
@@ -119,13 +119,13 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
     const { user } = useAuth();
 
     const loadItems = useCallback(() => {
-        if (items.length) return;
+        if (categories.length) return;
         setLoadingItems(true);
-        expenditureService.getItems(exp.id)
-            .then(data => setItems(data))
+        expenditureService.getCategories(exp.id)
+            .then(data => setCategories(data))
             .catch(() => toast.error('Lỗi tải hạng mục'))
             .finally(() => setLoadingItems(false));
-    }, [exp.id, items.length]);
+    }, [exp.id, categories.length]);
 
     useEffect(() => { if (open) loadItems(); }, [open, loadItems]);
 
@@ -216,36 +216,83 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                 <div className="py-4 text-center text-[10px] text-gray-400 animate-pulse">Đang tải...</div>
                             ) : (
                                 <div className="rounded-lg overflow-hidden border border-gray-100 shadow-sm">
-                                    <table className="w-full text-xs bg-white">
+                                    <table className="w-full text-xs bg-white text-left">
                                         <thead className="bg-[#ff5e14] text-white">
-                                            <tr className="text-[9px] font-black uppercase tracking-widest">
-                                                <th className="py-2 px-3 text-left border-r border-white/10 w-[40px]">STT</th>
-                                                <th className="py-2 px-3 text-left border-r border-white/10">Hàng hóa</th>
-                                                <th className="py-2 px-3 text-right border-r border-white/10 w-[110px]">Kế hoạch</th>
+                                            <tr className="text-[9px] font-black uppercase tracking-widest border-b border-[#ff5e14]">
+                                                <th className="py-2 px-3 text-center border-r border-white/20 w-[40px]">STT</th>
+                                                <th className="py-2 px-3 border-r border-white/20 w-[15%]">Danh mục</th>
+                                                <th className="py-2 px-3 border-r border-white/20 w-[15%] bg-orange-500">Tổng DM</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Hàng hóa / Ghi chú</th>
+                                                <th className="py-2 px-3 border-r border-white/20 min-w-[120px]">Nhãn / ĐV / Tại</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/20 w-[110px]">Kế hoạch</th>
                                                 <th className="py-2 px-3 text-right w-[110px]">Thực tế</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
-                                            {items.map((it, idx) => (
-                                                <tr key={it.id} className="hover:bg-gray-50/50 transition-colors">
-                                                    <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 border-r border-gray-50">
-                                                        {String(idx + 1).padStart(2, '0')}
-                                                    </td>
-                                                    <td className="py-2.5 px-3 border-r border-gray-50">
-                                                        <div className="font-bold text-gray-800 leading-tight">{it.category}</div>
-                                                        {it.note && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.note}</div>}
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-right bg-blue-50/10">
-                                                        <div className="font-bold text-blue-700 leading-none">{fmt(it.quantity * it.expectedPrice)}</div>
-                                                        <div className="text-[8px] text-gray-400 mt-1 font-medium">{it.quantity} x {fmt(it.expectedPrice)}</div>
-                                                    </td>
-                                                    <td className="py-2.5 px-3 text-right bg-orange-50/10">
-                                                        <div className="font-bold text-orange-700 leading-none">{fmt((it.actualQuantity || 0) * it.price)}</div>
-                                                        <div className="text-[8px] text-gray-400 mt-1 font-medium">{it.actualQuantity || 0} x {fmt(it.price)}</div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            {items.length === 0 && <tr><td colSpan={4} className="py-4 text-center text-[10px] text-gray-300 italic">Không có dữ liệu</td></tr>}
+                                            {categories.length > 0 ? categories.map((cat, cIdx) => {
+                                                const rowSpan = cat.items && cat.items.length > 0 ? cat.items.length : 1;
+                                                return (
+                                                    <React.Fragment key={cat.id || cIdx}>
+                                                        {!cat.items || cat.items.length === 0 ? (
+                                                            <tr className="hover:bg-gray-50/50 transition-colors">
+                                                                <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-50">-</td>
+                                                                <td className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/10 align-top">
+                                                                    <div className="text-[11px] font-black text-gray-800 uppercase leading-snug">{cat.name}</div>
+                                                                </td>
+                                                                <td className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/20 align-top">
+                                                                    <div className="text-[9px] font-bold text-[#ff5e14] flex flex-col gap-0.5">
+                                                                        <span>KH: {fmt(cat.expectedAmount || 0)}</span>
+                                                                        <span>TT: {fmt(cat.actualAmount || 0)}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td colSpan={4} className="py-2.5 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
+                                                            </tr>
+                                                        ) : (
+                                                            cat.items.map((it: any, idx: number) => {
+                                                                const expectedQty = it.expectedQuantity ?? it.quantity;
+                                                                return (
+                                                                    <tr key={it.id} className="hover:bg-gray-50/50 transition-colors">
+                                                                        <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-50">
+                                                                            {String(idx + 1).padStart(2, '0')}
+                                                                        </td>
+                                                                        {idx === 0 && (
+                                                                            <td rowSpan={rowSpan} className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/10 align-top max-w-[150px]">
+                                                                                <div className="text-[11px] font-black text-gray-800 uppercase leading-snug break-words">{cat.name}</div>
+                                                                            </td>
+                                                                        )}
+                                                                        {idx === 0 && (
+                                                                            <td rowSpan={rowSpan} className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/20 align-top max-w-[150px]">
+                                                                                <div className="text-[9px] font-bold text-[#ff5e14] mt-0.5 flex flex-col gap-1 bg-white p-1.5 rounded border border-orange-100 shadow-sm">
+                                                                                    <span className="flex justify-between items-center"><span className="opacity-70">KH:</span> <span className="text-[10px] font-black text-blue-700">{fmt(cat.expectedAmount || 0)}</span></span>
+                                                                                    <span className="flex justify-between items-center"><span className="opacity-70">TT:</span> <span className="text-[10px] font-black text-orange-700">{fmt(cat.actualAmount || 0)}</span></span>
+                                                                                </div>
+                                                                            </td>
+                                                                        )}
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            <div className="font-bold text-gray-800 uppercase leading-tight">{it.category}</div>
+                                                                            {it.note && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.note}</div>}
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            <div className="text-[10px] font-bold text-gray-700">{it.brand || '-'} <span className="font-normal text-gray-400">/</span> {it.unit || '-'}</div>
+                                                                            <div className="text-[9px] text-gray-500 mt-0.5">{it.purchaseLocation || '-'}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 text-right bg-blue-50/10 border-r border-gray-50">
+                                                                            <div className="font-bold text-blue-700 leading-none">{fmt(expectedQty * it.expectedPrice)}</div>
+                                                                            <div className="text-[8px] text-gray-400 mt-1 font-medium">{expectedQty} x {fmt(it.expectedPrice)}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 text-right bg-orange-50/10">
+                                                                            <div className="font-bold text-orange-700 leading-none">{fmt((it.actualQuantity || 0) * (it.actualPrice ?? it.price))}</div>
+                                                                            <div className="text-[8px] text-gray-400 mt-1 font-medium">{it.actualQuantity || 0} x {fmt(it.actualPrice ?? it.price)}</div>
+                                                                        </td>
+                                                                    </tr>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            }) : (
+                                                <tr><td colSpan={7} className="py-8 text-center text-[10px] text-gray-300 italic font-bold uppercase tracking-widest">Không có dữ liệu</td></tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -265,23 +312,7 @@ function CampaignDetail({ campaign, onModalToggle }: { campaign: CampaignDto; on
     const [ownerName, setOwnerName] = useState<string>(`Owner #${campaign.fundOwnerId}`);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const fetchExpenditures = async () => {
-        setLoading(true);
-        try {
-            const resp = await campaignService.getAllExpenditures(currentPage, pageSize);
-            setExpenditures((resp.content || []).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-            setTotalPages(resp.totalPages || 0);
-        } catch (error) {
-            console.error('Failed to fetch expenditures:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchExpenditures();
-    }, [currentPage]);
+    const [totalPages, setTotalPages] = useState(1);
 
     useEffect(() => {
         setLoading(true);
@@ -485,7 +516,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
         let list = campaigns;
         if (statusFilter === 'PENDING') list = list.filter(c => (c as any).needsAttention);
         else if (statusFilter === 'APPROVED') list = list.filter(c => !(c as any).needsAttention);
-        
+
         if (search.trim()) list = list.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
         setFiltered(list);
     }, [search, statusFilter, campaigns]);
