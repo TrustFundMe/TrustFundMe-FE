@@ -6,9 +6,13 @@ import { aiService } from '@/services/aiService';
 import { expenditureService } from '@/services/expenditureService';
 import { useToast } from '@/components/ui/Toast';
 
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+
 interface ExpenditureItem {
     id: string;
     name: string;
+    expectedPurchaseLink?: string;
+    actualPurchaseLink?: string;
     unit: string;
     quantity: number;
     price: number;
@@ -32,8 +36,8 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     // ── Excel Import / Export ───────────────────────────────────────────────
     const handleDownloadTemplate = () => {
         import('xlsx').then((XLSX) => {
-            const headers = [['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Ghi chú']];
-            const example = [[1, 'Ví dụ: Mì tôm', 'thùng', 10, 50000, 'Chi tiêu đợt 1']];
+            const headers = [['STT', 'Tên vật phẩm', 'Link mua dự kiến', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Ghi chú']];
+            const example = [[1, 'Ví dụ: Mì tôm', 'https://maps.app.goo.gl/xxx', 'thùng', 10, 50000, 'Chi tiêu đợt 1']];
             const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
             ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 25 }];
             const wb = XLSX.utils.book_new();
@@ -47,6 +51,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             const rows = items.map((item, idx) => [
                 idx + 1,
                 item.name,
+                item.expectedPurchaseLink || '',
                 item.unit,
                 item.quantity,
                 item.price,
@@ -54,7 +59,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 item.note,
             ]);
             const ws = XLSX.utils.aoa_to_sheet([
-                ['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Thành tiền (VNĐ)', 'Ghi chú'],
+                ['STT', 'Tên vật phẩm', 'Link mua dự kiến', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Thành tiền (VNĐ)', 'Ghi chú'],
                 ...rows,
             ]);
             ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 25 }];
@@ -82,7 +87,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             result.data.forEach((item, idx) => {
                 const row = idx + 1;
                 const errs: string[] = [];
-                if (!item.category || item.category.trim() === '') {
+                if (!item.name || item.name.trim() === '') {
                     errs.push(`Dòng ${row}: Thiếu tên vật phẩm`);
                 }
                 const qty = Number(item.quantity);
@@ -101,11 +106,14 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 } else if (price < 0) {
                     errs.push(`Dòng ${row}: Đơn giá không được nhỏ hơn 0`);
                 }
-                if (item.category && item.category.trim().length > 50) {
+                if (item.name && item.name.trim().length > 50) {
                     errs.push(`Dòng ${row}: Tên vật phẩm không được vượt quá 50 ký tự`);
                 }
                 if (item.note && item.note.trim().length > 100) {
                     errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
+                }
+                if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) {
+                    errs.push(`Dòng ${row}: Link mua hàng không đúng định dạng`);
                 }
                 errors.push(...errs);
             });
@@ -117,7 +125,8 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
 
             const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
-                name: item.category || '',
+                name: item.name || '',
+                expectedPurchaseLink: item.expectedPurchaseLink || item.purchaseLink || '',
                 unit: item.unit || '',
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.expectedPrice) || 0,
@@ -147,6 +156,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
         const newItem: ExpenditureItem = {
             id: Math.random().toString(36).substr(2, 9),
             name: '',
+            expectedPurchaseLink: '',
             unit: '',
             quantity: 1,
             price: 0,
@@ -287,13 +297,14 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                     </div>
                 </div>
 
-                <div className="px-4 overflow-y-auto custom-scrollbar shrink-0" style={{maxHeight: '200px'}}>
+                <div className="px-4 overflow-y-auto custom-scrollbar shrink-0" style={{ maxHeight: '200px' }}>
                     <table className="w-full">
                         <thead>
                             <tr className="text-[9px] font-black text-black/20 uppercase tracking-widest border-b border-gray-50">
                                 <th className="px-2 py-2 text-left font-black w-8">#</th>
-                                <th className="px-2 py-2 text-left font-black">Vật phẩm</th>
-                                <th className="px-2 py-2 text-left font-black w-20">Ghi chú</th>
+                                <th className="px-2 py-2 text-left font-black w-32">Vật phẩm</th>
+                                <th className="px-2 py-2 text-left font-black">Link địa chỉ</th>
+                                <th className="px-2 py-2 text-left font-black w-24">Ghi chú</th>
                                 <th className="px-1 py-2 text-center font-black w-14">SL</th>
                                 <th className="px-1 py-2 text-right font-black w-20">Đơn giá</th>
                                 <th className="px-2 py-2 text-right font-black w-24">Thành tiền</th>
@@ -312,6 +323,16 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                                 value={item.name}
                                                 onChange={(e) => updateItem(item.id, 'name', e.target.value)}
                                                 className="w-full bg-transparent border-none p-0 text-xs font-black text-black placeholder:text-black/5 focus:ring-0"
+                                                placeholder="Tên..."
+                                            />
+                                        </td>
+                                        <td className="px-2 py-2">
+                                            <input
+                                                type="text"
+                                                value={item.expectedPurchaseLink || ''}
+                                                onChange={(e) => updateItem(item.id, 'expectedPurchaseLink', e.target.value)}
+                                                className={`w-full bg-gray-50/50 rounded px-1.5 py-1 text-[10px] font-bold border-none focus:ring-1 focus:ring-[#dc2626]/20 ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'text-rose-500 bg-rose-50' : 'text-blue-500'}`}
+                                                placeholder="https://..."
                                             />
                                         </td>
                                         <td className="px-2 py-2">

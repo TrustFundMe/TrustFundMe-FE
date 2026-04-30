@@ -264,7 +264,7 @@ export default function AIAnalysisModal({
                                     <tbody className="divide-y divide-slate-100">
                                         {detected.map((item, idx) => {
                                             const sysItem = items.find(i => {
-                                                const s1 = (i.category || '').toLowerCase().trim();
+                                                const s1 = (i.name || '').toLowerCase().trim();
                                                 const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
                                                 return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                             });
@@ -342,7 +342,7 @@ export default function AIAnalysisModal({
                                         {(() => {
                                             const totalSys = detected.reduce((acc, item) => {
                                                 const sysItem = items.find(i => {
-                                                    const s1 = (i.category || '').toLowerCase().trim();
+                                                    const s1 = (i.name || '').toLowerCase().trim();
                                                     const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
                                                     return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                                 });

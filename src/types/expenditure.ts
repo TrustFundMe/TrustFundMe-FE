@@ -20,7 +20,9 @@ export interface ExpenditureTransaction {
 export interface ExpenditureItem {
     id: number;
     expenditureId: number;
-    category: string;
+    name: string;
+    expectedPurchaseLink?: string;
+    actualPurchaseLink?: string;
     quantity: number;
     expectedQuantity?: number;
     quantityLeft?: number;
@@ -66,7 +68,8 @@ export interface Expenditure {
 }
 
 export interface CreateExpenditureItemRequest {
-    category: string;
+    name: string;
+    expectedPurchaseLink?: string;
     quantity: number;
     price: number;
     expectedPrice: number;

@@ -7,6 +7,8 @@ import { useToast } from '@/components/ui/Toast';
 import { expenditureService } from '@/services/expenditureService';
 import StepFooter from '../parts/StepFooter';
 
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+
 interface Props {
   state: NewCampaignTestState;
   milestoneTotal: number;
@@ -112,6 +114,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
               unit: item.unit || '',
               brand: item.brand || '',
               purchaseLocation: item.purchaseLocation || '',
+              expectedPurchaseLink: item.expectedPurchaseLink || item.purchaseLink || '',
               note: item.note || ''
             }))
           }))
@@ -155,31 +158,32 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       milestones: state.milestones.map((m) =>
         m.id === milestoneId
           ? {
-              ...m,
-              categories: [
-                ...(m.categories || []),
-                {
-                  id: catId,
-                  name: '',
-                  description: '',
-                  balance: 0,
-                  items: [
-                    {
-                      id: `ci-${Math.random().toString(36).slice(2, 9)}`,
-                      name: '',
-                      expectedQuantity: 0,
-                      actualQuantity: 0,
-                      expectedPrice: 0,
-                      actualPrice: 0,
-                      unit: '',
-                      brand: '',
-                      purchaseLocation: '',
-                      note: '',
-                    },
-                  ],
-                },
-              ],
-            }
+            ...m,
+            categories: [
+              ...(m.categories || []),
+              {
+                id: catId,
+                name: '',
+                description: '',
+                balance: 0,
+                items: [
+                  {
+                    id: `ci-${Math.random().toString(36).slice(2, 9)}`,
+                    name: '',
+                    expectedQuantity: 0,
+                    actualQuantity: 0,
+                    expectedPrice: 0,
+                    actualPrice: 0,
+                    unit: '',
+                    brand: '',
+                    purchaseLocation: '',
+                    expectedPurchaseLink: '',
+                    note: '',
+                  },
+                ],
+              },
+            ],
+          }
           : m
       ),
     });
@@ -191,30 +195,31 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       milestones: state.milestones.map((m) =>
         m.id === milestoneId
           ? {
-              ...m,
-              categories: (m.categories || []).map((c) =>
-                c.id === catId
-                  ? {
-                      ...c,
-                      items: [
-                        ...c.items,
-                        {
-                          id: itemId,
-                          name: '',
-                          expectedQuantity: 1,
-                          actualQuantity: 0,
-                          expectedPrice: 0,
-                          actualPrice: 0,
-                          unit: '',
-                          brand: '',
-                          purchaseLocation: '',
-                          note: '',
-                        },
-                      ],
-                    }
-                  : c
-              ),
-            }
+            ...m,
+            categories: (m.categories || []).map((c) =>
+              c.id === catId
+                ? {
+                  ...c,
+                  items: [
+                    ...c.items,
+                    {
+                      id: itemId,
+                      name: '',
+                      expectedQuantity: 1,
+                      actualQuantity: 0,
+                      expectedPrice: 0,
+                      actualPrice: 0,
+                      unit: '',
+                      brand: '',
+                      purchaseLocation: '',
+                      expectedPurchaseLink: '',
+                      note: '',
+                    },
+                  ],
+                }
+                : c
+            ),
+          }
           : m
       ),
     });
@@ -225,11 +230,11 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       milestones: state.milestones.map((m) =>
         m.id === milestoneId
           ? {
-              ...m,
-              categories: (m.categories || []).map((c) =>
-                c.id === catId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c
-              ),
-            }
+            ...m,
+            categories: (m.categories || []).map((c) =>
+              c.id === catId ? { ...c, items: c.items.filter((i) => i.id !== itemId) } : c
+            ),
+          }
           : m
       ),
     });
@@ -260,13 +265,13 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       milestones: state.milestones.map((m) =>
         m.id === milestoneId
           ? {
-              ...m,
-              categories: (m.categories || []).map((c) =>
-                c.id === catId
-                  ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, [field]: value } : i)) }
-                  : c
-              ),
-            }
+            ...m,
+            categories: (m.categories || []).map((c) =>
+              c.id === catId
+                ? { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, [field]: value } : i)) }
+                : c
+            ),
+          }
           : m
       ),
     });
@@ -376,7 +381,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
               className="relative overflow-visible rounded-xl border border-gray-200 bg-white"
             >
               <span className="absolute -left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-xs font-black text-brand shadow-sm">
-                    {idx + 1}
+                {idx + 1}
               </span>
               <div className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
@@ -397,11 +402,10 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                       </div>
                     </div>
                     <input
-                      className={`${inCls} w-full font-semibold ${
-                        showErrors && !m.title.trim()
+                      className={`${inCls} w-full font-semibold ${showErrors && !m.title.trim()
                           ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100'
                           : ''
-                      }`}
+                        }`}
                       value={m.title}
                       placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
                       spellCheck={false}
@@ -539,6 +543,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                   <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-28">Đơn giá dự kiến</th>
                                   <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Nhãn hàng</th>
                                   <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Địa điểm mua</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-48">Link mua hàng</th>
                                   <th className="px-3 py-2 text-left font-bold border-b border-gray-200">Ghi chú</th>
                                   <th className="px-3 py-2 text-center font-bold border-b border-gray-200 w-10"></th>
                                 </tr>
@@ -597,6 +602,14 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                           placeholder="Chợ, siêu thị..."
                                           value={item.purchaseLocation}
                                           onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'purchaseLocation', e.target.value)}
+                                        />
+                                      </td>
+                                      <td className="px-2 py-1.5">
+                                        <input
+                                          className={`w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'bg-red-50 text-red-600 font-bold' : 'text-blue-600 font-medium'}`}
+                                          placeholder="https://..."
+                                          value={item.expectedPurchaseLink || ''}
+                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'expectedPurchaseLink', e.target.value)}
                                         />
                                       </td>
                                       <td className="px-2 py-1.5">
