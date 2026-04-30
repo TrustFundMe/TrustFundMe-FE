@@ -18,7 +18,6 @@ type DonationItemLayoutProps = {
     visibleItems: ExpenditureItem[];
     page: number;
     itemsPerPage: number;
-    tipPercent: number;
     paymentMethod: PaymentMethod;
     isAnonymous: boolean;
     isAgreed: boolean;
@@ -31,7 +30,6 @@ type DonationItemLayoutProps = {
     onQuantityChange: (itemId: string, diff: number) => void;
     onItemDeselect: (itemId: string) => void;
     onPageChange: (page: number) => void;
-    onTipChange: (percent: number) => void;
     onPaymentMethodChange: (method: PaymentMethod) => void;
     onAnonymousChange: (checked: boolean) => void;
     onAgreedChange: (checked: boolean) => void;
@@ -51,7 +49,6 @@ export default function DonationItemLayout({
     visibleItems,
     page,
     itemsPerPage,
-    tipPercent,
     paymentMethod,
     isAnonymous,
     isAgreed,
@@ -64,7 +61,6 @@ export default function DonationItemLayout({
     onQuantityChange,
     onItemDeselect,
     onPageChange,
-    onTipChange,
     onPaymentMethodChange,
     onAnonymousChange,
     onAgreedChange,
@@ -73,8 +69,7 @@ export default function DonationItemLayout({
     isGuest = false
 }: DonationItemLayoutProps) {
     const router = useRouter();
-    const tipAmount = Math.round((amount * tipPercent) / 100);
-    const totalAmount = amount + tipAmount;
+    const totalAmount = amount;
 
     if (donationBlocked) {
         return (
@@ -141,14 +136,8 @@ export default function DonationItemLayout({
             <div className="flex-[0.35] bg-gray-50/50 p-6 flex flex-col min-w-[320px] border-l border-gray-100">
                 <PaymentSummary
                     amount={amount}
-                    tipPercent={tipPercent}
-                    onTipChange={onTipChange}
                 />
 
-                <PaymentMethods
-                    selected={paymentMethod}
-                    onChange={onPaymentMethodChange}
-                />
 
                 {/* Checkboxes */}
                 <div className="mb-6 space-y-3">
@@ -179,7 +168,7 @@ export default function DonationItemLayout({
                     onClick={onSubmit}
                     className="w-full bg-brand text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-brand-hover transition-all active:scale-[0.98] shadow-xl shadow-brand/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Thanh toán ngay
+                    {submitting ? 'Đang xử lý...' : 'Quyên góp'}
                 </button>
             </div>
         </div>

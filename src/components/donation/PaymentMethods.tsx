@@ -8,7 +8,7 @@ type PaymentMethodsProps = {
 };
 
 const paymentOptions = [
-    { id: 'payos' as PaymentMethod, label: 'PayOS', icon: QrCode },
+    { id: 'payos' as PaymentMethod, label: 'Quét mã VietQR', icon: QrCode },
     { id: 'paypal' as PaymentMethod, label: 'PayPal', icon: Wallet },
 ];
 

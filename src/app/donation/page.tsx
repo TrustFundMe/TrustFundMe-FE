@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ExpenditureItem, PaymentMethod } from '@/components/donation/types';
 import { generateSuggestions, SuggestionOption } from '@/utils/dpSuggestion';
-import SuccessScreen from '@/components/donation/SuccessScreen';
 import TermsModal from '@/components/donation/TermsModal';
 import SuggestionModal from '@/components/donation/SuggestionModal';
 import DonationGeneralLayout from '@/components/donation/DonationGeneralLayout';
@@ -12,10 +11,14 @@ import DonationItemLayout from '@/components/donation/DonationItemLayout';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { CampaignDto } from '@/types/campaign';
+import VietQRModal from '@/components/donation/VietQRModal';
 import { paymentService, CreatePaymentRequest } from '@/services/paymentService';
 import { authService } from '@/services/authService';
 import { aiService } from '@/services/aiService';
 import { useToast } from '@/components/ui/Toast';
+import { 
+  Loader2
+} from 'lucide-react';
 import Script from 'next/script';
 
 // Mock data for donors
@@ -27,6 +30,7 @@ const mockRecentDonors = [
 
 function DonationContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { toast } = useToast();
   const prefillAmount = searchParams.get('amount');
   const isGeneralMode = searchParams.get('fundType') === 'general';
@@ -39,12 +43,10 @@ function DonationContent() {
   const [items, setItems] = useState<Record<string, number>>({});
   const [uiQuantities, setUiQuantities] = useState<Record<string, number>>({});
   const [isManualMode, setIsManualMode] = useState(false);
-  const [tipPercent, setTipPercent] = useState(10);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('payos');
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 4;
 
-  const [isSuccess, setIsSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
@@ -56,6 +58,10 @@ function DonationContent() {
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
   const [donationBlocked, setDonationBlocked] = useState(false);
   const [blockedMessage, setBlockedMessage] = useState('');
+  const [showQR, setShowQR] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
+  const [currentDonationId, setCurrentDonationId] = useState<number | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     const n = Number(prefillAmount);
@@ -122,9 +128,34 @@ function DonationContent() {
     }
   }, [campaignId]);
 
+  // Polling for payment status
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (showQR && currentDonationId) {
+      pollInterval = setInterval(async () => {
+        try {
+          const donation = await paymentService.getDonation(currentDonationId);
+          if (donation.status === 'PAID') {
+            console.log("💰 Donation confirmed PAID. Redirecting...");
+            clearInterval(pollInterval);
+            setRedirecting(true);
+            setShowQR(false);
+            router.push(`/thankyou-new?donationId=${currentDonationId}`);
+          }
+        } catch (error) {
+          console.error("Polling error:", error);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [showQR, currentDonationId]);
+
   // Derived Values
-  const tipAmount = Math.round((amount * tipPercent) / 100);
-  const totalAmount = amount + tipAmount;
+  const totalAmount = amount;
 
   // Tạo gợi ý khi có amount + items
   const generateForAmount = (val: number) => {
@@ -303,7 +334,7 @@ function DonationContent() {
         donorId: currentDonorId,
         campaignId: campaign.id,
         donationAmount: amount,
-        tipAmount: tipAmount,
+        tipAmount: 0,
         description: description,
         isAnonymous: isAnonymous,
         items: itemsPayload
@@ -341,70 +372,13 @@ function DonationContent() {
       const response = await paymentService.createPayment(request);
 
       if (response.paymentUrl) {
-        // Open PayOS checkout in iframe using SDK
-        if ((window as any).payOS) {
-          const config = {
-            onSuccess: async (data: any) => {
-              console.log("✅ [PayOS] Payment success:", data);
-              // Verify payment status first - only sync quantity if actually PAID
-              if (response.donationId) {
-                try {
-                  await paymentService.verifyPayment(response.donationId);
-                } catch { }
-
-                // Sync quantity in background (non-blocking)
-                paymentService.syncQuantity(response.donationId).catch(() => { });
-              }
-
-              // Refresh quantityLeft from backend after successful payment
-              if (campaignId) {
-                try {
-                  const itemsData = await expenditureService.getItemsByCampaignId(campaignId);
-                  const mappedItems: ExpenditureItem[] = itemsData
-                    .map(item => ({
-                      id: item.id.toString(),
-                      name: item.category,
-                      description: item.note || '',
-                      price: item.expectedPrice,
-                      quantityLeft: item.quantityLeft ?? 0
-                    }))
-                    .filter(item => item.quantityLeft > 0);
-
-                  setExpenditureItems(mappedItems);
-
-                  // Adjust selected item quantities if they exceed new quantityLeft
-                  setItems(prevItems => {
-                    const newItems: Record<string, number> = {};
-                    Object.entries(prevItems).forEach(([id, qty]) => {
-                      const updated = mappedItems.find(i => i.id === id);
-                      if (updated) {
-                        newItems[id] = Math.min(qty, updated.quantityLeft);
-                      }
-                    });
-                    return newItems;
-                  });
-                } catch (e) {
-                  console.warn("⚠️ [Donation] Could not refresh item quantities:", e);
-                }
-              }
-
-              setFinalData(data);
-              setIsSuccess(true);
-            },
-            onCancel: (data: any) => {
-              console.warn("❌ [PayOS] Payment cancelled:", data);
-            },
-            onExit: (data: any) => {
-              console.log("🚪 [PayOS] Checkout closed:", data);
-            }
-          };
-          (window as any).payOS.open(response.paymentUrl, config);
-        } else {
-          // Fallback if script not loaded
-          window.location.href = response.paymentUrl;
+        setQrUrl(response.paymentUrl);
+        if (response.donationId) {
+          setCurrentDonationId(response.donationId);
         }
+        setShowQR(true);
       } else {
-        // Fallback to internal success page if no URL (shouldn't happen with PayOS)
+        // Fallback to internal success page if no URL
         window.location.href = `/donation/success?id=${campaignId}&amount=${totalAmount}`;
       }
     } catch (error) {
@@ -419,15 +393,30 @@ function DonationContent() {
     ? expenditureItems
     : (amount > 0 ? expenditureItems.filter(i => i.price <= amount) : expenditureItems);
 
-  if (isSuccess) {
-    return <SuccessScreen totalAmount={finalData?.amount || totalAmount} onReset={() => window.location.reload()} />;
-  }
-
   return (
-    <div className="h-screen bg-[#FDFDFD] flex items-center justify-center p-4 font-sans text-gray-900" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-      <Script
-        src="https://js.payos.vn/v2/payos.js"
-        strategy="lazyOnload"
+    <div className="min-h-screen bg-white relative flex items-center justify-center p-4 font-sans text-gray-900 overflow-hidden" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+      {/* Premium Background Elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/5 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+      
+      <div className="relative z-10 w-full flex items-center justify-center">
+      <VietQRModal 
+        isOpen={showQR}
+        onClose={() => setShowQR(false)}
+        qrUrl={qrUrl}
+        donationId={currentDonationId}
+        amount={amount}
+        onConfirm={async () => {
+          if (currentDonationId) {
+             try {
+               await paymentService.verifyPayment(currentDonationId);
+               paymentService.syncQuantity(currentDonationId).catch(() => {});
+             } catch {}
+          }
+          setRedirecting(true);
+          setShowQR(false);
+          router.push(`/thankyou-new?donationId=${currentDonationId}`);
+        }}
       />
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
       {showSuggestionsModal && suggestions.length > 0 && (
@@ -439,20 +428,26 @@ function DonationContent() {
           loading={loadingLabels}
         />
       )}
+      
+      {redirecting && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center">
+            <Loader2 className="w-12 h-12 text-brand animate-spin mb-4" />
+            <p className="text-lg font-bold text-gray-900">Đang chuẩn bị trang cảm ơn...</p>
+            <p className="text-sm text-gray-500">Cảm ơn tấm lòng hảo tâm của bạn!</p>
+        </div>
+      )}
 
       {isGeneralMode ? (
         <DonationGeneralLayout
           campaign={campaign}
           amount={amount}
           isManualMode={isManualMode}
-          tipPercent={tipPercent}
           paymentMethod={paymentMethod}
           isAnonymous={isAnonymous}
           isAgreed={isAgreed}
           submitting={submitting}
           onPresetClick={handlePresetClick}
           onAmountChange={handleAmountInput}
-          onTipChange={setTipPercent}
           onPaymentMethodChange={setPaymentMethod}
           onAnonymousChange={setIsAnonymous}
           onAgreedChange={setIsAgreed}
@@ -472,7 +467,6 @@ function DonationContent() {
           visibleItems={visibleItems}
           page={page}
           itemsPerPage={ITEMS_PER_PAGE}
-          tipPercent={tipPercent}
           paymentMethod={paymentMethod}
           isAnonymous={isAnonymous}
           isAgreed={isAgreed}
@@ -484,7 +478,6 @@ function DonationContent() {
           onQuantityChange={handleItemChange}
           onItemDeselect={handleItemDeselect}
           onPageChange={setPage}
-          onTipChange={setTipPercent}
           onPaymentMethodChange={setPaymentMethod}
           onAnonymousChange={setIsAnonymous}
           onAgreedChange={setIsAgreed}
@@ -500,21 +493,8 @@ function DonationContent() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.05); border-radius: 99px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.1); }
         
-        #payos-checkout-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          z-index: 9999;
-          display: none;
-        }
-        #payos-checkout-container:not(:empty) {
-          display: block;
-          background: rgba(0, 0, 0, 0.5);
-        }
       `}</style>
-      <div id="payos-checkout-container"></div>
+      </div>
     </div>
   );
 }

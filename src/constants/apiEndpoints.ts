@@ -122,6 +122,7 @@ export const API_ENDPOINTS = {
     STATUS_PAGINATED: (status: string) => `/api/payments/status/${status}/paginated`,
     MY_DONATIONS: "/api/payments/my-donations",
     USER_DONATION_COUNT: (userId: number | string) => `/api/payments/user/${userId}/donation-count`,
+    CASSO_TRANSACTIONS_BY_CAMPAIGN: (campaignId: number | string) => `/api/payments/casso/transactions/campaign/${campaignId}`,
   },
   TASKS: {
     BASE: "/api/admin/tasks",

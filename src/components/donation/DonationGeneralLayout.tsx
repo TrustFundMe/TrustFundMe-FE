@@ -10,14 +10,12 @@ type DonationGeneralLayoutProps = {
     campaign: CampaignDto | null;
     amount: number;
     isManualMode: boolean;
-    tipPercent: number;
     paymentMethod: PaymentMethod;
     isAnonymous: boolean;
     isAgreed: boolean;
     submitting: boolean;
     onPresetClick: (amount: number) => void;
     onAmountChange: (amount: number) => void;
-    onTipChange: (percent: number) => void;
     onPaymentMethodChange: (method: PaymentMethod) => void;
     onAnonymousChange: (checked: boolean) => void;
     onAgreedChange: (checked: boolean) => void;
@@ -30,14 +28,12 @@ export default function DonationGeneralLayout({
     campaign,
     amount,
     isManualMode,
-    tipPercent,
     paymentMethod,
     isAnonymous,
     isAgreed,
     submitting,
     onPresetClick,
     onAmountChange,
-    onTipChange,
     onPaymentMethodChange,
     onAnonymousChange,
     onAgreedChange,
@@ -46,8 +42,7 @@ export default function DonationGeneralLayout({
     isGuest = false
 }: DonationGeneralLayoutProps) {
     const router = useRouter();
-    const tipAmount = Math.round((amount * tipPercent) / 100);
-    const totalAmount = amount + tipAmount;
+    const totalAmount = amount;
 
     return (
         <div className="w-full max-w-[540px] bg-white rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-gray-100 flex flex-col overflow-hidden">
@@ -87,16 +82,9 @@ export default function DonationGeneralLayout({
             <div className="bg-gray-50/50 p-6 pt-3 flex flex-col gap-3 border-t border-gray-50">
                 <PaymentSummary
                     amount={amount}
-                    tipPercent={tipPercent}
-                    onTipChange={onTipChange}
                     compact={true}
                 />
 
-                <PaymentMethods
-                    selected={paymentMethod}
-                    onChange={onPaymentMethodChange}
-                    compact={true}
-                />
 
                 {/* Extra Options */}
                 <div className="space-y-3">
@@ -127,7 +115,7 @@ export default function DonationGeneralLayout({
                     onClick={onSubmit}
                     className="w-full bg-brand text-white py-3 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-brand-hover transition-all active:scale-[0.98] shadow-lg shadow-brand/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                    {submitting ? 'Đang xử lý...' : 'Thanh toán ngay'}
+                    {submitting ? 'Đang xử lý...' : 'Quyên góp'}
                 </button>
             </div>
         </div>

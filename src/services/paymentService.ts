@@ -195,6 +195,10 @@ export const paymentService = {
             throw err;
         }
     },
+    async getCassoTransactionsByCampaign(campaignId: number | string): Promise<CassoTransaction[]> {
+        const res = await api.get<CassoTransaction[]>(API_ENDPOINTS.PAYMENTS.CASSO_TRANSACTIONS_BY_CAMPAIGN(campaignId));
+        return res.data;
+    },
     async getUserDonationCount(userId: number | string): Promise<number> {
         console.log(`🔍 [Payment] Fetching donation count for User ID: ${userId}`);
         try {
@@ -206,6 +210,24 @@ export const paymentService = {
         }
     }
 };
+
+export interface CassoTransaction {
+    id: number;
+    tid: string;
+    accountNumber: string;
+    bankName: string;
+    bankAbbreviation: string;
+    campaignId: number;
+    amount: number;
+    description: string;
+    transactionDate: string;
+    counterAccountName: string;
+    counterAccountNumber: string;
+    counterAccountBankName: string;
+    counterAccountBankId: string;
+    donorName?: string;
+    createdAt: string;
+}
 
 export interface DonationItemSummary {
     expenditureItemId: number;
