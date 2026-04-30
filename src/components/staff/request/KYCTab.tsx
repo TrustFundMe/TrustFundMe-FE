@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info, ZoomIn } from 'lucide-react';
+import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info, ZoomIn, ScrollText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { kycService } from '@/services/kycService';
 import { KycResponse } from '@/types/kyc';
@@ -51,6 +51,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const pageSize = 20; // Increased to compensate for filtered staff/admin users
 
   useEffect(() => {
@@ -112,6 +113,29 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
     setShowKycForm(false);
     toast.success('Gửi KYC thành công!');
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handleUpdateStatus = async (status: 'APPROVED' | 'REJECTED') => {
+    if (!selectedUser || !selectedUser.kycId) return;
+
+    let reason = '';
+    if (status === 'REJECTED') {
+      reason = window.prompt('Vui lòng nhập lý do từ chối:', 'Thông tin không khớp hoặc ảnh mờ') || '';
+      if (!reason) return;
+    }
+
+    setUpdatingStatus(true);
+    try {
+      await kycService.updateStatus(selectedUser.kycId, status, reason);
+      toast.success(status === 'APPROVED' ? 'Đã duyệt hồ sơ' : 'Đã từ chối hồ sơ');
+      setRefreshKey(prev => prev + 1);
+      // Update local state to reflect change immediately
+      setSelectedUser(prev => prev ? { ...prev, kycStatus: status } : null);
+    } catch (error: any) {
+      toast.error('Lỗi khi cập nhật trạng thái');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -328,13 +352,50 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
               {selectedUser ? (
                 <div className="space-y-6">
                 <KYCInputForm
+                    key={selectedUser.id}
                     userId={selectedUser.id}
                     userName={selectedUser.fullName}
                     onSuccess={handleKycSuccess}
                     onCancel={() => setShowKycForm(false)}
-                    readOnly={selectedUser.kycStatus === 'APPROVED'}
+                    readOnly={true}
+                    isStaff={true}
                     onImageClick={setLightboxImage}
                   />
+
+                   {selectedUser.cvUrl && (
+                     <div className="mt-4 pt-4 border-t border-gray-100">
+                       <a 
+                          href={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedUser.cvUrl)}&embedded=true`}
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+                        >
+                         <ScrollText className="h-4 w-4" />
+                         Xem hồ sơ năng lực (CV) trực tuyến
+                       </a>
+                     </div>
+                   )}
+
+                   {selectedUser.kycStatus === 'PENDING' && (
+                     <div className="grid grid-cols-2 gap-3 mt-6">
+                        <button 
+                          onClick={() => handleUpdateStatus('REJECTED')}
+                          disabled={updatingStatus}
+                          className="py-3.5 bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          Từ chối
+                        </button>
+                        <button 
+                          onClick={() => handleUpdateStatus('APPROVED')}
+                          disabled={updatingStatus}
+                          className="py-3.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-xl shadow-gray-200 disabled:opacity-50"
+                        >
+                          {updatingStatus ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                          Duyệt hồ sơ
+                        </button>
+                     </div>
+                   )}
                   {selectedUser.kycStatus === 'REJECTED' && (
                     <div className="mt-4 p-4 rounded-xl bg-orange-50 border border-orange-100">
                       <div className="flex items-center gap-2 text-orange-700 mb-1">

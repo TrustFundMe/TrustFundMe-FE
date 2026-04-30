@@ -14,7 +14,7 @@ import {
   Flag,
   ChevronLeft,
   ChevronRight,
-  Fingerprint
+  IdCard
 } from 'lucide-react';
 import RequireRole from '@/components/auth/RequireRole';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -23,7 +23,7 @@ import { Toaster } from 'react-hot-toast';
 const sidebarNavItems = [
   { href: '/staff', label: 'Tổng quan', icon: LayoutGrid },
   { href: '/staff/request', label: 'Trung tâm xử lý', icon: ClipboardList },
-  { href: '/staff/kyc', label: 'Xác thực danh tính', icon: Fingerprint },
+  { href: '/staff/kyc', label: 'Xác thực danh tính', icon: IdCard },
   { href: '/staff/commitments', label: 'Cam kết', icon: ShieldCheck },
   { href: '/staff/flags', label: 'Báo cáo', icon: Flag },
   { href: '/staff/feed-post', label: 'Bài đăng', icon: MessageSquare },

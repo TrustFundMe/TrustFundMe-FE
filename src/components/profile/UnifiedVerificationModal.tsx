@@ -1,13 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  X, Shield, ScrollText, Landmark, Loader2, CheckCircle2, 
-  FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download
-} from 'lucide-react';
+import { X, Shield, ScrollText, Loader2, CheckCircle2, FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download, Clock, XCircle } from 'lucide-react';
 import KYCInputForm from '@/components/staff/request/KYCInputForm';
-import { bankAccountService } from '@/services/bankAccountService';
-import { BankAccountDto } from '@/types/bankAccount';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { api } from '@/config/axios';
@@ -35,23 +30,7 @@ export default function UnifiedVerificationModal({
 }: UnifiedVerificationModalProps) {
   const { updateUser } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'kyc' | 'cv' | 'bank'>('kyc');
-  const [cvUploading, setCvUploading] = useState(false);
-  const [currentCvUrl, setCurrentCvUrl] = useState(initialCvUrl);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  // Multi-step state
-  const [kycFormData, setKycFormData] = useState<any>(null);
-  const kycFormDataRef = React.useRef<any>(null);
   const [isSubmittingAll, setIsSubmittingAll] = useState(false);
-
-  // Bank state
-  const [bankAccount, setBankAccount] = useState<BankAccountDto | null>(initialBankAccount);
-  const [bankCode, setBankCode] = useState(initialBankAccount?.bankCode || '');
-  const [accountNumber, setAccountNumber] = useState(initialBankAccount?.accountNumber || '');
-  const [accountHolderName, setAccountHolderName] = useState(initialBankAccount?.accountHolderName || '');
-  const [webhookKey, setWebhookKey] = useState(initialBankAccount?.webhookKey || '');
-  const [savingBank, setSavingBank] = useState(false);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -63,40 +42,12 @@ export default function UnifiedVerificationModal({
     };
   }, [onClose]);
 
-  const handleBankSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trBankCode = bankCode.trim();
-    const trAccNum = accountNumber.trim();
-    const trAccName = accountHolderName.trim();
-
-    if (!trBankCode) { toast('Vui lòng nhập mã ngân hàng', 'error'); return; }
-    if (!trAccNum) { toast('Vui lòng nhập số tài khoản', 'error'); return; }
-    if (!trAccName) { toast('Vui lòng nhập tên chủ tài khoản', 'error'); return; }
-
-    setSavingBank(true);
-    try {
-      const bankPayload = {
-        bankCode: trBankCode,
-        accountNumber: trAccNum,
-        accountHolderName: trAccName.toUpperCase(),
-        webhookKey: webhookKey.trim() || undefined
-      };
-
-      if (bankAccount) {
-        const updatedBank = await bankAccountService.update(bankAccount.id, bankPayload);
-        setBankAccount(updatedBank);
-      } else {
-        const newBank = await bankAccountService.create(bankPayload);
-        setBankAccount(newBank);
-      }
-      toast('Cập nhật thông tin ngân hàng thành công', 'success');
-      onSuccess();
-    } catch (err: any) {
-      toast(err.response?.data?.message || 'Lỗi khi lưu thông tin ngân hàng', 'error');
-    } finally {
-      setSavingBank(false);
-    }
-  };
+  const [cvUploading, setCvUploading] = useState(false);
+  const [currentCvUrl, setCurrentCvUrl] = useState(initialCvUrl);
+  const [cvMetadata, setCvMetadata] = useState<{ name: string, time: string } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [kycFormData, setKycFormData] = useState<any>(null);
+  const kycFormDataRef = React.useRef<any>(null);
 
   const uploadCv = async (file: File) => {
     setCvUploading(true);
@@ -106,22 +57,53 @@ export default function UnifiedVerificationModal({
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^a-zA-Z0-9\s_-]/g, '');
       };
       const dateStr = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+      const timestamp = Date.now();
       const safeFullName = removeAccents(userName || 'User').replace(/\s+/g, '_');
-      const fileName = `${safeFullName}_${dateStr}.${file.name.split('.').pop()}`;
+      const fileName = `${safeFullName}_${dateStr}_${timestamp}.${file.name.split('.').pop()}`;
       const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'TrustFundMe';
       
-      const { error: uploadError } = await supabase.storage.from(bucketName).upload(`cvs/${fileName}`, file);
+      const { error: uploadError } = await supabase.storage.from(bucketName).upload(`cvs/${fileName}`, file, {
+        upsert: true
+      });
       if (uploadError) throw uploadError;
       
       const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(`cvs/${fileName}`);
       
-      await api.put(API_ENDPOINTS.USERS.BY_ID(userId), { cvUrl: publicUrl });
+      // Note: We no longer persist to DB immediately. Persisting happens on final submit.
       updateUser({ cvUrl: publicUrl });
       setCurrentCvUrl(publicUrl);
-      toast('Tải lên hồ sơ năng lực thành công!', 'success');
-      onSuccess();
+      setCvMetadata({
+        name: file.name,
+        time: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+      });
+      toast('Đã chọn hồ sơ năng lực!', 'success');
     } catch (error: any) {
-      toast('Lỗi tải lên CV: ' + (error.message || 'Unknown error'), 'error');
+      console.error('CV Upload Error:', error);
+      if (error.response?.status === 401) {
+        toast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại để tải lên hồ sơ.', 'error');
+      } else {
+        toast('Lỗi tải lên CV: ' + (error.response?.data?.message || error.message || 'Unknown error'), 'error');
+      }
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
+  const deleteCv = async () => {
+    if (!confirm('Bạn có chắc chắn muốn xóa hồ sơ năng lực này?')) return;
+    setCvUploading(true);
+    try {
+      await api.put(API_ENDPOINTS.USERS.BY_ID(userId), { cvUrl: '' });
+      updateUser({ cvUrl: '' });
+      setCurrentCvUrl('');
+      toast('Đã xóa hồ sơ năng lực!', 'success');
+    } catch (error: any) {
+      console.error('CV Delete Error:', error);
+      if (error.response?.status === 401) {
+        toast('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại để xóa hồ sơ.', 'error');
+      } else {
+        toast('Lỗi xóa CV: ' + (error.response?.data?.message || error.message || 'Unknown error'), 'error');
+      }
     } finally {
       setCvUploading(false);
     }
@@ -158,33 +140,49 @@ export default function UnifiedVerificationModal({
   };
 
   const handleFinalSubmit = async () => {
+    // 1. Validation for KYC
+    if (kycData?.status !== 'APPROVED') {
+      const kycStatus = isKycComplete();
+      if (!kycStatus.ok) {
+        toast(`Vui lòng điền đủ: ${kycStatus.missing.join(', ')}`, 'error');
+        return;
+      }
+    }
+
+    // 2. Validation for CV
+    if (!isCvComplete()) {
+      toast('Vui lòng tải lên hồ sơ năng lực (CV) trước khi hoàn tất', 'error');
+      return;
+    }
+
     setIsSubmittingAll(true);
     try {
-      // 1. Submit Bank (since it's the current tab's focus, but we do it all)
-      const bankPayload = {
-        bankCode: bankCode.trim(),
-        accountNumber: accountNumber.trim(),
-        accountHolderName: accountHolderName.trim().toUpperCase(),
-        webhookKey: webhookKey.trim() || undefined
-      };
-
-      if (bankAccount) {
-        await bankAccountService.update(bankAccount.id, bankPayload);
-      } else {
-        await bankAccountService.create(bankPayload);
-      }
-
-      // 2. Submit KYC if data changed
+      // Submit/Update KYC if data exists and not already approved
       if (kycFormData && kycData?.status !== 'APPROVED') {
         const kycPayload = {
           ...kycFormData,
-          issueDate: kycFormData.issueDate ? kycFormData.issueDate.toISOString().split('T')[0] : '',
-          expiryDate: kycFormData.expiryDate ? kycFormData.expiryDate.toISOString().split('T')[0] : '',
+          issueDate: kycFormData.issueDate ? (kycFormData.issueDate instanceof Date ? kycFormData.issueDate.toISOString().split('T')[0] : kycFormData.issueDate) : '',
+          expiryDate: kycFormData.expiryDate ? (kycFormData.expiryDate instanceof Date ? kycFormData.expiryDate.toISOString().split('T')[0] : kycFormData.expiryDate) : '',
+          // Face biometric data (from FaceLivenessCheck via KYCInputForm onDataChange)
+          faceDescriptor: kycFormData.faceDescriptor ? JSON.stringify(kycFormData.faceDescriptor) : null,
+          livenessMetadata: kycFormData.livenessMetadata ? JSON.stringify(kycFormData.livenessMetadata) : null,
+          faceMeshSample: kycFormData.faceMeshSample ? JSON.stringify(kycFormData.faceMeshSample) : null,
         };
-        await kycService.submit(userId, kycPayload);
+        
+        if (kycData && kycData.id) {
+          await kycService.update(userId, kycPayload);
+        } else {
+          await kycService.submit(userId, kycPayload);
+        }
       }
 
-      toast('Đã gửi toàn bộ hồ sơ xác thực thành công!', 'success');
+      // 4. Persist CV URL to user table (Final step)
+      if (currentCvUrl) {
+        await api.put(API_ENDPOINTS.USERS.BY_ID(userId), { cvUrl: currentCvUrl });
+        updateUser({ cvUrl: currentCvUrl });
+      }
+
+      toast('Đã nộp hồ sơ xác thực thành công!', 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -201,28 +199,36 @@ export default function UnifiedVerificationModal({
 
     // 2. KYC data exists from server (any status) with required fields filled
     if (kycData && kycData.fullName && kycData.idNumber && kycData.issueDate && kycData.expiryDate && kycData.issuePlace) {
-      return true;
+      return { ok: true };
     }
 
     // 3. User has filled required fields in the form - use REF for synchronous read
     const d = kycFormDataRef.current;
     if (d) {
-      const ok = !!(
-        d.fullName?.trim() &&
-        d.idNumber?.trim() &&
-        d.issueDate &&
-        d.expiryDate &&
-        d.issuePlace?.trim()
-      );
-      if (ok) return true;
+      const missing = [];
+      if (!d.fullName?.trim()) missing.push('Họ tên');
+      if (!d.idNumber?.trim()) missing.push('Số định danh');
+      if (!d.issueDate) missing.push('Ngày cấp');
+      if (!d.expiryDate) missing.push('Ngày hết hạn');
+      if (!d.issuePlace?.trim()) missing.push('Nơi cấp');
+      if (!d.address?.trim()) missing.push('Địa chỉ cư trú');
+      if (!d.idImageFront) missing.push('Ảnh mặt trước/Hộ chiếu');
+      if (d.idType !== 'PASSPORT' && !d.idImageBack) missing.push('Ảnh mặt sau');
+      if (!d.selfieImage) missing.push('Ảnh xác thực gương mặt');
+      
+      if (missing.length > 0) {
+        return { ok: false, missing };
+      }
+      return { ok: true };
     }
 
-    // 4. Fallback: read DOM input values directly (handles React async state timing)
+    // Fallback: try reading from DOM if ref is not yet populated
     try {
       const getVal = (name: string) => {
         const el = document.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
         return el?.value?.trim() || '';
       };
+
       const fullName = getVal('fullName');
       const idNumber = getVal('idNumber');
       const issuePlace = getVal('issuePlace');
@@ -231,65 +237,25 @@ export default function UnifiedVerificationModal({
       const hasIssueDateVal = dateInputs.length >= 1 && (dateInputs[0] as HTMLInputElement)?.value?.trim();
       const hasExpiryDateVal = dateInputs.length >= 2 && (dateInputs[1] as HTMLInputElement)?.value?.trim();
 
-      if (fullName && idNumber && issuePlace && hasIssueDateVal && hasExpiryDateVal) {
-        return true;
-      }
-    } catch (e) {
-      // DOM query failed, ignore
-    }
+      const missing = [];
+      if (!fullName) missing.push('Họ tên');
+      if (!idNumber) missing.push('Số định danh');
+      if (!issuePlace) missing.push('Nơi cấp');
+      if (!hasIssueDateVal) missing.push('Ngày cấp');
+      if (!hasExpiryDateVal) missing.push('Ngày hết hạn');
 
-    return false;
+      if (missing.length > 0) {
+        return { ok: false, missing };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, missing: ['Thông tin KYC'] };
+    }
   };
 
   const isCvComplete = () => {
-    return !!currentCvUrl;
-  };
-
-  const canAccessTab = (tabId: string): boolean => {
-    if (tabId === 'kyc') return true;
-    if (tabId === 'cv') return isKycComplete();
-    if (tabId === 'bank') return isKycComplete() && isCvComplete();
+    if (kycData?.status === 'APPROVED' || currentCvUrl) return true;
     return false;
-  };
-
-  const getStepBlockMessage = (tabId: string): string => {
-    if (tabId === 'cv' && !isKycComplete()) {
-      return 'Vui lòng hoàn thành bước Định danh (KYC) trước khi tiếp tục';
-    }
-    if (tabId === 'bank') {
-      if (!isKycComplete()) return 'Vui lòng hoàn thành bước Định danh (KYC) trước';
-      if (!isCvComplete()) return 'Vui lòng tải lên Hồ sơ năng lực (CV) trước khi tiếp tục';
-    }
-    return '';
-  };
-
-  const handleTabClick = (tabId: 'kyc' | 'cv' | 'bank') => {
-    if (!canAccessTab(tabId)) {
-      toast(getStepBlockMessage(tabId), 'error');
-      return;
-    }
-    setActiveTab(tabId);
-  };
-
-  const nextStep = () => {
-    if (activeTab === 'kyc') {
-      if (!isKycComplete()) {
-        toast('Vui lòng điền đầy đủ thông tin KYC (họ tên, số CCCD, ngày cấp, ngày hết hạn, nơi cấp) trước khi tiếp tục', 'error');
-        return;
-      }
-      setActiveTab('cv');
-    } else if (activeTab === 'cv') {
-      if (!isCvComplete()) {
-        toast('Vui lòng tải lên hồ sơ năng lực (CV) trước khi tiếp tục', 'error');
-        return;
-      }
-      setActiveTab('bank');
-    }
-  };
-
-  const prevStep = () => {
-    if (activeTab === 'bank') setActiveTab('cv');
-    else if (activeTab === 'cv') setActiveTab('kyc');
   };
 
   const handleKycDataChange = React.useCallback((data: any) => {
@@ -301,59 +267,42 @@ export default function UnifiedVerificationModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <div className="relative w-full max-w-6xl bg-white rounded-[2rem] shadow-2xl flex flex-col h-fit max-h-[95vh] overflow-hidden animate-in fade-in zoom-in duration-300">
         
-        {/* Header Section - More Compact */}
-        <div className="px-8 py-4 border-b border-gray-100 bg-gradient-to-br from-gray-50/50 to-white flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-black flex items-center justify-center text-white shadow-lg">
-              <Shield className="h-7 w-7" />
+        {/* Header Section - Ultra Compact */}
+        <div className="px-6 py-3 border-b border-gray-100 bg-gradient-to-br from-gray-50/50 to-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-black flex items-center justify-center text-white shadow-lg">
+              <Shield className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Xác thực hồ sơ</h2>
-              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Trust & Transparency Identity Center</p>
+              <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Xác thực hồ sơ</h2>
+              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.2em]">Trust & Transparency Identity Center</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            {/* Compact Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
-              {[
-                { id: 'kyc', label: 'Định danh', icon: Shield, status: kycData?.status === 'APPROVED' || kycData?.status === 'PENDING' },
-                { id: 'cv', label: 'Hồ sơ năng lực', icon: ScrollText, status: !!currentCvUrl },
-                { id: 'bank', label: 'Ngân hàng', icon: Landmark, status: !!bankAccount }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                const accessible = canAccessTab(tab.id);
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabClick(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300
-                      ${isActive ? 'bg-white text-black shadow-sm' : accessible ? 'text-gray-400 hover:text-black' : 'text-gray-300 cursor-not-allowed'}
-                    `}
-                  >
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-black' : 'text-current'}`} />
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    {tab.status && <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-1 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />}
-                  </button>
-                );
-              })}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
+               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+               <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Hồ sơ đa tầng</span>
             </div>
 
-            <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-xl bg-gray-100 text-gray-400 hover:bg-black hover:text-white transition-all duration-300">
-              <X className="h-5 w-5" />
+            <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 hover:bg-black hover:text-white transition-all duration-300">
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* Content Section */}
-        <div className="overflow-y-auto px-8 pt-1 pb-4 custom-scrollbar bg-white">
-          {activeTab === 'kyc' && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 flex flex-col gap-2">
+        {/* Content Section - Merged View */}
+        <div className="overflow-y-auto px-6 py-4 custom-scrollbar bg-white">
+          <div className="grid grid-cols-12 gap-6 items-start">
+            
+            {/* LEFT: KYC Form */}
+            <div className="col-span-7 flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Bước 1: Xác minh danh tính</h3>
+                  <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-white">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Phần 1: Thông tin định danh cá nhân</h3>
                   {kycData?.status && (
                     <div className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
                       kycData.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
@@ -366,212 +315,156 @@ export default function UnifiedVerificationModal({
                   )}
                 </div>
               </div>
-              <KYCInputForm
-                userId={userId}
-                userName={userName}
-                onSuccess={() => {}}
-                isStaff={false}
-                readOnly={kycData?.status === 'APPROVED'}
-                onDataChange={handleKycDataChange}
-                hideSubmitButton={true}
-                initialData={kycFormData}
-              />
               
-              <div className="flex justify-end">
-                <button 
-                  onClick={nextStep}
-                  className="px-6 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all flex items-center gap-2 shadow-lg"
-                >
-                  Bước tiếp theo <Shield className="h-3.5 w-3.5" />
-                </button>
+              <div className="bg-gray-50/30 rounded-3xl p-1 border border-gray-100">
+                <KYCInputForm
+                  userId={userId}
+                  userName={userName}
+                  onSuccess={() => {}}
+                  isStaff={false}
+                  readOnly={kycData?.status === 'APPROVED' || kycData?.status === 'PENDING'}
+                  onDataChange={handleKycDataChange}
+                  hideSubmitButton={true}
+                  initialData={kycFormData}
+                />
               </div>
-            </div>
-          )}
 
-          {activeTab === 'cv' && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500 h-full flex flex-col">
-              <div className="grid grid-cols-12 gap-8 items-start">
-                <div className="col-span-4 space-y-6">
-                  <div className="bg-gray-50 rounded-3xl p-6 border border-gray-100">
-                    <div className="h-12 w-12 rounded-2xl bg-black text-white flex items-center justify-center mb-4">
-                      <ScrollText className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">Hồ sơ năng lực</h3>
-                    <p className="text-xs font-bold text-gray-400 leading-relaxed mb-6">
-                      Chứng minh khả năng thực hiện dự án bằng cách tải lên CV hoặc các tài liệu liên quan.
-                    </p>
-                    
-                    <a 
-                      href="/templates/Mau_CV_Thien_Nguyen.docx" 
-                      download
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Tải mẫu hồ sơ (.docx)
-                    </a>
+            </div>
+
+            {/* RIGHT: CV Upload & Instructions */}
+            <div className="col-span-5 flex flex-col gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-white">
+                    <ScrollText className="h-4 w-4" />
                   </div>
+                  <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Phần 2: Hồ sơ năng lực</h3>
                 </div>
 
-                <div className="col-span-8">
-                  <div 
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`bg-gray-50/50 rounded-3xl p-8 border-2 border-dashed transition-all flex flex-col items-center justify-center min-h-[300px] ${
-                      isDragging ? 'border-black bg-gray-100 scale-[0.99]' : 'border-gray-200'
-                    }`}
-                  >
-                    {currentCvUrl ? (
-                      <div className="w-full space-y-6">
-                        <div className="flex items-center justify-between p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-                          <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                              <CheckCircle2 className="h-8 w-8" />
-                            </div>
-                            <div>
-                              <p className="text-base font-black text-gray-900">Hồ sơ đã sẵn sàng</p>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Document uploaded and verified</p>
-                            </div>
+                <div 
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`bg-gray-50/50 rounded-2xl p-4 border-2 border-dashed transition-all flex flex-col items-center justify-center min-h-[140px] ${
+                    isDragging ? 'border-black bg-gray-100 scale-[0.99]' : 'border-gray-200'
+                  }`}
+                >
+                  {currentCvUrl ? (
+                    <div className="w-full space-y-4 text-center">
+                      <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-1">
+                        <CheckCircle2 className="h-6 w-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Hồ sơ đã tải lên</p>
+                        {cvMetadata ? (
+                          <div className="bg-white/50 border border-gray-100 rounded-xl p-2 max-w-[240px] mx-auto">
+                            <p className="text-[9px] font-bold text-gray-600 truncate" title={cvMetadata.name}>{cvMetadata.name}</p>
+                            <p className="text-[8px] font-medium text-gray-400">Tải lên lúc: {cvMetadata.time}</p>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <a href={currentCvUrl} target="_blank" rel="noopener noreferrer" 
-                               className="h-12 w-12 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-black hover:text-white transition-all">
-                              <Eye className="h-6 w-6" />
-                            </a>
-                            <label className="cursor-pointer">
-                              <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
-                              <div className="h-12 px-6 flex items-center gap-2 rounded-xl bg-black text-white text-[11px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg">
-                                {cvUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                                Thay đổi
-                              </div>
-                            </label>
-                          </div>
+                        ) : (
+                           <p className="text-[9px] font-medium text-gray-400 italic">Tài liệu đã được ghi nhận</p>
+                        )}
+                      </div>
+                        <div className="flex items-center justify-center gap-2">
+                          <a href={currentCvUrl} target="_blank" rel="noopener noreferrer" 
+                             className="h-10 px-4 flex items-center gap-2 rounded-xl bg-white border border-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all">
+                            <Eye className="h-3.5 w-3.5" /> Xem
+                          </a>
+                          {kycData?.status !== 'PENDING' && kycData?.status !== 'APPROVED' && (
+                            <>
+                              <label className="cursor-pointer">
+                                <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
+                                <div className="h-10 px-4 flex items-center gap-2 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all">
+                                  {cvUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                                  Đổi
+                                </div>
+                              </label>
+                              <button 
+                                type="button" 
+                                onClick={deleteCv}
+                                disabled={cvUploading}
+                                className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all"
+                                title="Xóa hồ sơ"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <label className="cursor-pointer group block">
-                          <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
-                          <div className="h-20 w-20 rounded-[2rem] bg-black text-white flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500 shadow-2xl">
-                            {cvUploading ? <Loader2 className="h-10 w-10 animate-spin" /> : <Upload className="h-10 w-10" />}
-                          </div>
-                          <p className="text-lg font-black text-gray-900 uppercase tracking-tight">Kéo thả hoặc Nhấn để tải lên CV</p>
-                          <p className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">Hỗ trợ PDF, DOCX (Tối đa 10MB)</p>
-                        </label>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <label className="cursor-pointer group block">
+                        <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
+                        <div className="h-14 w-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl">
+                          {cvUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
+                        </div>
+                        <p className="text-[10px] font-black text-gray-900 uppercase tracking-tight leading-tight">Kéo thả hoặc Nhấn để tải CV</p>
+                        <p className="text-[8px] font-bold text-gray-400 mt-2 uppercase tracking-widest">PDF, DOCX (Max 10MB)</p>
+                      </label>
+                    </div>
+                  )}
                 </div>
+
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <p className="text-[9px] font-bold text-gray-500 leading-relaxed mb-4">
+                    Chứng minh khả năng thực hiện dự án bằng cách tải lên CV hoặc các tài liệu liên quan.
+                  </p>
+                  <a 
+                    href="/templates/Mau_CV_Thien_Nguyen.docx" 
+                    download
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
+                  >
+                    <Download className="h-3 w-3" />
+                    Mẫu hồ sơ (.docx)
+                  </a>
+                </div>
+
+                {kycData?.status === 'PENDING' && (
+                  <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-200">
+                      <Clock className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black text-amber-800 uppercase tracking-tight">Hồ sơ đang chờ kiểm duyệt</p>
+                      <p className="text-[9px] font-medium text-amber-600 leading-tight">Nhân viên hệ thống đang tiến hành kiểm duyệt thông tin của bạn. Kết quả sẽ có trong vòng 24 giờ tới.</p>
+                    </div>
+                  </div>
+                )}
+
+                {kycData?.status === 'REJECTED' && (
+                  <div className="bg-red-50/50 border border-red-100 rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="h-10 w-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-red-200">
+                      <XCircle className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black text-red-800 uppercase tracking-tight">Hồ sơ bị từ chối</p>
+                      <div className="space-y-1 mt-0.5">
+                        <p className="text-[9px] font-bold text-red-600 leading-tight">Lý do: {kycData.rejectionReason || 'Dữ liệu không khớp hoặc ảnh mờ.'}</p>
+                        <p className="text-[8px] font-medium text-red-500/80 leading-tight italic">* Vui lòng chỉnh sửa thông tin bị sai và nhấn "Nộp hồ sơ xác thực" bên dưới để gửi lại.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="mt-auto pt-8 flex items-center justify-between border-t border-gray-50">
-                <button 
-                  onClick={prevStep}
-                  className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all"
-                >
-                  Quay lại bước 1
-                </button>
-                <button 
-                  onClick={nextStep}
-                  className="px-10 py-4 bg-black text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition-all flex items-center gap-3 shadow-xl"
-                >
-                  Bước tiếp theo: Ngân hàng <Landmark className="h-4 w-4" />
-                </button>
-              </div>
+              {kycData?.status !== 'PENDING' && kycData?.status !== 'APPROVED' && (
+                <div className="mt-auto pt-4">
+                  <button 
+                    onClick={handleFinalSubmit}
+                    disabled={isSubmittingAll} 
+                    className="w-full py-3.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                    Nộp hồ sơ xác thực
+                  </button>
+                  <p className="text-[8px] text-center text-gray-400 uppercase font-bold tracking-widest mt-3">
+                    Thông tin sẽ được nhân viên xét duyệt trong 24h
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-
-          {activeTab === 'bank' && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500 h-full flex flex-col">
-              <div className="grid grid-cols-12 gap-4 items-start">
-                {/* Sidebar Info */}
-                <div className="col-span-4 space-y-3">
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                    <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-white mb-3 shadow-md">
-                      <Landmark className="h-4 w-4" />
-                    </div>
-                    <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight mb-1.5">Tài khoản nhận tiền</h3>
-                    <p className="text-[10px] font-bold text-gray-400 leading-relaxed">
-                      Thông tin này được dùng để tiếp nhận các khoản quyên góp công khai.
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-5 w-5 rounded-full bg-black flex items-center justify-center text-white shrink-0">
-                        <Star className="h-2.5 w-2.5 fill-white" />
-                      </div>
-                      <h4 className="text-[9px] font-black text-gray-900 uppercase tracking-widest">Nghị định 93/2021/NĐ-CP</h4>
-                    </div>
-                    <p className="text-[9px] font-bold text-gray-500 leading-relaxed">
-                      "Cá nhân phải mở tài khoản riêng tại ngân hàng cho từng cuộc vận động."
-                    </p>
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-[8px] font-black text-gray-900 uppercase tracking-widest flex items-center gap-2">
-                        <span className="h-1 w-1 rounded-full bg-emerald-500"></span>
-                        ĐỐI SOÁT CASSO
-                      </p>
-                      <p className="text-[9px] font-bold text-gray-400 mt-0.5">Tự động đồng bộ giao dịch thời gian thực.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bank Form */}
-                <div className="col-span-8 bg-gray-50/30 rounded-3xl p-4 border border-gray-100">
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-3">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Mã ngân hàng (VietinBank, VCB...)</label>
-                      <input 
-                        type="text" placeholder="VD: VCB" value={bankCode} onChange={e => setBankCode(e.target.value)} required
-                        className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none" 
-                      />
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Số tài khoản</label>
-                      <input 
-                        type="text" placeholder="Nhập số tài khoản" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} required
-                        className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none font-mono tracking-widest" 
-                      />
-                    </div>
-
-                    <div className="space-y-1 col-span-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Tên chủ tài khoản (Không dấu)</label>
-                      <input 
-                        type="text" placeholder="VD: NGUYEN VAN A" value={accountHolderName} onChange={e => setAccountHolderName(e.target.value)} required
-                        className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none uppercase" 
-                      />
-                    </div>
-
-                    <div className="space-y-1 col-span-2">
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Webhook Key (Casso - Tùy chọn)</label>
-                      <input 
-                        type="text" placeholder="Mã bảo mật từ hệ thống Casso" value={webhookKey} onChange={e => setWebhookKey(e.target.value)}
-                        className="w-full bg-white border-2 border-gray-100 focus:border-black rounded-xl px-4 py-2 text-sm font-bold transition-all outline-none" 
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-8 flex items-center justify-between border-t border-gray-50">
-                <button 
-                  onClick={prevStep}
-                  className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all"
-                >
-                  Quay lại bước 2
-                </button>
-                <button 
-                  onClick={handleFinalSubmit}
-                  disabled={isSubmittingAll} 
-                  className="px-8 py-4 bg-black text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-3"
-                >
-                  {isSubmittingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  Hoàn tất xác thực
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
 
