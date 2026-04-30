@@ -275,16 +275,10 @@ export default function UnifiedVerificationModal({
             </div>
             <div>
               <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Xác thực hồ sơ</h2>
-              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-[0.2em]">Trust & Transparency Identity Center</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
-               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-               <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">Hồ sơ đa tầng</span>
-            </div>
-
             <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-lg bg-gray-100 text-gray-400 hover:bg-black hover:text-white transition-all duration-300">
               <X className="h-4 w-4" />
             </button>

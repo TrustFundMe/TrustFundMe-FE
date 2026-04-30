@@ -724,7 +724,7 @@ function ProfileContent() {
                         </div>
                       </div>
                       
-                      <div className="flex flex-col items-center md:items-end gap-2.5 shrink-0">
+                      <div className="flex flex-col items-center md:items-center gap-2.5 shrink-0">
                         <div className="px-5 py-2 rounded-xl bg-white text-black text-[9px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:bg-gray-200 transition-all whitespace-nowrap">
                           {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount ? 'Xem chi tiết' : 'Bắt đầu ngay'} 
                           <ChevronRight className="h-3 w-3" />

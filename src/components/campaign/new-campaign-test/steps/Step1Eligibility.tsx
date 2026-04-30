@@ -12,6 +12,7 @@ import { kycService } from '@/services/kycService';
 import { bankAccountService } from '@/services/bankAccountService';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   state: NewCampaignTestState;
@@ -134,15 +135,18 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
   const [bankOpen, setBankOpen] = useState(false);
   const [refreshingStep1, setRefreshingStep1] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [checkingBankDup, setCheckingBankDup] = useState(false);
+  const [checkingBankDupLive, setCheckingBankDupLive] = useState(false);
+  const [bankDuplicateError, setBankDuplicateError] = useState('');
   const [bankTouched, setBankTouched] = useState<{ holder: boolean; number: boolean; bank: boolean }>({
     holder: false,
     number: false,
     bank: false,
   });
-  const [kycImages, setKycImages] = useState<{ front?: string; back?: string; selfie?: string }>({});
   const bankWrapRef = useRef<HTMLDivElement>(null);
   const KYC_PAGE_HREF = '/account/profile';
   const { user, updateUser } = useAuth();
+  const { toast } = useToast();
 
   const refreshStepOneData = async (showDoneNotice = false) => {
     if (!user?.id) return;
@@ -162,18 +166,11 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
           kycFullName: kyc.fullName || user.fullName || '',
           kycRejectReason: kyc.rejectionReason || '',
         });
-        setKycImages({
-          front: kyc.idImageFront || undefined,
-          back: kyc.idImageBack || undefined,
-          selfie: kyc.selfieImage || undefined,
-        });
       } else {
         onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '', kycRejectReason: '' });
-        setKycImages({});
       }
     } else {
       onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '', kycRejectReason: '' });
-      setKycImages({});
     }
 
     if (userResult.status === 'fulfilled' && userResult.value?.data) {
@@ -214,6 +211,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
   const bankHolderTrim = state.bankInfo.accountHolderName.trim();
   const bankNumberTrim = state.bankInfo.accountNumber.trim();
   const bankCodeTrim = state.bankInfo.bankCode.trim();
+  const bankDuplicateCheckKey = `${bankCodeTrim}|${bankNumberTrim}`;
   const bankErrors = {
     holder:
       !bankHolderTrim
@@ -243,6 +241,41 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
     );
   }, [bankQuery]);
 
+  useEffect(() => {
+    // Chỉ check realtime khi đã có đủ dữ liệu tối thiểu hợp lệ
+    if (!bankNumberTrim || !bankCodeTrim || bankErrors.number || bankErrors.bank) {
+      setCheckingBankDupLive(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setCheckingBankDupLive(true);
+      try {
+        const exists = await bankAccountService.checkExists(bankNumberTrim, bankCodeTrim);
+        if (cancelled) return;
+        if (exists) {
+          setBankDuplicateError('Số tài khoản này đã tồn tại trong hệ thống. Vui lòng dùng tài khoản khác.');
+        } else {
+          setBankDuplicateError('');
+        }
+      } catch {
+        if (!cancelled) {
+          setBankDuplicateError('Không kiểm tra được trùng tài khoản. Vui lòng thử lại.');
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingBankDupLive(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [bankDuplicateCheckKey, bankErrors.number, bankErrors.bank, bankNumberTrim, bankCodeTrim]);
+
   const addBankProof = (files: FileList | File[] | null) => {
     if (!files?.length) return;
     const list = Array.from(files);
@@ -260,25 +293,44 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
     if (e.dataTransfer?.files?.length) addBankProof(e.dataTransfer.files);
   };
 
+  const handleStepNext = async () => {
+    if (!canNext || checkingBankDup) return;
+    const accountNumber = state.bankInfo.accountNumber.trim();
+    const bankCode = state.bankInfo.bankCode.trim();
+    if (!accountNumber || !bankCode) return;
+    setCheckingBankDup(true);
+    setBankDuplicateError('');
+    try {
+      const exists = await bankAccountService.checkExists(accountNumber, bankCode);
+      if (exists) {
+        setBankDuplicateError('Số tài khoản này đã tồn tại trong hệ thống. Vui lòng dùng tài khoản khác.');
+        toast('Tài khoản ngân hàng bị trùng trong hệ thống', 'error');
+        return;
+      }
+      onNext();
+    } catch {
+      setBankDuplicateError('Không kiểm tra được trùng tài khoản. Vui lòng thử lại.');
+    } finally {
+      setCheckingBankDup(false);
+    }
+  };
+
   return (
     <div className="rounded-xl bg-white p-3 md:p-4">
-      <h2 className="text-lg font-bold tracking-tight text-black">Bước 1 — Kiểm tra cổng & tài khoản</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold tracking-tight text-black">Bước 1 — Kiểm tra cổng & tài khoản</h2>
+        <button
+          type="button"
+          onClick={() => refreshStepOneData(true)}
+          disabled={refreshingStep1 || initialLoading}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {refreshingStep1 ? 'Đang làm mới...' : 'Làm mới trạng thái'}
+        </button>
+      </div>
 
       <div className="mt-3 space-y-3">
-        <SectionBlock
-          step="1"
-          title="Định danh & cổng vào"
-          actions={
-            <button
-              type="button"
-              onClick={() => refreshStepOneData(true)}
-              disabled={refreshingStep1 || initialLoading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {refreshingStep1 ? 'Đang làm mới...' : 'Làm mới trạng thái'}
-            </button>
-          }
-        >
+        <SectionBlock step="1" title="Định danh & cổng vào">
           {(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') ? (
             <div
               className="rounded-lg border border-gray-200 bg-gray-50 p-3"
@@ -297,57 +349,27 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
                       </span>
                     )}
                   </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Tên KYC: <span className="font-bold text-black">{state.kycFullName}</span>
-                  </p>
                 </div>
               </div>
-              {/* KYC ID Images */}
-              {(kycImages.front || kycImages.back || kycImages.selfie) && (
-                <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-200 pt-3">
-                  {kycImages.front && (
-                    <div className="flex flex-col items-center gap-1">
-                      <img src={kycImages.front} alt="CCCD Mặt trước" className="h-20 w-32 rounded-lg border border-gray-200 object-cover" />
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Mặt trước</span>
-                    </div>
-                  )}
-                  {kycImages.back && (
-                    <div className="flex flex-col items-center gap-1">
-                      <img src={kycImages.back} alt="CCCD Mặt sau" className="h-20 w-32 rounded-lg border border-gray-200 object-cover" />
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Mặt sau</span>
-                    </div>
-                  )}
-                  {kycImages.selfie && (
-                    <div className="flex flex-col items-center gap-1">
-                      <img src={kycImages.selfie} alt="Ảnh chân dung" className="h-20 w-20 rounded-full border border-gray-200 object-cover" />
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Chân dung</span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-red-200 bg-red-50/70 px-4 py-3">
-                <p className="text-sm font-bold text-red-700">
-                  {state.kycStatus === 'NOT_SUBMITTED'
-                    ? 'Bạn chưa xác minh danh tính (KYC).'
-                    : 'KYC chưa đạt.'}
-                </p>
-                {state.kycRejectReason ? (
-                  <p className="mt-1 text-xs text-red-600">Lý do: {state.kycRejectReason}</p>
-                ) : null}
-                <p className="mt-1.5 text-xs leading-relaxed text-red-600/90">
-                  Hoàn tất xác minh danh tính để tiếp tục tạo chiến dịch.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-red-700">
+                    {state.kycStatus === 'NOT_SUBMITTED' ? 'Chưa xác minh KYC' : 'KYC chưa đạt'}
+                  </p>
+                  {state.kycRejectReason ? (
+                    <p className="text-xs text-red-600 truncate">Lý do: {state.kycRejectReason}</p>
+                  ) : (
+                    <p className="text-xs text-red-600/90">Cần xác minh danh tính để tiếp tục.</p>
+                  )}
+                </div>
                 <Link
                   href={KYC_PAGE_HREF}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 shrink-0"
                 >
-                  Xác minh KYC ngay
+                  Xác minh ngay
                 </Link>
               </div>
             </div>
@@ -384,7 +406,10 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
                   className={fieldBox}
                   placeholder="Ví dụ: NGUYEN VAN A hoặc HỘI CHỮ THẬP ĐỎ"
                   value={state.bankInfo.accountHolderName}
-                  onChange={(e) => onPatch({ bankInfo: { ...state.bankInfo, accountHolderName: e.target.value } })}
+                  onChange={(e) => {
+                    setBankDuplicateError('');
+                    onPatch({ bankInfo: { ...state.bankInfo, accountHolderName: e.target.value } });
+                  }}
                   onBlur={() => setBankTouched((prev) => ({ ...prev, holder: true }))}
                   aria-describedby="step1-holder-name-hint"
                 />
@@ -413,7 +438,10 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
                   autoComplete="off"
                   placeholder="Ví dụ: 0123456789"
                   value={state.bankInfo.accountNumber}
-                  onChange={(e) => onPatch({ bankInfo: { ...state.bankInfo, accountNumber: e.target.value } })}
+                  onChange={(e) => {
+                    setBankDuplicateError('');
+                    onPatch({ bankInfo: { ...state.bankInfo, accountNumber: e.target.value } });
+                  }}
                   onBlur={() => setBankTouched((prev) => ({ ...prev, number: true }))}
                   aria-describedby="step1-account-number-hint"
                 />
@@ -483,6 +511,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
                             <button
                               type="button"
                               onClick={() => {
+                                setBankDuplicateError('');
                                 onPatch({ bankInfo: { ...state.bankInfo, bankCode: b.code, bankName: b.name } });
                                 setBankOpen(false);
                                 setBankQuery('');
@@ -515,6 +544,9 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
               {bankTouched.bank && bankErrors.bank && (
                 <p className="text-xs font-semibold text-red-600">{bankErrors.bank}</p>
               )}
+              {bankDuplicateError && (
+                <p className="text-xs font-semibold text-red-600">{bankDuplicateError}</p>
+              )}
             </div>
         </SectionBlock>
 
@@ -541,88 +573,32 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
               </div>
             </div>
           ) : (
-            /* ── No CV — show templates + upload ── */
+            /* ── No CV — redirect to profile page ── */
             <>
               <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5">
                 <p className="text-xs leading-relaxed text-gray-500">
                   Hồ sơ chứng minh năng lực là yếu tố <strong className="text-black">bắt buộc</strong>.
-                  Tải biểu mẫu bên dưới, điền đầy đủ, xuất ra PDF và tải lên.
+                  Vui lòng cập nhật hồ sơ năng lực tại trang cá nhân trước khi tiếp tục.
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <a
-                    href="/templates/Mau_CV_Thien_Nguyen.docx"
-                    download
+                  <Link
+                    href="/account/profile"
                     className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800"
                   >
-                    Tải mẫu Word
-                  </a>
-                  <a
-                    href="/templates/Mau_CV_Thien_Nguyen.pdf"
-                    download
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
-                  >
-                    Tải mẫu PDF
-                  </a>
+                    Cập nhật hồ sơ trên trang cá nhân
+                  </Link>
                 </div>
               </div>
-
-              <LabeledField
-                label="Tải lên hồ sơ năng lực"
-                hint="Upload file PDF đã điền đầy đủ theo biểu mẫu trên. Hỗ trợ PNG, JPG cho ảnh bằng khen/giấy xác nhận."
-              >
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={onDrop}
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.multiple = true;
-                    input.onchange = (e) => {
-                      const files = (e.target as HTMLInputElement).files;
-                      if (files) addBankProof(files);
-                    };
-                    input.click();
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                    }
-                  }}
-                  className="flex min-h-[100px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 px-4 py-6 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:border-black focus-visible:outline-none"
-                >
-                <svg className="h-8 w-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
-                  <path d="M12 16V8m0 0l-3 3m3-3l3 3" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M4 16.5A3.5 3.5 0 007.5 20h9A3.5 3.5 0 0020 16.5v-.04" strokeLinecap="round" />
-                </svg>
-                <p className="mt-1.5 text-xs font-bold uppercase tracking-widest text-gray-400">Kéo thả hoặc bấm để tải lên</p>
-                <p className="mt-0.5 text-[10px] text-gray-400">PDF, PNG, JPG — tối đa 10MB/tệp</p>
-              </div>
-              </LabeledField>
-              {state.bankProofFiles.length > 0 ? (
-                <ul className="mt-4 space-y-2">
-                  {state.bankProofFiles.map((f) => (
-                    <motion.li
-                      key={f.id}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="flex justify-between gap-2 border-b border-gray-100 py-2 text-base text-gray-900"
-                    >
-                      <span className="truncate font-medium">{f.name}</span>
-                      <span className="shrink-0 text-gray-600">{f.sizeKb} KB</span>
-                    </motion.li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-3 text-sm font-medium text-red-600">Cần ít nhất một tệp.</p>
-              )}
             </>
           )}
         </SectionBlock>
       </div>
 
-      <StepFooter canNext={canNext} onNext={onNext} failMessage={failMessage} />
+      <StepFooter
+        canNext={canNext && !checkingBankDup && !checkingBankDupLive}
+        onNext={handleStepNext}
+        failMessage={checkingBankDup || checkingBankDupLive ? 'Đang kiểm tra trùng tài khoản ngân hàng...' : failMessage}
+      />
     </div>
   );
 }

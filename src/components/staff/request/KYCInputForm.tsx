@@ -600,7 +600,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 </div>
 
                 {!readOnly && (
-                    <div className="col-span-12 px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
+                    <div className="col-span-12 rounded-xl bg-emerald-50 px-3 py-1.5 ring-1 ring-inset ring-emerald-200/80">
                         <p className="text-[8px] font-bold text-emerald-700 italic text-center uppercase tracking-tighter">
                             Hệ thống sẽ tự động điền các thông tin sau khi bạn tải ảnh lên.
                         </p>
