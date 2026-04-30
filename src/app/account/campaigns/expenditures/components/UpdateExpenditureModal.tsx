@@ -1,8 +1,10 @@
 import { Fragment } from 'react';
-import { X, Receipt, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { X, Receipt, AlertCircle, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import { CampaignDto } from '@/types/campaign';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { MediaUploadResponse } from '@/services/mediaService';
+
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
 
 interface UpdateExpenditureModalProps {
     isOpen: boolean;
@@ -14,7 +16,7 @@ interface UpdateExpenditureModalProps {
     itemMedia: Record<number, MediaUploadResponse[]>;
     donationSummary: Record<number, number>;
     isRefundDone: boolean;
-    handleUpdateItemChange: (index: number, field: 'actualQuantity' | 'price', value: string) => void;
+    handleUpdateItemChange: (index: number, field: 'actualQuantity' | 'price' | 'actualPurchaseLink', value: string) => void;
     handleUpdateSubmit: () => void;
     updating: boolean;
     setGalleryModalItemId: (id: number) => void;
@@ -77,8 +79,32 @@ export default function UpdateExpenditureModal({
                                             <Fragment key={item.id}>
                                                 <tr className="hover:bg-gray-50">
                                                     <td className="px-4 py-2 text-sm text-gray-900">
-                                                        <div className="font-bold">{item.category}</div>
-                                                        {item.note && <div className="text-[11px] text-gray-500 mt-0.5 leading-tight">{item.note}</div>}
+                                                        <div className="font-bold">{item.name}</div>
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
+                                                            {item.expectedPurchaseLink && (
+                                                                <a
+                                                                    href={item.expectedPurchaseLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-[9px] font-black text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
+                                                                    title="Link dự kiến"
+                                                                >
+                                                                    <ExternalLink className="w-2.5 h-2.5" /> DK
+                                                                </a>
+                                                            )}
+                                                            {item.actualPurchaseLink && (
+                                                                <a
+                                                                    href={item.actualPurchaseLink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
+                                                                    title="Link thực tế"
+                                                                >
+                                                                    <ExternalLink className="w-2.5 h-2.5" /> TT
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                        {item.note && <div className="text-[11px] text-gray-500 mt-1 leading-tight uppercase opacity-70 font-medium italic">{item.note}</div>}
                                                     </td>
                                                     <td className="px-4 py-2 text-right bg-gray-50/50 align-middle">
                                                         {campaign.type === 'ITEMIZED' ? (
@@ -130,6 +156,17 @@ export default function UpdateExpenditureModal({
                                                                     className={`w-24 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-xs font-bold text-right py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                                                     value={updateItems[index]?.price || ''}
                                                                     onChange={(e) => handleUpdateItemChange(index, 'price', e.target.value)}
+                                                                />
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 border-l border-gray-200 pl-3">
+                                                                <label className="text-[8px] font-black uppercase tracking-tighter text-gray-400">Link:</label>
+                                                                <input
+                                                                    type="text"
+                                                                    disabled={isRefundDone}
+                                                                    placeholder="Link thực tế..."
+                                                                    className={`w-32 border-gray-200 rounded-lg shadow-sm focus:ring-orange-400 focus:border-orange-400 text-[10px] py-0.5 px-1 ${isRefundDone ? 'bg-gray-100 cursor-not-allowed' : ''} ${(updateItems[index] as any)?.actualPurchaseLink && !URL_REGEX.test((updateItems[index] as any).actualPurchaseLink) ? 'border-red-500 bg-red-50 text-red-600 font-bold' : ''}`}
+                                                                    value={(updateItems[index] as any)?.actualPurchaseLink || ''}
+                                                                    onChange={(e) => handleUpdateItemChange(index, 'actualPurchaseLink' as any, e.target.value)}
                                                                 />
                                                             </div>
                                                             <div className="ml-2 pl-3 border-l-2 border-orange-300 font-black text-orange-600 text-sm lg:text-base">

@@ -17,6 +17,8 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { vi } from 'date-fns/locale';
 
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+
 export default function CreateExpenditurePage() {
     return (
         <Suspense fallback={
@@ -48,7 +50,7 @@ function CreateExpenditureContent() {
         collapsed: boolean;
     }
     const [categories, setCategories] = useState<CategoryState[]>([
-        { name: '', description: '', withdrawalCondition: '', items: [{ category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }
+        { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }
     ]);
 
     const [showImportModal, setShowImportModal] = useState(false);
@@ -109,9 +111,9 @@ function CreateExpenditureContent() {
     const handleDownloadTemplate = () => {
         try {
             const sampleData = [
-                { 'STT': 1, 'Tên hàng hóa / Dịch vụ': 'Thùng mì tôm', 'Số lượng dự kiến': 100, 'Đơn giá dự kiến (VNĐ)': 7000, 'Thành tiền dự kiến (VNĐ)': 700000, 'Ghi chú': 'Mua tại siêu thị Co.opmart' },
-                { 'STT': 2, 'Tên hàng hóa / Dịch vụ': 'Nước đóng chai (lốc 6 chai)', 'Số lượng dự kiến': 50, 'Đơn giá dự kiến (VNĐ)': 18000, 'Thành tiền dự kiến (VNĐ)': 900000, 'Ghi chú': 'Nước suối bidrico 1500ml' },
-                { 'STT': 3, 'Tên hàng hóa / Dịch vụ': 'Gạo (kg)', 'Số lượng dự kiến': 200, 'Đơn giá dự kiến (VNĐ)': 25000, 'Thành tiền dự kiến (VNĐ)': 5000000, 'Ghi chú': 'Gạo ST25 Việt Nam' },
+                { 'STT': 1, 'Tên hàng hóa / Dịch vụ': 'Thùng mì tôm', 'Link mua hàng dự kiến': 'https://maps.app.goo.gl/xxx', 'Số lượng dự kiến': 100, 'Đơn giá dự kiến (VNĐ)': 7000, 'Thành tiền dự kiến (VNĐ)': 700000, 'Ghi chú': 'Mua tại siêu thị Co.opmart' },
+                { 'STT': 2, 'Tên hàng hóa / Dịch vụ': 'Nước đóng chai (lốc 6 chai)', 'Link mua hàng dự kiến': 'https://shopee.vn/xxx', 'Số lượng dự kiến': 50, 'Đơn giá dự kiến (VNĐ)': 18000, 'Thành tiền dự kiến (VNĐ)': 900000, 'Ghi chú': 'Nước suối bidrico 1500ml' },
+                { 'STT': 3, 'Tên hàng hóa / Dịch vụ': 'Gạo (kg)', 'Link mua hàng dự kiến': '', 'Số lượng dự kiến': 200, 'Đơn giá dự kiến (VNĐ)': 25000, 'Thành tiền dự kiến (VNĐ)': 5000000, 'Ghi chú': 'Gạo ST25 Việt Nam' },
             ];
             const ws = XLSX.utils.json_to_sheet(sampleData);
             const wb = XLSX.utils.book_new();
@@ -142,7 +144,8 @@ function CreateExpenditureContent() {
         try {
             const data = items.map((item, idx) => ({
                 'STT': idx + 1,
-                'Tên hàng hóa / Dịch vụ': item.category || '',
+                'Tên hàng hóa / Dịch vụ': item.name || '',
+                'Link mua hàng dự kiến': item.expectedPurchaseLink || '',
                 'Số lượng dự kiến': Number(item.quantity) || 0,
                 'Đơn giá dự kiến (VNĐ)': Number(item.expectedPrice) || 0,
                 'Thành tiền dự kiến (VNĐ)': (Number(item.quantity) || 0) * (Number(item.expectedPrice) || 0),
@@ -188,7 +191,7 @@ function CreateExpenditureContent() {
                 const errs: string[] = [];
 
                 // Tên hàng hóa
-                if (!item.category || item.category.trim() === '') {
+                if (!item.name || item.name.trim() === '') {
                     errs.push(`Dòng ${row}: Thiếu tên hàng hóa / dịch vụ`);
                 }
 
@@ -211,7 +214,7 @@ function CreateExpenditureContent() {
                 }
 
                 // Tên hàng hóa: tối đa 50 ký tự
-                if (item.category && item.category.trim().length > 50) {
+                if (item.name && item.name.trim().length > 50) {
                     errs.push(`Dòng ${row}: Tên hàng hóa không được vượt quá 50 ký tự`);
                 }
 
@@ -223,6 +226,11 @@ function CreateExpenditureContent() {
                 // Ghi chú: tối đa 100 ký tự
                 if (item.note && item.note.trim().length > 100) {
                     errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
+                }
+
+                // Link
+                if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) {
+                    errs.push(`Dòng ${row}: Link mua hàng không đúng định dạng`);
                 }
 
                 errors.push(...errs);
@@ -262,7 +270,7 @@ function CreateExpenditureContent() {
 
     // ── Category handlers ──
     const addCategory = () => {
-        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }]);
+        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }]);
     };
 
     const removeCategory = (catIndex: number) => {
@@ -294,7 +302,7 @@ function CreateExpenditureContent() {
 
     const addItem = (catIndex: number) => {
         const newCats = [...categories];
-        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { category: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }] };
+        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }] };
         setCategories(newCats);
     };
 
@@ -338,12 +346,12 @@ function CreateExpenditureContent() {
         }
 
         const allItems = getAllItems();
-        if (allItems.some(item => !item.category || item.quantity <= 0 || item.expectedPrice < 0)) {
+        if (allItems.some(item => !item.name || item.quantity <= 0 || item.expectedPrice < 0)) {
             toast.error('Vui lòng kiểm tra lại thông tin các hạng mục (Tên, Số lượng > 0, Đơn giá >= 0).');
             return;
         }
 
-        if (allItems.some(item => item.category.length > 50)) {
+        if (allItems.some(item => item.name.length > 50)) {
             toast.error('Tên hàng hóa / dịch vụ không được vượt quá 50 ký tự.');
             return;
         }
@@ -608,10 +616,11 @@ function CreateExpenditureContent() {
                                                     <tr>
                                                         <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-5">STT</th>
                                                         <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Tên hàng hóa / Dịch vụ</th>
+                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-48">Link mua hàng</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-16">SL</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Đơn giá (VNĐ)</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Thành tiền</th>
-                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-28">Ghi chú</th>
+                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-24">Ghi chú</th>
                                                         <th className="px-2 py-1.5 w-8"></th>
                                                     </tr>
                                                 </thead>
@@ -625,9 +634,18 @@ function CreateExpenditureContent() {
                                                                     maxLength={50}
                                                                     className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
                                                                     placeholder="Tên sản phẩm..."
-                                                                    value={item.category}
-                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'category', e.target.value)}
+                                                                    value={item.name}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'name', e.target.value)}
                                                                     required
+                                                                />
+                                                            </td>
+                                                            <td className="px-2 py-1">
+                                                                <input
+                                                                    type="text"
+                                                                    className={`w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'border-red-500 bg-red-50 text-red-600' : ''}`}
+                                                                    placeholder="https://..."
+                                                                    value={item.expectedPurchaseLink || ''}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'expectedPurchaseLink', e.target.value)}
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-1">
@@ -810,10 +828,10 @@ function CreateExpenditureContent() {
                                         <thead>
                                             <tr className="bg-orange-50">
                                                 <th className="px-3 py-2 text-left text-sm font-bold text-gray-700">STT</th>
-                                                <th className="px-3 py-2 text-left text-sm font-bold text-gray-700">Tên hàng hóa / Dịch vụ</th>
-                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">Số lượng</th>
-                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">Đơn giá (VNĐ)</th>
-                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">Thành tiền (VNĐ)</th>
+                                                <th className="px-3 py-2 text-left text-sm font-bold text-gray-700">Tên</th>
+                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">SL</th>
+                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">Đơn giá</th>
+                                                <th className="px-3 py-2 text-right text-sm font-bold text-gray-700">Thành tiền</th>
                                                 <th className="px-3 py-2 text-left text-sm font-bold text-gray-700">Ghi chú</th>
                                             </tr>
                                         </thead>
@@ -821,7 +839,7 @@ function CreateExpenditureContent() {
                                             {importPreview.map((item, idx) => (
                                                 <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                                                     <td className="px-3 py-2">{idx + 1}</td>
-                                                    <td className="px-3 py-2 font-medium">{item.category || '(trống)'}</td>
+                                                    <td className="px-3 py-2 font-medium">{item.name || '(trống)'}</td>
                                                     <td className="px-3 py-2 text-right">{item.quantity}</td>
                                                     <td className="px-3 py-2 text-right">
                                                         {new Intl.NumberFormat('vi-VN').format(Number(item.expectedPrice))}

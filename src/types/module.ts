@@ -29,7 +29,8 @@ export type IconKey =
     | "bell"
     | "history"
     | "database"
-    | "chart-bar";
+    | "chart-bar"
+    | "brain";
 
 
 export interface ModuleGroup {

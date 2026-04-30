@@ -20,6 +20,8 @@ import { mediaService } from '@/services/mediaService';
 import { expenditureService } from '@/services/expenditureService';
 import { useRouter } from 'next/navigation';
 
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+
 const steps = [
   {
     id: 'eligibility',
@@ -183,6 +185,7 @@ export default function NewCampaignTestPage() {
           if (!item.name.trim()) return false;
           if (!item.expectedQuantity || item.expectedQuantity <= 0) return false;
           if (!item.expectedPrice || item.expectedPrice <= 0) return false;
+          if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) return false;
         }
       }
     }
@@ -210,6 +213,7 @@ export default function NewCampaignTestPage() {
           if (!item.name.trim()) return `Đợt ${i + 1}, danh mục ${j + 1}, hạng mục ${k + 1}: thiếu tên`;
           if (!item.expectedQuantity || item.expectedQuantity <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: số lượng phải > 0`;
           if (!item.expectedPrice || item.expectedPrice <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: đơn giá phải > 0`;
+          if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) return `Đợt ${i + 1}, hạng mục ${k + 1}: link không đúng định dạng`;
         }
       }
     }
@@ -328,6 +332,7 @@ export default function NewCampaignTestPage() {
             brand: item.brand || '',
             purchaseLocation: item.purchaseLocation || '',
             unit: item.unit || '',
+            expectedPurchaseLink: item.expectedPurchaseLink || '',
             note: item.note || '',
           })),
         }));
@@ -342,9 +347,9 @@ export default function NewCampaignTestPage() {
           endDate: `${milEndDate}T23:59:59`,
           categories,
         };
-        
+
         console.log('Expenditure payload:', JSON.stringify(expenditurePayload, null, 2));
-        
+
         try {
           await expenditureService.create(expenditurePayload);
         } catch (expErr: any) {
@@ -461,114 +466,113 @@ export default function NewCampaignTestPage() {
       {/* Scrollable content */}
       <main ref={mainScrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-[960px] px-4 py-4 md:px-8 md:py-5">
-        {/* Step content with animation */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeStep}
-            variants={stepVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-          >
-            {activeStep === 0 && (
-              <Step1Eligibility
-                state={state}
-                onPatch={patchState}
-                canNext={step0CanNext}
-                failMessage={step0FailMessage}
-                onNext={() => goToStep(1)}
-              />
-            )}
-            {activeStep === 1 && (
-              <Step2CampaignForm
-                state={state}
-                errors={step2Errors}
-                showErrors={step2ShowErrors}
-                canNext={step2CanNext}
-                onPatchCore={(patch) => patchState({ campaignCore: { ...state.campaignCore, ...patch } })}
-                onTogglePreview={() => setPreviewVisible((v) => !v)}
-                previewOpen={previewVisible}
-                onPrev={() => goToStep(0)}
-                onNext={() => {
-                  if (step2CanNext) {
-                    setStep2ShowErrors(false);
-                    goToStep(2);
-                  } else {
-                    setStep2ShowErrors(true);
-                  }
-                }}
-              />
-            )}
-            {activeStep === 2 && (
-              <Step3Milestones
-                state={state}
-                milestoneTotal={milestoneTotal}
-                onPatch={patchState}
-                onPrev={() => goToStep(1)}
-                onNext={() => {
-                  if (step3CanNext) {
-                    setStep3ShowErrors(false);
-                    goToStep(3);
-                  } else {
-                    setStep3ShowErrors(true);
-                  }
-                }}
-                canNext={step3CanNext}
-                showErrors={step3ShowErrors}
-                failMessage={step3FailMessage}
-              />
-            )}
-            {activeStep === 3 && (
-              <Step5RiskTerms
-                state={state}
-                onPatch={patchState}
-                onPrev={() => goToStep(2)}
-                onNext={() => goToStep(4)}
-                canNext={step4CanNext}
-              />
-            )}
-            {activeStep === 4 && (
-              <Step6ReviewSubmit
-                state={state}
-                checks={finalValidations}
-                onOpenFullPreview={() => setStep6FullPreview(true)}
-                onPrev={() => goToStep(3)}
-                onSubmit={handleRealSubmit}
-                canSubmit={canSubmit && !isSubmitting}
-              />
-            )}
+          {/* Step content with animation */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeStep}
+              variants={stepVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+            >
+              {activeStep === 0 && (
+                <Step1Eligibility
+                  state={state}
+                  onPatch={patchState}
+                  canNext={step0CanNext}
+                  failMessage={step0FailMessage}
+                  onNext={() => goToStep(1)}
+                />
+              )}
+              {activeStep === 1 && (
+                <Step2CampaignForm
+                  state={state}
+                  errors={step2Errors}
+                  showErrors={step2ShowErrors}
+                  canNext={step2CanNext}
+                  onPatchCore={(patch) => patchState({ campaignCore: { ...state.campaignCore, ...patch } })}
+                  onTogglePreview={() => setPreviewVisible((v) => !v)}
+                  previewOpen={previewVisible}
+                  onPrev={() => goToStep(0)}
+                  onNext={() => {
+                    if (step2CanNext) {
+                      setStep2ShowErrors(false);
+                      goToStep(2);
+                    } else {
+                      setStep2ShowErrors(true);
+                    }
+                  }}
+                />
+              )}
+              {activeStep === 2 && (
+                <Step3Milestones
+                  state={state}
+                  milestoneTotal={milestoneTotal}
+                  onPatch={patchState}
+                  onPrev={() => goToStep(1)}
+                  onNext={() => {
+                    if (step3CanNext) {
+                      setStep3ShowErrors(false);
+                      goToStep(3);
+                    } else {
+                      setStep3ShowErrors(true);
+                    }
+                  }}
+                  canNext={step3CanNext}
+                  showErrors={step3ShowErrors}
+                  failMessage={step3FailMessage}
+                />
+              )}
+              {activeStep === 3 && (
+                <Step5RiskTerms
+                  state={state}
+                  onPatch={patchState}
+                  onPrev={() => goToStep(2)}
+                  onNext={() => goToStep(4)}
+                  canNext={step4CanNext}
+                />
+              )}
+              {activeStep === 4 && (
+                <Step6ReviewSubmit
+                  state={state}
+                  checks={finalValidations}
+                  onOpenFullPreview={() => setStep6FullPreview(true)}
+                  onPrev={() => goToStep(3)}
+                  onSubmit={handleRealSubmit}
+                  canSubmit={canSubmit && !isSubmitting}
+                />
+              )}
 
-            {submitResult.type !== 'idle' && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`mt-6 rounded-2xl border p-5 ${
-                  submitResult.type === 'success'
-                    ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
-                    : 'border-red-100 bg-red-50 text-red-800'
-                }`}
-              >
-                <div className="flex items-center gap-2 font-semibold">
-                  {submitResult.type === 'success' ? (
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
+              {submitResult.type !== 'idle' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-6 rounded-2xl border p-5 ${submitResult.type === 'success'
+                      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                      : 'border-red-100 bg-red-50 text-red-800'
+                    }`}
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    {submitResult.type === 'success' ? (
+                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {submitResult.type === 'success' ? 'Thành công' : 'Lỗi'}
+                  </div>
+                  <p className="mt-1 text-sm">{submitResult.message}</p>
+                  {submitResult.type === 'success' && (
+                    <p className="mt-2 text-xs opacity-70 italic">Đang chuyển hướng về trang quản lý chiến dịch...</p>
                   )}
-                  {submitResult.type === 'success' ? 'Thành công' : 'Lỗi'}
-                </div>
-                <p className="mt-1 text-sm">{submitResult.message}</p>
-                {submitResult.type === 'success' && (
-                  <p className="mt-2 text-xs opacity-70 italic">Đang chuyển hướng về trang quản lý chiến dịch...</p>
-                )}
-              </motion.div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+                </motion.div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 

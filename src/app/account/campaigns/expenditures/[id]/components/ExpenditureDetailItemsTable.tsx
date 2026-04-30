@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Fragment, useState } from 'react';
-import { Receipt, Download, Package, ImageIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight } from 'lucide-react';
+import { Receipt, Download, Package, ImageIcon, ArrowUp, ArrowDown, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { ItemDonorsModal } from './ItemDonorsModal';
 import { ExpenditureCatology } from '@/types/expenditure';
 
@@ -50,7 +50,7 @@ const ItemRow: React.FC<{
     item: any; idx: number; campaign: any; itemMedia: Record<number, any[]>;
     donationSummary: Record<number, number>; isEvidenceSubmitted: boolean;
     setGalleryModalItemId: (id: number | null) => void; loadItemMedia: (id: number) => void;
-    setDonorModalItem: (v: {id: number, name: string} | null) => void;
+    setDonorModalItem: (v: { id: number, name: string } | null) => void;
 }> = ({ item, idx, campaign, itemMedia, donationSummary, isEvidenceSubmitted, setGalleryModalItemId, loadItemMedia, setDonorModalItem }) => {
     const media = itemMedia[item.id] || [];
     const planTotal = (item.quantity || 0) * (item.expectedPrice || 0);
@@ -66,8 +66,32 @@ const ItemRow: React.FC<{
             <td className="px-2 py-2 border-r border-[#E2E8F0]">
                 <div className="flex items-center gap-3">
                     <div className="min-w-0">
-                        <div className="text-[14px] font-bold text-[#1E293B] truncate">{item.category}</div>
-                        {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-0.5">{item.note}</div>}
+                        <div className="text-[14px] font-bold text-[#1E293B] truncate">{item.name}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                            {item.expectedPurchaseLink && (
+                                <a
+                                    href={item.expectedPurchaseLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[9px] font-black text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
+                                    title="Link mua dự kiến"
+                                >
+                                    <ExternalLink className="w-2.5 h-2.5" /> DK
+                                </a>
+                            )}
+                            {item.actualPurchaseLink && (
+                                <a
+                                    href={item.actualPurchaseLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
+                                    title="Link mua thực tế"
+                                >
+                                    <ExternalLink className="w-2.5 h-2.5" /> TT
+                                </a>
+                            )}
+                        </div>
+                        {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-1 uppercase opacity-70 font-medium">{item.note}</div>}
                     </div>
                 </div>
             </td>
@@ -146,7 +170,7 @@ const ItemRow: React.FC<{
                     </td>
                     <td className="px-2 py-2 text-center">
                         <button
-                            onClick={() => setDonorModalItem({ id: item.id, name: item.category })}
+                            onClick={() => setDonorModalItem({ id: item.id, name: item.name })}
                             className="text-[10px] text-[#1E293B] font-bold hover:underline opacity-80 flex mx-auto items-center"
                         >
                             Xem danh sách
@@ -162,7 +186,7 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
     items, categories, campaign, itemMedia, donationSummary, handleExportItems,
     setGalleryModalItemId, loadItemMedia, totalPlan, totalActual, totalReceived, expenditure
 }) => {
-    const [donorModalItem, setDonorModalItem] = useState<{id: number, name: string} | null>(null);
+    const [donorModalItem, setDonorModalItem] = useState<{ id: number, name: string } | null>(null);
     const [collapsedCats, setCollapsedCats] = useState<Record<number, boolean>>({});
     const hasCategories = categories && categories.length > 0;
     const toggleCat = (catId: number) => setCollapsedCats(prev => ({ ...prev, [catId]: !prev[catId] }));

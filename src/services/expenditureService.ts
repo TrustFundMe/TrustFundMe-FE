@@ -48,7 +48,7 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; price: number; }[]): Promise<Expenditure> => {
+    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; price: number; actualPurchaseLink?: string; }[]): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items });
         return response.data;
     },

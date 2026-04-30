@@ -54,8 +54,8 @@ export default function ExpenditureDetailPage() {
             <div className="max-w-[1500px] mx-auto px-4 pt-2 pb-4">
                 {/* Navigation */}
                 <div className="mb-2">
-                    <Link 
-                        href={`/account/campaigns/expenditures?campaignId=${expenditure.campaignId}`} 
+                    <Link
+                        href={`/account/campaigns/expenditures?campaignId=${expenditure.campaignId}`}
                         className="inline-flex items-center text-[#64748B] hover:text-[#1E293B] transition-colors text-[10px] font-black uppercase tracking-[2px]"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại quản lý chi tiêu
@@ -79,7 +79,7 @@ export default function ExpenditureDetailPage() {
 
                     {/* Header Right: Stats Cards */}
                     <div className="flex-1">
-                        <ExpenditureDetailStats 
+                        <ExpenditureDetailStats
                             expenditure={expenditure}
                             totalReceived={totalReceived}
                             totalActual={totalActual}
@@ -113,7 +113,7 @@ export default function ExpenditureDetailPage() {
                 <ExpenditureGalleryModal
                     isOpen={!!galleryModalItemId}
                     onClose={() => setGalleryModalItemId(null)}
-                    itemName={items.find(i => i.id === galleryModalItemId)?.category || 'Vật phẩm'}
+                    itemName={items.find(i => i.id === galleryModalItemId)?.name || 'Vật phẩm'}
                     media={itemMedia[galleryModalItemId] || []}
                     onFileChange={(files) => handleItemFileChange(galleryModalItemId, files)}
                     onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId)}

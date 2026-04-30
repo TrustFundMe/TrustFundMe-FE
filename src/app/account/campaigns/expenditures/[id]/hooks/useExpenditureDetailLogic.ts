@@ -10,6 +10,8 @@ import { paymentService } from '@/services/paymentService';
 import { feedPostService } from '@/services/feedPostService';
 import { Expenditure, ExpenditureItem, ExpenditureCatology } from '@/types/expenditure';
 
+const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+
 export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, authLoading: boolean) {
     const router = useRouter();
 
@@ -23,7 +25,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
 
     // Update state
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number; }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number; actualPurchaseLink?: string; }[]>([]);
     const [updating, setUpdating] = useState(false);
     const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
 
@@ -71,7 +73,8 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
                 setUpdateItems(safeItems.map(item => ({
                     id: item.id,
                     actualQuantity: item.actualQuantity || 0,
-                    price: item.price || 0
+                    price: item.price || 0,
+                    actualPurchaseLink: item.actualPurchaseLink || ''
                 })));
 
                 if (campaignData?.type === 'ITEMIZED' && safeItems.length > 0) {
@@ -117,7 +120,8 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
             setUpdateItems(items.map(item => ({
                 id: item.id,
                 actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
-                price: item.price !== undefined ? item.price : 0
+                price: item.price !== undefined ? item.price : 0,
+                actualPurchaseLink: item.actualPurchaseLink || ''
             })));
             setPendingDeleteMediaIds([]);
             items.forEach(item => loadItemMedia(item.id));
@@ -125,13 +129,24 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
         setIsUpdateModalOpen(true);
     };
 
-    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price', value: string) => {
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price' | 'actualPurchaseLink', value: string) => {
         const newItems = [...updateItems];
-        newItems[index] = { ...newItems[index], [field]: Number(value) };
+        if (field === 'actualPurchaseLink') {
+            newItems[index] = { ...newItems[index], [field]: value };
+        } else {
+            newItems[index] = { ...newItems[index], [field]: Number(value) };
+        }
         setUpdateItems(newItems);
     };
 
     const handleUpdateSubmit = async () => {
+        // Validation
+        const invalidLinks = updateItems.filter(item => item.actualPurchaseLink && item.actualPurchaseLink.trim() !== '' && !URL_REGEX.test(item.actualPurchaseLink));
+        if (invalidLinks.length > 0) {
+            toast.error('Có link mua hàng không đúng định dạng. Vui lòng kiểm tra lại.');
+            return;
+        }
+
         try {
             setUpdating(true);
             if (pendingDeleteMediaIds.length > 0) {
@@ -235,7 +250,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
             const actualAmt = (item.actualQuantity || 0) * (item.price || 0);
             return [
                 idx + 1,
-                item.category || '',
+                item.name || '',
                 isAuthorized ? planAmt : receivedAmt,
                 actualAmt,
             ];

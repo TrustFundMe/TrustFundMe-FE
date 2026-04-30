@@ -32,9 +32,11 @@ import {
     History,
     Database,
     BarChart,
+    BrainCircuit,
 } from "lucide-react"
 
 export const iconMap: Record<IconKey, LucideIcon> = {
+    brain: BrainCircuit,
     dashboard: LayoutDashboard,
     users: Users,
     person: User,
