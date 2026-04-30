@@ -272,6 +272,9 @@ export default function AIAnalysisModal({
                                             const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
                                             const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
                                             const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+
+                                            // Handle "Product Not Found" case
+                                            const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
                                             const diff = sysVal - item.total;
                                             const isMatch = Math.abs(diff) < 500;
 
@@ -295,20 +298,22 @@ export default function AIAnalysisModal({
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
-                                                        <div className="font-black text-slate-800 text-[11px] tabular-nums">
-                                                            {fmtVND(item.total)}
+                                                        <div className={`font-black text-[11px] tabular-nums ${isPNF ? 'text-rose-600' : 'text-slate-800'}`}>
+                                                            {isPNF ? 'KHÔNG THỂ KIỂM TRA GIÁ' : fmtVND(item.total)}
                                                         </div>
-                                                        <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                                                            {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
-                                                        </div>
+                                                        {!isPNF && (
+                                                            <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
+                                                                {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
+                                                            </div>
+                                                        )}
                                                         {item.statusMessage && (
                                                             <div className={`mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase inline-block border ${item.statusMessage === 'Sản phẩm không tồn tại'
-                                                                    ? 'bg-rose-50 text-rose-600 border-rose-200'
-                                                                    : item.statusMessage === 'Giá bất thường'
-                                                                        ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                                                        : item.statusMessage === 'Thiếu thông tin phân loại'
-                                                                            ? 'bg-slate-50 text-slate-600 border-slate-200'
-                                                                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                                                ? 'bg-rose-50 text-rose-600 border-rose-200'
+                                                                : item.statusMessage === 'Giá bất thường'
+                                                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                                                    : item.statusMessage === 'Thiếu thông tin phân loại'
+                                                                        ? 'bg-slate-50 text-slate-600 border-slate-200'
+                                                                        : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                                                                 }`}>
                                                                 {item.statusMessage}
                                                             </div>
@@ -325,8 +330,8 @@ export default function AIAnalysisModal({
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <div className={`font-black text-[10px] tabular-nums ${isMatch ? 'text-emerald-500' : 'text-rose-600'}`}>
-                                                            {diff !== 0 ? (diff > 0 ? '+' : '') : ''}{fmtVND(diff)}
+                                                        <div className={`font-black text-[10px] tabular-nums ${isPNF ? 'text-slate-400' : (isMatch ? 'text-emerald-500' : 'text-rose-600')}`}>
+                                                            {isPNF ? '—' : (diff !== 0 ? (diff > 0 ? '+' : '') : '') + fmtVND(diff)}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -345,7 +350,10 @@ export default function AIAnalysisModal({
                                                 const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
                                                 return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
                                             }, 0);
-                                            const totalAI = detected.reduce((acc, item) => acc + item.total, 0);
+                                            const totalAI = detected.reduce((acc, item) => {
+                                                const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
+                                                return acc + (isPNF ? 0 : item.total);
+                                            }, 0);
                                             const diffTotal = totalSys - totalAI;
 
                                             return (
