@@ -28,7 +28,7 @@ const AboutPage = () => {
                 Xem chiến dịch
               </Link>
               <Link
-                href="/campaign-creation"
+                href="/new-campaign-test"
                 className="inline-flex h-11 items-center rounded-full border border-[#111827] bg-white px-6 text-sm font-extrabold text-[#111827] transition-colors hover:bg-[#f3f4f6]"
               >
                 Tạo chiến dịch

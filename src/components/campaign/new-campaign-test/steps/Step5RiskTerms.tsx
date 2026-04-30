@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { fullRiskTermsVietnamese } from '../mockData';
 import { NewCampaignTestState } from '../types';
+import StepFooter from '../parts/StepFooter';
 
 interface Props {
   state: NewCampaignTestState;
@@ -52,8 +53,8 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
   };
 
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
-      <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 5 — Điều khoản quản trị rủi ro</h2>
+    <div className="rounded-xl bg-white p-4 md:p-5">
+      <h2 className="text-lg font-bold tracking-tight text-black">Bước 4 — Điều khoản quản trị rủi ro</h2>
       <p className="mt-1 text-sm text-gray-500">Đọc và chấp nhận vô điều kiện trước khi gửi duyệt hồ sơ.</p>
 
       {/* Document container */}
@@ -165,27 +166,7 @@ export default function Step5RiskTerms({ state, onPatch, onPrev, onNext, canNext
         </div>
       </motion.label>
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-        <motion.button
-          type="button"
-          onClick={onPrev}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
-        >
-          Quay lại
-        </motion.button>
-        <motion.button
-          type="button"
-          disabled={!canNext}
-          onClick={onNext}
-          whileHover={canNext ? { scale: 1.02 } : {}}
-          whileTap={canNext ? { scale: 0.97 } : {}}
-          className="rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-        >
-          Tới bước cuối
-        </motion.button>
-      </div>
+      <StepFooter canNext={canNext} onPrev={onPrev} onNext={onNext} nextLabel="Tới bước cuối" />
     </div>
   );
 }

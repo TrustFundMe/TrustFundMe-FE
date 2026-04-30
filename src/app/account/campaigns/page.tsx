@@ -321,7 +321,7 @@ function CampaignsContent() {
                 </p>
                 {!searchTerm && (
                   <Link
-                    href="/campaign-creation"
+                    href="/new-campaign-test"
                     className="inline-flex px-8 py-4 bg-orange-600 text-white rounded-2xl hover:bg-orange-700 transition-all font-bold shadow-xl shadow-orange-100 hover:scale-105"
                   >
                     Bắt đầu chiến dịch đầu tiên

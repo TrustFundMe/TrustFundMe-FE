@@ -29,7 +29,7 @@ const HeroSection9 = () => {
       },
       {
         text: 'Tạo chiến dịch',
-        onClick: () => window.location.href = '/campaign-creation',
+        onClick: () => window.location.href = '/new-campaign-test',
         variant: 'outline' as const,
         className: 'border-2 border-[#1A685B] text-[#1A685B] hover:bg-[#1A685B] hover:text-white shadow-none transition-all duration-300 text-lg px-10 py-6 font-bold rounded-lg',
       },

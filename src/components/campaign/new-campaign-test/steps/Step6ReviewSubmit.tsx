@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { NewCampaignTestState } from '../types';
+import StepFooter from '../parts/StepFooter';
 
 interface Props {
   state: NewCampaignTestState;
@@ -42,8 +43,8 @@ export default function Step6ReviewSubmit({
   canSubmit,
 }: Props) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-6">
-      <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 6 — Tóm tắt & Gửi duyệt</h2>
+    <div className="rounded-xl bg-white p-4 md:p-5">
+      <h2 className="text-lg font-bold tracking-tight text-black">Bước 5 — Tóm tắt & Gửi duyệt</h2>
       <p className="mt-1 text-sm text-gray-500">
         Kiểm tra thông tin, ký xác nhận điện tử, sau đó gửi hồ sơ chờ Staff duyệt.
       </p>
@@ -151,27 +152,7 @@ export default function Step6ReviewSubmit({
         </div>
       )}
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-        <motion.button
-          type="button"
-          onClick={onPrev}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
-        >
-          Quay lại
-        </motion.button>
-        <motion.button
-          type="button"
-          disabled={!canSubmit}
-          onClick={onSubmit}
-          whileHover={canSubmit ? { scale: 1.02 } : {}}
-          whileTap={canSubmit ? { scale: 0.97 } : {}}
-          className="rounded-full bg-brand px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-        >
-          Gửi duyệt hồ sơ
-        </motion.button>
-      </div>
+      <StepFooter canNext={canSubmit} onPrev={onPrev} onNext={onSubmit} nextLabel="Gửi duyệt hồ sơ" />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 
@@ -67,6 +67,8 @@ function formatTimeAgo(dateString: string) {
   }
 }
 
+const QUICK_AMOUNTS = [50000, 100000, 200000, 500000];
+
 export default function CampaignDonateCard({
   raisedAmount,
   goalAmount,
@@ -80,7 +82,7 @@ export default function CampaignDonateCard({
   goalAmount: number;
   progressPercentage: number;
   donorCount?: number;
-  recentDonors?: any[];
+  recentDonors?: { donorName: string; donorAvatar?: string | null; amount: number; anonymous?: boolean; createdAt: string }[];
   onDonate: (amount: number) => void;
   onMoreDonorsClick?: () => void;
 }) {
@@ -88,24 +90,20 @@ export default function CampaignDonateCard({
   const remainingAmount = Math.max(0, goalAmount - raisedAmount);
 
   const [amount, setAmount] = useState<number>(50000);
-  const quickAmounts = useMemo(() => [50000, 100000, 200000, 500000], []);
   const normalizedAmount = Math.max(0, amount || 0);
 
   return (
-    <div className="single-sidebar-widgets mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
+    <div className="mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
       <div className="p-3.5 md:p-4">
         <div className="rounded-xl border border-[rgba(15,23,42,0.10)] bg-slate-50/70 p-2.5">
           <CircularProgress value={progress} />
         </div>
 
         <div className="mt-2.5 rounded-xl border border-[rgba(15,23,42,0.10)] bg-white px-3 py-2.5">
-          <div className="d-flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Mục tiêu chiến dịch</p>
               <p className="mt-1 truncate text-[15px] font-extrabold text-slate-900">{goalAmount.toLocaleString("vi-VN")} VNĐ</p>
-            </div>
-            <div className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-              {progress}%
             </div>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -121,7 +119,7 @@ export default function CampaignDonateCard({
         </div>
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          {quickAmounts.map((v) => (
+          {QUICK_AMOUNTS.map((v) => (
             <button
               key={v}
               type="button"
@@ -164,13 +162,8 @@ export default function CampaignDonateCard({
           </motion.button>
         </div>
 
-        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-500">
-          <div>
-            Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
-          </div>
-          <div>
-            Tỷ lệ: <span className="font-extrabold text-slate-700">{progress}%</span>
-          </div>
+        <div className="mt-1.5 text-[11px] font-semibold text-slate-500">
+          Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
         </div>
 
         <div className="mt-3 border-t border-[rgba(15,23,42,0.10)] pt-3">

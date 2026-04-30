@@ -1,14 +1,15 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useRef, useState } from 'react';
 import { CampaignImage, NewCampaignTestState } from '../types';
 import CategorySelector from '../parts/CategorySelector';
+import StepFooter from '../parts/StepFooter';
 
 interface Props {
   state: NewCampaignTestState;
   errors: Record<string, string>;
   showErrors: boolean;
+  canNext: boolean;
   onPatchCore: (patch: Partial<NewCampaignTestState['campaignCore']>) => void;
   onTogglePreview: () => void;
   previewOpen: boolean;
@@ -24,10 +25,10 @@ function newImageId(): string {
 function inputClass(fieldKey: string, errors: Record<string, string>, showErrors: boolean) {
   const err = Boolean(showErrors && errors[fieldKey]);
   return [
-    'w-full rounded-xl border-2 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition duration-150',
+    'w-full rounded-lg border bg-white px-4 py-3 text-sm text-gray-900 outline-none transition duration-150 placeholder:text-gray-400',
     err
-      ? 'border-red-200 bg-red-50/50 focus:border-red-400 focus:ring-2 focus:ring-red-100'
-      : 'border-gray-200 bg-white focus:border-brand focus:bg-white focus:ring-2 focus:ring-orange-100',
+      ? 'border-red-200 bg-red-50/50 focus:border-red-400 focus:ring-1 focus:ring-red-100'
+      : 'border-gray-200 hover:border-gray-300 focus:border-black focus:ring-1 focus:ring-black/5',
   ].join(' ');
 }
 
@@ -53,6 +54,7 @@ export default function Step2CampaignForm({
   state,
   errors,
   showErrors,
+  canNext,
   onPatchCore,
   onTogglePreview,
   previewOpen,
@@ -62,8 +64,32 @@ export default function Step2CampaignForm({
   const core = state.campaignCore;
   const images = core.campaignImages ?? [];
   const [isDragging, setIsDragging] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const coverErr = showErrors && errors.coverImage;
+  const hasValue = (field: string) => {
+    switch (field) {
+      case 'title':
+        return core.title.trim().length > 0;
+      case 'targetAmount':
+        return core.targetAmount > 0;
+      case 'startDate':
+        return Boolean(core.startDate);
+      case 'endDate':
+        return Boolean(core.endDate);
+      case 'category':
+        return Boolean(core.categoryId || core.category.trim());
+      case 'objective':
+        return core.objective.trim().length > 0;
+      case 'thankMessage':
+        return core.thankMessage.trim().length > 0;
+      case 'coverImage':
+        return images.length > 0;
+      default:
+        return false;
+    }
+  };
+  const shouldShowFieldError = (field: string) => showErrors || Boolean(touched[field]) || hasValue(field);
+  const coverErr = shouldShowFieldError('coverImage') && errors.coverImage;
 
   const applyImages = (nextImages: CampaignImage[], preferredCoverId?: string) => {
     const coverId =
@@ -118,91 +144,116 @@ export default function Step2CampaignForm({
   };
 
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm md:p-5">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-xl bg-white p-3.5 md:p-4">
+      <div className="mb-3 flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 2 — Nội dung chiến dịch</h2>
-          <p className="mt-0.5 text-sm text-gray-500">Thông tin hiển thị công khai sau khi được duyệt.</p>
+          <h2 className="text-lg font-bold tracking-tight text-black">Bước 2 — Nội dung chiến dịch</h2>
+          <p className="mt-1 text-sm text-gray-500">Thông tin hiển thị công khai sau khi được duyệt.</p>
         </div>
-        <motion.button
+        <button
           type="button"
           onClick={onTogglePreview}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-150 ${
-            previewOpen ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50'
+          className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition ${
+            previewOpen ? 'bg-black text-white' : 'border border-gray-200 bg-white text-black hover:bg-gray-50'
           }`}
         >
           <EyeIcon />
           {previewOpen ? 'Đang xem trước' : 'Xem trước'}
-        </motion.button>
+        </button>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(280px,38%)] lg:items-start lg:gap-6">
-        <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(270px,36%)] lg:items-start lg:gap-4">
+        <div className="space-y-3">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             <Field label="Tên chiến dịch" required error={errors.title} showErrors={showErrors}>
               <input
-                className={inputClass('title', errors, showErrors)}
+                className={inputClass('title', errors, shouldShowFieldError('title'))}
                 value={core.title}
-                onChange={(e) => onPatchCore({ title: e.target.value })}
+                onChange={(e) => {
+                  setTouched((prev) => ({ ...prev, title: true }));
+                  onPatchCore({ title: e.target.value });
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
               />
             </Field>
             <Field label="Số tiền mục tiêu (đ)" required error={errors.targetAmount} showErrors={showErrors}>
               <input
                 type="number"
-                className={inputClass('targetAmount', errors, showErrors)}
+                className={inputClass('targetAmount', errors, shouldShowFieldError('targetAmount'))}
                 value={core.targetAmount}
-                onChange={(e) => onPatchCore({ targetAmount: Number(e.target.value) || 0 })}
+                onChange={(e) => {
+                  setTouched((prev) => ({ ...prev, targetAmount: true }));
+                  onPatchCore({ targetAmount: Number(e.target.value) || 0 });
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, targetAmount: true }))}
               />
             </Field>
             <Field label="Ngày bắt đầu" required error={errors.startDate} showErrors={showErrors}>
               <input
-                className={inputClass('startDate', errors, showErrors)}
+                className={inputClass('startDate', errors, shouldShowFieldError('startDate'))}
                 type="date"
                 min={new Date().toISOString().split('T')[0]}
                 value={core.startDate}
-                onChange={(e) => onPatchCore({ startDate: e.target.value })}
+                onChange={(e) => {
+                  setTouched((prev) => ({ ...prev, startDate: true }));
+                  onPatchCore({ startDate: e.target.value });
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, startDate: true }))}
               />
             </Field>
             <Field label="Ngày kết thúc" required error={errors.endDate} showErrors={showErrors}>
               <input
-                className={inputClass('endDate', errors, showErrors)}
+                className={inputClass('endDate', errors, shouldShowFieldError('endDate'))}
                 type="date"
                 min={core.startDate || new Date().toISOString().split('T')[0]}
                 value={core.endDate}
-                onChange={(e) => onPatchCore({ endDate: e.target.value })}
+                onChange={(e) => {
+                  setTouched((prev) => ({ ...prev, endDate: true }));
+                  onPatchCore({ endDate: e.target.value });
+                }}
+                onBlur={() => setTouched((prev) => ({ ...prev, endDate: true }))}
               />
             </Field>
             <Field label="Danh mục" required error={errors.category} showErrors={showErrors}>
               <CategorySelector
                 categoryId={core.categoryId}
-                onChange={(id, name) => onPatchCore({ categoryId: id, category: name })}
-                error={showErrors && errors.category}
+                onChange={(id, name) => {
+                  setTouched((prev) => ({ ...prev, category: true }));
+                  onPatchCore({ categoryId: id, category: name });
+                }}
+                error={shouldShowFieldError('category') && errors.category}
               />
             </Field>
           </div>
           <Field label="Câu chuyện / mục tiêu gây quỹ" required error={errors.objective} showErrors={showErrors}>
             <textarea
-              rows={4}
-              className={`${inputClass('objective', errors, showErrors)} min-h-[100px] resize-y leading-relaxed`}
+              rows={3}
+              className={`${inputClass('objective', errors, shouldShowFieldError('objective'))} min-h-[100px] resize-y leading-relaxed`}
               value={core.objective}
-              onChange={(e) => onPatchCore({ objective: e.target.value })}
+              onChange={(e) => {
+                setTouched((prev) => ({ ...prev, objective: true }));
+                onPatchCore({ objective: e.target.value });
+              }}
+              onBlur={() => setTouched((prev) => ({ ...prev, objective: true }))}
             />
           </Field>
 
           <Field label="Lời cảm ơn nhà tài trợ" required error={errors.thankMessage} showErrors={showErrors}>
             <textarea
-              rows={3}
-              className={`${inputClass('thankMessage', errors, showErrors)} min-h-[76px] resize-y leading-relaxed`}
+              rows={2}
+              className={`${inputClass('thankMessage', errors, shouldShowFieldError('thankMessage'))} min-h-[68px] resize-y leading-relaxed`}
               value={core.thankMessage}
-              onChange={(e) => onPatchCore({ thankMessage: e.target.value })}
+              onChange={(e) => {
+                setTouched((prev) => ({ ...prev, thankMessage: true }));
+                onPatchCore({ thankMessage: e.target.value });
+              }}
+              onBlur={() => setTouched((prev) => ({ ...prev, thankMessage: true }))}
             />
           </Field>
         </div>
 
-        <div className={`mt-4 lg:mt-0 ${coverErr ? 'rounded-2xl ring-2 ring-red-200' : ''} lg:rounded-xl lg:bg-gray-50/60 lg:p-2.5 lg:ring-1 lg:ring-gray-100`}>
-          <label className="mb-1.5 block text-sm font-semibold text-gray-800">
+        <div className={`mt-3 lg:mt-0 ${coverErr ? 'rounded-xl ring-2 ring-red-200' : ''} lg:rounded-xl lg:bg-gray-50/60 lg:p-2 lg:ring-1 lg:ring-gray-100`}>
+          <label className="mb-1.5 block text-sm font-semibold text-gray-900">
             Ảnh chiến dịch <span className="text-red-600">*</span>
           </label>
           <p className="mb-2 text-xs leading-snug text-gray-500">
@@ -211,7 +262,7 @@ export default function Step2CampaignForm({
 
           {/* Large cover preview */}
           {images.length > 0 && core.coverImageUrl ? (
-            <div className="relative mb-3 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
+            <div className="relative mb-2.5 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
               <div className="aspect-video w-full">
                 <img src={core.coverImageUrl} alt="Ảnh bìa" className="h-full w-full object-cover" />
               </div>
@@ -223,7 +274,7 @@ export default function Step2CampaignForm({
 
           {/* Thumbnails row */}
           {images.length > 0 ? (
-            <div className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-gutter:stable]">
+            <div className="mb-1.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-gutter:stable]">
               {images.map((img) => {
                 const isCover = img.id === core.coverImageId;
                 return (
@@ -276,7 +327,7 @@ export default function Step2CampaignForm({
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             role="button"
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-5 transition-all duration-200 ${
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-all duration-200 ${
               coverErr && images.length === 0
                 ? 'border-red-200 bg-red-50/50'
                 : isDragging
@@ -294,26 +345,7 @@ export default function Step2CampaignForm({
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <motion.button
-          type="button"
-          onClick={onPrev}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
-        >
-          Quay lại
-        </motion.button>
-        <motion.button
-          type="button"
-          onClick={onNext}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover active:scale-[0.98]"
-        >
-          Tiếp tục
-        </motion.button>
-      </div>
+      <StepFooter canNext={canNext} onPrev={onPrev} onNext={onNext} />
     </div>
   );
 }
@@ -333,12 +365,12 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-semibold text-gray-900">
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
       </label>
       {children}
-      {showErrors && error ? <p className="text-xs font-semibold text-red-600">{error}</p> : null}
+      {(showErrors || Boolean(error)) && error ? <p className="text-xs font-semibold text-red-600">{error}</p> : null}
     </div>
   );
 }

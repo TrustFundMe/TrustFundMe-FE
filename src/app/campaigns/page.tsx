@@ -17,7 +17,7 @@ const CampaignsPage = () => {
           heading="Nơi trao gửi yêu thương"
           subheading="Gửi gắm yêu thương và lan tỏa những điều tốt đẹp"
           ctaLabel="Tạo chiến dịch"
-          ctaHref="/campaign-creation"
+          ctaHref="/new-campaign-test"
         />
         <CampaignCategoriesSection />
       </div>

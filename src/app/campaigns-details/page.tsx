@@ -1,7 +1,7 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { XCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
@@ -14,7 +14,6 @@ import PostsFeed from '@/components/campaign/PostsFeed';
 import DonorsModal from '@/components/campaign/DonorsModal';
 import TrustScoreLogsModal from '@/components/campaign/TrustScoreLogsModal';
 import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower, CampaignMedia } from '@/components/campaign/types';
-import { mockComments } from '@/components/campaign/mock';
 import { feedPostService } from '@/services/feedPostService';
 import type { FeedPostDto } from '@/types/feedPost';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -132,8 +131,6 @@ function CampaignDetailsInner() {
   const postsLoadedRef = useRef(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
 
-  const comments = useMemo(() => [...mockComments], []);
-  const displayPlans = useMemo<CampaignPlan[]>(() => plans, [plans]);
 
   useEffect(() => {
     let mounted = true;
@@ -148,14 +145,58 @@ function CampaignDetailsInner() {
 
       try {
         setLoading(true);
-        const [dto, activeGoal, expenditures] = await Promise.all([
+
+        // Phase 1: Fetch critical data in parallel — campaign + owner + media + goal + progress
+        const [dto, activeGoal, expenditures, mediaResult, progressData, recentDonorsData] = await Promise.all([
           campaignService.getById(campaignId),
           campaignService.getActiveGoalByCampaignId(campaignId),
-          campaignService.getExpendituresByCampaignId(campaignId)
+          campaignService.getExpendituresByCampaignId(campaignId),
+          mediaService.getMediaByCampaignId(campaignId).catch(() => []),
+          paymentService.getCampaignProgress(campaignId).catch(() => null),
+          paymentService.getRecentDonors(campaignId, 3).catch(() => []),
         ]);
 
+        if (!mounted) return;
+
+        // Process media immediately
+        let galleryUrls: string[] = [];
+        let finalCoverUrl = '';
+        const mediaList = mediaResult as any[];
+        const attachments: CampaignMedia[] = [];
+        if (mediaList && mediaList.length > 0) {
+          const coverMedia = mediaList.find(m => m.id === dto.coverImage);
+          finalCoverUrl = coverMedia ? coverMedia.url : mediaList[0].url;
+          const sortedMedia = [...mediaList].sort((a: any, b: any) => {
+            if (a.id === dto.coverImage) return -1;
+            if (b.id === dto.coverImage) return 1;
+            return 0;
+          });
+          const photos: string[] = [];
+          sortedMedia.forEach((m: any) => {
+            const mediaType = m.mediaType || m.type || '';
+            if (mediaType === 'PHOTO' || mediaType === 'VIDEO') {
+              photos.push(m.url);
+            }
+            if (mediaType === 'FILE') {
+              attachments.push({ id: m.id, type: 'FILE', url: m.url, name: m.fileName || m.name || `Tệp đính kèm` });
+            }
+          });
+          galleryUrls = photos;
+        }
+
+        // Show campaign immediately with basic owner info (no extra fetch yet)
+        const campaignData = mapCampaignDtoToUi(dto, activeGoal, undefined, galleryUrls, finalCoverUrl, undefined, attachments);
+        setCampaign(campaignData);
+        setProgress(progressData);
+        setRecentDonors(recentDonorsData);
+        setLoading(false); // Page visible now!
+
+        // Process expenditure plans (only fetch categories if not nested)
+        const expendituresNeedingCategories = (expenditures || []).filter(
+          (exp: any) => !exp.categories || exp.categories.length === 0
+        );
         const categoryEntries = await Promise.all(
-          (expenditures || []).map(async (exp: any) => {
+          expendituresNeedingCategories.map(async (exp: any) => {
             try {
               const categories = await expenditureService.getCategories(exp.id);
               return [exp.id as number, categories as any[]] as const;
@@ -187,7 +228,6 @@ function CampaignDetailsInner() {
             })),
           }));
           const totalItems = normalizedCategories.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0);
-
           const firstCategoryDescription =
             normalizedCategories.find((cat: any) => (cat.description || '').trim())?.description || '';
           return {
@@ -207,31 +247,28 @@ function CampaignDetailsInner() {
         if (!mounted) return;
         setPlans(mappedPlans);
 
-        // Fetch owner, media, follow info, progress, and user's own flags in parallel
+        // Phase 2: Non-blocking — owner details, follow info, flags, trust score, posts
         const [
           ownerResult,
-          mediaResult,
           followResult,
           followersResult,
-          progressData,
-          recentDonorsData,
-          myFlags
+          myFlags,
+          trustScoreResult,
+          postsResult,
         ] = await Promise.all([
           userService.getUserById(dto.fundOwnerId).catch(() => null),
-          mediaService.getMediaByCampaignId(campaignId).catch(() => []),
           Promise.all([
             campaignService.isFollowing(campaignId).catch(() => false),
             campaignService.getFollowerCount(campaignId).catch(() => 0)
           ]).catch(() => [false, 0]),
           campaignService.getFollowers(campaignId).catch(() => []),
-          paymentService.getCampaignProgress(campaignId).catch(() => null),
-          paymentService.getRecentDonors(campaignId, 3).catch(() => []),
-          flagService.getMyFlags(0, 100).catch(() => [] as import('@/services/flagService').FlagDto[])
+          flagService.getMyFlags(0, 100).catch(() => [] as import('@/services/flagService').FlagDto[]),
+          trustScoreService.getUserScore(dto.fundOwnerId).catch(() => null),
+          feedPostService.getByCampaignId(campaignId, { size: 4 }).catch(() => null),
         ]);
 
-        console.log("🔍 [CampaignDetails] Data fetched:", { progressData, recentDonorsData });
+        if (!mounted) return;
 
-        // Check if current user already flagged this campaign
         const alreadyFlagged = (myFlags as import('@/services/flagService').FlagDto[])
           .some(f => f.campaignId === campaignId);
 
@@ -241,92 +278,34 @@ function CampaignDetailsInner() {
           owner.avatar = ownerResult.data.avatarUrl || owner.avatar;
         }
 
-        let galleryUrls: string[] = [];
-        let finalCoverUrl = '';
-        const mediaList = mediaResult as any[];
-        const attachments: CampaignMedia[] = [];
-        if (mediaList && mediaList.length > 0) {
-          const coverMedia = mediaList.find(m => m.id === dto.coverImage);
-          finalCoverUrl = coverMedia ? coverMedia.url : mediaList[0].url;
-          const sortedMedia = [...mediaList].sort((a: any, b: any) => {
-            if (a.id === dto.coverImage) return -1;
-            if (b.id === dto.coverImage) return 1;
-            return 0;
-          });
-
-          // Tách riêng ảnh, video, file
-          const photos: string[] = [];
-          sortedMedia.forEach((m: any) => {
-            const mediaType = m.mediaType || m.type || '';
-            if (mediaType === 'PHOTO') {
-              photos.push(m.url);
-            } else if (mediaType === 'VIDEO') {
-              photos.push(m.url);
-            }
-            if (mediaType === 'FILE') {
-              attachments.push({ id: m.id, type: 'FILE', url: m.url, name: m.fileName || m.name || `Tệp đính kèm` });
-            }
-          });
-          galleryUrls = photos;
-        }
-
         const followed = (followResult as [boolean, number])[0];
         const followerCount = (followResult as [boolean, number])[1];
 
-        // Map followers data - fetch user info for each follower
         const followersList = followersResult as any[];
-        const followersData: CampaignFollower[] = await Promise.all(
-          followersList.map(async (f: any) => {
-            const userId = f.userId || 0;
-            let userName = 'Người dùng';
-            let avatarUrl = undefined;
+        const followersData: CampaignFollower[] = followersList.map((f: any) => ({
+          userId: f.userId || 0,
+          userName: f.userName || 'Người dùng',
+          avatarUrl: f.avatarUrl || undefined,
+          followedAt: f.followedAt || f.createdAt || new Date().toISOString(),
+        }));
 
-            try {
-              const userRes = await userService.getUserById(userId);
-              if (userRes.success && userRes.data) {
-                userName = userRes.data.fullName;
-                avatarUrl = userRes.data.avatarUrl;
-              }
-            } catch {
-              // Use default values
-            }
-
-            return {
-              userId,
-              userName,
-              avatarUrl,
-              followedAt: f.followedAt || f.createdAt || new Date().toISOString()
-            };
-          })
-        );
-
-        if (!mounted) return;
-
-        // Fetch trust score for campaign owner
-        let trustScore: number | undefined;
-        try {
-          const scoreRes = await trustScoreService.getUserScore(dto.fundOwnerId);
-          trustScore = scoreRes.totalScore;
-          console.log('[DEBUG trustScore] ownerId=', dto.fundOwnerId, 'score=', scoreRes.totalScore);
-        } catch (err) {
-          console.log('[DEBUG trustScore] failed for', dto.fundOwnerId, err);
-          // Trust score is optional, ignore errors
-        }
-
-        const campaignData = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl, trustScore, attachments);
-        campaignData.followed = followed;
-        campaignData.followerCount = followerCount;
-        campaignData.flagged = alreadyFlagged;   // ← pre-set from existing flags
-        setCampaign(campaignData);
+        const trustScore = trustScoreResult?.totalScore;
+        const updatedCampaign = mapCampaignDtoToUi(dto, activeGoal, owner, galleryUrls, finalCoverUrl, trustScore, attachments);
+        updatedCampaign.followed = followed;
+        updatedCampaign.followerCount = followerCount;
+        updatedCampaign.flagged = alreadyFlagged;
+        setCampaign(updatedCampaign);
         setFollowers(followersData);
-        setProgress(progressData);
-        setRecentDonors(recentDonorsData);
+
+        if (postsResult) {
+          setPosts(postsResult.content.map(mapFeedPostDtoToCampaignPost));
+          setPostsTotal(postsResult.totalElements);
+          postsLoadedRef.current = true;
+        }
       } catch (err) {
         console.error('Fetch campaign detail error:', err);
         if (!mounted) return;
         setError('Không thể tải thông tin chiến dịch');
-      } finally {
-        if (!mounted) return;
         setLoading(false);
       }
     };
@@ -337,22 +316,6 @@ function CampaignDetailsInner() {
       mounted = false;
     };
   }, [campaignId]);
-
-  const loadCampaignPosts = useCallback(async () => {
-    if (!campaignId) return;
-    try {
-      const result = await feedPostService.getByCampaignId(campaignId, { size: 4 });
-      setPosts(result.content.map(mapFeedPostDtoToCampaignPost));
-      setPostsTotal(result.totalElements);
-      postsLoadedRef.current = true;
-    } catch {
-      // silently fail - posts section stays empty
-    }
-  }, [campaignId]);
-
-  useEffect(() => {
-    loadCampaignPosts();
-  }, [loadCampaignPosts]);
 
   if (loading) {
     return (
@@ -477,23 +440,11 @@ function CampaignDetailsInner() {
               />
 
 
-              {/* KYC warning button for staff/admin when campaign owner has not finished KYC */}
-              {(isStaff || isAdmin) && campaign && campaign.kycVerified === false && (
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/staff/verification?userId=${campaign.creator.id}`)}
-                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700"
-                  >
-                    Kiểm tra KYC của chủ chiến dịch
-                  </button>
-                </div>
-              )}
-
               <MilestoneTimeline
-                plans={displayPlans}
+                plans={plans}
                 raisedAmount={progress?.raisedAmount || campaign.raisedAmount || 0}
               />
+
               <div
                 style={{
                   border: '1px solid rgba(15,23,42,0.10)',
@@ -587,7 +538,7 @@ function CampaignDetailsInner() {
 
                 <div style={{ marginBottom: 18 }}>
                   <PlansList
-                    plans={displayPlans}
+                    plans={plans}
                     onOpenPlan={(planId) => {
                       router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
                     }}
@@ -719,8 +670,8 @@ export default function CampaignDetailsPage() {
                   maxWidth: 1200,
                   margin: '0 auto',
                   display: 'grid',
-                  gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)',
-                  gap: 48,
+                  gridTemplateColumns: 'minmax(0, 1.45fr) minmax(0, 0.95fr)',
+                  gap: 30,
                   alignItems: 'start',
                 }}
               >
@@ -732,7 +683,7 @@ export default function CampaignDetailsPage() {
                     <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
                   </div>
                 </div>
-                <div style={{ minWidth: 0, marginTop: 86 }}>
+                <div style={{ minWidth: 0, marginTop: 16 }}>
                   <div className="animate-pulse space-y-6">
                     <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
                     <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>

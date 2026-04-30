@@ -6,15 +6,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { mockBanks } from '../mockData';
 import { CredibilityFile, NewCampaignTestState } from '../types';
 import LegalModal from '../parts/LegalModal';
+import StepFooter from '../parts/StepFooter';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { kycService } from '@/services/kycService';
 import { bankAccountService } from '@/services/bankAccountService';
+import { api } from '@/config/axios';
+import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 
 interface Props {
   state: NewCampaignTestState;
   onPatch: (patch: Partial<NewCampaignTestState>) => void;
   onNext: () => void;
   canNext: boolean;
+  failMessage?: string;
 }
 
 /** Ô nhập dạng hộp — dễ nhận diện vùng bấm và nhập liệu */
@@ -39,31 +43,52 @@ function LabeledField({
   const hintId = id ? `${id}-hint` : undefined;
   return (
     <div className="flex flex-col gap-2">
-      {id ? (
-        <label htmlFor={id} className="text-sm font-semibold text-gray-900">
-          {label}
-        </label>
-      ) : (
-        <span className="text-sm font-semibold text-gray-900">{label}</span>
-      )}
-      {hint ? (
-        <p id={hintId} className="text-xs leading-snug text-gray-600">
-          {hint}
-        </p>
-      ) : null}
+      <div className="flex items-center gap-1.5">
+        {id ? (
+          <label htmlFor={id} className="text-sm font-semibold text-gray-900">
+            {label}
+          </label>
+        ) : (
+          <span className="text-sm font-semibold text-gray-900">{label}</span>
+        )}
+        {hint ? (
+          <button
+            type="button"
+            id={hintId}
+            title={hint}
+            aria-label={hint}
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition hover:text-gray-600"
+          >
+            <InfoIcon />
+          </button>
+        ) : null}
+      </div>
       {children}
     </div>
   );
 }
 
-function SectionBlock({ step, title, children }: { step: string; title: string; children: React.ReactNode }) {
+function SectionBlock({
+  step,
+  title,
+  actions,
+  children,
+}: {
+  step: string;
+  title: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 md:p-5">
-      <div className="mb-3.5 flex items-center gap-3 border-b border-gray-100 pb-2.5">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-[11px] font-bold text-white">
-          {step}
-        </span>
-        <h3 className="text-sm font-bold uppercase tracking-wide text-black">{title}</h3>
+    <section className="rounded-xl border border-gray-200 bg-white p-3 md:p-4">
+      <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-gray-100 pb-2">
+        <div className="flex items-center gap-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-[11px] font-bold text-white">
+            {step}
+          </span>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-black">{title}</h3>
+        </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
       {children}
     </section>
@@ -104,16 +129,64 @@ function InfoIcon() {
   );
 }
 
-export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Props) {
+export default function Step1Eligibility({ state, onPatch, onNext, canNext, failMessage }: Props) {
   const [bankQuery, setBankQuery] = useState('');
   const [bankOpen, setBankOpen] = useState(false);
-  const [kycChecking, setKycChecking] = useState(false);
-  const [kycNotice, setKycNotice] = useState('');
+  const [refreshingStep1, setRefreshingStep1] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [bankTouched, setBankTouched] = useState<{ holder: boolean; number: boolean; bank: boolean }>({
+    holder: false,
+    number: false,
+    bank: false,
+  });
   const [kycImages, setKycImages] = useState<{ front?: string; back?: string; selfie?: string }>({});
   const bankWrapRef = useRef<HTMLDivElement>(null);
   const KYC_PAGE_HREF = '/account/profile';
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+
+  const refreshStepOneData = async (showDoneNotice = false) => {
+    if (!user?.id) return;
+    setRefreshingStep1(true);
+
+    const [kycResult, userResult] = await Promise.allSettled([
+      kycService.getMyKyc(),
+      api.get(API_ENDPOINTS.USERS.BY_ID(user.id)),
+    ]);
+
+    if (kycResult.status === 'fulfilled') {
+      const kyc = kycResult.value;
+      if (kyc) {
+        const status = kyc.status === 'APPROVED' ? 'APPROVED' : kyc.status === 'PENDING' ? 'PENDING' : kyc.status === 'REJECTED' ? 'REJECTED' : 'NOT_SUBMITTED';
+        onPatch({
+          kycStatus: status,
+          kycFullName: kyc.fullName || user.fullName || '',
+          kycRejectReason: kyc.rejectionReason || '',
+        });
+        setKycImages({
+          front: kyc.idImageFront || undefined,
+          back: kyc.idImageBack || undefined,
+          selfie: kyc.selfieImage || undefined,
+        });
+      } else {
+        onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '', kycRejectReason: '' });
+        setKycImages({});
+      }
+    } else {
+      onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '', kycRejectReason: '' });
+      setKycImages({});
+    }
+
+    if (userResult.status === 'fulfilled' && userResult.value?.data) {
+      const latestUser = userResult.value.data;
+      updateUser({
+        fullName: latestUser.fullName,
+        cvUrl: latestUser.cvUrl,
+      });
+    }
+
+    setRefreshingStep1(false);
+    setInitialLoading(false);
+  };
 
   // Auto-fetch KYC + Bank on mount
   useEffect(() => {
@@ -121,57 +194,8 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
       setInitialLoading(false);
       return;
     }
-
-    const fetchUserData = async () => {
-      setInitialLoading(true);
-
-      // Fetch KYC — independent, don't block bank
-      try {
-        const kyc = await kycService.getMyKyc();
-        if (kyc) {
-          const status = kyc.status === 'APPROVED' ? 'APPROVED' : kyc.status === 'PENDING' ? 'PENDING' : kyc.status === 'REJECTED' ? 'REJECTED' : 'NOT_SUBMITTED';
-          onPatch({
-            kycStatus: status,
-            kycFullName: kyc.fullName || user.fullName || '',
-            kycRejectReason: kyc.rejectionReason || '',
-          });
-          setKycImages({
-            front: kyc.idImageFront || undefined,
-            back: kyc.idImageBack || undefined,
-            selfie: kyc.selfieImage || undefined,
-          });
-        } else {
-          onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '' });
-        }
-      } catch (err: any) {
-        console.warn('KYC fetch failed (may not exist yet):', err?.response?.status || err.message);
-        // If KYC service fails (500/403/etc), assume NOT_SUBMITTED so user can still proceed
-        onPatch({ kycStatus: 'NOT_SUBMITTED', kycFullName: user.fullName || '' });
-      }
-
-      // Fetch Bank Accounts — independent
-      try {
-        const banks = await bankAccountService.getMyBankAccounts();
-        if (banks && banks.length > 0) {
-          const primary = banks[0];
-          onPatch({
-            bankInfo: {
-              accountHolderName: primary.accountHolderName,
-              accountNumber: primary.accountNumber,
-              bankCode: primary.bankCode,
-              bankName: mockBanks.find(b => b.code === primary.bankCode)?.name || primary.bankCode,
-              branch: '',
-            },
-          });
-        }
-      } catch (err: any) {
-        console.warn('Bank fetch failed:', err?.response?.status || err.message);
-      }
-
-      setInitialLoading(false);
-    };
-
-    fetchUserData();
+    setInitialLoading(true);
+    refreshStepOneData();
   }, [user?.id]);
 
   useEffect(() => {
@@ -187,6 +211,26 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
     () => mockBanks.find((b) => b.code === state.bankInfo.bankCode) ?? null,
     [state.bankInfo.bankCode],
   );
+  const bankHolderTrim = state.bankInfo.accountHolderName.trim();
+  const bankNumberTrim = state.bankInfo.accountNumber.trim();
+  const bankCodeTrim = state.bankInfo.bankCode.trim();
+  const bankErrors = {
+    holder:
+      !bankHolderTrim
+        ? 'Vui lòng nhập tên chủ tài khoản.'
+        : bankHolderTrim.length < 6 || bankHolderTrim.length > 255
+          ? 'Tên chủ tài khoản phải từ 6-255 ký tự.'
+          : '',
+    number:
+      !bankNumberTrim
+        ? 'Vui lòng nhập số tài khoản.'
+        : !/^\d+$/.test(bankNumberTrim)
+          ? 'Số tài khoản chỉ được chứa chữ số.'
+          : bankNumberTrim.length < 6 || bankNumberTrim.length > 50
+            ? 'Số tài khoản phải từ 6-50 chữ số.'
+            : '',
+    bank: !bankCodeTrim ? 'Vui lòng chọn ngân hàng nhận tiền.' : '',
+  };
 
   const filteredBanks = useMemo(() => {
     const q = bankQuery.trim().toLowerCase();
@@ -216,41 +260,25 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
     if (e.dataTransfer?.files?.length) addBankProof(e.dataTransfer.files);
   };
 
-  const refreshKycStatus = async () => {
-    if (!user?.id) return;
-    setKycChecking(true);
-    setKycNotice('');
-    try {
-      const kyc = await kycService.getByUserId(user.id);
-      if (kyc) {
-        const status = kyc.status === 'APPROVED' ? 'APPROVED' : kyc.status === 'PENDING' ? 'PENDING' : kyc.status === 'REJECTED' ? 'REJECTED' : 'NOT_SUBMITTED';
-        onPatch({
-          kycStatus: status,
-          kycFullName: kyc.fullName || user.fullName || '',
-          kycRejectReason: kyc.rejectionReason || '',
-        });
-        if (status === 'APPROVED') setKycNotice('KYC đã được duyệt.');
-        else if (status === 'PENDING') setKycNotice('KYC đang chờ duyệt.');
-        else if (status === 'REJECTED') setKycNotice('KYC chưa đạt. Vui lòng cập nhật hồ sơ.');
-        else setKycNotice('Bạn chưa nộp KYC.');
-      } else {
-        onPatch({ kycStatus: 'NOT_SUBMITTED' });
-        setKycNotice('Bạn chưa nộp KYC. Vui lòng vào trang KYC và gửi hồ sơ trước.');
-      }
-    } catch {
-      setKycNotice('Không thể kiểm tra KYC. Vui lòng thử lại.');
-    } finally {
-      setKycChecking(false);
-    }
-  };
-
   return (
-    <div className="rounded-xl bg-white p-4 md:p-5">
+    <div className="rounded-xl bg-white p-3 md:p-4">
       <h2 className="text-lg font-bold tracking-tight text-black">Bước 1 — Kiểm tra cổng & tài khoản</h2>
-      <p className="mt-1 text-sm text-gray-500">Xác minh danh tính và tài khoản nhận tiền.</p>
 
-      <div className="mt-5 space-y-4">
-        <SectionBlock step="1" title="Định danh & cổng vào">
+      <div className="mt-3 space-y-3">
+        <SectionBlock
+          step="1"
+          title="Định danh & cổng vào"
+          actions={
+            <button
+              type="button"
+              onClick={() => refreshStepOneData(true)}
+              disabled={refreshingStep1 || initialLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {refreshingStep1 ? 'Đang làm mới...' : 'Làm mới trạng thái'}
+            </button>
+          }
+        >
           {(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') ? (
             <div
               className="rounded-lg border border-gray-200 bg-gray-50 p-3"
@@ -264,7 +292,9 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                   <p className="text-sm font-bold text-black">
                     {state.kycStatus === 'APPROVED' ? 'Định danh đã xác minh' : 'KYC đang chờ duyệt'}
                     {state.kycStatus === 'PENDING' && (
-                      <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">chờ duyệt</span>
+                      <span className="ml-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700">
+                        chờ duyệt
+                      </span>
                     )}
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
@@ -298,16 +328,16 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-                <p className="text-sm font-bold text-black">
+              <div className="rounded-lg border border-red-200 bg-red-50/70 px-4 py-3">
+                <p className="text-sm font-bold text-red-700">
                   {state.kycStatus === 'NOT_SUBMITTED'
                     ? 'Bạn chưa xác minh danh tính (KYC).'
                     : 'KYC chưa đạt.'}
                 </p>
                 {state.kycRejectReason ? (
-                  <p className="mt-1 text-xs text-gray-500">Lý do: {state.kycRejectReason}</p>
+                  <p className="mt-1 text-xs text-red-600">Lý do: {state.kycRejectReason}</p>
                 ) : null}
-                <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+                <p className="mt-1.5 text-xs leading-relaxed text-red-600/90">
                   Hoàn tất xác minh danh tính để tiếp tục tạo chiến dịch.
                 </p>
               </div>
@@ -319,14 +349,6 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                 >
                   Xác minh KYC ngay
                 </Link>
-                <button
-                  type="button"
-                  onClick={refreshKycStatus}
-                  disabled={kycChecking}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {kycChecking ? 'Đang kiểm tra...' : 'Làm mới trạng thái'}
-                </button>
               </div>
             </div>
           )}
@@ -339,41 +361,19 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
               >
                 Xem thông tin KYC
               </Link>
-              <button
-                type="button"
-                onClick={refreshKycStatus}
-                disabled={kycChecking}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {kycChecking ? 'Đang kiểm tra...' : 'Làm mới trạng thái'}
-              </button>
             </div>
           )}
 
-          {/* Mock controls removed — now using real API data */}
-          {kycNotice ? <p className="mt-2 text-xs font-medium text-gray-700">{kycNotice}</p> : null}
+          {/* Silent refresh by design */}
         </SectionBlock>
 
         <SectionBlock step="2" title="Tài khoản ngân hàng nhận tiền">
-          {state.bankInfo.accountNumber && state.bankInfo.bankCode ? (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Tài khoản đã liên kết</p>
-                <div className="space-y-1 text-sm text-black">
-                  <p>Chủ TK: <span className="font-bold">{state.bankInfo.accountHolderName}</span></p>
-                  <p>Số TK: <span className="font-bold">{state.bankInfo.accountNumber}</span></p>
-                  <p>Ngân hàng: <span className="font-bold">{state.bankInfo.bankName}</span></p>
-                </div>
+          <div className="space-y-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-3.5 py-2.5">
+                <p className="text-xs font-bold text-blue-800">
+                  Theo quy định tại Nghị định 93/2021/NĐ-CP, mỗi chiến dịch phải sử dụng một tài khoản tiếp nhận tiền riêng biệt.
+                </p>
               </div>
-              <Link
-                href={KYC_PAGE_HREF}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
-              >
-                Thay đổi tài khoản
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-4">
               <LabeledField
                 id="step1-holder-name"
                 label="Tên chủ tài khoản"
@@ -385,8 +385,12 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                   placeholder="Ví dụ: NGUYEN VAN A hoặc HỘI CHỮ THẬP ĐỎ"
                   value={state.bankInfo.accountHolderName}
                   onChange={(e) => onPatch({ bankInfo: { ...state.bankInfo, accountHolderName: e.target.value } })}
+                  onBlur={() => setBankTouched((prev) => ({ ...prev, holder: true }))}
                   aria-describedby="step1-holder-name-hint"
                 />
+                {bankTouched.holder && bankErrors.holder && (
+                  <p className="text-xs font-semibold text-red-600">{bankErrors.holder}</p>
+                )}
                 {state.kycStatus === 'APPROVED' && state.bankInfo.accountHolderName.trim() !== '' && state.bankInfo.accountHolderName.trim() !== state.kycFullName.trim() && (
                   <p className="mt-1 flex items-center gap-1.5 text-xs text-amber-600">
                     <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -410,8 +414,12 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                   placeholder="Ví dụ: 0123456789"
                   value={state.bankInfo.accountNumber}
                   onChange={(e) => onPatch({ bankInfo: { ...state.bankInfo, accountNumber: e.target.value } })}
+                  onBlur={() => setBankTouched((prev) => ({ ...prev, number: true }))}
                   aria-describedby="step1-account-number-hint"
                 />
+                {bankTouched.number && bankErrors.number && (
+                  <p className="text-xs font-semibold text-red-600">{bankErrors.number}</p>
+                )}
               </LabeledField>
 
               <div className="relative z-30" ref={bankWrapRef}>
@@ -478,6 +486,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                                 onPatch({ bankInfo: { ...state.bankInfo, bankCode: b.code, bankName: b.name } });
                                 setBankOpen(false);
                                 setBankQuery('');
+                                setBankTouched((prev) => ({ ...prev, bank: true }));
                               }}
                               className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition ${active ? 'bg-gray-100 font-bold text-black ring-1 ring-gray-300' : 'text-gray-900 hover:bg-gray-50'}`}
                             >
@@ -503,15 +512,17 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
                   </motion.div>
                 )}
               </div>
+              {bankTouched.bank && bankErrors.bank && (
+                <p className="text-xs font-semibold text-red-600">{bankErrors.bank}</p>
+              )}
             </div>
-          )}
         </SectionBlock>
 
         <SectionBlock step="3" title="Hồ sơ năng lực thiện nguyện">
           {user?.cvUrl ? (
             /* ── User already has CV — show summary only ── */
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Đã có hồ sơ năng lực</p>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-2">Đã có hồ sơ năng lực</p>
               <div className="flex flex-wrap items-center gap-2">
                 <a
                   href={user.cvUrl}
@@ -611,33 +622,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext }: Pr
         </SectionBlock>
       </div>
 
-      <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          {canNext ? (
-            <>
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-white">
-                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-              </span>
-              <span className="text-brand">Đã hoàn tất — sẵn sàng tiếp tục</span>
-            </>
-          ) : (
-            <>
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-gray-400">
-                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" /></svg>
-              </span>
-              <span className="text-gray-400">Vui lòng hoàn tất các mục bên trên</span>
-            </>
-          )}
-        </div>
-        <button
-          type="button"
-          disabled={!canNext}
-          onClick={onNext}
-          className="rounded-full bg-brand px-7 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none"
-        >
-          Tiếp tục
-        </button>
-      </div>
+      <StepFooter canNext={canNext} onNext={onNext} failMessage={failMessage} />
     </div>
   );
 }

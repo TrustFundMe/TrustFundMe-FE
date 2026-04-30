@@ -33,9 +33,7 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
             setLoading(true);
             try {
                 const id = typeof campaignId === 'string' ? parseInt(campaignId, 10) : campaignId;
-                console.log("📊 [Analytics] Fetching data for ID:", id, "period:", period);
                 const res = await paymentService.getCampaignAnalytics(id, period);
-                console.log("📊 [Analytics] Success:", res);
 
                 const generateSlots = (p: string) => {
                     const slots = [];
@@ -48,7 +46,7 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                         }
                     } else if (p === 'Tuần') {
                         const day = now.getDay();
-                        const limit = day === 0 ? 7 : day; // If Sunday, limit is 7, otherwise 1-6
+                        const limit = day === 0 ? 7 : day;
                         const allDays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
                         for (let i = 0; i < limit; i++) {
                             slots.push(allDays[i]);
@@ -141,8 +139,8 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
 
                 if (extendedRes) extendedRes.chartData = formattedChartData as unknown as ChartPoint[];
                 setData(extendedRes);
-            } catch (err) {
-                console.error("❌ Failed to fetch campaign analytics:", err);
+            } catch {
+                // silently fail
             } finally {
                 setLoading(false);
             }
@@ -166,15 +164,13 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
 
     const CustomTooltipContent = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
         if (active && payload && payload.length) {
-            // Find the balance explicitly set OR the first available value
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const balanceData = payload.find((p: any) => p.payload && p.payload.tooltipBalance !== undefined);
             const val = balanceData ? Math.max(balanceData.payload.tooltipBalance, 0) : Math.max(payload[0].value, 0);
             const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
             return (
                 <div style={{ background: '#fff', padding: '12px', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                     <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#6B7280', fontSize: 13 }}>{label}</p>
-                    <p style={{ margin: 0, color: '#111827', fontWeight: 800, fontSize: 15 }}>Số dư: <span style={{ color: '#0F5D51' }}>{formatted}</span></p>
+                    <p style={{ margin: 0, color: '#111827', fontWeight: 800, fontSize: 15 }}>Số dư: <span style={{ color: '#0f172a' }}>{formatted}</span></p>
                 </div>
             );
         }
@@ -183,19 +179,8 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
 
     if (loading) {
         return (
-            <div style={{
-                border: '1px solid rgba(0,0,0,0.10)',
-                borderRadius: 16,
-                padding: '48px',
-                background: '#fff',
-                marginTop: '32px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-            }}>
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '48px 0' }}>
+                <div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#ff5e14', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
             </div>
         );
     }
@@ -205,74 +190,69 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
     const hasData = (data.chartData && data.chartData.length > 0) && (data.totalReceived > 0 || data.totalSpent > 0);
 
     return (
-        <div style={{
-            border: '1px solid rgba(0,0,0,0.10)',
-            borderRadius: 16,
-            padding: '24px',
-            background: '#fff',
-            marginTop: '32px',
-            position: 'relative'
-        }}>
-            <div className="d-flex flex-column gap-4" style={{ marginBottom: 32 }}>
-                <div className="d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center gap-3">
-                        <h4 style={{ marginBottom: 0, fontSize: 20, fontWeight: 700 }}>Thống Kê Giao Dịch</h4>
-                        <Link
-                            href={`/account/campaigns/transactions?campaignId=${campaignId}`}
-                            className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#ff5e14] text-white text-[11px] font-black uppercase tracking-wider hover:bg-[#ea550c] transition-all shadow-sm shadow-orange-100"
-                        >
-                            Xem biến động số dư
-                        </Link>
-                    </div>
+        <div>
+            {/* Header row with link + period selector */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Link
+                    href={`/account/campaigns/transactions?campaignId=${campaignId}`}
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '6px 14px',
+                        borderRadius: 9999,
+                        background: '#ff5e14',
+                        color: '#fff',
+                        fontSize: 11,
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        textDecoration: 'none',
+                        transition: 'background 150ms',
+                    }}
+                >
+                    Xem biến động số dư
+                </Link>
 
-                    <div className="d-flex align-items-center gap-2">
-                        <select
-                            className="form-select text-sm border-0"
-                            style={{ background: '#f8f9fa', borderRadius: 8, fontSize: 13, cursor: 'pointer', paddingRight: '28px' }}
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                        >
-                            <option value="Tháng">Tháng</option>
-                            <option value="Tuần">Tuần</option>
-                            <option value="Ngày">Ngày</option>
-                        </select>
-                    </div>
-                </div>
+                <select
+                    value={period}
+                    onChange={(e) => setPeriod(e.target.value)}
+                    style={{
+                        background: '#f8f9fa',
+                        borderRadius: 8,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        padding: '6px 28px 6px 12px',
+                        border: '1px solid rgba(15,23,42,0.10)',
+                        fontWeight: 600,
+                        color: '#334155',
+                        outline: 'none',
+                    }}
+                >
+                    <option value="Tháng">Tháng</option>
+                    <option value="Tuần">Tuần</option>
+                    <option value="Ngày">Ngày</option>
+                </select>
+            </div>
 
-                {/* Custom Legend - Horizontal */}
-                <div className="d-flex align-items-center gap-4 flex-wrap">
-                    <div className="d-flex align-items-center">
-                        <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#0F5D51' }}></div>
-                        <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Tổng nhận</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: '#0F5D51', marginLeft: 8 }}>
-                            {new Intl.NumberFormat('vi-VN').format(data.totalReceived)} ₫
+            {/* Legend */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+                {[
+                    { label: 'Tổng nhận', value: data.totalReceived, color: '#10b981' },
+                    { label: 'Tổng rút', value: data.totalSpent, color: '#ef4444' },
+                    { label: 'Nhận từ quỹ chung', value: data.receivedFromGeneralFund || 0, color: '#3b82f6' },
+                    { label: 'Số dư hiện tại', value: data.currentBalance, color: '#0f172a' },
+                ].map((item) => (
+                    <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.color }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{item.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: item.color }}>
+                            {new Intl.NumberFormat('vi-VN').format(item.value)} ₫
                         </span>
                     </div>
-                    <div className="d-flex align-items-center">
-                        <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
-                        <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Tổng rút</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: '#ef4444', marginLeft: 8 }}>
-                            {new Intl.NumberFormat('vi-VN').format(data.totalSpent)} ₫
-                        </span>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>
-                        <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Nhận từ quỹ chung</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: '#3b82f6', marginLeft: 8 }}>
-                            {new Intl.NumberFormat('vi-VN').format(data.receivedFromGeneralFund || 0)} ₫
-                        </span>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#000' }}></div>
-                        <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 8 }}>Số dư hiện tại</span>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: '#000', marginLeft: 8 }}>
-                            {new Intl.NumberFormat('vi-VN').format(data.currentBalance)} ₫
-                        </span>
-                    </div>
-                </div>
-                <div style={{ marginTop: '4px', fontSize: 12, color: '#6B7280', fontStyle: 'italic', paddingLeft: 4 }}>
-                    *Chú thích: Tr = Triệu đồng, N = Nghìn đồng
-                </div>
+                ))}
+            </div>
+            <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginBottom: 16 }}>
+                *Chú thích: Tr = Triệu đồng, N = Nghìn đồng
             </div>
 
             <div style={{ width: '100%', height: 350, position: 'relative' }}>
@@ -326,9 +306,9 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                                 key={p.key}
                                 type="monotone"
                                 dataKey={p.key}
-                                stroke={p.type === 'green' ? '#0F5D51' : '#ef4444'}
+                                stroke={p.type === 'green' ? '#10b981' : '#ef4444'}
                                 strokeWidth={3}
-                                dot={{ r: 4, fill: p.type === 'green' ? '#0F5D51' : '#ef4444', strokeWidth: 0 }}
+                                dot={{ r: 4, fill: p.type === 'green' ? '#10b981' : '#ef4444', strokeWidth: 0 }}
                                 activeDot={{ r: 6 }}
                                 animationDuration={1000}
                                 connectNulls={false}

@@ -164,20 +164,20 @@ const CategoryCard = ({
     <button
       type="button"
       onClick={() => onClick(id)}
-      className="group flex flex-col items-center justify-center gap-3 py-6 px-6 hover:bg-slate-50 border-b-2 border-transparent hover:border-[#ff5e14] transition-all duration-300 min-w-[120px] md:min-w-[140px]"
+      className="group flex flex-col items-center justify-center gap-2.5 py-5 px-5 rounded-xl cursor-pointer border-0 outline-none ring-0 hover:bg-slate-50 transition-colors duration-200 min-w-[110px] md:min-w-[130px]"
     >
-      <div className="text-slate-400 group-hover:text-[#ff5e14] transition-all duration-300 transform group-hover:scale-110">
+      <div className="text-slate-400 group-hover:text-[#ff5e14] transition-all duration-200 transform group-hover:scale-110 group-hover:-translate-y-0.5">
         {resolvedUrl ? (
           <img
             src={resolvedUrl}
             alt={title}
-            className="h-14 w-14 md:h-16 md:w-16 object-contain opacity-50 contrast-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 group-hover:contrast-100 transition-all duration-300"
+            className="h-12 w-12 md:h-14 md:w-14 object-contain opacity-60 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-200"
           />
         ) : (
-          <HeartHandshake className="h-14 w-14 md:h-16 md:w-16 stroke-[1.2]" />
+          <HeartHandshake className="h-12 w-12 md:h-14 md:w-14 stroke-[1.2]" />
         )}
       </div>
-      <span className="text-[12px] md:text-sm font-semibold text-slate-500 group-hover:text-slate-900 tracking-tight text-center leading-tight whitespace-nowrap">
+      <span className="text-[11px] md:text-xs font-bold text-slate-500 group-hover:text-slate-900 tracking-tight text-center leading-tight whitespace-nowrap transition-colors duration-200">
         {title}
       </span>
     </button>
@@ -263,7 +263,7 @@ export function CampaignCategoriesSection() {
 
   if (loading && categories.length === 0) {
     return (
-      <div className="py-12 text-center bg-white border-b border-slate-100 shadow-sm">
+      <div className="min-h-[70dvh] py-12 text-center bg-white border-b border-slate-100 shadow-sm flex flex-col items-center justify-center">
         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#ff5e14] border-r-transparent"></div>
         <p className="mt-4 text-slate-500 font-medium tracking-wide">Đang tải danh mục...</p>
       </div>
@@ -289,6 +289,10 @@ export function CampaignCategoriesSection() {
   return (
     <section id="campaigns" className="pt-0 pb-8 bg-white overflow-hidden border-b border-slate-100 shadow-sm">
       <div className="mx-auto w-full max-w-[1440px] px-0 relative">
+        <p className="text-center text-xs font-semibold text-slate-400 uppercase tracking-widest pt-5 pb-1">
+          Chọn lĩnh vực bạn quan tâm
+        </p>
+
         {/* Navigation Arrows - Only show if slider is active and on desktop */}
         {showSlider && (
           <>

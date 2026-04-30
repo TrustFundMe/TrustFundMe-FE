@@ -3,13 +3,10 @@
 import Image from "next/image";
 import { useMemo } from "react";
 import {
-  DotsHorizontalIcon,
   FileIcon,
   ArrowRightIcon,
   HeartIcon,
   ChatBubbleIcon,
-  Share2Icon,
-  BookmarkIcon,
 } from "@radix-ui/react-icons";
 import type { CampaignPost, CampaignPostAttachment } from "./types";
 
@@ -152,54 +149,47 @@ function PostCard({
     >
       {/* Author row */}
       <div style={{ padding: "12px 14px 0", flex: "0 0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                overflow: "hidden",
-                flexShrink: 0,
-                background: "#f1f5f9",
-              }}
-            >
-              <Image
-                src={post.author.avatar}
-                alt={post.author.name}
-                width={36}
-                height={36}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            </div>
-
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                  color: "#0f172a",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  maxWidth: 200,
-                }}
-              >
-                {post.author.name}
-              </div>
-              <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, lineHeight: 1.3 }}>
-                {post.createdAt}
-              </div>
-            </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              overflow: "hidden",
+              flexShrink: 0,
+              background: "#f1f5f9",
+            }}
+          >
+            <Image
+              src={post.author.avatar}
+              alt={post.author.name}
+              width={36}
+              height={36}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
           </div>
 
-          <span style={{ opacity: 0.4, padding: 4, flexShrink: 0 }}>
-            <DotsHorizontalIcon style={{ width: 14, height: 14 }} />
-          </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                lineHeight: 1.2,
+                color: "#0f172a",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: 200,
+              }}
+            >
+              {post.author.name}
+            </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, lineHeight: 1.3 }}>
+              {post.createdAt}
+            </div>
+          </div>
         </div>
 
-        {/* Post content text */}
         {hasText && (
           <div
             style={{
@@ -218,7 +208,6 @@ function PostCard({
         )}
       </div>
 
-      {/* Media / attachment */}
       {hasMedia && (
         <div style={{ padding: "10px 14px", flex: "0 0 auto" }}>
           {attachment?.type === "file" ? (
@@ -242,32 +231,22 @@ function PostCard({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
           padding: "8px 14px",
           borderTop: "1px solid rgba(15,23,42,0.06)",
           flex: "0 0 auto",
           background: "#fafbfc",
+          gap: 14,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-            <HeartIcon style={{ width: 14, height: 14 }} />
-            <span>{post.likeCount}</span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
-            <ChatBubbleIcon style={{ width: 14, height: 14 }} />
-            <span>{post.comments.length}</span>
-          </div>
-
-          <span style={{ opacity: 0.4 }}>
-            <Share2Icon style={{ width: 13, height: 13 }} />
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+          <HeartIcon style={{ width: 14, height: 14 }} />
+          <span>{post.likeCount}</span>
         </div>
 
-        <span style={{ opacity: 0.4 }}>
-          <BookmarkIcon style={{ width: 13, height: 13 }} />
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+          <ChatBubbleIcon style={{ width: 14, height: 14 }} />
+          <span>{post.comments.length}</span>
+        </div>
       </div>
     </button>
   );

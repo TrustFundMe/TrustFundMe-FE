@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Fragment } from "react";
+import { Phone, Mail, MapPin } from "lucide-react";
 
 const Footer = ({ footer }: { footer: number }) => {
   switch (footer) {
@@ -232,34 +233,34 @@ const Footer3 = () => {
                 <div className="footer-content">
                   <div className="contact-info-area">
                     <div className="contact-items">
-                      <div className="icon">
-                        <i className="fal fa-phone" />
+                      <div className="icon d-flex align-items-center justify-content-center">
+                        <Phone className="h-5 w-5 text-white" />
                       </div>
                       <div className="content">
-                        <h6>
-                          <a href="tel:+11002345909">+1 100 234 5909</a>
-                          <a href="tel:+11002345910">+1 100 234 5910</a>
-                        </h6>
+                        <div className="d-flex flex-column gap-1">
+                          <a href="tel:+84901234567" className="link">+84 901 234 567</a>
+                          <a href="tel:+84987654321" className="link">+84 987 654 321</a>
+                        </div>
                       </div>
                     </div>
                     <div className="contact-items">
-                      <div className="icon color-2">
-                        <i className="fal fa-envelope" />
+                      <div className="icon color-2 d-flex align-items-center justify-content-center">
+                        <Mail className="h-5 w-5 text-white" />
                       </div>
                       <div className="content">
-                        <h6>
+                        <div className="d-flex flex-column gap-1">
                           <a href="mailto:trustfundme@co.vn" className="link">
                             trustfundme@co.vn
                           </a>
                           <a href="mailto:support@trustfundme.co.vn" className="link">
                             support@trustfundme.co.vn
                           </a>
-                        </h6>
+                        </div>
                       </div>
                     </div>
                     <div className="contact-items">
-                      <div className="icon color-3">
-                        <i className="fal fa-map-marker-alt" />
+                      <div className="icon color-3 d-flex align-items-center justify-content-center">
+                        <MapPin className="h-5 w-5 text-white" />
                       </div>
                       <div className="content">
                         <h6>
@@ -314,8 +315,7 @@ const Footer3 = () => {
         <div className="container">
           <div className="footer-wrapper">
             <p className="wow fadeInUp text-center" data-wow-delay=".3s">
-              © <Link href="/">TrustFundMe</Link> Charity Trust - 2026. All rights
-              reserved.
+              © 2026 <Link href="/">TrustFundMe</Link>. Mọi quyền được bảo lưu.
             </p>
           </div>
         </div>
@@ -629,9 +629,9 @@ const specialLink = [
   { link: "/sign-in", text: "Đăng nhập" },
 ];
 const popularlLink = [
-  { link: "/causes-details", text: "Water Purify" },
-  { link: "/causes-details", text: "Food Collection" },
-  { link: "/causes-details", text: "Healthcare" },
-  { link: "/causes-details", text: "Education" },
-  { link: "/donation-details", text: "Make Donation" },
+  { link: "/campaigns", text: "Nước sạch cộng đồng" },
+  { link: "/campaigns", text: "Hỗ trợ lương thực" },
+  { link: "/campaigns", text: "Y tế khẩn cấp" },
+  { link: "/campaigns", text: "Giáo dục bền vững" },
+  { link: "/donation", text: "Quyên góp ngay" },
 ];

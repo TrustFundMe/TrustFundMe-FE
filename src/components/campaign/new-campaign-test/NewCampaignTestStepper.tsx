@@ -26,43 +26,43 @@ export default function NewCampaignTestStepper({
   const reached = typeof maxReached === 'number' ? maxReached : activeIndex;
 
   return (
-    <nav aria-label="Quy trình tạo chiến dịch" className="w-full">
-      <ol className="grid grid-cols-1 gap-2 md:grid-cols-5 md:gap-3">
+    <nav aria-label="Quy trình tạo chiến dịch" className="w-full md:h-[56px]">
+      <ol className="grid grid-cols-1 gap-2 md:h-full md:grid-cols-5 md:gap-3.5 md:items-stretch">
         {steps.map((step, idx) => {
           const done = idx < activeIndex;
           const active = idx === activeIndex;
           const canClick = idx !== activeIndex && idx <= reached;
 
           return (
-            <li key={step.id} className="min-w-0">
+            <li key={step.id} className="min-w-0 md:h-full">
               <button
                 type="button"
                 aria-current={active ? 'step' : undefined}
                 onClick={() => canClick && onJump(idx)}
                 disabled={!canClick && !active}
                 title={step.title}
-                className={`group relative w-full overflow-hidden rounded-xl border px-2.5 py-1.5 text-left transition-all ${
+                className={`group relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left transition-all md:h-full ${
                   active
-                    ? 'border-orange-200 bg-orange-50 shadow-[0_4px_12px_-6px_rgba(249,115,22,0.5)]'
+                    ? 'border-orange-300 bg-orange-50 shadow-[0_6px_16px_-8px_rgba(249,115,22,0.6)]'
                     : done
-                      ? 'border-emerald-200 bg-emerald-50/60'
-                      : 'border-slate-200 bg-white'
-                } ${canClick ? 'cursor-pointer hover:border-orange-200 hover:bg-orange-50/50' : 'cursor-default'}`}
+                      ? 'border-emerald-300 bg-emerald-50/70'
+                      : 'border-slate-300 bg-white'
+                } ${canClick ? 'cursor-pointer hover:border-orange-300 hover:bg-orange-50/60' : 'cursor-default'}`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 md:h-full md:justify-center">
                   <span
-                    className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold leading-none tabular-nums transition-colors ${
+                    className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-black leading-none tabular-nums transition-colors ${
                       done
-                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                        ? 'border-emerald-600 bg-emerald-600 text-white'
                         : active
                           ? 'border-orange-600 bg-orange-600 text-white'
-                          : 'border-slate-300 bg-white text-slate-500'
+                          : 'border-slate-400 bg-white text-slate-700'
                     }`}
                   >
                     {idx + 1}
                   </span>
                   <span
-                    className={`min-w-0 truncate whitespace-nowrap text-[11px] font-bold leading-none ${
+                    className={`min-w-0 text-[13px] font-black leading-tight break-words ${
                       active ? 'text-orange-700' : done ? 'text-emerald-700' : 'text-slate-700'
                     }`}
                   >

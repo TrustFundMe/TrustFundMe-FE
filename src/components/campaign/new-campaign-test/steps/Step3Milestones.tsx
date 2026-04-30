@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { NewCampaignTestState, Milestone, MilestoneCategory } from '../types';
 import { useToast } from '@/components/ui/Toast';
 import { expenditureService } from '@/services/expenditureService';
+import StepFooter from '../parts/StepFooter';
 
 interface Props {
   state: NewCampaignTestState;
@@ -14,10 +15,11 @@ interface Props {
   onNext: () => void;
   canNext: boolean;
   showErrors?: boolean;
+  failMessage?: string;
 }
 
 const inCls =
-  'rounded-xl border border-[#d9e0e7] bg-white px-3 py-2.5 text-sm text-[#202426] outline-none transition duration-150 focus:border-[#ff5e14] focus:ring-2 focus:ring-[#ff5e14]/20';
+  'rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition duration-150 placeholder:text-gray-400 hover:border-gray-300 focus:border-black focus:ring-1 focus:ring-black/5';
 
 function TrashIcon() {
   return (
@@ -32,7 +34,7 @@ function formatVnd(n: number): string {
   return n.toLocaleString('vi-VN');
 }
 
-export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext, showErrors }: Props) {
+export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext, showErrors, failMessage }: Props) {
   const target = state.campaignCore.targetAmount;
   const milestonesOk = milestoneTotal === target && target > 0;
   const today = new Date().toISOString().split('T')[0];
@@ -277,11 +279,29 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     });
   };
 
+  const getMilestoneErrorCount = (m: Milestone) => {
+    let count = 0;
+    if (!m.title.trim()) count += 1;
+    if (!m.startDate || m.startDate < today) count += 1;
+    if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
+    if (!m.categories || m.categories.length === 0) count += 1;
+    (m.categories || []).forEach((cat) => {
+      if (!cat.name.trim()) count += 1;
+      if (!cat.items || cat.items.length === 0) count += 1;
+      (cat.items || []).forEach((item) => {
+        if (!item.name.trim()) count += 1;
+        if (!item.expectedQuantity || item.expectedQuantity <= 0) count += 1;
+        if (!item.expectedPrice || item.expectedPrice <= 0) count += 1;
+      });
+    });
+    return count;
+  };
+
   return (
-    <div className="rounded-2xl bg-white p-3 shadow-sm md:p-4">
+    <div className="rounded-xl bg-white p-3.5 md:p-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-800">Bước 3 — Lập kế hoạch chi tiêu</h2>
+          <h2 className="text-lg font-bold tracking-tight text-black">Bước 3 — Lập kế hoạch chi tiêu</h2>
           <p className="mt-1 text-sm text-gray-500">
             Chia chiến dịch thành nhiều đợt giải ngân. Mỗi đợt liệt kê các hạng mục cần mua sắm.
           </p>
@@ -321,9 +341,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       </div>
 
       {/* Tổng giải ngân */}
-      <div className="mt-3">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#dfe6ee] bg-[#fff8f3] px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8a5a2b]">Tổng giải ngân</p>
+      <div className="mt-2.5">
+        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-orange-50/80 px-3 py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">Tổng giải ngân</p>
           <motion.span
             animate={{ color: milestonesOk ? '#059669' : '#dc2626' }}
             className="text-sm font-semibold tabular-nums"
@@ -339,35 +359,41 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       </div>
 
       {/* Milestone cards */}
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         {state.milestones.map((m, idx) => {
-          const isLast = idx === state.milestones.length - 1;
           const milSum = (m.categories || []).reduce((sum, cat) => {
             return sum + (cat.items || []).reduce((itemSum, item) => {
               return itemSum + (item.expectedPrice || 0) * (item.expectedQuantity || 0);
             }, 0);
           }, 0);
-          const effectiveAmount = milSum;
+          const errorCount = getMilestoneErrorCount(m);
           return (
             <motion.div
               key={m.id}
               layout
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative ml-4 overflow-visible rounded-xl border border-[#e5ebf1] bg-[#fcfdfd]"
+              className="relative overflow-visible rounded-xl border border-gray-200 bg-white"
             >
-              <span className="absolute -left-6 top-5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#ffd8bf] bg-[#ffefe4] text-sm font-black text-[#ff5e14] shadow-sm">
+              <span className="absolute -left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-xs font-black text-brand shadow-sm">
                     {idx + 1}
               </span>
-              <div className="p-3">
+              <div className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-[#202426]">
+                      <p className="text-sm font-semibold text-black">
                         Tên đợt <span className="text-red-500">*</span>
                       </p>
-                      <div className="text-xs font-bold text-brand tabular-nums">
-                        Tổng: {formatVnd(milSum)} đ
+                      <div className="flex items-center gap-2">
+                        {showErrors && errorCount > 0 && (
+                          <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700">
+                            {errorCount} lỗi
+                          </span>
+                        )}
+                        <div className="text-xs font-bold text-brand tabular-nums">
+                          Tổng: {formatVnd(milSum)} đ
+                        </div>
                       </div>
                     </div>
                     <input
@@ -389,16 +415,16 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     type="button"
                     disabled={state.milestones.length <= 1}
                     onClick={() => removeMilestone(m.id)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[#9aa5b1] ring-1 ring-[#d9e0e7] transition hover:bg-[#fff1f1] hover:text-[#dc2626] hover:ring-[#fecaca] disabled:cursor-not-allowed disabled:opacity-35 mt-[22px]"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-gray-400 ring-1 ring-gray-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200 disabled:cursor-not-allowed disabled:opacity-35 mt-[22px]"
                     aria-label="Xóa mốc"
                   >
                     <TrashIcon />
                   </button>
                 </div>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-[#202426]">Ngày bắt đầu dự kiến <span className="text-red-500">*</span></p>
+                    <p className="text-sm font-semibold text-black">Ngày bắt đầu dự kiến <span className="text-red-500">*</span></p>
                     <input
                       type="date"
                       min={today}
@@ -408,7 +434,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-[#202426]">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
+                    <p className="text-sm font-semibold text-black">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
                     <input
                       type="date"
                       min={m.startDate || today}
@@ -419,9 +445,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                   </div>
                 </div>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-[#202426]">Mô tả đợt</p>
+                    <p className="text-sm font-semibold text-black">Mô tả đợt</p>
                     <textarea
                       className={`${inCls} w-full resize-none text-sm leading-relaxed`}
                       rows={2}
@@ -432,7 +458,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-[#202426]">Điều kiện giải ngân</p>
+                    <p className="text-sm font-semibold text-black">Điều kiện giải ngân</p>
                     <textarea
                       className={`${inCls} w-full resize-none text-sm leading-relaxed`}
                       rows={2}
@@ -445,13 +471,13 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                 </div>
 
                 {/* Categories section — chỉ tên danh mục + số tiền */}
-                <div className="mt-3 space-y-2">
+                <div className="mt-2.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#2f3a44] uppercase tracking-wide">Danh mục chi tiêu <span className="text-red-500">*</span></p>
+                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Danh mục chi tiêu <span className="text-red-500">*</span></p>
                     <button
                       type="button"
                       onClick={() => addCategory(m.id)}
-                      className="text-xs font-semibold text-[#ff5e14] hover:underline"
+                      className="text-xs font-semibold text-brand hover:underline"
                     >
                       + Thêm danh mục
                     </button>
@@ -465,10 +491,10 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     const catTotal = cat.items.reduce((sum, item) => sum + (item.expectedPrice || 0) * (item.expectedQuantity || 0), 0);
 
                     return (
-                      <div key={cat.id} className="rounded-xl border border-[#e5ebf1] bg-[#f7f9fb] p-3 space-y-3">
+                      <div key={cat.id} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2.5">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 space-y-1">
-                            <p className="text-[10px] font-bold text-[#8a949e] uppercase">Tên danh mục</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Tên danh mục</p>
                             <input
                               className={`${inCls} w-full py-1.5 text-sm font-semibold ${catNameMissing ? 'border-red-300 bg-red-50/50' : ''}`}
                               placeholder="Thực phẩm, Trang thiết bị..."
@@ -477,7 +503,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             />
                           </div>
                           <div className="w-40 space-y-1">
-                            <p className="text-[10px] font-bold text-[#8a949e] uppercase text-right">Tổng danh mục</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase text-right">Tổng danh mục</p>
                             <div className="flex items-center justify-end h-9 font-bold text-brand tabular-nums">
                               {formatVnd(catTotal)} đ
                             </div>
@@ -485,39 +511,39 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                           <button
                             type="button"
                             onClick={() => removeCategory(m.id, cat.id)}
-                            className="mt-5 p-2 rounded-lg text-[#9aa5b1] hover:text-[#dc2626] hover:bg-red-50 transition"
+                            className="mt-5 p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                           >
                             <TrashIcon />
                           </button>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           <div className="flex items-center justify-between px-1">
-                            <p className="text-[10px] font-bold text-[#8a949e] uppercase">Bảng hạng mục chi tiết</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase">Bảng hạng mục chi tiết</p>
                             <button
                               type="button"
                               onClick={() => addCategoryItem(m.id, cat.id)}
-                              className="text-[10px] font-bold text-[#ff5e14] hover:underline"
+                              className="text-[10px] font-bold text-brand hover:underline"
                             >
                               + Thêm hạng mục
                             </button>
                           </div>
 
-                          <div className="overflow-x-auto rounded-lg border border-[#dfe6ee] bg-white">
+                          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
                             <table className="w-full min-w-[700px] text-xs">
                               <thead>
-                                <tr className="bg-[#fcfdfd] text-[#8a949e] border-bottom">
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee]">Tên mặt hàng/Dịch vụ</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee] w-24">Số lượng</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee] w-24">Đơn vị</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee] w-28">Đơn giá dự kiến</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee] w-32">Nhãn hàng</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee] w-32">Địa điểm mua</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-[#dfe6ee]">Ghi chú</th>
-                                  <th className="px-3 py-2 text-center font-bold border-b border-[#dfe6ee] w-10"></th>
+                                <tr className="bg-gray-50 text-gray-400 border-bottom">
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200">Tên mặt hàng/Dịch vụ</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-24">Số lượng</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-24">Đơn vị</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-28">Đơn giá dự kiến</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Nhãn hàng</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Địa điểm mua</th>
+                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200">Ghi chú</th>
+                                  <th className="px-3 py-2 text-center font-bold border-b border-gray-200 w-10"></th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-[#dfe6ee]">
+                              <tbody className="divide-y divide-gray-200">
                                 {cat.items.map((item) => {
                                   const nameErr = showErrors && !item.name.trim();
                                   const qtyErr = showErrors && (!item.expectedQuantity || item.expectedQuantity <= 0);
@@ -575,7 +601,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                       </td>
                                       <td className="px-2 py-1.5">
                                         <input
-                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-[#8a949e]"
+                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-gray-400"
                                           placeholder="..."
                                           value={item.note}
                                           onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'note', e.target.value)}
@@ -586,7 +612,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                           type="button"
                                           hidden={cat.items.length <= 1}
                                           onClick={() => removeCategoryItem(m.id, cat.id, item.id)}
-                                          className="text-[#9aa5b1] hover:text-[#dc2626] transition p-1"
+                                          className="text-gray-400 hover:text-red-600 transition p-1"
                                         >
                                           <TrashIcon />
                                         </button>
@@ -614,32 +640,12 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       <button
         type="button"
         onClick={addMilestone}
-        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#ffcfb3] bg-[#fff4ec] py-2.5 text-sm font-semibold text-[#ff5e14] transition hover:bg-[#ffe9db] sm:w-auto sm:px-5"
+        className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-orange-200 bg-orange-50/40 py-2.5 text-sm font-semibold text-brand transition hover:bg-orange-50 sm:w-auto sm:px-5"
       >
         <span className="text-base leading-none">+</span> Thêm đợt
       </button>
 
-      {/* Navigation */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2.5">
-        <motion.button
-          type="button"
-          onClick={onPrev}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full px-5 py-2.5 text-sm font-semibold text-[#202426] ring-1 ring-[#d9e0e7] hover:bg-[#f7f9fb]"
-        >
-          Quay lại
-        </motion.button>
-        <motion.button
-          type="button"
-          onClick={onNext}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          className="rounded-full bg-brand px-7 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-hover"
-        >
-          Tiếp tục
-        </motion.button>
-      </div>
+      <StepFooter canNext={canNext} onPrev={onPrev} onNext={onNext} failMessage={failMessage} />
     </div>
   );
 }

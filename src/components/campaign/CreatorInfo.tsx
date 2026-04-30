@@ -11,6 +11,12 @@ interface CreatorInfoProps {
 export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps) {
   const hasTrustScore = user.trustScore !== undefined && user.trustScore !== null && user.trustScore > 0;
 
+  const handleTrustScoreClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onShowTrustScore?.();
+  };
+
   return (
     <Link
       href={`/fund-owner-details?id=${user.id}`}
@@ -24,7 +30,6 @@ export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps
         color: "inherit",
         transition: "opacity 0.2s"
       }}
-      className="creator-info-link"
     >
       <div
         style={{
@@ -53,21 +58,16 @@ export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 3,
-                background: "#fef3c7",
-                color: "#d97706",
+                background: "rgba(255,94,20,0.08)",
+                color: "#ea580c",
                 borderRadius: 9999,
                 padding: "1px 8px",
                 fontSize: 11,
                 fontWeight: 600,
-                border: "1px solid #fcd34d",
+                border: "1px solid rgba(255,94,20,0.25)",
                 cursor: "pointer",
               }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('[DEBUG badge click] onShowTrustScore exists:', !!onShowTrustScore);
-                onShowTrustScore?.();
-              }}
+              onClick={handleTrustScoreClick}
               title="Bấm vào để xem chi tiết điểm uy tín"
             >
               <Star size={10} />
@@ -77,23 +77,13 @@ export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps
         </div>
         {hasTrustScore && onShowTrustScore && (
           <div
-            style={{ fontSize: 10, color: '#d97706', marginTop: 2 }}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('[DEBUG text click] onShowTrustScore:', !!onShowTrustScore);
-              onShowTrustScore();
-            }}
+            style={{ fontSize: 10, color: '#ea580c', marginTop: 2, cursor: 'pointer' }}
+            onClick={handleTrustScoreClick}
           >
             Bấm vào để xem chi tiết
           </div>
         )}
       </div>
-      <style jsx>{`
-        .creator-info-link:hover {
-          opacity: 0.8;
-        }
-      `}</style>
     </Link>
   );
 }

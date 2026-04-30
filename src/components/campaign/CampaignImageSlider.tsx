@@ -89,7 +89,7 @@ export default function CampaignImageSlider({
                 fill
                 sizes="(min-width: 1024px) 40vw, 100vw"
                 style={{ objectFit: "cover" }}
-                priority={false}
+                priority
               />
             </div>
           )}
@@ -165,27 +165,19 @@ export default function CampaignImageSlider({
                 zIndex: 20,
               }}
             >
-              {slides.map((url, i) => {
-                const dotIsVideo = isVideoUrl(url);
-                return (
+              {slides.map((_, i) => (
                   <span
                     key={i}
                     style={{
                       width: i === index ? 18 : 8,
                       height: 8,
                       borderRadius: 9999,
-                      background:
-                        i === index
-                          ? dotIsVideo
-                            ? "#ff5e14"
-                            : "#ff5e14"
-                          : "rgba(255,255,255,0.7)",
+                      background: i === index ? "#ff5e14" : "rgba(255,255,255,0.7)",
                       transition: "all 180ms ease",
                       display: "inline-block",
                     }}
                   />
-                );
-              })}
+                ))}
             </div>
 
             {/* Type label badge */}

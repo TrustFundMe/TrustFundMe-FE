@@ -39,12 +39,9 @@ export default function CampaignHeader({
   };
 
   return (
-    <div className="causes-details-items">
+    <div>
       <div style={{ marginTop: 10, marginBottom: 14 }}>
-        <div
-          className="d-flex align-items-center justify-content-between flex-wrap gap-2"
-          style={{ marginBottom: 12 }}
-        >
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
           <span
             style={{
               display: "inline-flex",
@@ -62,7 +59,7 @@ export default function CampaignHeader({
               <img
                 src={campaign.categoryIconUrl}
                 alt={campaign.category}
-                className="h-5 w-5 object-contain"
+                style={{ width: 20, height: 20, objectFit: "contain" }}
               />
             ) : null}
             {campaign.category.toUpperCase()}
@@ -84,43 +81,68 @@ export default function CampaignHeader({
 
       <CampaignImageSlider images={sliderImages} alt={campaign.title} />
 
-      {/* Tệp đính kèm — ngay bên dưới ảnh */}
       {fileAttachments.length > 0 && (
-        <div className="mt-4">
-          <h4 className="text-[10px] font-black text-black/30 uppercase tracking-widest mb-3">
+        <div style={{ marginTop: 16 }}>
+          <h4 style={{ fontSize: 10, fontWeight: 900, color: "rgba(0,0,0,0.3)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12 }}>
             Tệp đính kèm
           </h4>
-          <div className="flex flex-col gap-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {fileAttachments.map((file) => (
               <button
                 key={file.id}
                 onClick={() => openFile(file)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl border border-black/8 bg-gray-50 hover:bg-gray-100 transition-all text-left group"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "#f9fafb",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "background 150ms",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#f1f5f9"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
               >
-                <div className="w-9 h-9 rounded-lg bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <FileText className="h-4 w-4 text-brand" />
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    background: "#fff",
+                    border: "1px solid rgba(0,0,0,0.10)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <FileText style={{ width: 16, height: 16, color: "#ff5e14" }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-black group-hover:text-brand transition-colors truncate">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 12, fontWeight: 900, color: "#000", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {file.name || "Tệp đính kèm"}
                   </p>
-                  <p className="text-[9px] font-bold text-black/20 uppercase tracking-widest">
+                  <p style={{ margin: 0, fontSize: 9, fontWeight: 700, color: "rgba(0,0,0,0.2)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     Tải xuống để xem
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-black/20 group-hover:text-brand transition-colors shrink-0" />
+                <ExternalLink style={{ width: 16, height: 16, color: "rgba(0,0,0,0.2)", flexShrink: 0 }} />
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="details-content" style={{ paddingTop: 16 }}>
+      <div style={{ paddingTop: 16 }}>
         <div style={{ marginTop: 8, marginBottom: 18 }}>
           <CreatorInfo user={campaign.creator} onShowTrustScore={onShowTrustScore} />
         </div>
 
-        <div className="mt-4">
+        <div style={{ marginTop: 16 }}>
           <CampaignActions
             followed={campaign.followed}
             flagged={campaign.flagged}
@@ -132,8 +154,8 @@ export default function CampaignHeader({
           />
         </div>
 
-        <div className="causes-contents mt-4">
-          <p className="mb-0" style={{ fontFamily: "var(--font-dm-sans)" }}>
+        <div style={{ marginTop: 16 }}>
+          <p style={{ marginBottom: 0, fontFamily: "var(--font-dm-sans)" }}>
             {campaign.description}
           </p>
         </div>

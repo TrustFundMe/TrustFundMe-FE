@@ -62,7 +62,7 @@ export default function TrustScoreLogsModal({ userId, userName, onClose }: Trust
         {/* Header */}
         <div
           className="relative flex items-center justify-between px-7 pt-6 pb-14"
-          style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}
+          style={{ background: 'linear-gradient(135deg, #ff5e14, #ea580c)' }}
         >
           <div>
             <h2 className="text-xl font-bold text-white">Nhật Ký Điểm Uy Tín</h2>
@@ -83,12 +83,12 @@ export default function TrustScoreLogsModal({ userId, userName, onClose }: Trust
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center items-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#ff5e14]" />
             </div>
           ) : logs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <div className="h-14 w-14 rounded-2xl flex items-center justify-center bg-amber-50">
-                <Star className="h-7 w-7 text-amber-300" />
+              <div className="h-14 w-14 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,94,20,0.08)' }}>
+                <Star className="h-7 w-7 text-[#ff5e14]/40" />
               </div>
               <p className="font-semibold text-gray-500 text-sm">Chưa có nhật ký điểm uy tín nào.</p>
             </div>
@@ -130,7 +130,7 @@ export default function TrustScoreLogsModal({ userId, userName, onClose }: Trust
                             {(log.description && log.description.length > 50) && (
                               <button
                                 onClick={() => toggleExpand(log.id)}
-                                className="text-[10px] font-bold text-amber-600 hover:text-amber-700 mt-1 uppercase tracking-tight"
+                                className="text-[10px] font-bold text-[#ff5e14] hover:text-[#ea580c] mt-1 uppercase tracking-tight"
                               >
                                 {expandedLogs.has(log.id) ? 'Thu gọn' : 'Xem thêm'}
                               </button>
@@ -146,7 +146,7 @@ export default function TrustScoreLogsModal({ userId, userName, onClose }: Trust
                             {href ? (
                               <Link
                                 href={href}
-                                className="text-xs font-semibold text-amber-600 hover:text-amber-700 hover:underline"
+                                className="text-xs font-semibold text-[#ff5e14] hover:text-[#ea580c] hover:underline"
                               >
                                 Xem {log.referenceType === 'CAMPAIGN' ? 'chiến dịch' : log.referenceType === 'POST' ? 'bài viết' : log.referenceType === 'EXPENDITURE' ? 'chi tiêu' : 'chi tiết'}
                               </Link>

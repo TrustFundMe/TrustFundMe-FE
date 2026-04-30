@@ -2,15 +2,13 @@
 
 import DanboxLayout from "@/layout/DanboxLayout";
 import { useAuth } from "@/contexts/AuthContextProxy";
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Heart, Share2, Users, CreditCard, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { ArrowRightIcon, CheckIcon, ReloadIcon } from "@radix-ui/react-icons";
 
 export default function SignOutPage() {
   const { isAuthenticated, logout } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -20,211 +18,80 @@ export default function SignOutPage() {
 
   return (
     <DanboxLayout header={4} footer={2}>
-      <section className="section-padding" style={{ minHeight: "80vh" }}>
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-10">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-center mb-5"
-              >
-                <div
-                  className="rounded-circle d-inline-flex align-items-center justify-content-center mb-4"
-                  style={{
-                    width: "80px",
-                    height: "80px",
-                    backgroundColor: "#fff5f0",
-                    margin: "0 auto",
-                  }}
-                >
-                  <CheckCircle size={40} style={{ color: "#ff5e14" }} />
-                </div>
-                <h1 className="fw-bold mb-3" style={{ color: "#202426", fontSize: "2.5rem" }}>
-                  Bạn đã đăng xuất khỏi TrustFundMe an toàn.
-                </h1>
-              </motion.div>
+      <section className="relative min-h-[100dvh] overflow-hidden bg-[#f8f5f2] px-4 py-16 md:py-24">
+        <div className="pointer-events-none absolute inset-0 opacity-80">
+          <div className="absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#ff5e14]/10 blur-3xl" />
+        </div>
 
-              {/* App Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="card border-0 shadow-sm mb-5"
-                style={{ borderRadius: "16px", backgroundColor: "#fff5f0" }}
-              >
-                <div className="card-body p-5">
-                  <div className="row align-items-center">
-                    <div className="col-lg-8">
-                      <h3 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                        Đừng bỏ lỡ bất kỳ khoản ủng hộ nào với ứng dụng TrustFundMe
-                      </h3>
-                      <ul className="list-unstyled mb-4" style={{ fontSize: "16px" }}>
-                        <li className="mb-2 d-flex align-items-start gap-2">
-                          <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Nhận mẹo và hướng dẫn gây quỹ hiệu quả</span>
-                        </li>
-                        <li className="mb-2 d-flex align-items-start gap-2">
-                          <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Mở rộng nhiều cách chia sẻ chiến dịch hơn</span>
-                        </li>
-                        <li className="mb-2 d-flex align-items-start gap-2">
-                          <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Đăng video cập nhật đến người ủng hộ</span>
-                        </li>
-                        <li className="mb-2 d-flex align-items-start gap-2">
-                          <CheckCircle size={20} style={{ color: "#ff5e14", marginTop: "2px", flexShrink: 0 }} />
-                          <span>Quản lý chiến dịch gây quỹ ở mọi nơi</span>
-                        </li>
-                      </ul>
-                      <p className="text-muted mb-0">
-                        Hoặc tìm "TrustFundMe" trên cửa hàng ứng dụng của bạn
-                      </p>
-                    </div>
+        <div className="relative mx-auto w-full max-w-[1100px]">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: [0.32, 0.72, 0, 1] }}
+            className="rounded-[2rem] bg-black/[0.03] p-2 ring-1 ring-black/[0.06]"
+          >
+            <div className="rounded-[calc(2rem-0.5rem)] bg-white p-6 md:p-10">
+              <div className="flex flex-col gap-8 md:grid md:grid-cols-[1.2fr_0.8fr] md:items-start">
+                <div>
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#fff0e8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#b44a1d]">
+                    <CheckIcon className="h-3.5 w-3.5" />
+                    Phiên đăng xuất hoàn tất
                   </div>
-                </div>
-              </motion.div>
+                  <h1 className="text-3xl font-black leading-[1.06] tracking-tight text-[#1f2937] md:text-5xl">
+                    Bạn đã đăng xuất an toàn khỏi TrustFundMe
+                  </h1>
+                  <p className="mt-4 max-w-[62ch] text-sm leading-relaxed text-[#4b5563] md:text-base">
+                    Cảm ơn bạn đã đồng hành. Khi quay lại, mọi dữ liệu chiến dịch và lịch sử ủng hộ vẫn được lưu giữ đầy đủ trong tài khoản của bạn.
+                  </p>
 
-              {/* Testimonial */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-                className="card border-0 shadow-sm mb-5"
-                style={{ borderRadius: "16px" }}
-              >
-                <div className="card-body p-5">
-                  <div className="d-flex align-items-start gap-4">
-                    <div
-                      className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        backgroundColor: "#fff5f0",
-                      }}
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <Link
+                      href="/sign-in"
+                      className="group inline-flex items-center rounded-full bg-[#111827] px-6 py-3 text-sm font-bold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#0b1220] active:scale-[0.98]"
                     >
-                      <span className="fw-bold" style={{ color: "#ff5e14", fontSize: "20px" }}>
-                        E
+                      Đăng nhập lại
+                      <span className="ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
+                        <ArrowRightIcon className="h-4 w-4" />
                       </span>
-                    </div>
-                    <div>
-                      <p className="mb-2" style={{ fontSize: "16px", fontStyle: "italic", color: "#202426" }}>
-                        "Ứng dụng giúp tôi theo dõi chiến dịch gây quỹ dễ dàng hơn rất nhiều. Tôi luôn mang điện thoại bên mình nên chỉ cần một lần chạm là xem được ngay. Mỗi khi có thông báo ủng hộ mới, tôi rất hào hứng và cũng dễ dàng gửi lời cảm ơn đến mọi người."
-                      </p>
-                      <div>
-                        <strong style={{ color: "#202426" }}>Evan</strong>
-                        <span className="text-muted"> - Người dùng ứng dụng TrustFundMe</span>
-                      </div>
-                    </div>
+                    </Link>
+                    <Link
+                      href="/campaigns"
+                      className="inline-flex items-center rounded-full border border-[#111827]/20 bg-white px-6 py-3 text-sm font-bold text-[#111827] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-[#111827]/35 hover:bg-[#f8fafc] active:scale-[0.98]"
+                    >
+                      Xem chiến dịch đang mở
+                    </Link>
                   </div>
                 </div>
-              </motion.div>
 
-              {/* Fundraising Tips */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.4 }}
-              >
-                <h3 className="fw-bold text-center mb-5" style={{ color: "#202426" }}>
-                  Làm gì để gây quỹ thành công hơn?
-                </h3>
-                <div className="row g-4">
-                  <div className="col-md-6 col-lg-4">
-                    <div className="card border-0 shadow-sm h-100" style={{ borderRadius: "12px" }}>
-                      <div className="card-body p-4 text-center">
-                        <div
-                          className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                            backgroundColor: "#fff5f0",
-                            margin: "0 auto",
-                          }}
-                        >
-                          <Share2 size={30} style={{ color: "#ff5e14" }} />
-                        </div>
-                        <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Chia sẻ với bạn bè và người thân
-                        </h5>
-                        <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Chia sẻ chiến dịch của bạn bằng thông điệp cá nhân hóa.</li>
-                          <li>• Truyền cảm hứng để mọi người cùng bạn lan tỏa câu chuyện.</li>
-                        </ul>
+                <div className="rounded-[1.5rem] bg-[#f8fafc] p-4 ring-1 ring-black/[0.08] md:p-5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#6b7280]">
+                    Bước gợi ý tiếp theo
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {[
+                      "Đăng nhập lại để tiếp tục theo dõi tiến độ chiến dịch.",
+                      "Kiểm tra phần cập nhật để xem tác động mới nhất.",
+                      "Quay về trang chủ để khám phá các chiến dịch đang cần hỗ trợ.",
+                    ].map((item) => (
+                      <div
+                        key={item}
+                        className="rounded-xl bg-white px-3 py-3 text-sm leading-relaxed text-[#334155] ring-1 ring-black/[0.06]"
+                      >
+                        {item}
                       </div>
-                    </div>
+                    ))}
                   </div>
-
-                  <div className="col-md-6 col-lg-4">
-                    <div className="card border-0 shadow-sm h-100" style={{ borderRadius: "12px" }}>
-                      <div className="card-body p-4 text-center">
-                        <div
-                          className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                            backgroundColor: "#fff5f0",
-                            margin: "0 auto",
-                          }}
-                        >
-                          <CreditCard size={30} style={{ color: "#ff5e14" }} />
-                        </div>
-                        <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Thiết lập rút tiền sớm
-                        </h5>
-                        <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Mời người thụ hưởng hoặc thiết lập tài khoản rút tiền sớm.</li>
-                          <li>• Tiền có thể tự động chuyển vào tài khoản ngân hàng đã chỉ định.</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-md-6 col-lg-4">
-                    <div className="card border-0 shadow-sm h-100" style={{ borderRadius: "12px" }}>
-                      <div className="card-body p-4 text-center">
-                        <div
-                          className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                            backgroundColor: "#fff5f0",
-                            margin: "0 auto",
-                          }}
-                        >
-                          <Users size={30} style={{ color: "#ff5e14" }} />
-                        </div>
-                        <h5 className="fw-bold mb-3" style={{ color: "#202426" }}>
-                          Mời thành viên đồng hành
-                        </h5>
-                        <ul className="list-unstyled text-start" style={{ fontSize: "14px" }}>
-                          <li className="mb-2">• Thêm bạn bè và người thân làm thành viên để cùng gây quỹ.</li>
-                          <li>• Thành viên có thể hỗ trợ chia sẻ chiến dịch, cảm ơn và cập nhật cho người ủng hộ.</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+                  <Link
+                    href="/"
+                    className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#ff5e14] transition-colors duration-300 hover:text-[#e0520f]"
+                  >
+                    <ReloadIcon className="h-4 w-4" />
+                    Về trang chủ
+                  </Link>
                 </div>
-              </motion.div>
-
-              {/* Quay về trang chủ */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="text-center mt-5"
-              >
-                <Link
-                  href="/"
-                  className="theme-btn d-inline-flex align-items-center gap-2"
-                >
-                  <Heart size={18} />
-                  Về trang chủ
-                </Link>
-              </motion.div>
+              </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
     </DanboxLayout>

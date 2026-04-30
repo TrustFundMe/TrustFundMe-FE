@@ -121,15 +121,46 @@ export default function NewCampaignTestPage() {
 
   const step0CanNext = useMemo(() => {
     const b = state.bankInfo;
+    const accountNumber = b.accountNumber.trim();
+    const accountHolderName = b.accountHolderName.trim();
+    const bankCode = b.bankCode.trim();
+    const bankName = b.bankName.trim();
+    const isBankValid =
+      bankCode.length > 0 &&
+      bankName.length > 0 &&
+      accountHolderName.length >= 6 &&
+      accountHolderName.length <= 255 &&
+      /^\d+$/.test(accountNumber) &&
+      accountNumber.length >= 6 &&
+      accountNumber.length <= 50;
     return (
       (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
-      b.accountNumber.trim() !== '' &&
-      b.bankCode.trim() !== '' &&
-      b.bankName.trim() !== '' &&
-      b.accountHolderName.trim() !== '' &&
+      isBankValid &&
       (state.bankProofFiles.length > 0 || !!user?.cvUrl)
     );
-  }, [state]);
+  }, [state, user?.cvUrl]);
+  const step0FailMessage = useMemo(() => {
+    const b = state.bankInfo;
+    const accountNumber = b.accountNumber.trim();
+    const accountHolderName = b.accountHolderName.trim();
+    const bankCode = b.bankCode.trim();
+    const bankName = b.bankName.trim();
+    if (!(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING')) {
+      return 'Cần hoàn tất KYC trước khi tiếp tục';
+    }
+    if (!accountHolderName) return 'Thiếu tên chủ tài khoản nhận tiền';
+    if (accountHolderName.length < 6 || accountHolderName.length > 255) {
+      return 'Tên chủ tài khoản phải từ 6-255 ký tự';
+    }
+    if (!accountNumber) return 'Thiếu số tài khoản nhận tiền';
+    if (!/^\d+$/.test(accountNumber)) return 'Số tài khoản chỉ được chứa chữ số';
+    if (accountNumber.length < 6 || accountNumber.length > 50) {
+      return 'Số tài khoản phải từ 6-50 chữ số';
+    }
+    if (!bankCode || !bankName) return 'Cần chọn ngân hàng nhận tiền';
+    if (!(state.bankProofFiles.length > 0 || !!user?.cvUrl)) return 'Cần ít nhất một hồ sơ năng lực thiện nguyện';
+    return 'Vui lòng hoàn tất các mục bên trên';
+  }, [state, user?.cvUrl]);
 
   const step2CanNext = useMemo(() => Object.keys(step2Errors).length === 0, [step2Errors]);
 
@@ -156,6 +187,33 @@ export default function NewCampaignTestPage() {
       }
     }
     return true;
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
+  const step3FailMessage = useMemo(() => {
+    const target = state.campaignCore.targetAmount;
+    if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
+    if (milestoneTotal !== target) return `Tổng phân bổ (${milestoneTotal.toLocaleString('vi-VN')}đ) chưa khớp mục tiêu`;
+    const today = new Date().toISOString().split('T')[0];
+    for (let i = 0; i < state.milestones.length; i += 1) {
+      const m = state.milestones[i];
+      if (!m.title.trim()) return `Đợt ${i + 1}: thiếu tên đợt`;
+      if (!m.startDate) return `Đợt ${i + 1}: thiếu ngày bắt đầu`;
+      if (m.startDate < today) return `Đợt ${i + 1}: ngày bắt đầu phải từ hôm nay`;
+      if (!m.endDate) return `Đợt ${i + 1}: thiếu ngày kết thúc`;
+      if (m.endDate <= m.startDate) return `Đợt ${i + 1}: ngày kết thúc phải sau ngày bắt đầu`;
+      if (!m.categories || m.categories.length === 0) return `Đợt ${i + 1}: cần ít nhất 1 danh mục`;
+      for (let j = 0; j < m.categories.length; j += 1) {
+        const cat = m.categories[j];
+        if (!cat.name.trim()) return `Đợt ${i + 1}, danh mục ${j + 1}: thiếu tên danh mục`;
+        if (!cat.items || cat.items.length === 0) return `Đợt ${i + 1}, danh mục ${j + 1}: cần ít nhất 1 hạng mục`;
+        for (let k = 0; k < cat.items.length; k += 1) {
+          const item = cat.items[k];
+          if (!item.name.trim()) return `Đợt ${i + 1}, danh mục ${j + 1}, hạng mục ${k + 1}: thiếu tên`;
+          if (!item.expectedQuantity || item.expectedQuantity <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: số lượng phải > 0`;
+          if (!item.expectedPrice || item.expectedPrice <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: đơn giá phải > 0`;
+        }
+      }
+    }
+    return 'Vui lòng hoàn tất các mục bên trên';
   }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
 
   const step4CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
@@ -389,7 +447,7 @@ export default function NewCampaignTestPage() {
 
         {/* Horizontal stepper — compact, always on screen */}
         <div className="border-t border-slate-100">
-          <div className="mx-auto max-w-[1200px] px-4 py-1 md:px-8">
+          <div className="mx-auto max-w-[1200px] px-4 py-1.5 md:px-8">
             <NewCampaignTestStepper
               steps={steps}
               activeIndex={activeStep}
@@ -402,7 +460,7 @@ export default function NewCampaignTestPage() {
 
       {/* Scrollable content */}
       <main ref={mainScrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[960px] px-4 py-6 md:px-8 md:py-8">
+        <div className="mx-auto max-w-[960px] px-4 py-4 md:px-8 md:py-5">
         {/* Step content with animation */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -414,13 +472,20 @@ export default function NewCampaignTestPage() {
             transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
           >
             {activeStep === 0 && (
-              <Step1Eligibility state={state} onPatch={patchState} canNext={step0CanNext} onNext={() => goToStep(1)} />
+              <Step1Eligibility
+                state={state}
+                onPatch={patchState}
+                canNext={step0CanNext}
+                failMessage={step0FailMessage}
+                onNext={() => goToStep(1)}
+              />
             )}
             {activeStep === 1 && (
               <Step2CampaignForm
                 state={state}
                 errors={step2Errors}
                 showErrors={step2ShowErrors}
+                canNext={step2CanNext}
                 onPatchCore={(patch) => patchState({ campaignCore: { ...state.campaignCore, ...patch } })}
                 onTogglePreview={() => setPreviewVisible((v) => !v)}
                 previewOpen={previewVisible}
@@ -451,6 +516,7 @@ export default function NewCampaignTestPage() {
                 }}
                 canNext={step3CanNext}
                 showErrors={step3ShowErrors}
+                failMessage={step3FailMessage}
               />
             )}
             {activeStep === 3 && (
