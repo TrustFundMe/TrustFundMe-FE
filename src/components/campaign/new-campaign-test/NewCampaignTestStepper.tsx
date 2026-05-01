@@ -26,8 +26,8 @@ export default function NewCampaignTestStepper({
   const reached = typeof maxReached === 'number' ? maxReached : activeIndex;
 
   return (
-    <nav aria-label="Quy trình tạo chiến dịch" className="w-full md:h-[56px]">
-      <ol className="grid grid-cols-1 gap-2 md:h-full md:grid-cols-5 md:gap-3.5 md:items-stretch">
+    <nav aria-label="Quy trình tạo chiến dịch" className="w-full md:h-[50px]">
+      <ol className="grid grid-cols-1 gap-2 md:h-full md:grid-cols-5 md:gap-3 md:items-stretch">
         {steps.map((step, idx) => {
           const done = idx < activeIndex;
           const active = idx === activeIndex;
@@ -41,7 +41,7 @@ export default function NewCampaignTestStepper({
                 onClick={() => canClick && onJump(idx)}
                 disabled={!canClick && !active}
                 title={step.title}
-                className={`group relative w-full overflow-hidden rounded-xl border px-3 py-2 text-left transition-all md:h-full ${
+                className={`group relative w-full overflow-hidden rounded-xl border px-3 py-1.5 text-left transition-all md:h-full ${
                   active
                     ? 'border-orange-300 bg-orange-50 shadow-[0_6px_16px_-8px_rgba(249,115,22,0.6)]'
                     : done
@@ -49,7 +49,7 @@ export default function NewCampaignTestStepper({
                       : 'border-slate-300 bg-white'
                 } ${canClick ? 'cursor-pointer hover:border-orange-300 hover:bg-orange-50/60' : 'cursor-default'}`}
               >
-                <div className="flex items-center gap-2 md:h-full md:justify-center">
+                <div className="flex items-center gap-2 md:h-full md:justify-start">
                   <span
                     className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-black leading-none tabular-nums transition-colors ${
                       done

@@ -535,7 +535,8 @@ function ProfileContent() {
       });
       updateUser({
         fullName: profileRes.data.fullName ?? fullName,
-        phoneNumber: profileRes.data.phoneNumber ?? trPhone
+        phoneNumber: profileRes.data.phoneNumber ?? trPhone,
+        cvUrl: profileRes.data.cvUrl ?? cvUrl
       });
 
       // 2. Handle Bank Account (Update or Create)

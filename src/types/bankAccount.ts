@@ -9,6 +9,7 @@ export interface BankAccountDto {
     createdAt: string;
     updatedAt: string;
     webhookKey?: string;
+    campaignId?: number;
 }
 
 export interface CreateBankAccountRequest {
@@ -16,6 +17,7 @@ export interface CreateBankAccountRequest {
     accountNumber: string;
     accountHolderName: string;
     webhookKey?: string;
+    campaignId?: number;
 }
 
 export interface UpdateBankAccountRequest {
@@ -23,4 +25,5 @@ export interface UpdateBankAccountRequest {
     accountNumber: string;
     accountHolderName: string;
     webhookKey?: string;
+    campaignId?: number;
 }
