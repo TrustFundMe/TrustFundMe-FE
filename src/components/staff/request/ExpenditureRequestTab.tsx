@@ -6,7 +6,7 @@ import {
     CheckCircle, AlertCircle, Clock,
     HandCoins, Search as SearchIcon, X,
     LayoutDashboard, Sparkles, Loader2, Info, ShoppingBag,
-    ShieldCheck, AlertTriangle, ShieldAlert
+    ShieldCheck, AlertTriangle, ShieldAlert, Store
 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
@@ -72,7 +72,8 @@ const CategoryTable = ({
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%]">Danh mục</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%] text-right bg-orange-50/50">Tổng dự kiến danh mục</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Hàng hóa / Ghi chú</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng / Đơn / Tại</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng / Đơn</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Địa điểm mua / Link</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase text-right">Dự kiến chi (Số lượng x Đơn giá)</th>
                 </tr>
             </thead>
@@ -116,7 +117,20 @@ const CategoryTable = ({
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
                                                 <div className="text-[10px] font-bold text-gray-700">{i.brand || '-'} <span className="font-normal text-gray-400">/</span> {i.unit || '-'}</div>
-                                                <div className="text-[9px] text-gray-500 font-medium mt-0.5">{i.purchaseLocation || '-'}</div>
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100">
+                                                <div className="text-[9px] text-gray-500 font-medium">{i.purchaseLocation || '-'}</div>
+                                                {i.expectedPurchaseLink && (
+                                                    <a
+                                                        href={i.expectedPurchaseLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1 mt-1"
+                                                    >
+                                                        <Store className="h-2.5 w-2.5" />
+                                                        Xem link mua
+                                                    </a>
+                                                )}
                                             </td>
                                             <td className="py-2 px-3 text-right">
                                                 <div className="text-[11px] font-black text-gray-800">{fmtNum(expectedQty * i.expectedPrice)}</div>

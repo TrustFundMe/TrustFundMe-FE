@@ -171,7 +171,7 @@ export const expenditureService = {
         const response = await axiosInstance.post(`/api/expenditures/${expenditure.id}/audit`);
         const data = response.data;
 
-        const mappedDetectedItems = (data.items || []).map((item: any) => ({
+        const mappedDetectedItems = (data.items || []).map((item: any, index: number) => ({
             name: item.itemName,
             plannedCategory: item.itemName,
             quantity: item.quantity || 1,
@@ -181,6 +181,10 @@ export const expenditureService = {
             marketPriceRange: item.evidenceUrls && item.evidenceUrls.length > 0
                 ? 'Nguồn đối chứng minh bạch: ' : '',
             evidenceUrls: item.evidenceUrls || [],
+            isLinkMatched: item.isLinkMatched,
+            linkType: item.linkType,
+            statusMessage: item.statusMessage,
+            expectedPurchaseLink: items[index]?.expectedPurchaseLink
         }));
 
         return {
