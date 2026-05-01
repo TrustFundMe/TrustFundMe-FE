@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info, ZoomIn, ScrollText } from 'lucide-react';
+import { IdCard, Search, CheckCircle, XCircle, Clock, User, Plus, Loader2, X, Eye, UserPlus, Info, ZoomIn, ScrollText } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { kycService } from '@/services/kycService';
 import { KycResponse } from '@/types/kyc';
@@ -44,7 +44,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
   const [users, setUsers] = useState<UserWithKyc[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithKyc | null>(null);
-  const [filter, setFilter] = useState<'ALL' | 'NO_KYC' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [showKycForm, setShowKycForm] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -140,9 +140,9 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
 
   const filteredUsers = users.filter(user => {
     const kycStatus = user.kycStatus || 'NO_KYC';
-    const matchesFilter = filter === 'ALL' ||
-      (filter === 'NO_KYC' && !user.kycStatus) ||
-      kycStatus === filter;
+    const matchesFilter = filter === 'ALL' 
+      ? !!user.kycStatus 
+      : kycStatus === filter;
 
     const matchesSearch = searchTerm === '' ||
       user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -162,7 +162,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
       {/* Filter & Search */}
       <div className="flex items-center justify-between gap-4 flex-shrink-0 bg-gray-50/50 p-2 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-2">
-          {(['ALL', 'NO_KYC', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
+          {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
@@ -334,7 +334,7 @@ export default function KYCTab({ initialUserId, onModalToggle }: KYCTabProps) {
            <div className="flex items-center justify-between flex-shrink-0 px-1">
              <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-xl bg-[#ff5e14] flex items-center justify-center text-white shadow-lg shadow-[#ff5e14]/20">
-                   <Shield className="h-4 w-4" />
+                   <IdCard className="h-4 w-4" />
                 </div>
                 <h2 className="text-sm font-black text-gray-800 uppercase tracking-[0.1em]">
                   {selectedUser?.kycStatus === 'APPROVED' ? 'Thông tin xác thực danh tính' : 'Thiết lập xác thực danh tính'}
