@@ -25,7 +25,7 @@ function newImageId(): string {
 function inputClass(fieldKey: string, errors: Record<string, string>, showErrors: boolean) {
   const err = Boolean(showErrors && errors[fieldKey]);
   return [
-    'w-full rounded-lg border bg-white px-4 py-3 text-sm text-gray-900 outline-none transition duration-150 placeholder:text-gray-400',
+    'w-full rounded-lg border bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition duration-150 placeholder:text-gray-400',
     err
       ? 'border-red-200 bg-red-50/50 focus:border-red-400 focus:ring-1 focus:ring-red-100'
       : 'border-gray-200 hover:border-gray-300 focus:border-black focus:ring-1 focus:ring-black/5',
@@ -66,6 +66,7 @@ export default function Step2CampaignForm({
   const [isDragging, setIsDragging] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
   const hasValue = (field: string) => {
     switch (field) {
       case 'title':
@@ -89,7 +90,9 @@ export default function Step2CampaignForm({
     }
   };
   const shouldShowFieldError = (field: string) => showErrors || Boolean(touched[field]) || hasValue(field);
+  const getFieldError = (field: string) => (shouldShowFieldError(field) ? errors[field] : undefined);
   const coverErr = shouldShowFieldError('coverImage') && errors.coverImage;
+  const reserveCoverFeedbackSlot = Boolean(showErrors) || Boolean(touched.coverImage) || hasValue('coverImage');
 
   const applyImages = (nextImages: CampaignImage[], preferredCoverId?: string) => {
     const coverId =
@@ -106,6 +109,7 @@ export default function Step2CampaignForm({
 
   const appendFiles = (fileList: FileList | File[] | null) => {
     if (!fileList?.length) return;
+    setTouched((prev) => ({ ...prev, coverImage: true }));
     const list = Array.from(fileList as FileList);
     const additions: CampaignImage[] = [];
     for (const file of list) {
@@ -121,6 +125,7 @@ export default function Step2CampaignForm({
 
   const removeImage = (id: string, ev: React.MouseEvent) => {
     ev.stopPropagation();
+    setTouched((prev) => ({ ...prev, coverImage: true }));
     const img = images.find((i) => i.id === id);
     if (img?.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
     const next = images.filter((i) => i.id !== id);
@@ -128,14 +133,28 @@ export default function Step2CampaignForm({
   };
 
   const setCover = (id: string) => {
+    setTouched((prev) => ({ ...prev, coverImage: true }));
     const url = images.find((i) => i.id === id)?.url ?? '';
     onPatchCore({ coverImageId: id, coverImageUrl: url });
   };
 
   const handleDrop: React.DragEventHandler = (e) => {
     e.preventDefault();
+    dragDepthRef.current = 0;
     setIsDragging(false);
     appendFiles(e.dataTransfer?.files ?? null);
+  };
+
+  const handleDragEnter: React.DragEventHandler = (e) => {
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+  };
+
+  const handleDragLeave: React.DragEventHandler = (e) => {
+    e.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setIsDragging(false);
   };
 
   const handleFileInput: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -144,11 +163,11 @@ export default function Step2CampaignForm({
   };
 
   return (
-    <div className="rounded-xl bg-white p-3.5 md:p-4">
-      <div className="mb-3 flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-xl bg-white p-2.5 md:p-3">
+      <div className="mb-2.5 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-black">Bước 2 — Nội dung chiến dịch</h2>
-          <p className="mt-1 text-sm text-gray-500">Thông tin hiển thị công khai sau khi được duyệt.</p>
+          <p className="mt-0.5 text-xs text-gray-500">Thông tin hiển thị công khai sau khi được duyệt.</p>
         </div>
         <button
           type="button"
@@ -162,10 +181,15 @@ export default function Step2CampaignForm({
         </button>
       </div>
 
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(270px,36%)] lg:items-start lg:gap-4">
-        <div className="space-y-3">
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            <Field label="Tên chiến dịch" required error={errors.title} showErrors={showErrors}>
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(270px,36%)] lg:items-start lg:gap-3">
+        <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Field
+              label="Tên chiến dịch"
+              required
+              error={getFieldError('title')}
+              reserveFeedbackSlot={showErrors || Boolean(touched.title) || hasValue('title')}
+            >
               <input
                 className={inputClass('title', errors, shouldShowFieldError('title'))}
                 value={core.title}
@@ -176,7 +200,12 @@ export default function Step2CampaignForm({
                 onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
               />
             </Field>
-            <Field label="Số tiền mục tiêu (đ)" required error={errors.targetAmount} showErrors={showErrors}>
+            <Field
+              label="Số tiền mục tiêu (đ)"
+              required
+              error={getFieldError('targetAmount')}
+              reserveFeedbackSlot={showErrors || Boolean(touched.targetAmount) || hasValue('targetAmount')}
+            >
               <input
                 type="number"
                 className={inputClass('targetAmount', errors, shouldShowFieldError('targetAmount'))}
@@ -188,7 +217,12 @@ export default function Step2CampaignForm({
                 onBlur={() => setTouched((prev) => ({ ...prev, targetAmount: true }))}
               />
             </Field>
-            <Field label="Ngày bắt đầu" required error={errors.startDate} showErrors={showErrors}>
+            <Field
+              label="Ngày bắt đầu"
+              required
+              error={getFieldError('startDate')}
+              reserveFeedbackSlot={showErrors || Boolean(touched.startDate) || hasValue('startDate')}
+            >
               <input
                 className={inputClass('startDate', errors, shouldShowFieldError('startDate'))}
                 type="date"
@@ -201,7 +235,12 @@ export default function Step2CampaignForm({
                 onBlur={() => setTouched((prev) => ({ ...prev, startDate: true }))}
               />
             </Field>
-            <Field label="Ngày kết thúc" required error={errors.endDate} showErrors={showErrors}>
+            <Field
+              label="Ngày kết thúc"
+              required
+              error={getFieldError('endDate')}
+              reserveFeedbackSlot={showErrors || Boolean(touched.endDate) || hasValue('endDate')}
+            >
               <input
                 className={inputClass('endDate', errors, shouldShowFieldError('endDate'))}
                 type="date"
@@ -214,7 +253,12 @@ export default function Step2CampaignForm({
                 onBlur={() => setTouched((prev) => ({ ...prev, endDate: true }))}
               />
             </Field>
-            <Field label="Danh mục" required error={errors.category} showErrors={showErrors}>
+            <Field
+              label="Danh mục"
+              required
+              error={getFieldError('category')}
+              reserveFeedbackSlot={showErrors || Boolean(touched.category) || hasValue('category')}
+            >
               <CategorySelector
                 categoryId={core.categoryId}
                 onChange={(id, name) => {
@@ -225,10 +269,15 @@ export default function Step2CampaignForm({
               />
             </Field>
           </div>
-          <Field label="Câu chuyện / mục tiêu gây quỹ" required error={errors.objective} showErrors={showErrors}>
+          <Field
+            label="Câu chuyện / mục tiêu gây quỹ"
+            required
+            error={getFieldError('objective')}
+            reserveFeedbackSlot={showErrors || Boolean(touched.objective) || hasValue('objective')}
+          >
             <textarea
               rows={3}
-              className={`${inputClass('objective', errors, shouldShowFieldError('objective'))} min-h-[100px] resize-y leading-relaxed`}
+              className={`${inputClass('objective', errors, shouldShowFieldError('objective'))} min-h-[88px] resize-y leading-relaxed`}
               value={core.objective}
               onChange={(e) => {
                 setTouched((prev) => ({ ...prev, objective: true }));
@@ -238,10 +287,15 @@ export default function Step2CampaignForm({
             />
           </Field>
 
-          <Field label="Lời cảm ơn nhà tài trợ" required error={errors.thankMessage} showErrors={showErrors}>
+          <Field
+            label="Lời cảm ơn nhà tài trợ"
+            required
+            error={getFieldError('thankMessage')}
+            reserveFeedbackSlot={showErrors || Boolean(touched.thankMessage) || hasValue('thankMessage')}
+          >
             <textarea
               rows={2}
-              className={`${inputClass('thankMessage', errors, shouldShowFieldError('thankMessage'))} min-h-[68px] resize-y leading-relaxed`}
+              className={`${inputClass('thankMessage', errors, shouldShowFieldError('thankMessage'))} min-h-[60px] resize-y leading-relaxed`}
               value={core.thankMessage}
               onChange={(e) => {
                 setTouched((prev) => ({ ...prev, thankMessage: true }));
@@ -252,7 +306,11 @@ export default function Step2CampaignForm({
           </Field>
         </div>
 
-        <div className={`mt-3 lg:mt-0 ${coverErr ? 'rounded-xl ring-2 ring-red-200' : ''} lg:rounded-xl lg:bg-gray-50/60 lg:p-2 lg:ring-1 lg:ring-gray-100`}>
+        <div
+          className={`mt-2 rounded-xl lg:mt-0 lg:bg-gray-50/60 lg:p-2 ring-2 transition-colors ${
+            coverErr ? 'ring-red-200' : 'ring-gray-100'
+          }`}
+        >
           <label className="mb-1.5 block text-sm font-semibold text-gray-900">
             Ảnh chiến dịch <span className="text-red-600">*</span>
           </label>
@@ -262,7 +320,7 @@ export default function Step2CampaignForm({
 
           {/* Large cover preview */}
           {images.length > 0 && core.coverImageUrl ? (
-            <div className="relative mb-2.5 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
+            <div className="relative mb-2 w-full overflow-hidden rounded-xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
               <div className="aspect-video w-full">
                 <img src={core.coverImageUrl} alt="Ảnh bìa" className="h-full w-full object-cover" />
               </div>
@@ -318,11 +376,11 @@ export default function Step2CampaignForm({
 
           {/* Drop zone */}
           <div
-            onDragEnter={() => setIsDragging(true)}
-            onDragLeave={() => setIsDragging(false)}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
             onDragOver={(e) => {
               e.preventDefault();
-              setIsDragging(true);
+              if (!isDragging) setIsDragging(true);
             }}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
@@ -341,7 +399,9 @@ export default function Step2CampaignForm({
             </p>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileInput} />
-          {coverErr ? <p className="mt-1.5 text-xs font-semibold text-red-600">{errors.coverImage}</p> : null}
+          <div className={reserveCoverFeedbackSlot ? 'mt-1 min-h-5' : 'mt-1'} aria-live="polite">
+            {coverErr ? <p className="text-xs font-semibold leading-snug text-red-600">{errors.coverImage}</p> : null}
+          </div>
         </div>
       </div>
 
@@ -355,22 +415,27 @@ function Field({
   required,
   children,
   error,
-  showErrors,
+  reserveFeedbackSlot,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   error?: string;
-  showErrors: boolean;
+  reserveFeedbackSlot: boolean;
 }) {
+  const showMessage = Boolean(error);
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1">
       <label className="text-sm font-semibold text-gray-900">
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
       </label>
       {children}
-      {(showErrors || Boolean(error)) && error ? <p className="text-xs font-semibold text-red-600">{error}</p> : null}
+      <div className={reserveFeedbackSlot ? 'min-h-5' : ''} aria-live="polite">
+        {showMessage ? (
+          <p className="text-xs font-semibold leading-snug text-red-600">{error}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

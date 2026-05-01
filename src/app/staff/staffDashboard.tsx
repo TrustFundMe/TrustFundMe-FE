@@ -1,42 +1,108 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ShieldCheck,
-  Clock,
-  FileCheck,
-  Calendar,
-  MessageSquare,
-  Flag,
-  Receipt,
-  HelpCircle,
-  Activity,
-  ArrowUpRight,
-  ClipboardList,
-  RefreshCw,
-  Loader2,
-  Save,
-  Pencil,
-  Bell,
-  Zap,
-  Fingerprint
-} from 'lucide-react';
+  ArrowTopRightIcon,
+  BellIcon,
+  CalendarIcon,
+  ChatBubbleIcon,
+  CheckCircledIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
+  FileTextIcon,
+  IdCardIcon,
+  LightningBoltIcon,
+  Pencil2Icon,
+  PersonIcon,
+  ReaderIcon,
+  ReloadIcon,
+  RocketIcon,
+  SewingPinFilledIcon,
+  UpdateIcon,
+} from '@radix-ui/react-icons';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useRouter } from 'next/navigation';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { campaignService } from '@/services/campaignService';
-import { kycService } from '@/services/kycService';
+import { notificationService } from '@/services/notificationService';
 import { expenditureService } from '@/services/expenditureService';
 import { useToast } from '@/components/ui/Toast';
 import { AvatarUploader } from '@/components/ui/avatar-uploader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Notification } from '@/types/notification';
 import {
   Modal,
   ModalContent,
   ModalHeader,
   ModalTitle,
 } from '@/components/ui/modal';
+
+interface DashboardTask {
+  id: number;
+  type: string;
+  targetId?: number;
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface DashboardAlert {
+  id: string;
+  title: string;
+  meta: string;
+  routeType: string;
+  targetId?: number;
+  tone: 'warning' | 'ok' | 'muted';
+  timestamp?: string;
+  notificationId?: number;
+  isRead?: boolean;
+}
+
+interface StatItem {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: 'warning' | 'ok' | 'info' | 'muted';
+}
+
+interface AppointmentLike {
+  id?: number;
+  title?: string;
+  campaignTitle?: string;
+  startTime?: string;
+  dateTime?: string;
+  date?: string;
+  status?: string;
+}
+
+interface PostLike {
+  id: number;
+}
+
+interface ProfileUser {
+  id: number;
+  role?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  gender?: string;
+  dob?: string;
+  avatarUrl?: string;
+  email?: string;
+}
+
+interface CampaignLite {
+  id: number;
+  title?: string;
+}
+
+interface ExpenditureDetailLite {
+  id: number;
+  campaignId?: number;
+  plan?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 const StaffProfileModal = ({
   open,
@@ -79,7 +145,7 @@ const StaffProfileModal = ({
       await api.put(API_ENDPOINTS.USERS.BY_ID(user.id), { avatarUrl });
       toast('Cập nhật ảnh đại diện thành công', 'success');
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast('Cập nhật ảnh đại diện thất bại', 'error');
       throw err;
     }
@@ -100,8 +166,12 @@ const StaffProfileModal = ({
       updateUser({ fullName: fullName.trim(), phoneNumber: phone.trim(), gender, dob });
       toast('Cập nhật hồ sơ thành công', 'success');
       onClose();
-    } catch (err: any) {
-      toast(err.response?.data?.message || 'Lỗi khi lưu thông tin', 'error');
+    } catch (err: unknown) {
+      const message =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      toast(message || 'Lỗi khi lưu thông tin', 'error');
     } finally {
       setSaving(false);
     }
@@ -121,7 +191,7 @@ const StaffProfileModal = ({
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute bottom-0 right-0 bg-brand p-1.5 rounded-lg shadow-lg border-2 border-white">
-                  <Pencil className="h-3 w-3 text-white" />
+                  <Pencil2Icon className="h-3 w-3 text-white" />
                 </div>
               </div>
             </AvatarUploader>
@@ -168,7 +238,7 @@ const StaffProfileModal = ({
               <div className="flex items-center gap-3 pt-6">
                 <button type="submit" disabled={saving}
                   className="flex-1 h-12 bg-brand text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-brand-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? <ReloadIcon className="w-4 h-4 animate-spin" /> : <CheckCircledIcon className="w-4 h-4" />}
                   Lưu thay đổi
                 </button>
                 <button type="button" onClick={onClose}
@@ -187,114 +257,154 @@ const StaffProfileModal = ({
 export default function StaffDashboard() {
   const { user: currentUser } = useAuth();
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [allTasks, setAllTasks] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [user, setUser] = useState<ProfileUser | null>(null);
+  const [tasks, setTasks] = useState<DashboardTask[]>([]);
+  const [allTasks, setAllTasks] = useState<DashboardTask[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentLike[]>([]);
+  const [posts, setPosts] = useState<PostLike[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [alerts, setAlerts] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [campaignNames, setCampaignNames] = useState<Map<number, string>>(new Map());
-  const [taskExpCampaignMap, setTaskExpCampaignMap] = useState<Map<number, number>>(new Map());
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [expenditureDetailsById, setExpenditureDetailsById] = useState<Map<number, ExpenditureDetailLite>>(new Map());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const mapNotificationRouteType = (notification: Notification): string => {
+    const targetType = (notification.targetType || '').toUpperCase();
+    const type = (notification.type || '').toUpperCase();
+
+    if (targetType.includes('KYC') || type.includes('KYC')) return 'KYC';
+    if (targetType.includes('EXPENDITURE') || type.includes('EXPENDITURE') || targetType.includes('EVIDENCE')) return 'EXPENDITURE';
+    if (targetType.includes('CAMPAIGN') || type.includes('CAMPAIGN')) return 'CAMPAIGN';
+    if (targetType.includes('SUPPORT') || type.includes('SUPPORT')) return 'SUPPORT';
+    if (targetType.includes('FLAG') || type.includes('FLAG')) return 'FLAG';
+    return 'DEFAULT';
+  };
 
   const fetchDashboardData = useCallback(async () => {
     if (!currentUser?.id) return;
     setLoadingTasks(true);
+
     try {
-      const [staffTasks, appRes, postRes, userRes, pendingKyc, pendingExpenditures] = await Promise.all([
-        campaignService.getTasksByStaff(currentUser.id).catch(() => []),
-        api.get(API_ENDPOINTS.APPOINTMENTS.BY_STAFF(currentUser.id)).catch(() => ({ data: [] })),
-        api.get(API_ENDPOINTS.FEED_POSTS.BY_AUTHOR(currentUser.id)).catch(() => ({ data: [] })),
-        api.get(API_ENDPOINTS.USERS.BY_ID(currentUser.id)).catch(() => ({ data: null })),
-        kycService.getPending().catch(() => ({ content: [] })),
-        expenditureService.getByStatus('PENDING_REVIEW').catch(() => []),
+      const [
+        staffTasksRes,
+        appointmentRes,
+        postRes,
+        profileRes,
+        latestNotificationsRes,
+        unreadCountRes,
+      ] = await Promise.allSettled([
+        campaignService.getTasksByStaff(currentUser.id),
+        api.get(API_ENDPOINTS.APPOINTMENTS.BY_STAFF(currentUser.id)),
+        api.get(API_ENDPOINTS.FEED_POSTS.BY_AUTHOR(currentUser.id)),
+        api.get(API_ENDPOINTS.USERS.BY_ID(currentUser.id)),
+        notificationService.getLatest(currentUser.id),
+        notificationService.getUnreadCount(currentUser.id),
       ]);
 
-      const rawTasks = staffTasks ?? [];
-      const appData = appRes.data;
-      const postData = postRes.data;
+      const rawTasks: DashboardTask[] = staffTasksRes.status === 'fulfilled' ? (staffTasksRes.value ?? []) : [];
+      const pendingTasks = rawTasks.filter((task) => task.status !== 'COMPLETED').slice(0, 8);
+
+      const appointmentsRaw =
+        appointmentRes.status === 'fulfilled'
+          ? (Array.isArray(appointmentRes.value.data) ? appointmentRes.value.data : (appointmentRes.value.data?.content ?? []))
+          : [];
+
+      const postsRaw =
+        postRes.status === 'fulfilled'
+          ? (Array.isArray(postRes.value.data) ? postRes.value.data : (postRes.value.data?.content ?? []))
+          : [];
+
+      const profileRaw = profileRes.status === 'fulfilled' ? profileRes.value.data : null;
+      const latestNotifications: Notification[] = latestNotificationsRes.status === 'fulfilled' ? (latestNotificationsRes.value ?? []) : [];
+      const unread = unreadCountRes.status === 'fulfilled' ? Number(unreadCountRes.value || 0) : 0;
 
       setAllTasks(rawTasks);
-      setTasks(rawTasks.filter((t: any) => t.status !== 'COMPLETED').slice(0, 10));
-      setAppointments(Array.isArray(appData) ? appData : (appData?.content ?? []));
-      setPosts(Array.isArray(postData) ? postData : (postData?.content ?? []));
-      setUser(userRes.data);
+      setTasks(pendingTasks);
+      setAppointments(appointmentsRaw);
+      setPosts(postsRaw);
+      setUser(profileRaw);
+      setUnreadCount(unread);
 
-      const newAlerts: any[] = [];
       const campaignIdsToFetch = new Set<number>();
-      const kycList = pendingKyc.content || [];
-      const expList = Array.isArray(pendingExpenditures) ? pendingExpenditures : [];
-
-      expList.forEach((e: any) => { if (e.campaignId) campaignIdsToFetch.add(e.campaignId); });
-
-      const expenditureIdsFromTasks = rawTasks
-        .filter((t: any) => (t.type === 'EXPENDITURE' || t.type === 'EVIDENCE') && t.targetId)
-        .map((t: any) => t.targetId);
-
-      const taskExpResults = await Promise.all(
-        expenditureIdsFromTasks.map(id => expenditureService.getById(id).catch(() => null))
-      );
-      const taskExpMap = new Map<number, any>();
-      taskExpResults.forEach(e => {
-        if (e) {
-          taskExpMap.set(e.id, e);
-          if (e.campaignId) campaignIdsToFetch.add(e.campaignId);
+      pendingTasks.forEach((task) => {
+        if (task.type === 'CAMPAIGN' && task.targetId) {
+          campaignIdsToFetch.add(task.targetId);
         }
       });
 
-      rawTasks.forEach((t: any) => {
-        if (t.type === 'CAMPAIGN' && t.targetId) campaignIdsToFetch.add(t.targetId);
+      const expenditureTaskIds = Array.from(
+        new Set(
+          pendingTasks
+            .filter((task) => (task.type === 'EXPENDITURE' || task.type === 'EVIDENCE') && task.targetId)
+            .map((task) => Number(task.targetId))
+            .filter((id) => Number.isFinite(id))
+        )
+      ).slice(0, 8);
+
+      const expenditureResults = await Promise.allSettled(
+        expenditureTaskIds.map((id) => expenditureService.getById(id))
+      );
+
+      const expDetailsMap = new Map<number, ExpenditureDetailLite>();
+      expenditureResults.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value?.id) {
+          const expenditure = result.value as ExpenditureDetailLite;
+          expDetailsMap.set(expenditure.id, expenditure);
+          if (expenditure.campaignId) {
+            campaignIdsToFetch.add(expenditure.campaignId);
+          }
+        }
+      });
+      setExpenditureDetailsById(expDetailsMap);
+
+      const campaignResults = await Promise.allSettled(
+        Array.from(campaignIdsToFetch)
+          .slice(0, 12)
+          .map((id) => campaignService.getById(id))
+      );
+
+      const campaignNameMap = new Map<number, string>();
+      campaignResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          const campaign = result.value as CampaignLite;
+          campaignNameMap.set(campaign.id, campaign.title || `#${campaign.id}`);
+        }
       });
 
-      const campaignResults = await Promise.all(
-        Array.from(campaignIdsToFetch).map(id => campaignService.getById(id).catch(() => null))
-      );
-      const campaignNameMap = new Map<number, string>();
-      campaignResults.forEach(c => { if (c) campaignNameMap.set(c.id, c.title); });
       setCampaignNames(campaignNameMap);
 
-      const expCampaignMap = new Map<number, number>();
-      taskExpMap.forEach((exp, expId) => { if (exp.campaignId) expCampaignMap.set(expId, exp.campaignId); });
-      setTaskExpCampaignMap(expCampaignMap);
+      const nextAlerts: DashboardAlert[] = latestNotifications.slice(0, 15).map((notification) => ({
+        id: `notification-${notification.id}`,
+        notificationId: notification.id,
+        title: notification.title || 'Thông báo hệ thống',
+        meta: notification.content || 'Bạn có thông báo mới',
+        routeType: mapNotificationRouteType(notification),
+        targetId: notification.targetId,
+        tone: notification.isRead ? 'muted' : 'warning',
+        timestamp: notification.createdAt || notification.updatedAt,
+        isRead: notification.isRead,
+      }));
 
-      kycList.slice(0, 10).forEach((kyc: any) => {
-        newAlerts.push({
-          id: `kyc-${kyc.id}`, title: `Xác thực danh tính: ${kyc.fullName || 'Người dùng'}`,
-          time: 'Định danh', category: 'Danh tính', color: 'orange', tab: 'KYC', targetId: kyc.userId,
+      if (nextAlerts.length === 0) {
+        nextAlerts.push({
+          id: 'empty-alert',
+          title: 'Không có thông báo mới',
+          meta: 'Dashboard đã đồng bộ',
+          routeType: 'DEFAULT',
+          tone: 'muted',
         });
+      }
+
+      const sortedAlerts = [...nextAlerts].sort((a, b) => {
+        const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return dateB - dateA;
       });
 
-      expList.slice(0, 10).forEach((exp: any) => {
-        const campaignTitle = campaignNameMap.get(exp.campaignId) || `#${exp.campaignId}`;
-        newAlerts.push({
-          id: `exp-${exp.id}`, title: `Phê duyệt chi tiêu: ${campaignTitle}`,
-          time: 'Tài chính', category: 'Ngân sách', color: 'rose', tab: 'EXPENDITURE', targetId: exp.campaignId,
-        });
-      });
-
-      rawTasks.filter(t => t.status === 'PENDING').slice(0, 10).forEach((t: any) => {
-        let title = '';
-        let targetId = t.targetId;
-        if (t.type === 'CAMPAIGN') {
-          title = `Duyệt chiến dịch: ${campaignNameMap.get(t.targetId) || `#${t.targetId}`}`;
-        } else if (t.type === 'EXPENDITURE' || t.type === 'EVIDENCE') {
-          const exp = taskExpMap.get(t.targetId);
-          const campaignTitle = exp ? (campaignNameMap.get(exp.campaignId) || `#${exp.campaignId}`) : 'chiến dịch';
-          title = t.type === 'EXPENDITURE' ? `Phê duyệt chi tiêu: ${campaignTitle}` : `Kiểm tra minh chứng: ${campaignTitle}`;
-          targetId = exp?.campaignId || t.targetId;
-        } else {
-          title = `Nhiệm vụ ${t.type} mới`;
-        }
-        newAlerts.push({
-          id: `task-${t.id}`, title, time: 'Hệ thống', category: 'Nhiệm vụ', color: 'orange',
-          tab: (t.type === 'EXPENDITURE' || t.type === 'EVIDENCE') ? 'EXPENDITURE' : 'CAMPAIGN', targetId,
-        });
-      });
-
-      setAlerts(newAlerts.length > 0 ? newAlerts : [
-        { id: 'empty', title: 'Không có thông báo mới', time: '-', category: 'Info', color: 'gray' },
-      ]);
+      setAlerts(sortedAlerts);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     } finally {
@@ -304,7 +414,8 @@ export default function StaffDashboard() {
 
   useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
 
-  const getTimeAgo = (dateStr: string) => {
+  const getTimeAgo = (dateStr?: string) => {
+    if (!dateStr) return 'Gần đây';
     try {
       const diffInSecs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
       if (diffInSecs < 60) return 'Vừa xong';
@@ -313,7 +424,9 @@ export default function StaffDashboard() {
       const hours = Math.floor(mins / 60);
       if (hours < 24) return `${hours} giờ trước`;
       return new Date(dateStr).toLocaleDateString('vi-VN');
-    } catch { return 'Gần đây'; }
+    } catch {
+      return 'Gần đây';
+    }
   };
 
   const getTaskLabel = (type: string) => {
@@ -334,235 +447,413 @@ export default function StaffDashboard() {
       case 'EXPENDITURE': return '/staff/request?tab=EXPENDITURE';
       case 'EVIDENCE': return '/staff/request?tab=EVIDENCE';
       case 'SUPPORT': return '/staff/request?tab=SUPPORT';
+      case 'FLAG': return '/staff/flags';
       default: return '/staff/request';
     }
   };
 
   const getTaskIcon = (type: string) => {
     switch (type) {
-      case 'KYC': return Fingerprint;
-      case 'CAMPAIGN': return FileCheck;
-      case 'EXPENDITURE': return Receipt;
-      case 'EVIDENCE': return ClipboardList;
-      default: return HelpCircle;
+      case 'KYC':
+        return IdCardIcon;
+      case 'CAMPAIGN':
+        return RocketIcon;
+      case 'EXPENDITURE':
+        return FileTextIcon;
+      case 'EVIDENCE':
+        return ReaderIcon;
+      default:
+        return ExclamationTriangleIcon;
     }
   };
 
-  const pendingCount = allTasks.filter(t => t.status === 'PENDING' || t.status !== 'COMPLETED').length;
-  const todayStr = new Date().toISOString().split('T')[0];
-  const completedToday = allTasks.filter(t => t.status === 'COMPLETED' && (t.updatedAt || t.createdAt)?.startsWith(todayStr)).length;
-  const todayAppointments = appointments.filter(a => {
-    const d = new Date(a.startTime || a.dateTime || a.date);
-    const now = new Date();
-    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
+  const formatBatchLabel = (expenditure?: ExpenditureDetailLite) => {
+    if (!expenditure) return '';
+    if (expenditure.plan && expenditure.plan.trim()) return expenditure.plan.trim();
+    if (expenditure.startDate || expenditure.endDate) {
+      const start = expenditure.startDate
+        ? new Date(expenditure.startDate).toLocaleDateString('vi-VN')
+        : '?';
+      const end = expenditure.endDate
+        ? new Date(expenditure.endDate).toLocaleDateString('vi-VN')
+        : '?';
+      return `Đợt ${start} - ${end}`;
+    }
+    return '';
+  };
 
-  const stats = [
-    { label: 'Đang chờ xử lý', value: pendingCount, icon: Clock, color: 'text-amber-600 bg-amber-50' },
-    { label: 'Hoàn thành hôm nay', value: completedToday, icon: Activity, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Lịch hẹn hôm nay', value: todayAppointments.length, icon: Calendar, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Bài đăng đã viết', value: posts.length, icon: MessageSquare, color: 'text-violet-600 bg-violet-50' },
-  ];
+  const { pendingCount, todayAppointments, stats, completionRate } = useMemo(() => {
+    const pending = allTasks.filter((task) => task.status !== 'COMPLETED').length;
+    const totalTasks = allTasks.length;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const completed = allTasks.filter(
+      (task) => task.status === 'COMPLETED' && (task.updatedAt || task.createdAt || '').startsWith(todayStr)
+    ).length;
+
+    const appointmentToday = appointments.filter((appointment) => {
+      const sourceDate = appointment.startTime || appointment.dateTime || appointment.date;
+      if (!sourceDate) return false;
+      const value = new Date(sourceDate);
+      const now = new Date();
+      return (
+        value.getDate() === now.getDate()
+        && value.getMonth() === now.getMonth()
+        && value.getFullYear() === now.getFullYear()
+      );
+    });
+
+    const completion = totalTasks > 0 ? Math.min(100, Math.round((completed / totalTasks) * 100)) : 0;
+    const nextStats: StatItem[] = [
+      {
+        label: 'Đang chờ xử lý',
+        value: pending,
+        icon: ClockIcon,
+        tone: 'warning',
+      },
+      {
+        label: 'Hoàn thành hôm nay',
+        value: completed,
+        icon: CheckCircledIcon,
+        tone: 'ok',
+      },
+      {
+        label: 'Lịch hẹn hôm nay',
+        value: appointmentToday.length,
+        icon: CalendarIcon,
+        tone: 'info',
+      },
+      {
+        label: 'Bài đăng đã viết',
+        value: posts.length,
+        icon: ChatBubbleIcon,
+        tone: 'muted',
+      },
+    ];
+
+    return {
+      pendingCount: pending,
+      todayAppointments: appointmentToday,
+      stats: nextStats,
+      completionRate: completion,
+    };
+  }, [allTasks, appointments, posts.length]);
+
+  const openTask = (type: string, targetId?: number) => {
+    const route = getTaskRoute(type);
+    const normalizedType = type.toUpperCase();
+    const separator = route.includes('?') ? '&' : '?';
+    if (targetId) {
+      router.push(`${route}${separator}targetId=${targetId}`);
+      return;
+    }
+    if (normalizedType === 'EXPENDITURE' || normalizedType === 'EVIDENCE') {
+      router.push(route);
+      return;
+    }
+    router.push(route);
+  };
+
+  const badgeToneClass = (tone: DashboardAlert['tone']) => {
+    if (tone === 'warning') return 'bg-amber-500';
+    if (tone === 'ok') return 'bg-emerald-500';
+    return 'bg-zinc-400';
+  };
+
+  const expenditureTitleById = useMemo(() => {
+    const map = new Map<number, string>();
+    alerts.forEach((alert) => {
+      if (alert.routeType === 'EXPENDITURE' && alert.targetId && alert.title) {
+        map.set(alert.targetId, alert.title);
+      }
+    });
+    return map;
+  }, [alerts]);
 
   return (
-    <div className="flex-1 bg-gray-50/50 overflow-y-auto">
-      <div className="max-w-[1400px] mx-auto p-6 space-y-6">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight">
-              Xin chào, {user?.fullName || currentUser?.fullName || 'Staff'}
-            </h1>
-            <p className="text-xs text-gray-400 font-bold mt-0.5">
-              {user?.role === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên kiểm duyệt'} · TrustFundMe
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => fetchDashboardData()} disabled={loadingTasks}
-              className="h-9 w-9 rounded-xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-brand hover:border-brand/20 transition-colors">
-              <RefreshCw className={`h-4 w-4 ${loadingTasks ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={() => setShowProfileModal(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 hover:border-brand/20 transition-colors">
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-lg object-cover" />
-              ) : (
-                <div className="h-7 w-7 rounded-lg bg-brand/10 text-brand flex items-center justify-center text-xs font-black">
-                  {(user?.fullName?.[0] || 'S').toUpperCase()}
+    <div className="flex-1 overflow-y-auto bg-zinc-50 min-h-[100dvh]">
+      <div className="max-w-[1400px] mx-auto px-4 py-2 md:px-6 md:py-3 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+          <div className="md:col-span-8">
+            <div className="rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5">
+              <div className="rounded-[calc(1.5rem-0.375rem)] bg-white px-4 py-3 shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-zinc-100">
+                      <SewingPinFilledIcon className="h-3 w-3" />
+                      Trung tâm điều phối
+                    </div>
+                    <h1 className="mt-2 text-[2rem] md:text-[2.2rem] tracking-tight font-black text-zinc-900 leading-none">
+                      Staff Dashboard
+                    </h1>
+                    <p className="mt-1 text-sm font-medium text-zinc-500">
+                      Xin chào {user?.fullName || currentUser?.fullName || 'Staff'} · {user?.role === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên kiểm duyệt'}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-zinc-400">
+                      {lastUpdated ? `Cập nhật lần cuối: ${lastUpdated.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : 'Đang đồng bộ dữ liệu'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 self-start">
+                    <button
+                      type="button"
+                      onClick={() => fetchDashboardData()}
+                      disabled={loadingTasks}
+                      className="group inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-white transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-zinc-800 active:scale-[0.98]"
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-white/15 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
+                        <ReloadIcon className={`h-4 w-4 ${loadingTasks ? 'animate-spin' : ''}`} />
+                      </span>
+                      Làm mới
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowProfileModal(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-zinc-700 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-zinc-300 hover:text-zinc-900 active:scale-[0.98]"
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-zinc-100 text-zinc-700">
+                        <PersonIcon className="h-4 w-4" />
+                      </span>
+                      Hồ sơ
+                    </button>
+                  </div>
                 </div>
-              )}
-              <span className="text-[11px] font-bold text-gray-700 hidden sm:block">{user?.fullName || 'Hồ sơ'}</span>
-            </button>
+              </div>
+            </div>
+          </div>
+          <div className="md:col-span-4">
+            <div className="rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5 h-full">
+              <div className="rounded-[calc(1.5rem-0.375rem)] bg-zinc-900 p-3 text-zinc-100 h-full">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em]">
+                  <LightningBoltIcon className="h-3 w-3" />
+                  Thao tác nhanh
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {[
+                    { icon: IdCardIcon, label: 'Duyệt danh tính', href: '/staff/kyc' },
+                    { icon: RocketIcon, label: 'Duyệt chiến dịch', href: '/staff/request?tab=CAMPAIGN' },
+                    { icon: FileTextIcon, label: 'Duyệt khoản chi', href: '/staff/request?tab=EXPENDITURE' },
+                    { icon: ExclamationTriangleIcon, label: 'Báo cáo vi phạm', href: '/staff/flags' },
+                    { icon: CalendarIcon, label: 'Lịch hẹn', href: '/staff/schedule' },
+                    { icon: ChatBubbleIcon, label: 'Feed nội bộ', href: '/staff/feed-post' },
+                  ].map((action) => (
+                    <button
+                      key={action.href}
+                      type="button"
+                      onClick={() => router.push(action.href)}
+                      className="group flex w-full items-center justify-between rounded-lg bg-white/8 px-2.5 py-2 text-left transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/15 active:scale-[0.98]"
+                    >
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold">
+                        <span className="grid h-5 w-5 place-items-center rounded-full bg-white/12 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
+                          <action.icon className="h-3.5 w-3.5" />
+                        </span>
+                        {action.label}
+                      </span>
+                      <ArrowTopRightIcon className="h-3.5 w-3.5 text-zinc-300" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2.5">
+          {stats.map((stat) => {
             const Icon = stat.icon;
+            const toneClass =
+              stat.tone === 'warning'
+                ? 'bg-amber-100 text-amber-700'
+                : stat.tone === 'ok'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : stat.tone === 'info'
+                    ? 'bg-sky-100 text-sky-700'
+                    : 'bg-zinc-100 text-zinc-700';
+
             return (
-              <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${stat.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-gray-900 leading-none">{loadingTasks ? '-' : stat.value}</div>
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-1">{stat.label}</div>
+              <div key={stat.label} className="rounded-[1.25rem] bg-black/5 p-1 ring-1 ring-black/5">
+                <div className="rounded-[calc(1.25rem-0.25rem)] bg-white p-3.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-zinc-400">{stat.label}</span>
+                    <span className={`grid h-8 w-8 place-items-center rounded-full ${toneClass}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="mt-2 text-3xl font-black tracking-tight text-zinc-900">
+                    {loadingTasks ? '...' : stat.value}
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tasks */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-brand" />
-                <h2 className="text-xs font-black text-gray-700 uppercase tracking-widest">Nhiệm vụ cần xử lý</h2>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
+          <div className="xl:col-span-8 rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5">
+            <div className="rounded-[calc(1.5rem-0.375rem)] bg-white overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] min-h-[calc(100dvh-220px)]">
+                <div className="flex items-center justify-between px-5 py-2.5 border-b border-zinc-100">
+                <div>
+                    <h2 className="text-lg font-black tracking-tight text-zinc-900">Nhiệm vụ cần xử lý</h2>
+                </div>
+                <span className="rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold text-zinc-600">
+                  {pendingCount} đang mở
+                </span>
               </div>
-              <span className="text-[10px] font-black text-gray-400">{tasks.length} nhiệm vụ</span>
-            </div>
-            <div className="divide-y divide-gray-50 max-h-[420px] overflow-y-auto">
-              {loadingTasks ? (
-                <div className="p-8 flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-brand" />
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-xs font-bold text-gray-400">Không có nhiệm vụ nào đang chờ</p>
-                </div>
-              ) : (
-                tasks.map((task, i) => {
-                  const Icon = getTaskIcon(task.type);
-                  return (
-                    <div key={task.id || i}
-                      onClick={() => router.push(`${getTaskRoute(task.type)}${task.targetId ? `&targetId=${task.targetId}` : ''}`)}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 cursor-pointer group">
-                      <div className="h-8 w-8 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
-                        <Icon className="h-4 w-4 text-brand" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] font-bold text-gray-800 truncate">
-                          {getTaskLabel(task.type)}: {(() => {
-                            if (task.type === 'CAMPAIGN') return campaignNames.get(task.targetId) || `#${task.targetId}`;
-                            if (task.type === 'EXPENDITURE' || task.type === 'EVIDENCE') {
-                              const campId = taskExpCampaignMap.get(task.targetId);
-                              return campId ? (campaignNames.get(campId) || `#${campId}`) : `#${task.targetId}`;
-                            }
-                            return `#${task.targetId || task.id}`;
-                          })()}
-                        </div>
-                        <div className="text-[10px] text-gray-400 font-medium mt-0.5">
-                          {task.createdAt ? getTimeAgo(task.createdAt) : 'Gần đây'}
-                        </div>
-                      </div>
-                      <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                        task.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
-                        task.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' :
-                        'bg-gray-100 text-gray-500'
-                      }`}>
-                        {task.status === 'PENDING' ? 'Chờ' : task.status === 'COMPLETED' ? 'Xong' : task.status}
-                      </span>
-                      <ArrowUpRight className="h-4 w-4 text-gray-300 group-hover:text-brand transition-colors" />
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
 
-          {/* Right column: Alerts + Quick Actions */}
-          <div className="space-y-6">
-            {/* Alerts */}
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                <Bell className="h-4 w-4 text-brand" />
-                <h2 className="text-xs font-black text-gray-700 uppercase tracking-widest">Thông báo</h2>
-              </div>
-              <div className="divide-y divide-gray-50 max-h-[260px] overflow-y-auto">
+              <div className="divide-y divide-zinc-100 max-h-[calc(100dvh-320px)] overflow-y-auto">
                 {loadingTasks ? (
-                  <div className="p-6 flex justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-brand" />
-                  </div>
-                ) : (
-                  alerts.slice(0, 8).map((alert) => (
-                    <div key={alert.id}
-                      onClick={() => {
-                        const baseRoute = getTaskRoute(alert.tab || alert.category);
-                        router.push(`${baseRoute}${alert.targetId ? `&targetId=${alert.targetId}` : ''}`);
-                      }}
-                      className="flex items-start gap-2.5 px-5 py-3 hover:bg-gray-50 cursor-pointer group">
-                      <div className={`h-1.5 w-1.5 rounded-full mt-1.5 shrink-0 ${
-                        alert.color === 'rose' ? 'bg-rose-500' : alert.color === 'orange' ? 'bg-brand' : 'bg-gray-400'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-bold text-gray-700 line-clamp-2 group-hover:text-brand transition-colors">
-                          {alert.title}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[9px] font-bold text-gray-400">{alert.time}</span>
-                          <span className="text-[9px] font-black text-brand uppercase">{alert.category}</span>
-                        </div>
-                      </div>
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <div key={`task-skeleton-${index}`} className="px-6 py-4 animate-pulse">
+                      <div className="h-3 w-40 rounded bg-zinc-100" />
+                      <div className="mt-2 h-2.5 w-56 rounded bg-zinc-100" />
                     </div>
                   ))
+                ) : tasks.length === 0 ? (
+                  <div className="px-6 py-10 text-center">
+                    <p className="text-sm font-semibold text-zinc-500">Không có nhiệm vụ cần xử lý.</p>
+                  </div>
+                ) : (
+                  tasks.map((task) => {
+                    const TaskIcon = getTaskIcon(task.type);
+                    const isExpenseTask = task.type === 'EXPENDITURE' || task.type === 'EVIDENCE';
+                    const expenditureDetail =
+                      isExpenseTask && task.targetId ? expenditureDetailsById.get(Number(task.targetId)) : undefined;
+                    const mappedCampaignId = expenditureDetail?.campaignId;
+                    const campaignTitle = mappedCampaignId
+                      ? (campaignNames.get(mappedCampaignId) || `#${mappedCampaignId}`)
+                      : undefined;
+                    const batchLabel = formatBatchLabel(expenditureDetail);
+                    const taskTitle =
+                      task.type === 'CAMPAIGN' && task.targetId
+                        ? (campaignNames.get(task.targetId) || `#${task.targetId}`)
+                        : isExpenseTask && campaignTitle
+                          ? `${campaignTitle}${batchLabel ? ` · ${batchLabel}` : ''}`
+                          : isExpenseTask && task.targetId && expenditureTitleById.get(task.targetId)
+                            ? (expenditureTitleById.get(task.targetId) || `#${task.targetId}`)
+                          : `#${task.targetId || task.id}`;
+
+                    const resolvedTargetId = isExpenseTask ? (mappedCampaignId || task.targetId) : task.targetId;
+
+                    return (
+                      <button
+                        key={task.id}
+                        type="button"
+                        onClick={() => openTask(task.type, resolvedTargetId)}
+                        className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-zinc-50"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-700 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
+                          <TaskIcon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-zinc-800">
+                            {getTaskLabel(task.type)} · {taskTitle}
+                          </span>
+                          <span className="mt-1 block text-xs text-zinc-500">
+                            Cập nhật {getTimeAgo(task.updatedAt || task.createdAt)}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-2">
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                            task.status === 'PENDING'
+                              ? 'bg-amber-100 text-amber-700'
+                              : task.status === 'COMPLETED'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : 'bg-zinc-100 text-zinc-600'
+                          }`}>
+                            {task.status}
+                          </span>
+                          <ArrowTopRightIcon className="h-4 w-4 text-zinc-400" />
+                        </span>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Quick Actions */}
-            <div className="bg-brand rounded-xl p-5 text-white">
-              <div className="flex items-center gap-2 mb-3">
-                <Zap className="w-4 h-4 text-orange-200" />
-                <span className="text-[9px] font-black uppercase tracking-widest text-orange-200">Thao tác nhanh</span>
-              </div>
-              <div className="space-y-1.5">
-                {[
-                  { icon: Fingerprint, label: 'Duyệt danh tính mới', href: '/staff/kyc' },
-                  { icon: FileCheck, label: 'Duyệt Chiến dịch', href: '/staff/request?tab=CAMPAIGN' },
-                  { icon: Receipt, label: 'Kiểm tra Khoản chi', href: '/staff/request?tab=EXPENDITURE' },
-                  { icon: Flag, label: 'Xem Báo cáo', href: '/staff/flags' },
-                  { icon: Calendar, label: 'Lịch hẹn', href: '/staff/schedule' },
-                  { icon: MessageSquare, label: 'Đăng Tin tức', href: '/staff/feed-post' },
-                ].map((action, i) => (
-                  <button key={i} onClick={() => router.push(action.href)}
-                    className="w-full flex items-center gap-3 py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-left">
-                    <action.icon className="w-4 h-4 text-orange-200" />
-                    <span className="text-[10px] font-bold text-orange-100">{action.label}</span>
-                  </button>
-                ))}
+          <div className="xl:col-span-4 space-y-3">
+            <div className="rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5">
+              <div className="rounded-[calc(1.5rem-0.375rem)] bg-white overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
+                <div className="px-5 py-2.5 border-b border-zinc-100">
+                  <h3 className="inline-flex items-center gap-2 text-lg font-black tracking-tight text-zinc-900">
+                    <BellIcon className="h-4 w-4" />
+                    Thông báo
+                    <span className="ml-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
+                      {unreadCount}
+                    </span>
+                  </h3>
+                </div>
+                <div className="divide-y divide-zinc-100 max-h-[210px] overflow-y-auto">
+                  {loadingTasks ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                      <div key={`alert-skeleton-${index}`} className="px-5 py-4 animate-pulse">
+                        <div className="h-2.5 w-44 rounded bg-zinc-100" />
+                        <div className="mt-2 h-2.5 w-28 rounded bg-zinc-100" />
+                      </div>
+                    ))
+                  ) : (
+                    alerts.slice(0, 8).map((alert) => (
+                      <button
+                        key={alert.id}
+                        type="button"
+                        onClick={() => openTask(alert.routeType, alert.targetId)}
+                        className="group flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-zinc-50 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                      >
+                        <span className={`mt-2 h-2.5 w-2.5 rounded-full ${badgeToneClass(alert.tone)}`} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-zinc-800 line-clamp-2">{alert.title}</span>
+                          <span className="mt-1 block text-xs text-zinc-500">
+                            {alert.timestamp ? `Cập nhật ${getTimeAgo(alert.timestamp)} · ` : ''}
+                            {alert.meta}
+                          </span>
+                        </span>
+                        <ArrowTopRightIcon className="h-4 w-4 text-zinc-400" />
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Today's Appointments */}
-            {todayAppointments.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-500" />
-                  <h2 className="text-xs font-black text-gray-700 uppercase tracking-widest">Lịch hẹn hôm nay</h2>
+            <div className="rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5">
+              <div className="rounded-[calc(1.5rem-0.375rem)] bg-white overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)]">
+                <div className="px-5 py-3 border-b border-zinc-100">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-zinc-400">Today</p>
+                  <h3 className="mt-1 inline-flex items-center gap-2 text-lg font-black tracking-tight text-zinc-900">
+                    <UpdateIcon className="h-4 w-4" />
+                    Lịch hẹn hôm nay
+                  </h3>
+                  <p className="mt-1 text-[11px] text-zinc-500 font-medium">Tỷ lệ xử lý hôm nay: {completionRate}%</p>
                 </div>
-                <div className="divide-y divide-gray-50">
-                  {todayAppointments.slice(0, 5).map((apt, i) => (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3">
-                      <span className="text-[10px] font-black text-gray-900 w-12 shrink-0">
-                        {new Date(apt.startTime || apt.dateTime || apt.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-gray-700 truncate">{apt.title || apt.campaignTitle || 'Lịch hẹn'}</p>
-                      </div>
-                      <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
-                        apt.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
-                        {apt.status === 'APPROVED' ? 'Xác nhận' : 'Chờ'}
-                      </span>
-                    </div>
-                  ))}
+                <div className="divide-y divide-zinc-100">
+                  {todayAppointments.length === 0 ? (
+                    <div className="px-5 py-6 text-sm font-medium text-zinc-500">Chưa có lịch hẹn trong hôm nay.</div>
+                  ) : (
+                    todayAppointments.slice(0, 5).map((appointment, index) => {
+                      const sourceDate = appointment.startTime || appointment.dateTime || appointment.date;
+                      const viewTime = sourceDate
+                        ? new Date(sourceDate).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                        : '--:--';
+
+                      return (
+                        <div key={`${sourceDate}-${index}`} className="px-5 py-4 flex items-center gap-3">
+                          <span className="inline-flex min-w-14 justify-center rounded-full bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">
+                            {viewTime}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-zinc-800">
+                              {appointment.title || appointment.campaignTitle || 'Lịch hẹn'}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-zinc-500">
+                              Trạng thái: {appointment.status || 'PENDING'}
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

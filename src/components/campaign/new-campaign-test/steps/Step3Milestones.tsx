@@ -1,8 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { useRef, useState } from 'react';
-import { NewCampaignTestState, Milestone, MilestoneCategory } from '../types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { NewCampaignTestState, Milestone, MilestoneCategory, MilestoneCategoryItem } from '../types';
 import { useToast } from '@/components/ui/Toast';
 import { expenditureService } from '@/services/expenditureService';
 import StepFooter from '../parts/StepFooter';
@@ -36,12 +35,41 @@ function formatVnd(n: number): string {
   return n.toLocaleString('vi-VN');
 }
 
+function formatDateVi(date?: string): string {
+  if (!date) return 'Chưa chọn';
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return date;
+  return d.toLocaleDateString('vi-VN');
+}
+
+function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return date;
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext, showErrors, failMessage }: Props) {
   const target = state.campaignCore.targetAmount;
   const milestonesOk = milestoneTotal === target && target > 0;
   const today = new Date().toISOString().split('T')[0];
   const campaignStart = state.campaignCore.startDate;
   const campaignEnd = state.campaignCore.endDate;
+  const firstMilestoneAutoStart = campaignStart ? addDays(campaignStart, 1) : today;
+
+  useEffect(() => {
+    if (!state.milestones.length) return;
+    let previousEnd = '';
+    let changed = false;
+    const nextMilestones = state.milestones.map((m, idx) => {
+      const expectedStart = idx === 0 ? firstMilestoneAutoStart : previousEnd || firstMilestoneAutoStart;
+      previousEnd = m.endDate || expectedStart;
+      if (m.startDate === expectedStart) return m;
+      changed = true;
+      return { ...m, startDate: expectedStart };
+    });
+    if (changed) onPatch({ milestones: nextMilestones });
+  }, [state.milestones, firstMilestoneAutoStart, onPatch]);
 
   const updateMilestone = (id: string, patch: Partial<Milestone>) => {
     onPatch({ milestones: state.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
@@ -50,6 +78,73 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [activeMilestoneId, setActiveMilestoneId] = useState<string>(state.milestones[0]?.id || '');
+  const [pendingDeleteMilestoneId, setPendingDeleteMilestoneId] = useState<string | null>(null);
+  const [categoryDetailModal, setCategoryDetailModal] = useState<{
+    milestoneId: string;
+    categoryId: string;
+  } | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<'info' | 'categories'>('info');
+  const [touchedMilestones, setTouchedMilestones] = useState<Record<string, boolean>>({});
+  const [touchedCategories, setTouchedCategories] = useState<Record<string, boolean>>({});
+  const prevActiveMilestoneIdRef = useRef<string>('');
+
+  const markMilestoneTouched = (milestoneId: string) => {
+    if (!milestoneId) return;
+    setTouchedMilestones((prev) => ({ ...prev, [milestoneId]: true }));
+  };
+
+  const markCategoryTouched = (categoryId: string) => {
+    if (!categoryId) return;
+    setTouchedCategories((prev) => ({ ...prev, [categoryId]: true }));
+  };
+
+  useEffect(() => {
+    if (!state.milestones.length) {
+      setActiveMilestoneId('');
+      return;
+    }
+    if (!state.milestones.some((m) => m.id === activeMilestoneId)) {
+      setActiveMilestoneId(state.milestones[0].id);
+    }
+  }, [state.milestones, activeMilestoneId]);
+
+  useEffect(() => {
+    const prev = prevActiveMilestoneIdRef.current;
+    if (prev && prev !== activeMilestoneId) markMilestoneTouched(prev);
+    prevActiveMilestoneIdRef.current = activeMilestoneId;
+  }, [activeMilestoneId]);
+
+  const activeMilestone = useMemo(
+    () => state.milestones.find((m) => m.id === activeMilestoneId) ?? state.milestones[0] ?? null,
+    [state.milestones, activeMilestoneId],
+  );
+
+  useEffect(() => {
+    if (!categoryDetailModal) return;
+    const ms = state.milestones.find((m) => m.id === categoryDetailModal.milestoneId);
+    const catExists = ms?.categories?.some((c) => c.id === categoryDetailModal.categoryId);
+    if (!ms || !catExists) setCategoryDetailModal(null);
+  }, [state.milestones, categoryDetailModal]);
+
+  useEffect(() => {
+    if (!categoryDetailModal) return;
+    if (activeMilestoneId !== categoryDetailModal.milestoneId) setCategoryDetailModal(null);
+  }, [activeMilestoneId, categoryDetailModal]);
+
+  useEffect(() => {
+    if (!categoryDetailModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCategoryDetailModal(null);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [categoryDetailModal]);
 
   const formatDateForInput = (val: any) => {
     if (!val) return today;
@@ -135,6 +230,8 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   const addMilestone = () => {
     const newId = `m-${Math.random().toString(36).slice(2, 9)}`;
+    const previousMilestone = state.milestones[state.milestones.length - 1];
+    const autoStartDate = previousMilestone?.endDate || firstMilestoneAutoStart;
     onPatch({
       milestones: [
         ...state.milestones,
@@ -144,12 +241,13 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
           description: '',
           plannedAmount: 0,
           releaseCondition: '',
-          startDate: today,
-          endDate: today,
+          startDate: autoStartDate,
+          endDate: autoStartDate,
           categories: [],
         },
       ],
     });
+    setActiveMilestoneId(newId);
   };
 
   const addCategory = (milestoneId: string) => {
@@ -187,6 +285,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
           : m
       ),
     });
+    if (activeMilestoneId === milestoneId) {
+      setCategoryDetailModal({ milestoneId, categoryId: catId });
+    }
   };
 
   const addCategoryItem = (milestoneId: string, catId: string) => {
@@ -241,6 +342,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   };
 
   const removeCategory = (milestoneId: string, catId: string) => {
+    if (categoryDetailModal?.milestoneId === milestoneId && categoryDetailModal?.categoryId === catId) {
+      setCategoryDetailModal(null);
+    }
     onPatch({
       milestones: state.milestones.map((m) =>
         m.id === milestoneId
@@ -278,16 +382,52 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   };
 
   const removeMilestone = (id: string) => {
-    if (state.milestones.length <= 1) return;
     onPatch({
       milestones: state.milestones.filter((m) => m.id !== id),
     });
+    if (activeMilestoneId === id) {
+      const next = state.milestones.find((m) => m.id !== id);
+      setActiveMilestoneId(next?.id || '');
+    }
   };
 
+  const pendingDeleteMilestone = pendingDeleteMilestoneId
+    ? state.milestones.find((m) => m.id === pendingDeleteMilestoneId) ?? null
+    : null;
+
+  const openDeleteMilestoneConfirm = (id: string) => {
+    setPendingDeleteMilestoneId(id);
+  };
+
+  const closeDeleteMilestoneConfirm = () => {
+    setPendingDeleteMilestoneId(null);
+  };
+
+  const confirmDeleteMilestone = () => {
+    if (!pendingDeleteMilestoneId) return;
+    removeMilestone(pendingDeleteMilestoneId);
+    setPendingDeleteMilestoneId(null);
+  };
+
+  const getMilestoneComputedTotal = (m: Milestone) => {
+    return (m.categories || []).reduce((sum, cat) => {
+      return sum + (cat.items || []).reduce((itemSum, item) => itemSum + (item.expectedPrice || 0) * (item.expectedQuantity || 0), 0);
+    }, 0);
+  };
+
+  const getItemTotal = (item: MilestoneCategoryItem) => (item.expectedPrice || 0) * (item.expectedQuantity || 0);
+
   const getMilestoneErrorCount = (m: Milestone) => {
+    const milestoneIndex = state.milestones.findIndex((x) => x.id === m.id);
+    const expectedStartDate =
+      milestoneIndex === 0
+        ? firstMilestoneAutoStart
+        : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
     let count = 0;
     if (!m.title.trim()) count += 1;
-    if (!m.startDate || m.startDate < today) count += 1;
+    if (!campaignStart) count += 1;
+    if (!m.startDate || m.startDate !== expectedStartDate) count += 1;
+    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate <= campaignStart) count += 1;
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
     if (!m.categories || m.categories.length === 0) count += 1;
     (m.categories || []).forEach((cat) => {
@@ -302,12 +442,62 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     return count;
   };
 
+  const getCategoryErrorCount = (cat: MilestoneCategory) => {
+    let count = 0;
+    if (!cat.name.trim()) count += 1;
+    if (!cat.items || cat.items.length === 0) count += 1;
+    (cat.items || []).forEach((item) => {
+      if (!item.name.trim()) count += 1;
+      if (!item.expectedQuantity || item.expectedQuantity <= 0) count += 1;
+      if (!item.expectedPrice || item.expectedPrice <= 0) count += 1;
+      if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) count += 1;
+    });
+    return count;
+  };
+
+  const getMilestoneIssues = (m: Milestone) => {
+    const milestoneIndex = state.milestones.findIndex((x) => x.id === m.id);
+    const expectedStartDate =
+      milestoneIndex === 0
+        ? firstMilestoneAutoStart
+        : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
+    const issues: string[] = [];
+    if (!m.title.trim()) issues.push('Thiếu tên đợt giải ngân');
+    if (!campaignStart) issues.push('Cần chọn ngày bắt đầu quyên góp ở bước 2 trước khi lập các đợt');
+    if (!m.startDate || m.startDate !== expectedStartDate) issues.push('Ngày bắt đầu đợt phải theo thứ tự nối tiếp từ đợt trước');
+    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate <= campaignStart) {
+      issues.push('Ngày bắt đầu đợt 1 phải sau ngày bắt đầu quyên góp');
+    }
+    if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) issues.push('Ngày kết thúc phải sau ngày bắt đầu');
+    if (!m.categories || m.categories.length === 0) issues.push('Chưa có danh mục chi tiêu');
+    (m.categories || []).forEach((cat, catIdx) => {
+      if (!cat.name.trim()) issues.push(`Danh mục ${catIdx + 1}: thiếu tên danh mục`);
+      if (!cat.items || cat.items.length === 0) issues.push(`Danh mục ${catIdx + 1}: chưa có hạng mục`);
+      (cat.items || []).forEach((item, itemIdx) => {
+        if (!item.name.trim()) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: thiếu tên mặt hàng`);
+        if (!item.expectedQuantity || item.expectedQuantity <= 0) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: số lượng phải > 0`);
+        if (!item.expectedPrice || item.expectedPrice <= 0) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: đơn giá phải > 0`);
+      });
+    });
+    return issues;
+  };
+
+  const dm = categoryDetailModal;
+  const modalMilestone =
+    dm != null ? state.milestones.find((m) => m.id === dm.milestoneId) ?? null : null;
+  const modalCategory =
+    modalMilestone != null ? (modalMilestone.categories || []).find((c) => c.id === dm?.categoryId) : undefined;
+  const modalCatIdx =
+    modalMilestone != null && modalCategory != null
+      ? (modalMilestone.categories || []).findIndex((c) => c.id === modalCategory.id)
+      : -1;
+
   return (
-    <div className="rounded-xl bg-white p-3.5 md:p-4">
-      <div className="flex items-center justify-between">
+    <div className="rounded-xl bg-white p-2 md:p-2.5">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-black">Bước 3 — Lập kế hoạch chi tiêu</h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-500">
             Chia chiến dịch thành nhiều đợt giải ngân. Mỗi đợt liệt kê các hạng mục cần mua sắm.
           </p>
         </div>
@@ -345,16 +535,23 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
         </div>
       </div>
 
-      {/* Tổng giải ngân */}
-      <div className="mt-2.5">
-        <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-orange-50/80 px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-700">Tổng giải ngân</p>
-          <motion.span
-            animate={{ color: milestonesOk ? '#059669' : '#dc2626' }}
-            className="text-sm font-semibold tabular-nums"
-          >
-            {formatVnd(milestoneTotal)} / {formatVnd(target)} đ
-          </motion.span>
+      {/* Tổng quan nhanh */}
+      <div className="mt-1.5">
+        <div className="mb-1.5 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-orange-50/80 px-2.5 py-1.5">
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-orange-200">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Tổng giải ngân</span>
+            <span className={`text-xs font-bold tabular-nums ${milestonesOk ? 'text-emerald-600' : 'text-red-600'}`}>
+              {formatVnd(milestoneTotal)} / {formatVnd(target)} đ
+            </span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-gray-200">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Bắt đầu quyên góp</span>
+            <span className="text-xs font-semibold text-black">{formatDateVi(campaignStart)}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-gray-200">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Kết thúc quyên góp</span>
+            <span className="text-xs font-semibold text-black">{formatDateVi(campaignEnd)}</span>
+          </div>
         </div>
         {showErrors && !milestonesOk && (
           <p className="mt-1 text-xs font-semibold text-red-600">
@@ -363,300 +560,583 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
         )}
       </div>
 
-      {/* Milestone cards */}
-      <div className="space-y-2.5">
-        {state.milestones.map((m, idx) => {
-          const milSum = (m.categories || []).reduce((sum, cat) => {
-            return sum + (cat.items || []).reduce((itemSum, item) => {
-              return itemSum + (item.expectedPrice || 0) * (item.expectedQuantity || 0);
-            }, 0);
-          }, 0);
-          const errorCount = getMilestoneErrorCount(m);
-          return (
-            <motion.div
-              key={m.id}
-              layout
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-visible rounded-xl border border-gray-200 bg-white"
-            >
-              <span className="absolute -left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-xs font-black text-brand shadow-sm">
-                {idx + 1}
-              </span>
-              <div className="p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-black">
-                        Tên đợt <span className="text-red-500">*</span>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {showErrors && errorCount > 0 && (
-                          <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700">
-                            {errorCount} lỗi
-                          </span>
-                        )}
-                        <div className="text-xs font-bold text-brand tabular-nums">
-                          Tổng: {formatVnd(milSum)} đ
-                        </div>
-                      </div>
+      {/* Master-detail cho đợt giải ngân */}
+      <div className="mt-1 grid gap-2 lg:grid-cols-12">
+        <div className="max-h-[68dvh] space-y-1.5 overflow-y-auto pr-1 lg:col-span-4">
+          {state.milestones.map((m, idx) => {
+            const isActive = activeMilestone?.id === m.id;
+            const errorCount = getMilestoneErrorCount(m);
+            const issues = getMilestoneIssues(m);
+            const mTotal = getMilestoneComputedTotal(m);
+            const shouldValidateMilestone = Boolean(showErrors) || Boolean(touchedMilestones[m.id]);
+            const hasMilestoneErrors = shouldValidateMilestone && errorCount > 0;
+            return (
+              <div
+                key={m.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setActiveMilestoneId(m.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setActiveMilestoneId(m.id);
+                  }
+                }}
+                className={`w-full rounded-lg border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 ${shouldValidateMilestone && errorCount > 0
+                  ? 'border-red-300 bg-red-50/40'
+                  : isActive
+                    ? 'border-orange-300 bg-orange-50/70 ring-1 ring-orange-200'
+                    : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
+              >
+                <div className="flex items-start justify-between gap-1.5">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-semibold text-black">Đợt {idx + 1}</p>
+                      {isActive && (
+                        <span className="rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-800">
+                          Đang chỉnh
+                        </span>
+                      )}
                     </div>
-                    <input
-                      className={`${inCls} w-full font-semibold ${showErrors && !m.title.trim()
-                          ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100'
-                          : ''
-                        }`}
-                      value={m.title}
-                      placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
-                      spellCheck={false}
-                      onChange={(e) => updateMilestone(m.id, { title: e.target.value })}
-                    />
-                    {showErrors && !m.title.trim() && (
-                      <p className="text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>
+                    <p className="mt-0.5 truncate text-sm font-bold leading-tight text-black">{m.title || `Đợt ${idx + 1}`}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className={`text-xs font-bold tabular-nums ${hasMilestoneErrors ? 'text-red-600' : 'text-brand'}`}>
+                      {formatVnd(mTotal)} đ
+                    </span>
+                    {hasMilestoneErrors && (
+                      <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700">
+                        Còn {errorCount} mục cần điền
+                      </span>
                     )}
-                  </div>
-                  <button
-                    type="button"
-                    disabled={state.milestones.length <= 1}
-                    onClick={() => removeMilestone(m.id)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-gray-400 ring-1 ring-gray-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200 disabled:cursor-not-allowed disabled:opacity-35 mt-[22px]"
-                    aria-label="Xóa mốc"
-                  >
-                    <TrashIcon />
-                  </button>
-                </div>
-
-                <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-black">Ngày bắt đầu dự kiến <span className="text-red-500">*</span></p>
-                    <input
-                      type="date"
-                      min={today}
-                      className={`${inCls} w-full ${showErrors && (!m.startDate || m.startDate < today) ? 'border-red-300 bg-red-50/50' : ''}`}
-                      value={m.startDate || ''}
-                      onChange={(e) => updateMilestone(m.id, { startDate: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-black">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
-                    <input
-                      type="date"
-                      min={m.startDate || today}
-                      className={`${inCls} w-full ${showErrors && (!m.endDate || (m.startDate && m.endDate <= m.startDate)) ? 'border-red-300 bg-red-50/50' : ''}`}
-                      value={m.endDate || ''}
-                      onChange={(e) => updateMilestone(m.id, { endDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-black">Mô tả đợt</p>
-                    <textarea
-                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
-                      rows={2}
-                      placeholder="Mục tiêu chính..."
-                      value={m.description}
-                      spellCheck={false}
-                      onChange={(e) => updateMilestone(m.id, { description: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-black">Điều kiện giải ngân</p>
-                    <textarea
-                      className={`${inCls} w-full resize-none text-sm leading-relaxed`}
-                      rows={2}
-                      placeholder="Ví dụ: Hoàn tất báo cáo đợt cũ..."
-                      value={m.releaseCondition}
-                      spellCheck={false}
-                      onChange={(e) => updateMilestone(m.id, { releaseCondition: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Categories section — chỉ tên danh mục + số tiền */}
-                <div className="mt-2.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Danh mục chi tiêu <span className="text-red-500">*</span></p>
                     <button
                       type="button"
-                      onClick={() => addCategory(m.id)}
-                      className="text-xs font-semibold text-brand hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteMilestoneConfirm(m.id);
+                      }}
+                      className="rounded-md border border-gray-300 px-2 py-0.5 text-[10px] font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                     >
-                      + Thêm danh mục
+                      Xóa
                     </button>
                   </div>
-                  {showErrors && (!m.categories || m.categories.length === 0) && (
-                    <p className="text-xs font-semibold text-red-600">Cần ít nhất một danh mục chi tiêu cho mỗi đợt.</p>
-                  )}
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] font-medium leading-snug text-black">
+                  <span>{m.startDate || 'Chưa có ngày bắt đầu'} → {m.endDate || 'Chưa có ngày kết thúc'}</span>
+                  <span>• {(m.categories || []).length} danh mục</span>
+                </div>
+                {hasMilestoneErrors && issues.length > 0 && (
+                  <p className="mt-1 text-[11px] font-semibold text-red-700">
+                    {issues[0]}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={addMilestone}
+            className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-orange-200 bg-orange-50/40 py-2 text-xs font-semibold text-brand transition hover:bg-orange-50"
+          >
+            <span className="text-sm leading-none">+</span> Thêm đợt
+          </button>
+        </div>
 
-                  {(m.categories || []).map((cat) => {
-                    const catNameMissing = showErrors && !cat.name.trim();
-                    const catTotal = cat.items.reduce((sum, item) => sum + (item.expectedPrice || 0) * (item.expectedQuantity || 0), 0);
+        <div className="lg:col-span-8">
+          {activeMilestone ? (
+            <div
+              key={activeMilestone.id}
+              className="rounded-xl border border-gray-200 bg-white p-3.5"
+            >
+              <div className="mb-2.5 flex items-center gap-2 rounded-xl bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('info')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeDetailTab === 'info' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'}`}
+                >
+                  Thông tin đợt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDetailTab('categories')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeDetailTab === 'categories' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'}`}
+                >
+                  Danh mục chi tiêu
+                </button>
+              </div>
 
+              {activeDetailTab === 'info' && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+                  {(() => {
+                    const shouldValidateMilestone = Boolean(showErrors) || Boolean(touchedMilestones[activeMilestone.id]);
                     return (
-                      <div key={cat.id} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2.5">
-                        <div className="flex items-center gap-2">
+                      <>
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 space-y-1">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Tên danh mục</p>
+                            <p className="text-sm font-semibold text-black">Thông tin đợt giải ngân</p>
                             <input
-                              className={`${inCls} w-full py-1.5 text-sm font-semibold ${catNameMissing ? 'border-red-300 bg-red-50/50' : ''}`}
-                              placeholder="Thực phẩm, Trang thiết bị..."
-                              value={cat.name}
-                              onChange={(e) => updateCategoryField(m.id, cat.id, 'name', e.target.value)}
+                              className={`${inCls} w-full font-semibold ${shouldValidateMilestone && !activeMilestone.title.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
+                              value={activeMilestone.title}
+                              placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
+                              spellCheck={false}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { title: e.target.value })}
                             />
-                          </div>
-                          <div className="w-40 space-y-1">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase text-right">Tổng danh mục</p>
-                            <div className="flex items-center justify-end h-9 font-bold text-brand tabular-nums">
-                              {formatVnd(catTotal)} đ
-                            </div>
                           </div>
                           <button
                             type="button"
-                            onClick={() => removeCategory(m.id, cat.id)}
-                            className="mt-5 p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                    onClick={() => openDeleteMilestoneConfirm(activeMilestone.id)}
+                            className="mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-400 ring-1 ring-gray-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200 disabled:cursor-not-allowed disabled:opacity-35"
+                            aria-label="Xóa mốc"
                           >
                             <TrashIcon />
                           </button>
                         </div>
+                        {shouldValidateMilestone && !activeMilestone.title.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
 
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between px-1">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase">Bảng hạng mục chi tiết</p>
-                            <button
-                              type="button"
-                              onClick={() => addCategoryItem(m.id, cat.id)}
-                              className="text-[10px] font-bold text-brand hover:underline"
-                            >
-                              + Thêm hạng mục
-                            </button>
+                        <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-black">Ngày bắt đầu đợt (tự động)</p>
+                            <input
+                              type="date"
+                              readOnly
+                              className={`${inCls} w-full bg-gray-100 text-gray-600 ${shouldValidateMilestone && (!activeMilestone.startDate || (campaignStart && activeMilestone.startDate <= campaignStart && state.milestones[0]?.id === activeMilestone.id)) ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                              value={activeMilestone.startDate || ''}
+                            />
+                            <p className="text-[11px] font-medium text-gray-500">
+                              Đợt 1 tự bắt đầu sau ngày bắt đầu quyên góp 1 ngày. Đợt sau tự bắt đầu bằng ngày kết thúc của đợt trước.
+                            </p>
                           </div>
-
-                          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                            <table className="w-full min-w-[700px] text-xs">
-                              <thead>
-                                <tr className="bg-gray-50 text-gray-400 border-bottom">
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200">Tên mặt hàng/Dịch vụ</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-24">Số lượng</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-24">Đơn vị</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-28">Đơn giá dự kiến</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Nhãn hàng</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-32">Địa điểm mua</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200 w-48">Link mua hàng</th>
-                                  <th className="px-3 py-2 text-left font-bold border-b border-gray-200">Ghi chú</th>
-                                  <th className="px-3 py-2 text-center font-bold border-b border-gray-200 w-10"></th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-200">
-                                {cat.items.map((item) => {
-                                  const nameErr = showErrors && !item.name.trim();
-                                  const qtyErr = showErrors && (!item.expectedQuantity || item.expectedQuantity <= 0);
-                                  const priceErr = showErrors && (!item.expectedPrice || item.expectedPrice <= 0);
-
-                                  return (
-                                    <tr key={item.id}>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className={`w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs font-semibold ${nameErr ? 'bg-red-50 text-red-600' : ''}`}
-                                          placeholder="Tên mặt hàng..."
-                                          value={item.name}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'name', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          type="number"
-                                          className={`w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-right tabular-nums ${qtyErr ? 'bg-red-50 text-red-600 font-bold' : ''}`}
-                                          value={item.expectedQuantity}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'expectedQuantity', Number(e.target.value) || 0)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-center"
-                                          placeholder="kg, chiếc..."
-                                          value={item.unit}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'unit', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          type="number"
-                                          className={`w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-right font-semibold tabular-nums ${priceErr ? 'bg-red-50 text-red-600 font-bold' : ''}`}
-                                          value={item.expectedPrice}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'expectedPrice', Number(e.target.value) || 0)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs"
-                                          placeholder="Thương hiệu..."
-                                          value={item.brand}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'brand', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs"
-                                          placeholder="Chợ, siêu thị..."
-                                          value={item.purchaseLocation}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'purchaseLocation', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className={`w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'bg-red-50 text-red-600 font-bold' : 'text-blue-600 font-medium'}`}
-                                          placeholder="https://..."
-                                          value={item.expectedPurchaseLink || ''}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'expectedPurchaseLink', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        <input
-                                          className="w-full bg-transparent border-none focus:ring-0 px-1 py-1 text-xs text-gray-400"
-                                          placeholder="..."
-                                          value={item.note}
-                                          onChange={(e) => updateCategoryItem(m.id, cat.id, item.id, 'note', e.target.value)}
-                                        />
-                                      </td>
-                                      <td className="px-2 py-1.5 text-center">
-                                        <button
-                                          type="button"
-                                          hidden={cat.items.length <= 1}
-                                          onClick={() => removeCategoryItem(m.id, cat.id, item.id)}
-                                          className="text-gray-400 hover:text-red-600 transition p-1"
-                                        >
-                                          <TrashIcon />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-black">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
+                            <input
+                              type="date"
+                              min={activeMilestone.startDate || today}
+                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.endDate || (activeMilestone.startDate && activeMilestone.endDate <= activeMilestone.startDate)) ? 'border-red-300 bg-red-50/50' : ''}`}
+                              value={activeMilestone.endDate || ''}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { endDate: e.target.value })}
+                            />
                           </div>
                         </div>
+
+                        <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-black">Mô tả đợt</p>
+                            <textarea
+                              className={`${inCls} w-full resize-none text-sm leading-relaxed`}
+                              rows={2}
+                              placeholder="Mục tiêu chính..."
+                              value={activeMilestone.description}
+                              spellCheck={false}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { description: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-black">Điều kiện giải ngân</p>
+                            <textarea
+                              className={`${inCls} w-full resize-none text-sm leading-relaxed`}
+                              rows={2}
+                              placeholder="Ví dụ: Hoàn tất báo cáo đợt cũ..."
+                              value={activeMilestone.releaseCondition}
+                              spellCheck={false}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { releaseCondition: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {activeDetailTab === 'categories' && (
+                <div className="mt-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-base font-semibold text-black">Danh mục chi tiêu <span className="text-red-500">*</span></p>
+                    <button type="button" onClick={() => addCategory(activeMilestone.id)} className="text-xs font-semibold text-brand hover:underline">
+                      + Thêm danh mục
+                    </button>
+                  </div>
+                  <p className="mb-2 text-xs font-semibold text-red-600">Các trường có dấu * là bắt buộc.</p>
+                  {showErrors && (
+                    <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-2.5">
+                      <p className="text-sm font-bold text-red-700">Các lỗi cần sửa trong bước này:</p>
+                      <ul className="mt-1 list-disc pl-5 text-xs font-semibold text-red-700">
+                        {getMilestoneIssues(activeMilestone).slice(0, 8).map((issue) => (
+                          <li key={issue}>{issue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="max-h-[68dvh] space-y-3 overflow-y-auto pr-1">
+                    {showErrors && (!activeMilestone.categories || activeMilestone.categories.length === 0) && (
+                      <p className="text-xs font-semibold text-red-600">Cần ít nhất một danh mục chi tiêu cho mỗi đợt.</p>
+                    )}
+
+                    {(activeMilestone.categories || []).map((cat, catIdx) => {
+                      const shouldValidateCategory = Boolean(showErrors) || Boolean(touchedCategories[cat.id]);
+                      const catNameMissing = shouldValidateCategory && !cat.name.trim();
+                      const catTotal = cat.items.reduce((sum, item) => sum + getItemTotal(item), 0);
+                      const catErrorCount = getCategoryErrorCount(cat);
+                      const isModalThis =
+                        categoryDetailModal?.milestoneId === activeMilestone.id &&
+                        categoryDetailModal?.categoryId === cat.id;
+                      return (
+                        <div key={cat.id} className={`rounded-xl border bg-white ${shouldValidateCategory && catErrorCount > 0
+                          ? 'border-red-300 bg-red-50/30'
+                          : isModalThis
+                            ? 'border-black ring-2 ring-black/15'
+                            : 'border-gray-300'
+                          }`}>
+                          <div className="border-b border-gray-200 p-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-semibold text-black">Danh mục:</p>
+                                  <p className="text-sm font-bold text-black">{catIdx + 1}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-semibold text-black">Tổng tiền danh mục này:</p>
+                                  <p className="text-sm font-bold tabular-nums text-brand">{formatVnd(catTotal)} đ</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="shrink-0 self-center text-sm font-semibold text-black">Tên danh mục <span className="text-red-500">*</span>:</p>
+                                <input
+                                  className={`${inCls} w-full py-1.5 text-sm font-semibold ${catNameMissing ? 'border-red-300 bg-red-50/50' : ''}`}
+                                  placeholder={`Nhập tên danh mục ${catIdx + 1}`}
+                                  value={cat.name}
+                                  onBlur={() => markCategoryTouched(cat.id)}
+                                  onChange={(e) => updateCategoryField(activeMilestone.id, cat.id, 'name', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                              {isModalThis && (
+                                <span className="rounded-full border border-orange-200 bg-orange-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-800">
+                                  Đang chỉnh
+                                </span>
+                              )}
+                              {shouldValidateCategory && catErrorCount > 0 && (
+                                <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-red-700">
+                                  Còn {catErrorCount} mục cần điền
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCategoryDetailModal({ milestoneId: activeMilestone.id, categoryId: cat.id })
+                                }
+                                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-100"
+                              >
+                                Xem chi tiết
+                              </button>
+                              <button type="button" onClick={() => removeCategory(activeMilestone.id, cat.id)} className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700">
+                                Xóa
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {dm && modalMilestone && modalCategory && modalCatIdx >= 0 ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="presentation"
+          onClick={() => setCategoryDetailModal(null)}
+        >
+          <div className="absolute inset-0 bg-black/45" aria-hidden />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="category-detail-modal-title"
+            className="relative z-10 flex max-h-[min(90dvh,900px)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="min-w-0">
+                <p id="category-detail-modal-title" className="text-base font-bold text-black">
+                  Danh mục {modalCatIdx + 1}
+                  {modalCategory.name.trim()
+                    ? ` — ${modalCategory.name.trim()}`
+                    : ': chưa đặt tên'}
+                </p>
+                <div className="mt-2">
+                  <p className="mb-1 text-xs font-semibold text-black">
+                    Tên danh mục <span className="text-red-500">*</span>
+                  </p>
+                  <input
+                    className={`${inCls} w-full py-1.5 text-sm font-semibold ${showErrors && !modalCategory.name.trim() ? 'border-red-300 bg-red-50/50' : ''}`}
+                    placeholder={`Nhập tên danh mục ${modalCatIdx + 1}`}
+                    value={modalCategory.name}
+                    onChange={(e) => updateCategoryField(modalMilestone.id, modalCategory.id, 'name', e.target.value)}
+                  />
+                </div>
+                <p className="mt-1 text-sm font-semibold tabular-nums text-brand">
+                  Tổng tiền danh mục này: {formatVnd(modalCategory.items.reduce((s, it) => s + getItemTotal(it), 0))} đ
+                </p>
+
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryDetailModal(null)}
+                className="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-gray-100"
+              >
+                Đóng
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              <details open className="rounded-lg border border-gray-200 bg-white p-2.5">
+                <summary className="cursor-pointer text-sm font-semibold text-black">Hạng mục trong danh mục</summary>
+                <div className="mt-2 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => addCategoryItem(modalMilestone.id, modalCategory.id)}
+                    className="text-[10px] font-bold text-brand hover:underline"
+                  >
+                    + Thêm hạng mục
+                  </button>
+                </div>
+                <div className="mt-2 space-y-2.5">
+                  {modalCategory.items.map((item, itemIdx) => {
+                    const shouldValidateCategory = Boolean(showErrors) || Boolean(touchedCategories[modalCategory.id]);
+                    const nameErr = shouldValidateCategory && !item.name.trim();
+                    const qtyErr = shouldValidateCategory && (!item.expectedQuantity || item.expectedQuantity <= 0);
+                    const priceErr = shouldValidateCategory && (!item.expectedPrice || item.expectedPrice <= 0);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-lg border p-3 ${itemIdx % 2 === 0 ? 'border-gray-300 bg-white' : 'border-slate-300 bg-slate-50/60'
+                          } border-l-4 border-l-brand/70`}
+                      >
+                        <div className="mb-2 flex items-center justify-between border-b border-gray-200 pb-1.5">
+                          <p className="text-xs font-bold text-black">Hạng mục {itemIdx + 1}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-semibold text-gray-700">
+                              Thành tiền:{' '}
+                              <span className="font-bold text-brand tabular-nums">{formatVnd(getItemTotal(item))} đ</span>
+                            </p>
+                            <button
+                              type="button"
+                              hidden={modalCategory.items.length <= 1}
+                              onClick={() => removeCategoryItem(modalMilestone.id, modalCategory.id, item.id)}
+                              className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid gap-2.5 md:grid-cols-12">
+                          <div className="md:col-span-6">
+                            <p className="mb-1 text-[11px] font-semibold text-black">
+                              Tên mặt hàng <span className="text-red-500">*</span>
+                            </p>
+                            <input
+                              className={`${inCls} w-full ${nameErr ? 'border-red-300 bg-red-50/50' : ''}`}
+                              placeholder="Gạo cứu trợ, áo ấm, thuốc..."
+                              value={item.name}
+                              onBlur={() => markCategoryTouched(modalCategory.id)}
+                              onChange={(e) =>
+                                updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'name', e.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <p className="mb-1 text-[11px] font-semibold text-black">
+                              Số lượng <span className="text-red-500">*</span>
+                            </p>
+                            <input
+                              type="number"
+                              className={`${inCls} w-full text-right tabular-nums ${qtyErr ? 'border-red-300 bg-red-50/50' : ''}`}
+                              value={item.expectedQuantity}
+                              onBlur={() => markCategoryTouched(modalCategory.id)}
+                              onChange={(e) =>
+                                updateCategoryItem(
+                                  modalMilestone.id,
+                                  modalCategory.id,
+                                  item.id,
+                                  'expectedQuantity',
+                                  Number(e.target.value) || 0,
+                                )
+                              }
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <p className="mb-1 text-[11px] font-semibold text-black">
+                              Đơn giá dự kiến <span className="text-red-500">*</span>
+                            </p>
+                            <input
+                              type="number"
+                              className={`${inCls} w-full text-right tabular-nums ${priceErr ? 'border-red-300 bg-red-50/50' : ''}`}
+                              value={item.expectedPrice}
+                              onBlur={() => markCategoryTouched(modalCategory.id)}
+                              onChange={(e) =>
+                                updateCategoryItem(
+                                  modalMilestone.id,
+                                  modalCategory.id,
+                                  item.id,
+                                  'expectedPrice',
+                                  Number(e.target.value) || 0,
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                        <details className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
+                          <summary className="cursor-pointer text-xs font-semibold text-black">Thông tin bổ sung cần điền</summary>
+                          <div className="mt-2 grid gap-2.5 md:grid-cols-2">
+                            <div>
+                              <p className="mb-1 text-[11px] font-semibold text-black">Đơn vị</p>
+                              <input
+                                className={inCls}
+                                placeholder="bao, chiếc..."
+                                value={item.unit}
+                                onBlur={() => markCategoryTouched(modalCategory.id)}
+                                onChange={(e) =>
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'unit', e.target.value)
+                                }
+                              />
+                            </div>
+                            <div>
+                              <p className="mb-1 text-[11px] font-semibold text-black">Nhãn hàng</p>
+                              <input
+                                className={inCls}
+                                placeholder="Tên nhãn hàng"
+                                value={item.brand}
+                                onBlur={() => markCategoryTouched(modalCategory.id)}
+                                onChange={(e) =>
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'brand', e.target.value)
+                                }
+                              />
+                            </div>
+                            <div>
+                              <p className="mb-1 text-[11px] font-semibold text-black">Địa điểm mua</p>
+                              <input
+                                className={inCls}
+                                placeholder="Chợ, siêu thị..."
+                                value={item.purchaseLocation}
+                                onBlur={() => markCategoryTouched(modalCategory.id)}
+                                onChange={(e) =>
+                                  updateCategoryItem(
+                                    modalMilestone.id,
+                                    modalCategory.id,
+                                    item.id,
+                                    'purchaseLocation',
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div>
+                              <p className="mb-1 text-[11px] font-semibold text-black">Link mua hàng</p>
+                              <input
+                                className={`${inCls} ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink)
+                                  ? 'border-red-300 bg-red-50/50 text-red-600 font-semibold'
+                                  : ''
+                                  }`}
+                                placeholder="https://..."
+                                value={item.expectedPurchaseLink || ''}
+                                onBlur={() => markCategoryTouched(modalCategory.id)}
+                                onChange={(e) =>
+                                  updateCategoryItem(
+                                    modalMilestone.id,
+                                    modalCategory.id,
+                                    item.id,
+                                    'expectedPurchaseLink',
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <p className="mb-1 text-[11px] font-semibold text-black">Ghi chú</p>
+                              <textarea
+                                className={`${inCls} w-full resize-none`}
+                                rows={2}
+                                placeholder="Ghi chú thêm cho item"
+                                value={item.note || ''}
+                                onBlur={() => markCategoryTouched(modalCategory.id)}
+                                onChange={(e) =>
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'note', e.target.value)
+                                }
+                              />
+                            </div>
+                          </div>
+                        </details>
                       </div>
                     );
                   })}
                 </div>
+              </details>
+            </div>
+            <div className="flex shrink-0 justify-end gap-2 border-t border-gray-200 bg-gray-50 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setCategoryDetailModal(null)}
+                className="rounded-lg bg-black px-4 py-2 text-xs font-semibold text-white hover:bg-gray-800"
+              >
+                Xong
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Add milestone button */}
-      <button
-        type="button"
-        onClick={addMilestone}
-        className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-orange-200 bg-orange-50/40 py-2.5 text-sm font-semibold text-brand transition hover:bg-orange-50 sm:w-auto sm:px-5"
-      >
-        <span className="text-base leading-none">+</span> Thêm đợt
-      </button>
+      {pendingDeleteMilestone ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="presentation"
+          onClick={closeDeleteMilestoneConfirm}
+        >
+          <div className="absolute inset-0 bg-black/45" aria-hidden />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-delete-milestone-title"
+            className="relative z-10 w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-gray-200 px-4 py-3">
+              <p id="confirm-delete-milestone-title" className="text-base font-bold text-black">
+                Bạn có muốn xóa đợt này không?
+              </p>
+            </div>
+            <div className="px-4 py-3 text-sm text-gray-700">
+              {pendingDeleteMilestone.title?.trim()
+                ? `Đợt sẽ bị xóa: ${pendingDeleteMilestone.title}`
+                : 'Đợt này chưa có tên, nhưng toàn bộ dữ liệu bên trong sẽ bị xóa.'}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-200 bg-gray-50 px-4 py-3">
+              <button
+                type="button"
+                onClick={closeDeleteMilestoneConfirm}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMilestone}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+              >
+                Xóa đợt
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <StepFooter canNext={canNext} onPrev={onPrev} onNext={onNext} failMessage={failMessage} />
     </div>

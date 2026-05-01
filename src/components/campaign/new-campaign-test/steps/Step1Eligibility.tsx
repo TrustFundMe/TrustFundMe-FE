@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { mockBanks } from '../mockData';
-import { CredibilityFile, NewCampaignTestState } from '../types';
-import LegalModal from '../parts/LegalModal';
+import { NewCampaignTestState } from '../types';
 import StepFooter from '../parts/StepFooter';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { kycService } from '@/services/kycService';
@@ -24,45 +23,50 @@ interface Props {
 
 /** Ô nhập dạng hộp — dễ nhận diện vùng bấm và nhập liệu */
 const fieldBox =
-  'w-full min-h-[48px] rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-black focus:ring-1 focus:ring-black/5';
+  'w-full min-h-[44px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-300 focus:border-black focus:ring-1 focus:ring-black/5';
 
 const bankTriggerBase =
-  'flex w-full min-h-[48px] items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm text-gray-900 outline-none transition hover:border-gray-300 focus-visible:border-black focus-visible:ring-1 focus-visible:ring-black/5';
+  'flex w-full min-h-[44px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-900 outline-none transition hover:border-gray-300 focus-visible:border-black focus-visible:ring-1 focus-visible:ring-black/5';
 
 function LabeledField({
   id,
   label,
   hint,
+  action,
   children,
 }: {
   /** Có `id` thì gắn `htmlFor` với control (input/button); bỏ qua khi khối chỉ đọc. */
   id?: string;
   label: string;
   hint?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const hintId = id ? `${id}-hint` : undefined;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5">
-        {id ? (
-          <label htmlFor={id} className="text-sm font-semibold text-gray-900">
-            {label}
-          </label>
-        ) : (
-          <span className="text-sm font-semibold text-gray-900">{label}</span>
-        )}
-        {hint ? (
-          <button
-            type="button"
-            id={hintId}
-            title={hint}
-            aria-label={hint}
-            className="inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition hover:text-gray-600"
-          >
-            <InfoIcon />
-          </button>
-        ) : null}
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5">
+          {id ? (
+            <label htmlFor={id} className="text-sm font-semibold text-gray-900">
+              {label}
+            </label>
+          ) : (
+            <span className="text-sm font-semibold text-gray-900">{label}</span>
+          )}
+          {hint ? (
+            <button
+              type="button"
+              id={hintId}
+              title={hint}
+              aria-label={hint}
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition hover:text-gray-600"
+            >
+              <InfoIcon />
+            </button>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
     </div>
@@ -81,13 +85,15 @@ function SectionBlock({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-3 md:p-4">
-      <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-gray-100 pb-2">
-        <div className="flex items-center gap-3">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-[11px] font-bold text-white">
+    <section className="rounded-lg border border-gray-200 bg-white p-2.5 md:p-3">
+      <div className="mb-2 flex min-h-7 items-center justify-between gap-2 border-b border-gray-100 pb-1.5">
+        <div className="flex min-w-0 items-center gap-2 self-center">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black text-[10px] font-bold text-white">
             {step}
           </span>
-          <h3 className="text-sm font-bold uppercase tracking-wide text-black">{title}</h3>
+          <h3 className="flex h-6 items-center truncate text-[11px] font-bold uppercase tracking-wide text-black">
+            {title}
+          </h3>
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
@@ -100,15 +106,6 @@ function CheckBadgeIcon() {
   return (
     <svg className="h-4 w-4 text-white" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
       <path d="M3.5 8.2l2.8 2.8 6.2-6.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
   );
 }
@@ -133,15 +130,17 @@ function InfoIcon() {
 export default function Step1Eligibility({ state, onPatch, onNext, canNext, failMessage }: Props) {
   const [bankQuery, setBankQuery] = useState('');
   const [bankOpen, setBankOpen] = useState(false);
+  const [cassoGuideOpen, setCassoGuideOpen] = useState(false);
   const [refreshingStep1, setRefreshingStep1] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [checkingBankDup, setCheckingBankDup] = useState(false);
   const [checkingBankDupLive, setCheckingBankDupLive] = useState(false);
   const [bankDuplicateError, setBankDuplicateError] = useState('');
-  const [bankTouched, setBankTouched] = useState<{ holder: boolean; number: boolean; bank: boolean }>({
+  const [bankTouched, setBankTouched] = useState<{ holder: boolean; number: boolean; bank: boolean; webhookKey: boolean }>({
     holder: false,
     number: false,
     bank: false,
+    webhookKey: false,
   });
   const bankWrapRef = useRef<HTMLDivElement>(null);
   const KYC_PAGE_HREF = '/account/profile';
@@ -188,7 +187,6 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
   // Auto-fetch KYC + Bank on mount
   useEffect(() => {
     if (!user?.id) {
-      setInitialLoading(false);
       return;
     }
     setInitialLoading(true);
@@ -228,6 +226,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
             ? 'Số tài khoản phải từ 6-50 chữ số.'
             : '',
     bank: !bankCodeTrim ? 'Vui lòng chọn ngân hàng nhận tiền.' : '',
+    webhookKey: !state.bankInfo.webhookKey.trim() ? 'Vui lòng nhập mã kết nối Casso.' : '',
   };
 
   const filteredBanks = useMemo(() => {
@@ -276,23 +275,6 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
     };
   }, [bankDuplicateCheckKey, bankErrors.number, bankErrors.bank, bankNumberTrim, bankCodeTrim]);
 
-  const addBankProof = (files: FileList | File[] | null) => {
-    if (!files?.length) return;
-    const list = Array.from(files);
-    const additions: CredibilityFile[] = list.map((file) => ({
-      id: Math.random().toString(36).slice(2, 9),
-      name: file.name,
-      sizeKb: Math.round(file.size / 1024),
-      file,
-    }));
-    onPatch({ bankProofFiles: [...state.bankProofFiles, ...additions] });
-  };
-
-  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer?.files?.length) addBankProof(e.dataTransfer.files);
-  };
-
   const handleStepNext = async () => {
     if (!canNext || checkingBankDup) return;
     const accountNumber = state.bankInfo.accountNumber.trim();
@@ -315,87 +297,187 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
     }
   };
 
+  const isStatusLoading = initialLoading || refreshingStep1;
+  const hasCv = Boolean(user?.cvUrl);
+  const kycTone =
+    isStatusLoading
+      ? {
+          box: 'border-gray-200 bg-gray-50',
+          badge: 'bg-gray-100 text-gray-700',
+          label: 'Đang tải trạng thái',
+        }
+      : state.kycStatus === 'APPROVED'
+      ? {
+          box: 'border-emerald-200 bg-emerald-50/70',
+          badge: 'bg-emerald-100 text-emerald-800',
+          label: 'Thành công',
+        }
+      : state.kycStatus === 'PENDING'
+        ? {
+            box: 'border-amber-200 bg-amber-50/70',
+            badge: 'bg-amber-100 text-amber-800',
+            label: 'Chờ duyệt',
+          }
+        : {
+            box: 'border-red-200 bg-red-50/80',
+            badge: 'bg-red-100 text-red-800',
+            label: state.kycStatus === 'REJECTED' ? 'Từ chối' : 'Chưa có',
+          };
+
+  const profileTone =
+    isStatusLoading
+      ? {
+          box: 'border-gray-200 bg-gray-50',
+          badge: 'bg-gray-100 text-gray-700',
+          label: 'Đang tải trạng thái',
+        }
+      : !hasCv
+      ? {
+          box: 'border-red-200 bg-red-50/80',
+          badge: 'bg-red-100 text-red-800',
+          label: 'Chưa có',
+        }
+      : state.credibilityStatus === 'APPROVED'
+        ? {
+            box: 'border-emerald-200 bg-emerald-50/70',
+            badge: 'bg-emerald-100 text-emerald-800',
+            label: 'Thành công',
+          }
+        : state.credibilityStatus === 'REJECTED'
+          ? {
+              box: 'border-red-200 bg-red-50/80',
+              badge: 'bg-red-100 text-red-800',
+              label: 'Từ chối',
+            }
+          : {
+              box: 'border-amber-200 bg-amber-50/70',
+              badge: 'bg-amber-100 text-amber-800',
+              label: 'Chờ duyệt',
+            };
+
   return (
-    <div className="rounded-xl bg-white p-3 md:p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-tight text-black">Bước 1 — Kiểm tra cổng & tài khoản</h2>
+    <div className="flex h-[calc(100dvh-6.75rem)] min-h-[calc(100dvh-6.75rem)] flex-col overflow-hidden rounded-xl bg-white p-2.5 md:p-3">
+      <div className="campaign-step-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-0.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold tracking-tight text-black">Bước 1 — Hồ sơ & tài khoản</h2>
         <button
           type="button"
           onClick={() => refreshStepOneData(true)}
           disabled={refreshingStep1 || initialLoading}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-black transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {refreshingStep1 ? 'Đang làm mới...' : 'Làm mới trạng thái'}
+          {refreshingStep1 ? 'Đang tải…' : 'Làm mới'}
         </button>
       </div>
 
-      <div className="mt-3 space-y-3">
-        <SectionBlock step="1" title="Định danh & cổng vào">
-          {(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') ? (
+      <div className="mt-2 space-y-2">
+        <SectionBlock
+          step="1"
+          title="KYC & hồ sơ"
+          actions={(
+            <div className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600">
+              <InfoIcon />
+              <span>Chờ duyệt vẫn có thể tạo campaign</span>
+            </div>
+          )}
+        >
+          <div className="grid gap-2 sm:grid-cols-2">
             <div
-              className="rounded-lg border border-gray-200 bg-gray-50 p-3"
+              className={`rounded-lg border p-2.5 ${kycTone.box}`}
               role="status"
             >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black">
-                  <CheckBadgeIcon />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-black">
-                    {state.kycStatus === 'APPROVED' ? 'Định danh đã xác minh' : 'KYC đang chờ duyệt'}
-                    {state.kycStatus === 'PENDING' && (
-                      <span className="ml-2 inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-700">
-                        chờ duyệt
-                      </span>
-                    )}
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">KYC</p>
+              {isStatusLoading ? (
+                <div className="mt-1 flex min-h-8 items-center gap-2">
+                  <p className={`rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
+                    {kycTone.label}
                   </p>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2.5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-red-700">
-                    {state.kycStatus === 'NOT_SUBMITTED' ? 'Chưa xác minh KYC' : 'KYC chưa đạt'}
+              ) : state.kycStatus === 'APPROVED' ? (
+                <div className="mt-1 flex min-h-8 items-center gap-2">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600">
+                    <CheckBadgeIcon />
+                  </span>
+                  <p className={`rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
+                    {kycTone.label}
                   </p>
+                </div>
+              ) : (
+                <div className="mt-1 space-y-1.5">
+                  <div className="flex min-h-8 items-center justify-between gap-2">
+                    <p className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
+                      {kycTone.label}
+                    </p>
+                    <Link
+                      href={KYC_PAGE_HREF}
+                      className="inline-flex rounded-md bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-gray-800"
+                    >
+                      {state.kycStatus === 'PENDING' ? 'Xem KYC' : 'Cập nhật KYC'}
+                    </Link>
+                  </div>
                   {state.kycRejectReason ? (
-                    <p className="text-xs text-red-600 truncate">Lý do: {state.kycRejectReason}</p>
-                  ) : (
-                    <p className="text-xs text-red-600/90">Cần xác minh danh tính để tiếp tục.</p>
-                  )}
+                    <p className="line-clamp-2 text-[11px] text-red-700">{state.kycRejectReason}</p>
+                  ) : null}
                 </div>
-                <Link
-                  href={KYC_PAGE_HREF}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-black px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800 shrink-0"
-                >
-                  Xác minh ngay
-                </Link>
-              </div>
+              )}
             </div>
-          )}
 
-          {(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') && (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Link
-                href={KYC_PAGE_HREF}
-                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
-              >
-                Xem thông tin KYC
-              </Link>
+            <div
+              className={`rounded-lg border p-2.5 ${profileTone.box}`}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-600">Hồ sơ (CV)</p>
+              {isStatusLoading ? (
+                <div className="mt-1 flex min-h-8 items-center">
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
+                    {profileTone.label}
+                  </span>
+                </div>
+              ) : hasCv ? (
+                <div className="mt-1 flex min-h-8 items-center justify-between gap-2">
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
+                    {profileTone.label}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <a
+                      href={user!.cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black hover:bg-gray-50"
+                    >
+                      Xem CV
+                    </a>
+                    <Link
+                      href="/account/profile"
+                      className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black hover:bg-gray-50"
+                    >
+                      Cập nhật hồ sơ
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-1">
+                  <div className="flex min-h-8 items-center justify-between gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
+                      {profileTone.label}
+                    </span>
+                    <Link
+                      href="/account/profile"
+                      className="inline-flex rounded-md bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-gray-800"
+                    >
+                      Cập nhật hồ sơ
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Silent refresh by design */}
+          </div>
         </SectionBlock>
 
-        <SectionBlock step="2" title="Tài khoản ngân hàng nhận tiền">
-          <div className="space-y-4">
-              <div className="rounded-lg border border-blue-200 bg-blue-50/70 px-3.5 py-2.5">
-                <p className="text-xs font-bold text-blue-800">
-                  Theo quy định tại Nghị định 93/2021/NĐ-CP, mỗi chiến dịch phải sử dụng một tài khoản tiếp nhận tiền riêng biệt.
-                </p>
-              </div>
+        <SectionBlock step="2" title="STK nhận giải ngân">
+          <div className="space-y-2.5">
+              <p className="text-[11px] font-semibold leading-snug text-blue-900">
+                Theo Nghị định 93/2021/NĐ-CP, chiến dịch phải có tài khoản tiếp nhận tiền riêng. Vui lòng nhập thông tin tài khoản chính xác.
+              </p>
               <LabeledField
                 id="step1-holder-name"
                 label="Tên chủ tài khoản"
@@ -547,51 +629,37 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
               {bankDuplicateError && (
                 <p className="text-xs font-semibold text-red-600">{bankDuplicateError}</p>
               )}
-            </div>
-        </SectionBlock>
 
-        <SectionBlock step="3" title="Hồ sơ năng lực thiện nguyện">
-          {user?.cvUrl ? (
-            /* ── User already has CV — show summary only ── */
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 mb-2">Đã có hồ sơ năng lực</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href={user.cvUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
-                >
-                  Xem hồ sơ
-                </a>
-                <Link
-                  href="/account/profile"
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-black transition hover:bg-gray-50"
-                >
-                  Thay đổi trên Profile
-                </Link>
-              </div>
-            </div>
-          ) : (
-            /* ── No CV — redirect to profile page ── */
-            <>
-              <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5">
-                <p className="text-xs leading-relaxed text-gray-500">
-                  Hồ sơ chứng minh năng lực là yếu tố <strong className="text-black">bắt buộc</strong>.
-                  Vui lòng cập nhật hồ sơ năng lực tại trang cá nhân trước khi tiếp tục.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Link
-                    href="/account/profile"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-gray-800"
+              <LabeledField
+                id="step1-webhook-key"
+                label="Mã kết nối nhận giao dịch tự động (Casso)"
+                hint="Nếu bạn dùng Casso, dán mã bảo mật để hệ thống tự nhận diện tiền chuyển vào. Không dùng Casso thì để trống."
+                action={(
+                  <button
+                    type="button"
+                    onClick={() => setCassoGuideOpen(true)}
+                    className="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-800 ring-1 ring-orange-200 transition hover:bg-orange-200 hover:text-orange-900"
                   >
-                    Cập nhật hồ sơ trên trang cá nhân
-                  </Link>
-                </div>
-              </div>
-            </>
-          )}
+                    Bấm để xem cách lấy mã Casso
+                  </button>
+                )}
+              >
+                <input
+                  id="step1-webhook-key"
+                  className={fieldBox}
+                  placeholder="Dán mã bảo mật Casso"
+                  value={state.bankInfo.webhookKey}
+                  onChange={(e) => onPatch({ bankInfo: { ...state.bankInfo, webhookKey: e.target.value } })}
+                  onBlur={() => setBankTouched((prev) => ({ ...prev, webhookKey: true }))}
+                  aria-describedby="step1-webhook-key-hint"
+                />
+                {bankTouched.webhookKey && bankErrors.webhookKey && (
+                  <p className="text-xs font-semibold text-red-600">{bankErrors.webhookKey}</p>
+                )}
+              </LabeledField>
+            </div>
         </SectionBlock>
+      </div>
       </div>
 
       <StepFooter
@@ -599,6 +667,97 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
         onNext={handleStepNext}
         failMessage={checkingBankDup || checkingBankDupLive ? 'Đang kiểm tra trùng tài khoản ngân hàng...' : failMessage}
       />
+
+      <AnimatePresence>
+        {cassoGuideOpen && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="absolute inset-0 bg-black/50" onClick={() => setCassoGuideOpen(false)} aria-hidden />
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="casso-guide-title"
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <header className="flex items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4 md:px-6">
+                <div>
+                  <h2 id="casso-guide-title" className="text-xl font-bold tracking-tight text-gray-900">
+                    Hướng dẫn lấy mã kết nối Casso
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCassoGuideOpen(false)}
+                  aria-label="Đóng"
+                  className="rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </header>
+
+              <div className="flex-1 overflow-y-auto px-5 py-5 md:px-6">
+                <div className="space-y-4 text-sm text-gray-700">
+                  <p>
+                    Webhook key Casso là mã bảo mật do Casso tự sinh khi bạn tạo tích hợp Webhook/Webhook V2.
+                    Hệ thống dùng key này để xác thực chữ ký webhook do Casso gửi về.
+                  </p>
+
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="mb-2 font-semibold text-gray-900">Cách lấy Webhook key Casso:</p>
+                    <ol className="list-decimal space-y-1 pl-5">
+                      <li>Đăng nhập: <a href="https://casso.vn/" target="_blank" rel="noreferrer" className="text-blue-700 underline">https://casso.vn/</a></li>
+                      <li>Vào Kết nối &gt; Tích hợp &gt; Thêm tích hợp</li>
+                      <li>Chọn Webhook hoặc Webhook V2</li>
+                      <li>Nhập Webhook URL của hệ thống bạn (ví dụ: <span className="font-medium">https://yourdomain.com/api/casso/webhook</span>)</li>
+                      <li>Sao chép “Key bảo mật” do Casso tạo</li>
+                      <li>Dán key đó vào ô này</li>
+                      <li>Bấm “Gọi thử” để test và sau đó bấm “Lưu”</li>
+                    </ol>
+                  </div>
+
+                  <div>
+                    <p className="font-semibold text-gray-900">Tài liệu chính thức:</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      <li><a href="https://developer.casso.vn/webhook/thiet-lap-webhook-thu-cong" target="_blank" rel="noreferrer" className="text-blue-700 underline">https://developer.casso.vn/webhook/thiet-lap-webhook-thu-cong</a></li>
+                      <li><a href="https://developer.casso.vn/casso-api/api/thiet-lap-webhook" target="_blank" rel="noreferrer" className="text-blue-700 underline">https://developer.casso.vn/casso-api/api/thiet-lap-webhook</a></li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                    <p className="font-semibold">Lưu ý:</p>
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
+                      <li>Webhook URL bắt buộc phải là đường dẫn public HTTPS</li>
+                      <li>Không dùng localhost, 127.0.0.1 hoặc IP nội bộ</li>
+                      <li>Nếu dùng Cloudflare hoặc anti-DDoS, cần whitelist IP của Casso</li>
+                      <li>Không chia sẻ key này cho người khác</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <footer className="flex justify-end border-t border-gray-200 bg-white px-5 py-3 md:px-6">
+                <button
+                  type="button"
+                  onClick={() => setCassoGuideOpen(false)}
+                  className="rounded-full bg-black px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+                >
+                  Đã hiểu
+                </button>
+              </footer>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

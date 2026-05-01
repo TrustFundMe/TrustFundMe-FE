@@ -44,6 +44,10 @@ const stepVariants = {
   exit: { opacity: 0, y: -10 },
 };
 
+// TEMP: bypass validate để đi nhanh tới bước 3 (Giai đoạn).
+// Tắt cờ này khi QA xong.
+const TEMP_BYPASS_TO_STEP3 = false;
+
 export default function NewCampaignTestPage() {
   const [state, setState] = useState<NewCampaignTestState>(seedState);
   const [activeStep, setActiveStep] = useState(0);
@@ -98,7 +102,7 @@ export default function NewCampaignTestPage() {
     if (!core.targetAmount || core.targetAmount <= 0) e.targetAmount = 'Vui lòng nhập số tiền mục tiêu.';
     else if (core.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
-    if (!core.category.trim()) e.category = 'Vui lòng chọn danh mục chiến dịch.';
+    if (!core.categoryId) e.category = 'Vui lòng chọn danh mục chiến dịch.';
 
     const imgs = core.campaignImages ?? [];
     const coverOk =
@@ -127,6 +131,7 @@ export default function NewCampaignTestPage() {
     const accountHolderName = b.accountHolderName.trim();
     const bankCode = b.bankCode.trim();
     const bankName = b.bankName.trim();
+    const webhookKey = b.webhookKey.trim();
     const isBankValid =
       bankCode.length > 0 &&
       bankName.length > 0 &&
@@ -134,11 +139,12 @@ export default function NewCampaignTestPage() {
       accountHolderName.length <= 255 &&
       /^\d+$/.test(accountNumber) &&
       accountNumber.length >= 6 &&
-      accountNumber.length <= 50;
+      accountNumber.length <= 50 &&
+      webhookKey.length > 0;
     return (
       (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
       isBankValid &&
-      (state.bankProofFiles.length > 0 || !!user?.cvUrl)
+      !!user?.cvUrl
     );
   }, [state, user?.cvUrl]);
   const step0FailMessage = useMemo(() => {
@@ -147,8 +153,9 @@ export default function NewCampaignTestPage() {
     const accountHolderName = b.accountHolderName.trim();
     const bankCode = b.bankCode.trim();
     const bankName = b.bankName.trim();
+    const webhookKey = b.webhookKey.trim();
     if (!(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING')) {
-      return 'Cần hoàn tất KYC trước khi tiếp tục';
+      return 'Hoàn tất KYC trên Profile.';
     }
     if (!accountHolderName) return 'Thiếu tên chủ tài khoản nhận tiền';
     if (accountHolderName.length < 6 || accountHolderName.length > 255) {
@@ -160,11 +167,14 @@ export default function NewCampaignTestPage() {
       return 'Số tài khoản phải từ 6-50 chữ số';
     }
     if (!bankCode || !bankName) return 'Cần chọn ngân hàng nhận tiền';
-    if (!(state.bankProofFiles.length > 0 || !!user?.cvUrl)) return 'Cần ít nhất một hồ sơ năng lực thiện nguyện';
+    if (!webhookKey) return 'Cần nhập mã kết nối Casso';
+    if (!user?.cvUrl) return 'Cần CV trên Profile để tiếp tục.';
     return 'Vui lòng hoàn tất các mục bên trên';
   }, [state, user?.cvUrl]);
 
   const step2CanNext = useMemo(() => Object.keys(step2Errors).length === 0, [step2Errors]);
+  const effectiveStep0CanNext = TEMP_BYPASS_TO_STEP3 ? true : step0CanNext;
+  const effectiveStep2CanNext = TEMP_BYPASS_TO_STEP3 ? true : step2CanNext;
 
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
@@ -236,9 +246,10 @@ export default function NewCampaignTestPage() {
         state.acknowledgements.overfundPolicyAccepted,
       gatesOk:
         (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
-        (state.bankProofFiles.length > 0 || !!user?.cvUrl) &&
+        !!user?.cvUrl &&
         Boolean(state.bankInfo.bankCode) &&
-        state.bankInfo.accountHolderName.trim() !== '',
+        state.bankInfo.accountHolderName.trim() !== '' &&
+        state.bankInfo.webhookKey.trim() !== '',
     };
   }, [state, step2Errors, milestoneTotal]);
 
@@ -258,18 +269,7 @@ export default function NewCampaignTestPage() {
     setSubmitResult({ type: 'idle', message: '' });
 
     try {
-      // 1. Bank Account
-      let bankId = undefined;
-      if (state.bankInfo.bankCode && state.bankInfo.accountNumber) {
-        const bankRes = await bankAccountService.create({
-          bankCode: state.bankInfo.bankCode,
-          accountNumber: state.bankInfo.accountNumber,
-          accountHolderName: state.bankInfo.accountHolderName,
-        });
-        bankId = bankRes.id;
-      }
-
-      // 2. Media Uploads
+      // 1. Media Uploads
       // Campaign images
       const uploadedImageIds: number[] = [];
       let coverMediaId: number | undefined = undefined;
@@ -284,21 +284,12 @@ export default function NewCampaignTestPage() {
         }
       }
 
-      // Bank proofs
-      const bankProofIds: number[] = [];
-      for (const proof of state.bankProofFiles) {
-        if (proof.file) {
-          const res = await mediaService.uploadMedia(proof.file, undefined, undefined, undefined, undefined, 'FILE');
-          bankProofIds.push(res.id);
-        }
-      }
-
-      // 3. Create Campaign
+      // 2. Create Campaign
       const campaignRes = await campaignService.create({
         fundOwnerId: user.id as number,
         title: state.campaignCore.title,
         description: state.campaignCore.objective,
-        categoryId: state.campaignCore.categoryId || 1, // Fallback to 1 if not selected
+        categoryId: state.campaignCore.categoryId as number,
         thankMessage: state.campaignCore.thankMessage,
         coverImage: coverMediaId,
         attachments: uploadedImageIds.map(id => ({ id, type: 'PHOTO', url: '' })),
@@ -306,9 +297,20 @@ export default function NewCampaignTestPage() {
         status: 'PENDING_APPROVAL',
       });
 
-      // 4. Link Media to Campaign
-      for (const id of [...uploadedImageIds, ...bankProofIds]) {
+      // 3. Link Media to Campaign
+      for (const id of uploadedImageIds) {
         await mediaService.updateMedia(id, { campaignId: campaignRes.id });
+      }
+
+      // 4. Create bank account with campaign linkage + optional Casso key
+      if (state.bankInfo.bankCode && state.bankInfo.accountNumber) {
+        await bankAccountService.create({
+          bankCode: state.bankInfo.bankCode,
+          accountNumber: state.bankInfo.accountNumber,
+          accountHolderName: state.bankInfo.accountHolderName,
+          webhookKey: state.bankInfo.webhookKey.trim() || undefined,
+          campaignId: campaignRes.id,
+        });
       }
 
       // 5. Create Goal
@@ -400,8 +402,8 @@ export default function NewCampaignTestPage() {
         // Ngoài vùng: chỉ cho tiến 1 step và phải pass validate
         if (target !== current + 1) return current;
         const ok =
-          (current === 0 && step0CanNext) ||
-          (current === 1 && step2CanNext) ||
+          (current === 0 && effectiveStep0CanNext) ||
+          (current === 1 && effectiveStep2CanNext) ||
           (current === 2 && step3CanNext) ||
           (current === 3 && step4CanNext);
         if (!ok) return current;
@@ -409,7 +411,7 @@ export default function NewCampaignTestPage() {
         return target;
       });
     },
-    [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext],
+    [maxReached, effectiveStep0CanNext, effectiveStep2CanNext, step3CanNext, step4CanNext],
   );
 
   useEffect(() => {
@@ -452,7 +454,7 @@ export default function NewCampaignTestPage() {
 
         {/* Horizontal stepper — compact, always on screen */}
         <div className="border-t border-slate-100">
-          <div className="mx-auto max-w-[1200px] px-4 py-1.5 md:px-8">
+          <div className="mx-auto max-w-[1200px] px-4 py-1 md:px-8">
             <NewCampaignTestStepper
               steps={steps}
               activeIndex={activeStep}
@@ -464,8 +466,11 @@ export default function NewCampaignTestPage() {
       </header>
 
       {/* Scrollable content */}
-      <main ref={mainScrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-[960px] px-4 py-4 md:px-8 md:py-5">
+      <main
+        ref={mainScrollRef}
+        className={`min-h-0 flex-1 ${activeStep === 0 ? 'overflow-hidden' : 'overflow-y-auto'}`}
+      >
+        <div className="mx-auto max-w-[1240px] px-4 py-2 md:px-8 md:py-2.5">
           {/* Step content with animation */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -480,7 +485,7 @@ export default function NewCampaignTestPage() {
                 <Step1Eligibility
                   state={state}
                   onPatch={patchState}
-                  canNext={step0CanNext}
+                  canNext={effectiveStep0CanNext}
                   failMessage={step0FailMessage}
                   onNext={() => goToStep(1)}
                 />
@@ -490,13 +495,13 @@ export default function NewCampaignTestPage() {
                   state={state}
                   errors={step2Errors}
                   showErrors={step2ShowErrors}
-                  canNext={step2CanNext}
+                  canNext={effectiveStep2CanNext}
                   onPatchCore={(patch) => patchState({ campaignCore: { ...state.campaignCore, ...patch } })}
                   onTogglePreview={() => setPreviewVisible((v) => !v)}
                   previewOpen={previewVisible}
                   onPrev={() => goToStep(0)}
                   onNext={() => {
-                    if (step2CanNext) {
+                    if (effectiveStep2CanNext) {
                       setStep2ShowErrors(false);
                       goToStep(2);
                     } else {
@@ -589,21 +594,26 @@ export default function NewCampaignTestPage() {
         />
       )}
       <style jsx global>{`
-        #new-campaign-test-root h1,
-        #new-campaign-test-root h2,
-        #new-campaign-test-root h3,
-        #new-campaign-test-root h4,
-        #new-campaign-test-root p,
-        #new-campaign-test-root span,
-        #new-campaign-test-root label,
-        #new-campaign-test-root li,
-        #new-campaign-test-root button,
-        #new-campaign-test-root input,
-        #new-campaign-test-root textarea {
-          font-size: 0.9em !important;
+        #new-campaign-test-root .min-h-\[52px\] { min-h: 46px !important; }
+        #new-campaign-test-root main {
+          scrollbar-width: thin;
+          scrollbar-color: #111827 #e5e7eb;
         }
-        #new-campaign-test-root .min-h-\[52px\] { min-h: 44px !important; }
-        #new-campaign-test-root .py-3 { padding-top: 0.6rem !important; padding-bottom: 0.6rem !important; }
+        #new-campaign-test-root main::-webkit-scrollbar {
+          width: 4px;
+          height: 4px;
+        }
+        #new-campaign-test-root main::-webkit-scrollbar-track {
+          background: #e5e7eb;
+          border-radius: 9999px;
+        }
+        #new-campaign-test-root main::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+          border-radius: 9999px;
+        }
+        #new-campaign-test-root main::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, #111827 0%, #000000 100%);
+        }
       `}</style>
     </div>
   );

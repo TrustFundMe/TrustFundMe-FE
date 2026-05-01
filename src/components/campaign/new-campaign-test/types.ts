@@ -95,6 +95,7 @@ export interface BankInfo {
   accountNumber: string;
   bankName: string;
   branch: string;
+  webhookKey: string;
 }
 
 export interface Acknowledgements {
