@@ -9,7 +9,6 @@ import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
 import CampaignNewFlowDetail from '@/components/staff/request/CampaignNewFlowDetail';
 import ExpenditureRequestTab from '@/components/staff/request/ExpenditureRequestTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
-import KYCTab from '@/components/staff/request/KYCTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
 import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
 import { newFlowMockCampaigns } from '@/components/staff/request/newFlowMockData';
@@ -41,16 +40,13 @@ function StaffRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'KYC' | 'HISTORY' | 'SUPPORT'>(
-    targetTab === 'KYC' ? 'KYC' : targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : targetTab === 'SUPPORT' ? 'SUPPORT' : 'CAMPAIGN'
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'HISTORY' | 'SUPPORT'>(
+    targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : targetTab === 'SUPPORT' ? 'SUPPORT' : 'CAMPAIGN'
   );
   const [isLoading, setIsLoading] = useState(false);
 
   const { user: currentUser } = useAuth();
   const targetId = searchParams.get('targetId');
-  const [selectedUserIdForKyc, setSelectedUserIdForKyc] = useState<number | null>(
-    searchParams.get('userId') ? Number(searchParams.get('userId')) : (activeTab === 'KYC' && targetId ? Number(targetId) : null)
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [users, setUsers] = useState<Map<number, UserInfo>>(new Map());
@@ -206,14 +202,7 @@ function StaffRequestContent() {
     }
   }, [currentUser]);
 
-  // Handle tab from URL
-  useEffect(() => {
-    if (targetTab === 'KYC') {
-      setActiveTab('KYC');
-      const uid = searchParams.get('userId');
-      if (uid) setSelectedUserIdForKyc(Number(uid));
-    }
-  }, [targetTab, searchParams]);
+
 
   // Memoized Data
   const filteredCampaigns = useMemo(() => {
@@ -228,9 +217,7 @@ function StaffRequestContent() {
 
   // Navigate to KYC verification tab
   const handleNavigateToKYC = (userId: number) => {
-    setSelectedUserIdForKyc(userId);
-    setActiveTab('KYC');
-    router.replace(`/staff/request?tab=KYC&userId=${userId}`);
+    router.push(`/staff/kyc?userId=${userId}`);
   };
 
   // Handlers
@@ -309,7 +296,6 @@ function StaffRequestContent() {
               { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
               { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
               { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
-              { id: 'KYC', label: 'Xác thực người dùng (KYC)', icon: ShieldCheck },
               { id: 'SUPPORT', label: 'Yêu cầu hỗ trợ', icon: HandCoins },
               { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
             ].map((tab) => {
@@ -427,7 +413,7 @@ function StaffRequestContent() {
                           },
                           {
                             key: 'kyc',
-                            title: 'XÁC THỰC KYC',
+                            title: 'XÁC THỰC DANH TÍNH',
                             className: 'text-center',
                             render: (r: CampaignRequest) => (
                               r.kycVerified ? (
@@ -443,7 +429,7 @@ function StaffRequestContent() {
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200 transition-all shadow-sm"
                                 >
                                   <XCircle className="h-3 w-3" />
-                                  CHƯA KYC
+                                  CHƯA ĐỊNH DANH
                                 </button>
                               )
                             ),
@@ -548,8 +534,6 @@ function StaffRequestContent() {
             <ExpenditureRequestTab initialCampaignId={targetId ? Number(targetId) : null} />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
-          ) : activeTab === 'KYC' ? (
-            <KYCTab initialUserId={selectedUserIdForKyc} onModalToggle={setIsModalOpen} />
           ) : activeTab === 'SUPPORT' ? (
             <SupportRequestManager onModalToggle={setIsModalOpen} />
           ) : (
@@ -594,11 +578,11 @@ function StaffRequestContent() {
                   approveDisabled={selectedCampaign ? !selectedCampaign.kycVerified : false}
                   rejectDisabled={false}
                   approveDisabledReason={selectedCampaign && !selectedCampaign.kycVerified
-                    ? "Cần xác minh KYC trước khi duyệt chiến dịch"
+                    ? "Cần xác minh danh tính trước khi duyệt chiến dịch"
                     : ""
                   }
                   rejectDisabledReason=""
-                  actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Trang KYC" : ""}
+                  actionLabel={selectedCampaign && !selectedCampaign.kycVerified ? "Đi tới Xác thực danh tính" : ""}
                   onActionClick={() => selectedCampaign && handleNavigateToKYC(selectedCampaign.fundOwnerId)}
                   onApprove={(reason: string | undefined) => handleReviewCampaign(true, reason, selectedCampaign?.campaignId)}
                   onReject={(reason: string | undefined) => handleReviewCampaign(false, reason, selectedCampaign?.campaignId)}

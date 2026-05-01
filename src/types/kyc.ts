@@ -15,6 +15,10 @@ export type SubmitKycRequest = {
   workplace?: string;     // nơi làm việc
   taxId?: string;          // mã số thuế cá nhân
   status?: KYCStatus;
+  // ── Face biometric data (from MediaPipe liveness check) ──
+  faceDescriptor?: string | null;    // JSON string of 128-dim vector
+  livenessMetadata?: string | null;  // JSON string of liveness proof
+  faceMeshSample?: string | null;    // JSON string of sample landmarks
 };
 
 export interface KycResponse extends SubmitKycRequest {
@@ -28,6 +32,11 @@ export interface KycResponse extends SubmitKycRequest {
   phoneNumber: string;
   status: KYCStatus;
   rejectionReason?: string;
+  // Face biometric
+  faceDescriptor?: string;
+  livenessMetadata?: string;
+  faceMeshSample?: string;
+  livenessVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }

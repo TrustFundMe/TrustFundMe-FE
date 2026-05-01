@@ -14,6 +14,7 @@ export interface UserInfo {
     verified: boolean;
     kycVerified: boolean;
     isActive: boolean;
+    cvUrl?: string;
     trustScore?: number;
     createdAt?: string;
 }
