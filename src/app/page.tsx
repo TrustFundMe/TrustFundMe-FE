@@ -5,6 +5,9 @@ import DanboxLayout from "@/layout/DanboxLayout";
 const EmailVerificationBanner = dynamic(
   () => import("@/components/EmailVerificationBanner").then(m => ({ default: m.EmailVerificationBanner }))
 );
+const EnforcementAlertBanner = dynamic(
+  () => import("@/components/EnforcementAlertBanner").then(m => ({ default: m.EnforcementAlertBanner }))
+);
 const HeroSection9 = dynamic(() => import("@/components/HeroSection9").then(m => ({ default: m.default })));
 const About2 = dynamic(() => import("@/components/About").then(m => ({ default: m.About2 })));
 const CounterSection1 = dynamic(() => import("@/components/CounterSection").then(m => ({ default: m.CounterSection1 })));
@@ -18,6 +21,7 @@ const Cta2 = dynamic(() => import("@/components/Cta").then(m => ({ default: m.Ct
 const Home = () => {
   return (
     <DanboxLayout header={4} footer={2}>
+      <EnforcementAlertBanner />
       <EmailVerificationBanner />
       <HeroSection9 />
       <About2 />

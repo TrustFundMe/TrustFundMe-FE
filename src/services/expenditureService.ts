@@ -229,4 +229,8 @@ export const expenditureService = {
             }
         }
     },
+    getPendingEvidenceByUser: async (userId: string | number): Promise<any[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/user/${userId}/pending-evidence`);
+        return response.data;
+    },
 };
