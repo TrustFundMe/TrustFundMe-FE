@@ -16,7 +16,8 @@ interface DetectedItem {
     matchStatus: 'MATCHED' | 'PARTIAL' | 'MISMATCHED';
     plannedCategory?: string;
     plannedAmount?: number;
-    differenceAmount?: number;
+    priceStatus?: 'MATCHED' | 'OVERPRICED' | 'UNDERPRICED';
+    deviationPercentage?: number;
     marketUnitPrice?: number;
     marketPriceRange?: string;
     priceRangeMin?: number;
@@ -29,6 +30,10 @@ interface DetectedItem {
     isLinkMatched?: boolean;
     linkType?: string;
     expectedPurchaseLink?: string;
+    geographicEvidenceUrl?: string;
+    logisticsScore?: number;
+    vendorTrustScore?: number;
+    geographicContextSummary?: string;
 }
 
 interface AIAnalysisResult {
@@ -107,6 +112,15 @@ export default function AIAnalysisModal({
 
     const detected: DetectedItem[] = Array.isArray(result.detectedItems) ? result.detectedItems : [];
 
+    // 🔍 DEBUG — mở F12 > Console để xem
+    console.group('[AIAudit] Raw result from backend');
+    console.log('Full result object:', result);
+    console.log('detectedItems:', result.detectedItems);
+    console.log('detectedItems count:', detected.length);
+    console.log('summary:', result.summary);
+    console.log('recommendation:', result.recommendation);
+    console.groupEnd();
+
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
@@ -159,9 +173,9 @@ export default function AIAnalysisModal({
                                 <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
                                 <p className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Đang tải dữ liệu gốc...</p>
                             </div>
-                        ) : detected.length === 0 ? (
+                        ) : items.length === 0 ? (
                             <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-slate-100">
-                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu bóc tách được từ hình ảnh/nội dung</p>
+                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu mặt hàng trong kế hoạch này.</p>
                             </div>
                         ) : (
                             /* Chỉ scroll trong bảng */
@@ -183,51 +197,52 @@ export default function AIAnalysisModal({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {detected.map((item, idx) => {
-                                            const sysItem = items.find(i => {
-                                                const s1 = (i.name || '').toLowerCase().trim();
-                                                const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
-                                                return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                        {items.map((sysItem, idx) => {
+                                            // Find matching AI analysis for this DB item
+                                            const aiItem = detected.find(d => {
+                                                const s1 = (sysItem.name || '').toLowerCase().trim();
+                                                const dName = (d.name || '').toLowerCase().trim();
+                                                const dCat = (d.plannedCategory || '').toLowerCase().trim();
+
+                                                // Prioritize matching the name first, then the category
+                                                return (dName && (s1 === dName || s1.includes(dName) || dName.includes(s1))) ||
+                                                    (dCat && (s1 === dCat || s1.includes(dCat) || dCat.includes(s1)));
                                             });
 
-                                            const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
-                                            const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                            const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+                                            const sysQty = sysItem.expectedQuantity || sysItem.quantity || 1;
+                                            const sysPrice = sysItem.expectedPrice || 0;
+                                            const sysVal = mode === 'plan'
+                                                ? sysQty * sysPrice
+                                                : (sysItem.actualQuantity || 0) * (sysItem.price || 0);
 
-                                            const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
-                                            const diff = sysVal - item.total;
-                                            const isMatch = Math.abs(diff) < 500;
+                                            const isPNF = aiItem?.marketUnitPrice === -1 || aiItem?.statusMessage === 'Sản phẩm không tồn tại';
+                                            const diff = aiItem && !isPNF ? sysVal - aiItem.total : null;
 
                                             return (
                                                 <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                                                     <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
-                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
-                                                        {sysItem?.note && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.note}</div>}
+                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{sysItem.name}</div>
+                                                        {sysItem.note && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.note}</div>}
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="text-[10px] font-bold text-slate-700">
-                                                            {sysItem?.brand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem?.unit || '-'}
+                                                            {sysItem.brand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem.unit || '-'}
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="flex flex-col gap-1">
-                                                            <div className="text-[9px] text-slate-500 font-medium">{sysItem?.purchaseLocation || '-'}</div>
-                                                            {item.expectedPurchaseLink && (
-                                                                <a
-                                                                    href={item.expectedPurchaseLink}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1"
-                                                                >
-                                                                    <Store className="h-2.5 w-2.5" />
-                                                                    Chi tiết địa điểm
+                                                            <div className="text-[9px] text-slate-500 font-medium">{sysItem.purchaseLocation || '-'}</div>
+                                                            {sysItem.expectedPurchaseLink && (
+                                                                <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer"
+                                                                    className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1">
+                                                                    <Store className="h-2.5 w-2.5" /> Link dự kiến mua
                                                                 </a>
                                                             )}
-                                                            {item.linkType && (
-                                                                <div className={`text-[8px] font-black px-1.5 py-0.5 rounded-full w-fit flex items-center gap-1 ${item.isLinkMatched ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
-                                                                    {item.isLinkMatched ? <ShieldCheck className="h-2 w-2" /> : <AlertTriangle className="h-2 w-2" />}
-                                                                    {item.linkType} • {item.isLinkMatched ? 'KHỚP' : 'KO KHỚP'}
+                                                            {aiItem?.linkType && (
+                                                                <div className={`text-[8px] font-black px-1.5 py-0.5 rounded-full w-fit flex items-center gap-1 ${aiItem.isLinkMatched ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                                                    {aiItem.isLinkMatched ? <ShieldCheck className="h-2 w-2" /> : <AlertTriangle className="h-2 w-2" />}
+                                                                    LINK • {aiItem.isLinkMatched ? 'KHỚP' : 'KHÔNG KHỚP'}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -235,49 +250,75 @@ export default function AIAnalysisModal({
                                                     <td className="px-3 py-3 text-center border-r border-slate-50">
                                                         <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
                                                         <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                                                            {sysItem ? (mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
+                                                            {mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`}
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 py-3 border-r border-slate-50">
-                                                        {isPNF ? (
+                                                    <td className="px-3 py-3 border-r border-slate-50 min-w-[200px]">
+                                                        {!aiItem ? (
+                                                            <div className="text-[9px] text-slate-300 italic">Chưa có dữ liệu AI</div>
+                                                        ) : isPNF ? (
                                                             <div className="flex flex-col gap-1">
                                                                 <span className="text-[10px] font-black text-rose-600 uppercase">Không kiểm tra được</span>
-                                                                {item.productExists === false && <span className="text-[8px] text-rose-400">Sản phẩm không tồn tại</span>}
-                                                                {item.productExistsByBrand === false && <span className="text-[8px] text-amber-500">Brand không có sản phẩm này</span>}
-                                                                {item.statusMessage && <span className="text-[8px] text-slate-400 italic">{item.statusMessage}</span>}
+                                                                {aiItem.statusMessage && <span className="text-[8px] text-slate-400 italic font-medium">{aiItem.statusMessage}</span>}
                                                             </div>
                                                         ) : (
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <div className="font-black text-[11px] tabular-nums text-slate-800">{fmtVND(item.total)}</div>
-                                                                <div className="text-[8px] font-bold text-slate-500">{item.quantity || 1} x {fmtNum(item.unitPrice)}</div>
-                                                                {(item.priceRangeMin != null && item.priceRangeMax != null && item.priceRangeMin > 0) && (
-                                                                    <div className="text-[8px] text-indigo-500 font-bold">
-                                                                        Khoảng: {fmtVND(item.priceRangeMin)} – {fmtVND(item.priceRangeMax)}
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="font-black text-[11px] tabular-nums text-slate-800">{fmtVND(aiItem.total)}</div>
+                                                                    {aiItem.vendorTrustScore != null && (
+                                                                        <div className={`text-[7px] font-black px-1 rounded flex items-center gap-0.5 ${aiItem.vendorTrustScore > 70 ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
+                                                                            <ShieldCheck className="h-2 w-2" />
+                                                                            Tin cậy: {aiItem.vendorTrustScore}%
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[8px] font-bold text-slate-500">{aiItem.quantity || 1} x {fmtNum(aiItem.unitPrice || 0)}</div>
+
+                                                                {/* Geographic Defense Logic */}
+                                                                {aiItem.geographicContextSummary && (
+                                                                    <div className="mt-1 p-1.5 bg-slate-50 rounded border border-slate-100">
+                                                                        <div className="text-[8px] text-slate-600 font-bold leading-tight">
+                                                                            🎯 Vùng miền: {aiItem.geographicContextSummary}
+                                                                        </div>
                                                                     </div>
                                                                 )}
-                                                                {item.marketPriceRange && (
-                                                                    <div className="text-[8px] text-slate-400 italic">{item.marketPriceRange}</div>
-                                                                )}
-                                                                {item.evidenceUrls && item.evidenceUrls.length > 0 && (
-                                                                    <div className="flex flex-wrap gap-1 mt-0.5">
-                                                                        {item.evidenceUrls.map((url, uidx) => (
-                                                                            <a key={uidx} href={url} target="_blank" rel="noopener noreferrer"
-                                                                                className="inline-flex items-center text-[8px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-1 py-0.5 rounded border border-indigo-100 transition-colors">
-                                                                                [{uidx + 1}] Nguồn
-                                                                            </a>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
+
+                                                                {/* Evidence Links */}
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {aiItem.evidenceUrls?.map((url, uidx) => (
+                                                                        <a key={uidx} href={url} target="_blank" rel="noopener noreferrer"
+                                                                            className="inline-flex items-center text-[7px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-1 py-0.5 rounded border border-indigo-100">
+                                                                            [{uidx + 1}] Chợ/Siêu thị
+                                                                        </a>
+                                                                    ))}
+                                                                    {aiItem.geographicEvidenceUrl && (
+                                                                        <a href={aiItem.geographicEvidenceUrl} target="_blank" rel="noopener noreferrer"
+                                                                            className="inline-flex items-center text-[7px] font-black bg-amber-50 text-amber-600 hover:bg-amber-100 px-1 py-0.5 rounded border border-amber-100">
+                                                                            🛡️ Bằng chứng khu vực
+                                                                        </a>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        {isPNF ? (
+                                                        {!aiItem || isPNF ? (
                                                             <span className="text-slate-300 text-[10px]">—</span>
                                                         ) : (
-                                                            <div className={`font-black text-[10px] tabular-nums ${diff > 0 ? 'text-rose-600' : diff < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                                {fmtVND(Math.abs(diff))}
-                                                                <div className="text-[8px] font-bold mt-0.5">{diff > 0 ? 'Dự kiến lố' : diff < 0 ? 'Dư thẩm định' : 'Khớp'}</div>
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <div className={`font-black text-[10px] tabular-nums ${diff! > 0 ? 'text-rose-600' : diff! < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                    {fmtVND(Math.abs(diff!))}
+                                                                </div>
+                                                                {aiItem.priceStatus && (
+                                                                    <div className={`text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest ${aiItem.priceStatus.includes('MATCHED') ? 'bg-emerald-50 text-emerald-600' :
+                                                                        aiItem.priceStatus.includes('OVERPRICED') ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                                                                        }`}>
+                                                                        {aiItem.priceStatus.replace('OVERPRICED', 'GIÁ CAO').replace('UNDERPRICED', 'GIÁ THẤP').replace('MATCHED', 'KHỚP GIÁ')} {aiItem.deviationPercentage ? `(${aiItem.deviationPercentage}%)` : ''}
+                                                                    </div>
+                                                                )}
+                                                                {!aiItem.priceStatus && (
+                                                                    <div className="text-[8px] font-bold mt-0.5">{diff! > 0 ? 'Dự kiến lố' : diff! < 0 ? 'Dư thẩm định' : 'Khớp'}</div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </td>
@@ -287,21 +328,22 @@ export default function AIAnalysisModal({
                                     </tbody>
                                     <tfoot className="bg-slate-50 border-t-2 border-slate-200 sticky bottom-0">
                                         {(() => {
-                                            const totalSys = detected.reduce((acc, item) => {
-                                                const sysItem = items.find(i => {
-                                                    const s1 = (i.name || '').toLowerCase().trim();
-                                                    const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                            const totalSys = items.reduce((acc, sysItem) => {
+                                                const sysQty = sysItem.expectedQuantity || sysItem.quantity || 1;
+                                                const sysPrice = sysItem.expectedPrice || 0;
+                                                return acc + (mode === 'plan' ? sysQty * sysPrice : (sysItem.actualQuantity || 0) * (sysItem.price || 0));
+                                            }, 0);
+                                            const hasAiData = detected.length > 0;
+                                            const totalAI = hasAiData ? items.reduce((acc, sysItem) => {
+                                                const aiItem = detected.find(d => {
+                                                    const s1 = (sysItem.name || '').toLowerCase().trim();
+                                                    const s2 = (d.plannedCategory || d.name || '').toLowerCase().trim();
                                                     return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                                 });
-                                                const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
-                                                const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                                return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
-                                            }, 0);
-                                            const totalAI = detected.reduce((acc, item) => {
-                                                const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
-                                                return acc + (isPNF ? 0 : item.total);
-                                            }, 0);
-                                            const diffTotal = totalSys - totalAI;
+                                                const isPNF = aiItem?.marketUnitPrice === -1 || aiItem?.statusMessage === 'Sản phẩm không tồn tại';
+                                                return acc + (aiItem && !isPNF ? aiItem.total : 0);
+                                            }, 0) : null;
+                                            const diffTotal = totalAI !== null ? totalSys - totalAI : null;
 
                                             return (
                                                 <tr className="font-black text-slate-800">
@@ -313,16 +355,22 @@ export default function AIAnalysisModal({
                                                         <div className="text-[8px] font-bold text-blue-400 uppercase">{mode === 'plan' ? 'Kế hoạch' : 'Hệ thống'}</div>
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-200 text-slate-800 text-xs tabular-nums">
-                                                        <div className="font-black">{fmtVND(totalAI)}</div>
+                                                        <div className="font-black">{totalAI !== null ? fmtVND(totalAI) : '—'}</div>
                                                         <div className="text-[8px] font-bold text-slate-400 uppercase">Thẩm định AI</div>
                                                     </td>
                                                     <td className="px-3 py-3 text-center text-xs tabular-nums">
-                                                        <div className={`font-black ${diffTotal > 0 ? 'text-rose-600' : diffTotal < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                            {fmtVND(Math.abs(diffTotal))}
-                                                        </div>
-                                                        <div className={`text-[8px] font-bold uppercase ${diffTotal > 0 ? 'text-rose-400' : diffTotal < 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
-                                                            {diffTotal > 0 ? 'Kế hoạch lố' : diffTotal < 0 ? 'Dư thẩm định' : 'Khớp'}
-                                                        </div>
+                                                        {diffTotal !== null ? (
+                                                            <>
+                                                                <div className={`font-black ${diffTotal > 0 ? 'text-rose-600' : diffTotal < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                    {fmtVND(Math.abs(diffTotal))}
+                                                                </div>
+                                                                <div className={`text-[8px] font-bold uppercase ${diffTotal > 0 ? 'text-rose-400' : diffTotal < 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                                                    {diffTotal > 0 ? 'Kế hoạch lố' : diffTotal < 0 ? 'Dư thẩm định' : 'Khớp'}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="text-[9px] text-slate-300 italic">Chờ AI phân tích</div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -375,6 +423,6 @@ export default function AIAnalysisModal({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
