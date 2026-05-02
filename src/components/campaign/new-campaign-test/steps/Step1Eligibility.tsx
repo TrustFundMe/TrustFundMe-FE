@@ -299,61 +299,25 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
 
   const isStatusLoading = initialLoading || refreshingStep1;
   const hasCv = Boolean(user?.cvUrl);
-  const kycTone =
-    isStatusLoading
-      ? {
-          box: 'border-gray-200 bg-gray-50',
-          badge: 'bg-gray-100 text-gray-700',
-          label: 'Đang tải trạng thái',
-        }
-      : state.kycStatus === 'APPROVED'
-      ? {
-          box: 'border-emerald-200 bg-emerald-50/70',
-          badge: 'bg-emerald-100 text-emerald-800',
-          label: 'Thành công',
-        }
-      : state.kycStatus === 'PENDING'
-        ? {
-            box: 'border-amber-200 bg-amber-50/70',
-            badge: 'bg-amber-100 text-amber-800',
-            label: 'Chờ duyệt',
-          }
-        : {
-            box: 'border-red-200 bg-red-50/80',
-            badge: 'bg-red-100 text-red-800',
-            label: state.kycStatus === 'REJECTED' ? 'Từ chối' : 'Chưa có',
-          };
+  const isIdentityVerified = state.kycStatus === 'APPROVED' && hasCv;
 
-  const profileTone =
-    isStatusLoading
-      ? {
-          box: 'border-gray-200 bg-gray-50',
-          badge: 'bg-gray-100 text-gray-700',
-          label: 'Đang tải trạng thái',
-        }
-      : !hasCv
-      ? {
-          box: 'border-red-200 bg-red-50/80',
-          badge: 'bg-red-100 text-red-800',
-          label: 'Chưa có',
-        }
-      : state.credibilityStatus === 'APPROVED'
-        ? {
-            box: 'border-emerald-200 bg-emerald-50/70',
-            badge: 'bg-emerald-100 text-emerald-800',
-            label: 'Thành công',
-          }
-        : state.credibilityStatus === 'REJECTED'
-          ? {
-              box: 'border-red-200 bg-red-50/80',
-              badge: 'bg-red-100 text-red-800',
-              label: 'Từ chối',
-            }
-          : {
-              box: 'border-amber-200 bg-amber-50/70',
-              badge: 'bg-amber-100 text-amber-800',
-              label: 'Chờ duyệt',
-            };
+  const identityTone = isStatusLoading
+    ? {
+        box: 'border-gray-200 bg-gray-50',
+        badge: 'bg-gray-100 text-gray-700',
+        label: 'Đang tải trạng thái...',
+      }
+    : isIdentityVerified
+    ? {
+        box: 'border-emerald-200 bg-emerald-50/70',
+        badge: 'bg-emerald-100 text-emerald-800',
+        label: 'Đã xác thực danh tính',
+      }
+    : {
+        box: 'border-red-200 bg-red-50/80',
+        badge: 'bg-red-100 text-red-800',
+        label: 'Chưa xác thực danh tính',
+      };
 
   return (
     <div className="flex h-[calc(100dvh-6.75rem)] min-h-[calc(100dvh-6.75rem)] flex-col overflow-hidden rounded-xl bg-white p-2.5 md:p-3">
@@ -373,105 +337,61 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
       <div className="mt-2 space-y-2">
         <SectionBlock
           step="1"
-          title="KYC & hồ sơ"
+          title="Xác thực danh tính"
           actions={(
             <div className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600">
               <InfoIcon />
-              <span>Chờ duyệt vẫn có thể tạo campaign</span>
+              <span>Yêu cầu KYC đã duyệt & có hồ sơ (CV)</span>
             </div>
           )}
         >
-          <div className="grid gap-2 sm:grid-cols-2">
-            <div
-              className={`rounded-lg border p-2.5 ${kycTone.box}`}
-              role="status"
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">KYC</p>
-              {isStatusLoading ? (
-                <div className="mt-1 flex min-h-8 items-center gap-2">
-                  <p className={`rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
-                    {kycTone.label}
-                  </p>
-                </div>
-              ) : state.kycStatus === 'APPROVED' ? (
-                <div className="mt-1 flex min-h-8 items-center gap-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600">
+          <div
+            className={`rounded-lg border p-4 ${identityTone.box} transition-all`}
+            role="status"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {isIdentityVerified ? (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 shadow-sm shadow-emerald-100">
                     <CheckBadgeIcon />
-                  </span>
-                  <p className={`rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
-                    {kycTone.label}
+                  </div>
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <InfoIcon />
+                  </div>
+                )}
+                <div>
+                  <p className={`text-[13px] font-bold ${isIdentityVerified ? 'text-emerald-900' : 'text-red-900'}`}>
+                    {identityTone.label}
+                  </p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {isIdentityVerified 
+                      ? 'Hồ sơ của bạn đã đủ điều kiện để tạo chiến dịch.' 
+                      : 'Vui lòng hoàn tất xác minh KYC và tải lên CV tại trang cá nhân.'}
                   </p>
                 </div>
-              ) : (
-                <div className="mt-1 space-y-1.5">
-                  <div className="flex min-h-8 items-center justify-between gap-2">
-                    <p className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${kycTone.badge}`}>
-                      {kycTone.label}
-                    </p>
-                    <Link
-                      href={KYC_PAGE_HREF}
-                      className="inline-flex rounded-md bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-gray-800"
-                    >
-                      {state.kycStatus === 'PENDING' ? 'Xem KYC' : 'Cập nhật KYC'}
-                    </Link>
-                  </div>
-                  {state.kycRejectReason ? (
-                    <p className="line-clamp-2 text-[11px] text-red-700">{state.kycRejectReason}</p>
-                  ) : null}
-                </div>
+              </div>
+
+              {!isIdentityVerified && !isStatusLoading && (
+                <Link
+                  href={KYC_PAGE_HREF}
+                  className="shrink-0 rounded-lg bg-black px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm transition hover:bg-gray-800"
+                >
+                  Tới trang xác thực
+                </Link>
               )}
             </div>
 
-            <div
-              className={`rounded-lg border p-2.5 ${profileTone.box}`}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-600">Hồ sơ (CV)</p>
-              {isStatusLoading ? (
-                <div className="mt-1 flex min-h-8 items-center">
-                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
-                    {profileTone.label}
-                  </span>
-                </div>
-              ) : hasCv ? (
-                <div className="mt-1 flex min-h-8 items-center justify-between gap-2">
-                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
-                    {profileTone.label}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <a
-                      href={user!.cvUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black hover:bg-gray-50"
-                    >
-                      Xem CV
-                    </a>
-                    <Link
-                      href="/account/profile"
-                      className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black hover:bg-gray-50"
-                    >
-                      Cập nhật hồ sơ
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-1">
-                  <div className="flex min-h-8 items-center justify-between gap-2">
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-bold leading-none ${profileTone.badge}`}>
-                      {profileTone.label}
-                    </span>
-                    <Link
-                      href="/account/profile"
-                      className="inline-flex rounded-md bg-black px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white hover:bg-gray-800"
-                    >
-                      Cập nhật hồ sơ
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
+            {state.kycRejectReason && state.kycStatus === 'REJECTED' && (
+              <div className="mt-3 rounded-md bg-red-100/50 p-2 border border-red-200/50">
+                <p className="text-[11px] font-semibold text-red-800">Lý do từ chối:</p>
+                <p className="text-[11px] text-red-700">{state.kycRejectReason}</p>
+              </div>
+            )}
           </div>
         </SectionBlock>
+
+        <div className={!isIdentityVerified ? 'pointer-events-none opacity-50' : ''}>
 
         <SectionBlock step="2" title="STK nhận giải ngân">
           <div className="space-y-2.5">
@@ -659,6 +579,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
               </LabeledField>
             </div>
         </SectionBlock>
+        </div>
       </div>
       </div>
 
