@@ -3,8 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import {
     X, Sparkles, CheckCircle,
-    ShieldCheck, Printer, MapPin, Phone, Mail, Hash,
-    AlertTriangle, LineChart, Store, Loader2
+    ShieldCheck, Printer, LineChart, Store, Loader2, AlertTriangle
 } from 'lucide-react';
 import { ExpenditureItem, Expenditure } from '@/types/expenditure';
 import { expenditureService } from '@/services/expenditureService';
@@ -17,12 +16,24 @@ interface DetectedItem {
     matchStatus: 'MATCHED' | 'PARTIAL' | 'MISMATCHED';
     plannedCategory?: string;
     plannedAmount?: number;
-    differenceAmount?: number;
+    priceStatus?: 'MATCHED' | 'OVERPRICED' | 'UNDERPRICED';
+    deviationPercentage?: number;
     marketUnitPrice?: number;
     marketPriceRange?: string;
+    priceRangeMin?: number;
+    priceRangeMax?: number;
+    productExists?: boolean;
+    productExistsByBrand?: boolean;
     unit?: string;
     evidenceUrls?: string[];
     statusMessage?: string;
+    isLinkMatched?: boolean;
+    linkType?: string;
+    expectedPurchaseLink?: string;
+    geographicEvidenceUrl?: string;
+    logisticsScore?: number;
+    vendorTrustScore?: number;
+    geographicContextSummary?: string;
 }
 
 interface AIAnalysisResult {
@@ -100,18 +111,27 @@ export default function AIAnalysisModal({
     };
 
     const detected: DetectedItem[] = Array.isArray(result.detectedItems) ? result.detectedItems : [];
-    const redFlags: string[] = Array.isArray(result.redFlags)
-        ? result.redFlags.map((f) => (typeof f === 'string' ? f : JSON.stringify(f)))
-        : [];
+
+    // 🔍 DEBUG — mở F12 > Console để xem
+    console.group('[AIAudit] Raw result from backend');
+    console.log('Full result object:', result);
+    console.log('detectedItems:', result.detectedItems);
+    console.log('detectedItems count:', detected.length);
+    console.log('summary:', result.summary);
+    console.log('recommendation:', result.recommendation);
+    console.groupEnd();
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
 
-            <div className="relative bg-[#fcfcfc] rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[96vh] border border-slate-200 animate-in zoom-in-95 duration-200">
-
-                {/* Header */}
-                <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between border-b border-slate-200 bg-white">
+            {/* Popup cố định, không scroll toàn trang */}
+            <div
+                className="relative bg-[#fcfcfc] rounded-xl shadow-2xl w-full max-w-5xl border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col"
+                style={{ height: '90vh', maxHeight: '90vh' }}
+            >
+                {/* Header - cố định */}
+                <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between border-b border-slate-200 bg-white rounded-t-xl">
                     <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg bg-[#111827] flex items-center justify-center text-white">
                             <Sparkles className="h-4 w-4" />
@@ -136,122 +156,37 @@ export default function AIAnalysisModal({
                     </div>
                 </div>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50 p-4 space-y-4">
-                    {/* Grid: Vendor (if exists) + Conclusion */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-2 p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-                            <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
-                                <Store className="h-4 w-4 text-indigo-500" />
-                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                    {mode === 'plan' ? 'Thông tin dự kiến (Kế hoạch)' : 'Thông tin đơn vị cung cấp (Vendor)'}
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Tên doanh nghiệp/Cửa hàng</p>
-                                    <p className="text-xs font-black text-slate-800">
-                                        {result.vendorInfo?.name || 'Không xác định'}
-                                    </p>
-                                </div>
-                                {result.vendorInfo?.taxId && (
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Mã số thuế</p>
-                                        <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                            <Hash className="h-3 w-3" /> {result.vendorInfo.taxId}
-                                        </p>
-                                    </div>
-                                )}
-                                <div className="sm:col-span-2">
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Địa chỉ</p>
-                                    <p className="text-xs font-medium text-slate-600 flex items-start gap-1.5">
-                                        <MapPin className="h-3 w-3 mt-0.5 shrink-0 text-slate-400" />
-                                        {result.vendorInfo?.address || 'N/A'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Liên hệ</p>
-                                    <div className="flex flex-col gap-1 mt-1">
-                                        {result.vendorInfo?.phone && (
-                                            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                                                <Phone className="h-3 w-3 text-slate-400" />
-                                                {result.vendorInfo.phone}
-                                            </span>
-                                        )}
-                                        {result.vendorInfo?.email && (
-                                            <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
-                                                <Mail className="h-3 w-3 text-slate-400" />
-                                                {result.vendorInfo.email}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {/* Body - flex column, không scroll ngoài */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50 p-4 gap-3">
 
-                        <div className="flex flex-col gap-4">
-                            <div className="p-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800 h-full">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CheckCircle className="h-4 w-4 text-emerald-400" />
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Kết luận kiểm toán</p>
-                                </div>
-                                <p className="text-xs font-black leading-relaxed mb-3">{result.recommendation}</p>
-                                <div className="h-px bg-slate-700 my-2" />
-                                <p className="text-[11px] text-slate-300 italic opacity-80 leading-relaxed">
-                                    &ldquo;{result.summary}&rdquo;
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Red Flags */}
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2 px-1">
-                            <AlertTriangle className="h-4 w-4 text-rose-500" />
-                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">
-                                Cảnh báo vi phạm &amp; Nghi vấn ({redFlags.length})
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                            {redFlags.length === 0 && (
-                                <div className="p-4 rounded-xl bg-white border border-slate-100 flex items-center justify-center col-span-full">
-                                    <p className="text-[10px] text-slate-400 italic">Không phát hiện dấu hiệu vi phạm</p>
-                                </div>
-                            )}
-                            {redFlags.map((flag, idx) => (
-                                <div key={idx} className="p-3 rounded-lg border border-rose-100 bg-rose-50/50 flex items-start gap-2 hover:bg-rose-100/50 transition-colors">
-                                    <AlertTriangle className="h-3.5 w-3.5 text-rose-500 mt-0.5 shrink-0" />
-                                    <p className="text-[11px] font-black text-rose-900 leading-snug">{flag}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Data Table */}
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2 px-1">
-                            <LineChart className="h-4 w-4 text-slate-400" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {/* BẢNG PHÂN TÍCH - ở trên cùng, chỉ scroll bên trong bảng */}
+                    <div className="flex flex-col flex-1 min-h-0 gap-1.5">
+                        <div className="flex items-center gap-2 px-1 flex-shrink-0">
+                            <LineChart className="h-3.5 w-3.5 text-slate-400" />
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
                                 {mode === 'plan' ? 'Phân tích chênh lệch với giá thị trường' : 'Đối soát dữ liệu Hệ thống vs. Hóa đơn'}
                             </p>
                         </div>
+
                         {loadingItems ? (
-                            <div className="h-40 flex flex-col items-center justify-center bg-white rounded-xl border border-slate-100">
+                            <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-xl border border-slate-100">
                                 <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
                                 <p className="mt-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Đang tải dữ liệu gốc...</p>
                             </div>
-                        ) : detected.length === 0 ? (
-                            <div className="p-10 text-center bg-white rounded-xl border border-slate-100">
-                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu bóc tách được từ hình ảnh/nội dung</p>
+                        ) : items.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-slate-100">
+                                <p className="text-[11px] text-slate-400 italic">Không có dữ liệu mặt hàng trong kế hoạch này.</p>
                             </div>
                         ) : (
-                            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                            /* Chỉ scroll trong bảng */
+                            <div className="flex-1 min-h-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-auto">
                                 <table className="w-full text-left text-[11px]">
-                                    <thead className="bg-[#F8FAFC] border-b border-slate-200">
+                                    <thead className="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10">
                                         <tr>
                                             <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
                                             <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa / Ghi chú</th>
-                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hiệu / Đơn vị / Nơi mua</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hiệu / Đơn vị</th>
+                                            <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Địa điểm mua (AI Audit)</th>
                                             <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
                                                 {mode === 'plan' ? 'Kế hoạch (Dự kiến)' : 'Hệ thống (Database)'}
                                             </th>
@@ -262,109 +197,180 @@ export default function AIAnalysisModal({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
-                                        {detected.map((item, idx) => {
-                                            const sysItem = items.find(i => {
-                                                const s1 = (i.name || '').toLowerCase().trim();
-                                                const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
-                                                return s1 === s2 || s1.includes(s2) || s2.includes(s1);
+                                        {items.map((sysItem, idx) => {
+                                            // Find matching AI analysis for this DB item
+                                            const aiItem = detected.find(d => {
+                                                const s1 = (sysItem.name || '').toLowerCase().trim();
+                                                const dName = (d.name || '').toLowerCase().trim();
+                                                const dCat = (d.plannedCategory || '').toLowerCase().trim();
+
+                                                // Prioritize matching the name first, then the category
+                                                return (dName && (s1 === dName || s1.includes(dName) || dName.includes(s1))) ||
+                                                    (dCat && (s1 === dCat || s1.includes(dCat) || dCat.includes(s1)));
                                             });
 
-                                            const sysQty = sysItem ? (sysItem.expectedQuantity || 1) : 1;
-                                            const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                            const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0)) : 0;
+                                            const sysQty = sysItem.expectedQuantity || 1;
+                                            const sysPrice = sysItem.expectedPrice || 0;
+                                            const sysVal = mode === 'plan'
+                                                ? sysQty * sysPrice
+                                                : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0);
 
-                                            // Handle "Product Not Found" case
-                                            const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
-                                            const diff = sysVal - item.total;
-                                            const isMatch = Math.abs(diff) < 500;
+                                            const isPNF = aiItem?.marketUnitPrice === -1 || aiItem?.statusMessage === 'Sản phẩm không tồn tại';
+                                            const diff = aiItem && !isPNF ? sysVal - aiItem.total : null;
 
                                             return (
                                                 <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                                                     <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
-                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
-                                                        {sysItem?.expectedNote && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.expectedNote}</div>}
+                                                        <div className="font-bold text-slate-800 leading-tight uppercase">{sysItem.name}</div>
+                                                        {sysItem.expectedNote && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.expectedNote}</div>}
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="text-[10px] font-bold text-slate-700">
-                                                            {sysItem?.expectedBrand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem?.expectedUnit || '-'}
+                                                            {sysItem.expectedBrand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem.expectedUnit || '-'}
                                                         </div>
-                                                        <div className="text-[9px] text-slate-500 font-medium mt-0.5">{sysItem?.expectedPurchaseLocation || '-'}</div>
+                                                    </td>
+                                                    <td className="px-3 py-3 border-r border-slate-50">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="text-[9px] text-slate-500 font-medium">{sysItem.expectedPurchaseLocation || '-'}</div>
+                                                            {sysItem.expectedPurchaseLink && (
+                                                                <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer"
+                                                                    className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1">
+                                                                    <Store className="h-2.5 w-2.5" /> Link dự kiến mua
+                                                                </a>
+                                                            )}
+                                                            {aiItem?.linkType && (
+                                                                <div className={`text-[8px] font-black px-1.5 py-0.5 rounded-full w-fit flex items-center gap-1 ${aiItem.isLinkMatched ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                                                                    {aiItem.isLinkMatched ? <ShieldCheck className="h-2 w-2" /> : <AlertTriangle className="h-2 w-2" />}
+                                                                    LINK • {aiItem.isLinkMatched ? 'KHỚP' : 'KHÔNG KHỚP'}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="px-3 py-3 text-center border-r border-slate-50">
                                                         <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
                                                         <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                                                            {sysItem ? (mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.actualPrice || 0)}`) : 'N/A'}
+                                                            {mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.actualPrice || 0)}`}
                                                         </div>
                                                     </td>
-                                                    <td className="px-3 py-3 border-r border-slate-50">
-                                                        <div className={`font-black text-[11px] tabular-nums ${isPNF ? 'text-rose-600' : 'text-slate-800'}`}>
-                                                            {isPNF ? 'KHÔNG THỂ KIỂM TRA GIÁ' : fmtVND(item.total)}
-                                                        </div>
-                                                        {!isPNF && (
-                                                            <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                                                            {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
+                                                    <td className="px-3 py-3 border-r border-slate-50 min-w-[200px]">
+                                                        {!aiItem ? (
+                                                            <div className="text-[9px] text-slate-300 italic">Chưa có dữ liệu AI</div>
+                                                        ) : isPNF ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] font-black text-rose-600 uppercase">Không kiểm tra được</span>
+                                                                {aiItem.statusMessage && <span className="text-[8px] text-slate-400 italic font-medium">{aiItem.statusMessage}</span>}
                                                             </div>
-                                                        )}
-                                                        {item.statusMessage && (
-                                                            <div className={`mt-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase inline-block border ${item.statusMessage === 'Sản phẩm không tồn tại'
-                                                                ? 'bg-rose-50 text-rose-600 border-rose-200'
-                                                                : item.statusMessage === 'Giá bất thường'
-                                                                    ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                                                    : item.statusMessage === 'Thiếu thông tin phân loại'
-                                                                        ? 'bg-slate-50 text-slate-600 border-slate-200'
-                                                                        : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                                                }`}>
-                                                                {item.statusMessage}
-                                                            </div>
-                                                        )}
-                                                        {item.evidenceUrls && item.evidenceUrls.length > 0 && (
-                                                            <div className="mt-1 flex flex-wrap gap-1">
-                                                                {item.evidenceUrls.map((url, uidx) => (
-                                                                    <a key={uidx} href={url} target="_blank" rel="noopener noreferrer"
-                                                                        className="inline-flex items-center text-[8px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-800 px-1 py-0.5 rounded border border-indigo-100 transition-colors">
-                                                                        [{uidx + 1}] Nguồn AI tìm được
-                                                                    </a>
-                                                                ))}
+                                                        ) : (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="font-black text-[11px] tabular-nums text-slate-800">{fmtVND(aiItem.total)}</div>
+                                                                    {aiItem.vendorTrustScore != null && (
+                                                                        <div className={`text-[7px] font-black px-1 rounded flex items-center gap-0.5 ${aiItem.vendorTrustScore > 70 ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>
+                                                                            <ShieldCheck className="h-2 w-2" />
+                                                                            Tin cậy: {aiItem.vendorTrustScore}%
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[8px] font-bold text-slate-500">{aiItem.quantity || 1} x {fmtNum(aiItem.unitPrice || 0)}</div>
+
+                                                                {/* Geographic Defense Logic */}
+                                                                {aiItem.geographicContextSummary && (
+                                                                    <div className="mt-1 p-1.5 bg-slate-50 rounded border border-slate-100">
+                                                                        <div className="text-[8px] text-slate-600 font-bold leading-tight">
+                                                                            🎯 Vùng miền: {aiItem.geographicContextSummary}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Evidence Links */}
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {aiItem.evidenceUrls?.map((url, uidx) => (
+                                                                        <a key={uidx} href={url} target="_blank" rel="noopener noreferrer"
+                                                                            className="inline-flex items-center text-[7px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-1 py-0.5 rounded border border-indigo-100">
+                                                                            [{uidx + 1}] Chợ/Siêu thị
+                                                                        </a>
+                                                                    ))}
+                                                                    {aiItem.geographicEvidenceUrl && (
+                                                                        <a href={aiItem.geographicEvidenceUrl} target="_blank" rel="noopener noreferrer"
+                                                                            className="inline-flex items-center text-[7px] font-black bg-amber-50 text-amber-600 hover:bg-amber-100 px-1 py-0.5 rounded border border-amber-100">
+                                                                            🛡️ Bằng chứng khu vực
+                                                                        </a>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-3 text-center">
-                                                        <div className={`font-black text-[10px] tabular-nums ${isPNF ? 'text-slate-400' : (isMatch ? 'text-emerald-500' : 'text-rose-600')}`}>
-                                                            {isPNF ? '—' : (diff !== 0 ? (diff > 0 ? '+' : '') : '') + fmtVND(diff)}
-                                                        </div>
+                                                        {!aiItem || isPNF ? (
+                                                            <span className="text-slate-300 text-[10px]">—</span>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <div className={`font-black text-[10px] tabular-nums ${diff! > 0 ? 'text-rose-600' : diff! < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                    {fmtVND(Math.abs(diff!))}
+                                                                </div>
+                                                                {aiItem.priceStatus && (
+                                                                    <div className={`text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest ${aiItem.priceStatus.includes('MATCHED') ? 'bg-emerald-50 text-emerald-600' :
+                                                                        aiItem.priceStatus.includes('OVERPRICED') ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                                                                        }`}>
+                                                                        {aiItem.priceStatus.replace('OVERPRICED', 'GIÁ CAO').replace('UNDERPRICED', 'GIÁ THẤP').replace('MATCHED', 'KHỚP GIÁ')} {aiItem.deviationPercentage ? `(${aiItem.deviationPercentage}%)` : ''}
+                                                                    </div>
+                                                                )}
+                                                                {!aiItem.priceStatus && (
+                                                                    <div className="text-[8px] font-bold mt-0.5">{diff! > 0 ? 'Dự kiến lố' : diff! < 0 ? 'Dư thẩm định' : 'Khớp'}</div>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
                                         })}
                                     </tbody>
-                                    <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                                    <tfoot className="bg-slate-50 border-t-2 border-slate-200 sticky bottom-0">
                                         {(() => {
-                                            const totalSys = detected.reduce((acc, item) => {
-                                                const sysItem = items.find(i => {
-                                                    const s1 = (i.name || '').toLowerCase().trim();
-                                                    const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
+                                            const totalSys = items.reduce((acc, sysItem) => {
+                                                const sysQty = sysItem.expectedQuantity || 1;
+                                                const sysPrice = sysItem.expectedPrice || 0;
+                                                return acc + (mode === 'plan' ? sysQty * sysPrice : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0));
+                                            }, 0);
+                                            const hasAiData = detected.length > 0;
+                                            const totalAI = hasAiData ? items.reduce((acc, sysItem) => {
+                                                const aiItem = detected.find(d => {
+                                                    const s1 = (sysItem.name || '').toLowerCase().trim();
+                                                    const s2 = (d.plannedCategory || d.name || '').toLowerCase().trim();
                                                     return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                                 });
-                                                const sysQty = sysItem ? (sysItem.expectedQuantity || 1) : 1;
-                                                const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                                return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0)) : 0);
-                                            }, 0);
-                                            const totalAI = detected.reduce((acc, item) => {
-                                                const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
-                                                return acc + (isPNF ? 0 : item.total);
-                                            }, 0);
-                                            const diffTotal = totalSys - totalAI;
+                                                const isPNF = aiItem?.marketUnitPrice === -1 || aiItem?.statusMessage === 'Sản phẩm không tồn tại';
+                                                return acc + (aiItem && !isPNF ? aiItem.total : 0);
+                                            }, 0) : null;
+                                            const diffTotal = totalAI !== null ? totalSys - totalAI : null;
 
                                             return (
                                                 <tr className="font-black text-slate-800">
                                                     <td colSpan={3} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest border-r border-slate-200">
                                                         <span>Tổng cộng đối soát:</span>
                                                     </td>
-                                                    <td className="px-3 py-3 text-center border-r border-slate-200 text-blue-700 text-xs tabular-nums">{fmtVND(totalSys)}</td>
-                                                    <td className="px-3 py-3 text-left border-r border-slate-200 text-slate-800 text-xs tabular-nums">{fmtVND(totalAI)}</td>
-                                                    <td className={`px-3 py-3 text-center text-xs tabular-nums ${Math.abs(diffTotal) < 1000 ? 'text-emerald-500' : 'text-rose-600'}`}>
-                                                        {diffTotal !== 0 ? (diffTotal > 0 ? '+' : '') : ''}{fmtVND(diffTotal)}
+                                                    <td className="px-3 py-3 border-r border-slate-200 text-blue-700 text-xs tabular-nums">
+                                                        <div className="font-black">{fmtVND(totalSys)}</div>
+                                                        <div className="text-[8px] font-bold text-blue-400 uppercase">{mode === 'plan' ? 'Kế hoạch' : 'Hệ thống'}</div>
+                                                    </td>
+                                                    <td className="px-3 py-3 border-r border-slate-200 text-slate-800 text-xs tabular-nums">
+                                                        <div className="font-black">{totalAI !== null ? fmtVND(totalAI) : '—'}</div>
+                                                        <div className="text-[8px] font-bold text-slate-400 uppercase">Thẩm định AI</div>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center text-xs tabular-nums">
+                                                        {diffTotal !== null ? (
+                                                            <>
+                                                                <div className={`font-black ${diffTotal > 0 ? 'text-rose-600' : diffTotal < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                    {fmtVND(Math.abs(diffTotal))}
+                                                                </div>
+                                                                <div className={`text-[8px] font-bold uppercase ${diffTotal > 0 ? 'text-rose-400' : diffTotal < 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                                                    {diffTotal > 0 ? 'Kế hoạch lố' : diffTotal < 0 ? 'Dư thẩm định' : 'Khớp'}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="text-[9px] text-slate-300 italic">Chờ AI phân tích</div>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -374,10 +380,24 @@ export default function AIAnalysisModal({
                             </div>
                         )}
                     </div>
+
+                    {/* KẾT LUẬN KIỂM TOÁN - ngang bảng, full width, cố định dưới */}
+                    <div className="flex-shrink-0 py-2 px-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800 flex gap-4 items-center">
+                        <div className="flex flex-col items-center flex-shrink-0 text-center">
+                            <CheckCircle className="h-5 w-5 text-emerald-400 mb-0.5" />
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-[1]" style={{ marginBottom: 0 }}>Kết luận</p>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-[1]">Kiểm toán</p>
+                        </div>
+                        <div className="w-px self-stretch bg-slate-700 flex-shrink-0" />
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <p className="text-xs font-black leading-snug">{result.recommendation}</p>
+                            <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{result.summary}&rdquo;</p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Footer */}
-                <div className="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-4 flex-shrink-0">
+                {/* Footer - cố định */}
+                <div className="px-4 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-4 flex-shrink-0 rounded-b-xl">
                     <div className="hidden sm:block">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
                             Transparency Audit Protocol &bull; TrustFundMe AI Center
@@ -403,6 +423,6 @@ export default function AIAnalysisModal({
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

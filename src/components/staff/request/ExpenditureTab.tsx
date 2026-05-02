@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
     Search, ChevronDown, ChevronRight, AlertCircle,
-    X, FileText, CreditCard, CheckCircle
+    X, FileText, CreditCard, CheckCircle, Store
 } from 'lucide-react';
 import type { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import type { CampaignDto } from '@/types/campaign';
@@ -223,7 +223,8 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                 <th className="py-2 px-3 border-r border-white/20 w-[15%]">Danh mục</th>
                                                 <th className="py-2 px-3 border-r border-white/20 w-[15%] bg-orange-500">Tổng DM</th>
                                                 <th className="py-2 px-3 border-r border-white/20">Hàng hóa / Ghi chú</th>
-                                                <th className="py-2 px-3 border-r border-white/20 min-w-[120px]">Nhãn / ĐV / Tại</th>
+                                                <th className="py-2 px-3 border-r border-white/20 min-w-[100px]">Nhãn / ĐV</th>
+                                                <th className="py-2 px-3 border-r border-white/20 min-w-[120px]">Địa điểm / Link</th>
                                                 <th className="py-2 px-3 text-right border-r border-white/20 w-[110px]">Kế hoạch</th>
                                                 <th className="py-2 px-3 text-right w-[110px]">Thực tế</th>
                                             </tr>
@@ -272,9 +273,22 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                                             <div className="font-bold text-gray-800 uppercase leading-tight">{it.name}</div>
                                                                             {it.expectedNote && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.expectedNote}</div>}
                                                                         </td>
-                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                        <td className="py-2 px-3 border-r border-gray-50 align-top">
                                                                             <div className="text-[10px] font-bold text-gray-700">{it.expectedBrand || '-'} <span className="font-normal text-gray-400">/</span> {it.expectedUnit || '-'}</div>
-                                                                            <div className="text-[9px] text-gray-500 mt-0.5">{it.expectedPurchaseLocation || '-'}</div>
+                                                                        </td>
+                                                                        <td className="py-2 px-3 border-r border-gray-50 align-top">
+                                                                            <div className="text-[9px] text-gray-500 font-medium">{it.expectedPurchaseLocation || '-'}</div>
+                                                                            {it.expectedPurchaseLink && (
+                                                                                <a
+                                                                                    href={it.expectedPurchaseLink}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1 mt-1"
+                                                                                >
+                                                                                    <Store className="h-2.5 w-2.5" />
+                                                                                    Chi tiết
+                                                                                </a>
+                                                                            )}
                                                                         </td>
                                                                         <td className="py-2.5 px-3 text-right bg-blue-50/10 border-r border-gray-50">
                                                                             <div className="font-bold text-blue-700 leading-none">{fmt(expectedQty * it.expectedPrice)}</div>

@@ -63,37 +63,36 @@ const ItemRow: React.FC<{
     return (
         <tr className="hover:bg-[#F8FAFC] transition-colors">
             <td className="px-2 py-2 text-center border-r border-[#E2E8F0] text-xs font-black text-[#64748B]">{idx + 1}</td>
-            <td className="px-2 py-2 border-r border-[#E2E8F0]">
-                <div className="flex items-center gap-3">
-                    <div className="min-w-0">
-                        <div className="text-[14px] font-bold text-[#1E293B] truncate">{item.name}</div>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                            {item.expectedPurchaseLink && (
-                                <a
-                                    href={item.expectedPurchaseLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[9px] font-black text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
-                                    title="Link mua dự kiến"
-                                >
-                                    <ExternalLink className="w-2.5 h-2.5" /> DK
-                                </a>
-                            )}
-                            {item.actualPurchaseLink && (
-                                <a
-                                    href={item.actualPurchaseLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-0.5 uppercase tracking-wider"
-                                    title="Link mua thực tế"
-                                >
-                                    <ExternalLink className="w-2.5 h-2.5" /> TT
-                                </a>
-                            )}
-                        </div>
-                        {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-1 uppercase opacity-70 font-medium">{item.note}</div>}
-                    </div>
+            <td className="px-3 py-2 border-r border-[#E2E8F0] align-top">
+                <div className="text-[14px] font-bold text-[#1E293B] uppercase leading-tight line-clamp-2 mb-1">{item.name}</div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[9px] font-black uppercase tracking-wider">
+                    {item.actualPurchaseLink && (
+                        <a
+                            href={item.actualPurchaseLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-0.5"
+                            title="Link mua thực tế"
+                        >
+                            <ExternalLink className="w-2.5 h-2.5" /> TT
+                        </a>
+                    )}
                 </div>
+                {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-1 uppercase opacity-70 font-medium">{item.note}</div>}
+            </td>
+            <td className="px-3 py-2 border-r border-[#E2E8F0] align-top">
+                <div className="text-[10px] text-[#475569] font-medium line-clamp-1 mb-1">{item.purchaseLocation || '-'}</div>
+                {item.expectedPurchaseLink && (
+                    <a
+                        href={item.expectedPurchaseLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-[10px] font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline"
+                    >
+                        <ExternalLink className="w-2.5 h-2.5 mr-1" />
+                        Xem link
+                    </a>
+                )}
             </td>
             <td className="px-2 py-2 text-center border-r border-[#E2E8F0]">
                 <button
@@ -219,7 +218,8 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                 <table className="w-full text-sm table-fixed border-collapse">
                     <colgroup>
                         <col className="w-[50px]" />
-                        <col className="w-[200px]" />
+                        <col className="w-[180px]" />
+                        <col className="w-[150px]" />
                         <col className="w-[80px]" />
                         {campaign?.type === 'AUTHORIZED' ? (
                             <>
@@ -242,6 +242,7 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                         <tr>
                             <th className="px-2 py-2 text-center text-xs font-black text-[#1E293B] border-r border-[#E2E8F0]">STT</th>
                             <th className="px-2 py-2 text-left text-xs font-black text-[#1E293B] border-r border-[#E2E8F0]">Tên hàng hóa / Dịch vụ</th>
+                            <th className="px-2 py-2 text-left text-xs font-black text-[#1E293B] border-r border-[#E2E8F0]">Địa điểm / Link</th>
                             <th className="px-2 py-2 text-center text-xs font-black text-[#1E293B] border-r border-[#E2E8F0]">Ảnh</th>
                             {campaign?.type === 'AUTHORIZED' ? (
                                 <>
@@ -266,7 +267,7 @@ const ExpenditureDetailItemsTable: React.FC<ExpenditureDetailItemsTableProps> = 
                             categories!.map((cat) => {
                                 const catItems = items.filter(item => item.catologyId === cat.id);
                                 const isCollapsed = collapsedCats[cat.id];
-                                const colSpan = campaign?.type === 'AUTHORIZED' ? 7 : 8;
+                                const colSpan = campaign?.type === 'AUTHORIZED' ? 8 : 9;
                                 return (
                                     <Fragment key={`cat-${cat.id}`}>
                                         <tr

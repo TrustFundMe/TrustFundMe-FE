@@ -142,7 +142,7 @@ export default function NewCampaignTestPage() {
       accountNumber.length <= 50 &&
       webhookKey.length > 0;
     return (
-      (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
+      state.kycStatus === 'APPROVED' &&
       isBankValid &&
       !!user?.cvUrl
     );
@@ -154,8 +154,8 @@ export default function NewCampaignTestPage() {
     const bankCode = b.bankCode.trim();
     const bankName = b.bankName.trim();
     const webhookKey = b.webhookKey.trim();
-    if (!(state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING')) {
-      return 'Hoàn tất KYC trên Profile.';
+    if (state.kycStatus !== 'APPROVED') {
+      return 'Hoàn tất xác thực danh tính trên Profile.';
     }
     if (!accountHolderName) return 'Thiếu tên chủ tài khoản nhận tiền';
     if (accountHolderName.length < 6 || accountHolderName.length > 255) {
@@ -251,7 +251,7 @@ export default function NewCampaignTestPage() {
         state.acknowledgements.legalLiabilityAccepted &&
         state.acknowledgements.overfundPolicyAccepted,
       gatesOk:
-        (state.kycStatus === 'APPROVED' || state.kycStatus === 'PENDING') &&
+        state.kycStatus === 'APPROVED' &&
         !!user?.cvUrl &&
         Boolean(state.bankInfo.bankCode) &&
         state.bankInfo.accountHolderName.trim() !== '' &&
