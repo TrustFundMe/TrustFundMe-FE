@@ -48,8 +48,8 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; price: number; actualPurchaseLink?: string; }[]): Promise<Expenditure> => {
-        const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items });
+    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; }[], proofUrl?: string): Promise<Expenditure> => {
+        const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items, proofUrl });
         return response.data;
     },
     requestWithdrawal: async (id: string | number, evidenceDueAt?: string, withdrawAmount?: number): Promise<Expenditure> => {
@@ -158,10 +158,17 @@ export const expenditureService = {
     },
 
     /** Tải file mẫu Excel */
-    downloadTemplate: async (): Promise<Blob> => {
+    exportItemsToExcelTemplate: async (): Promise<Blob> => {
         const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
         const response = await axios.get(`${feOrigin}/api/expenditures/import/template`, {
             responseType: 'blob',
+        });
+        return response.data;
+    },
+
+    createCategory: async (expenditureId: number, name: string, description?: string): Promise<ExpenditureCatology> => {
+        const response = await axiosInstance.post(`/api/expenditures/${expenditureId}/categories`, null, {
+            params: { name, description }
         });
         return response.data;
     },
@@ -232,5 +239,11 @@ export const expenditureService = {
     getPendingEvidenceByUser: async (userId: string | number): Promise<any[]> => {
         const response = await axiosInstance.get(`/api/expenditures/user/${userId}/pending-evidence`);
         return response.data;
+    },
+
+    submitEvidence: async (evidenceId: number | string, proofUrl: string): Promise<void> => {
+        await axiosInstance.post(`/api/expenditures/evidence/${evidenceId}/submit`, null, {
+            params: { proofUrl }
+        });
     },
 };

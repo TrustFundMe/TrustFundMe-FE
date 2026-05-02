@@ -23,22 +23,36 @@ export interface ExpenditureItem {
     name: string;
     expectedPurchaseLink?: string;
     actualPurchaseLink?: string;
-    quantity: number;
     expectedQuantity?: number;
     quantityLeft?: number;
     actualQuantity?: number;
-    price: number;
     expectedPrice: number;
+    actualPrice?: number;
     note?: string;
     catologyId?: number;
     catologyName?: string;
     unit?: string;
-    brand?: string;
+    expectedBrand?: string;
+    actualBrand?: string;
     purchaseLocation?: string;
     createdAt?: string;
     updatedAt?: string;
     /** Hình ảnh minh chứng cho item này (loaded separately) */
     media?: { id: number; url: string; description?: string; mediaType: string }[];
+}
+
+export interface ExpenditureEvidence {
+    id: number;
+    expenditureId: number;
+    campaignId: number;
+    cassoTransactionId?: string;
+    amount: number;
+    description?: string;
+    proofUrl: string;
+    status: string;
+    dueAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface Expenditure {
@@ -63,17 +77,23 @@ export interface Expenditure {
     accountHolderName?: string;
     items?: ExpenditureItem[];
     transactions?: ExpenditureTransaction[];
+    evidences?: ExpenditureEvidence[];
     createdAt?: string;
     updatedAt?: string;
+    proofUrl?: string;
 }
 
 export interface CreateExpenditureItemRequest {
     name: string;
     expectedPurchaseLink?: string;
-    quantity: number;
-    price: number;
+    expectedQuantity: number;
     expectedPrice: number;
+    actualPrice?: number;
+    actualQuantity?: number;
     note?: string;
+    expectedBrand?: string;
+    actualBrand?: string;
+    unit?: string;
 }
 
 export interface CreateExpenditureCatologyRequest {

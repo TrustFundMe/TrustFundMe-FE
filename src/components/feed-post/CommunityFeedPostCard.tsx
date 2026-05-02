@@ -79,7 +79,10 @@ export function CommunityFeedPostCard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const imgs = (post.attachments ?? []).filter(a => a.type === "image" && a.url);
+  const imgs = (post.attachments ?? []).filter(a => {
+    const isImage = a.type === "image" || (a as any).mediaType === "PHOTO" || (a as any).mediaType === "VIDEO";
+    return isImage && a.url;
+  });
   const text = post.content.replace(/<[^>]*>/g, "").trim();
   const isEvidence = post.targetName?.startsWith('evidence');
   let evidencePlanName = post.targetName?.includes('|') ? post.targetName.split('|')[1] : null;

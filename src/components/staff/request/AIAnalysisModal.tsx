@@ -303,7 +303,7 @@ export default function AIAnalysisModal({
                                                         </div>
                                                         {!isPNF && (
                                                             <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                                                                {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
+                                                                {`${item.expectedQuantity || 1} x ${fmtNum(item.unitPrice)}`}
                                                             </div>
                                                         )}
                                                         {item.statusMessage && (

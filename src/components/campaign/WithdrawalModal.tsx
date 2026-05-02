@@ -142,26 +142,26 @@ export default function WithdrawalModal({
                                                 {items.map(item => {
                                                     const donatedQty = donationSummary[item.id] ?? 0;
                                                     const unitPrice = item.expectedPrice || 0;
-                                                    const planSubtotal = item.quantity * unitPrice;
+                                                    const planSubtotal = (item.expectedQuantity || 0) * unitPrice;
                                                     const donatedSubtotal = donatedQty * unitPrice;
-                                                    const percentage = item.quantity > 0 ? Math.min(100, (donatedQty / item.quantity) * 100) : 0;
+                                                    const percentage = (item.expectedQuantity || 0) > 0 ? Math.min(100, (donatedQty / (item.expectedQuantity || 0)) * 100) : 0;
 
                                                     totalPlanMoney += planSubtotal;
                                                     totalDonatedMoney += donatedSubtotal;
-                                                    totalPlanQty += item.quantity;
+                                                    totalPlanQty += (item.expectedQuantity || 0);
                                                     totalDonatedQty += donatedQty;
 
                                                     return (
                                                         <tr key={item.id} className="border-b border-slate-50 last:border-0 group">
                                                             <td className="px-5 py-4 align-middle">
-                                                                <div className="font-black text-slate-700 text-[11px] leading-tight break-words max-w-[120px]">{item.category}</div>
+                                                                <div className="font-black text-slate-700 text-[11px] leading-tight break-words max-w-[120px]">{item.name}</div>
                                                             </td>
                                                             <td className="px-3 py-4 text-center align-middle">
                                                                 <div className="text-[11px] font-black text-blue-600 leading-none mb-1">
                                                                     {new Intl.NumberFormat('vi-VN').format(planSubtotal)} <span className="text-[8px] opacity-60">đ</span>
                                                                 </div>
                                                                 <div className="text-[9px] font-bold text-blue-300">
-                                                                    {item.quantity} × {new Intl.NumberFormat('vi-VN').format(unitPrice)} <span className="text-[7px] opacity-40 italic">đ</span>
+                                                                    {item.expectedQuantity} × {new Intl.NumberFormat('vi-VN').format(unitPrice)} <span className="text-[7px] opacity-40 italic">đ</span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-3 py-4 text-center align-middle bg-emerald-50/10">

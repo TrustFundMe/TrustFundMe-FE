@@ -85,16 +85,16 @@ function RejectModal({ onConfirm, onCancel }: { onConfirm: (r: string) => void; 
 
 /* ══════════════════════════════ ExpenditureItemRow ══════════════════════════════ */
 function ExpenditureItemRow({ item }: { item: ExpenditureItem }) {
-    const actualAmt = (item.actualQuantity ?? item.quantity) * item.price;
-    const expectedAmt = item.quantity * item.expectedPrice;
+    const actualAmt = (item.actualQuantity ?? (item.expectedQuantity || 0)) * (item.expectedPrice || 0);
+    const expectedAmt = (item.expectedQuantity || 0) * (item.expectedPrice || 0);
     const diff = actualAmt - expectedAmt;
     return (
         <tr className="border-t border-gray-50 hover:bg-gray-50/60 transition-colors">
-            <td className="py-2 px-3 text-xs text-gray-700 font-medium">{item.category}</td>
-            <td className="py-2 px-3 text-xs text-center text-gray-500">{item.quantity}</td>
+            <td className="py-2 px-3 text-xs text-gray-700 font-medium">{item.name}</td>
+            <td className="py-2 px-3 text-xs text-center text-gray-500">{item.expectedQuantity}</td>
             <td className="py-2 px-3 text-xs text-center text-gray-500">{item.actualQuantity ?? '—'}</td>
             <td className="py-2 px-3 text-xs text-right text-gray-600">{fmt(item.expectedPrice)}</td>
-            <td className="py-2 px-3 text-xs text-right text-gray-600">{fmt(item.price)}</td>
+            <td className="py-2 px-3 text-xs text-right text-gray-600">{fmt(item.expectedPrice)}</td>
             <td className="py-2 px-3 text-xs text-right font-semibold"
                 style={{ color: diff > 0 ? '#db5945' : diff < 0 ? '#ff5e14' : '#6b7280' }}>
                 {diff > 0 ? '+' : ''}{fmt(diff)}
@@ -431,7 +431,7 @@ export default function ExpenditureTab({ onModalToggle }: ExpenditureTabProps) {
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
     const searchParams = useSearchParams();
-    const targetCampaignId = searchParams.get('campaignId');
+    const targetCampaignId = searchParams?.get('campaignId');
 
     useEffect(() => {
         const loadAllData = async () => {

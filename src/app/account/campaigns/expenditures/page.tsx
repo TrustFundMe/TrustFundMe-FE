@@ -17,6 +17,8 @@ import ExpenditureGalleryModal from '@/components/campaign/ExpenditureGalleryMod
 
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useExpenditureLogic } from './hooks/useExpenditureLogic';
+import { expenditureService } from '@/services/expenditureService';
+import { toast } from 'react-hot-toast';
 
 export default function CampaignExpendituresPage() {
     return (
@@ -48,7 +50,7 @@ function CampaignExpendituresContent() {
         currentDraftPost, setCurrentDraftPost, handleOpenUpdateModal,
         showRefundModal, setShowRefundModal, refundExpenditure, setRefundExpenditure,
         refundAmount, setRefundAmount, userBankAccounts,
-        totalSpent, canCreate, blockReason, isDisabled, setGalleryModalItemId,
+        totalSpent, withdrawalCount, totalWithdrawnAmount, canCreate, blockReason, isDisabled, setGalleryModalItemId,
         handleGalleryFileChange, handleGalleryUploadSubmit, handleGalleryDeleteMedia,
         itemUploadState, galleryModalItemId
     } = useExpenditureLogic(campaignId, user, isAuthenticated, authLoading);
@@ -153,8 +155,8 @@ function CampaignExpendituresContent() {
                 <ExpenditureStats
                     campaignId={campaign.id}
                     balance={campaign.balance}
-                    expendituresCount={expenditures.length}
-                    totalSpent={totalSpent}
+                    withdrawalCount={withdrawalCount}
+                    totalWithdrawnAmount={totalWithdrawnAmount}
                 />
 
                 {/* Expenditure List */}
@@ -212,6 +214,10 @@ function CampaignExpendituresContent() {
                         updating={updating}
                         setGalleryModalItemId={setGalleryModalItemId}
                         expenditures={expenditures}
+                        setIsPostModalOpen={setIsPostModalOpen}
+                        setPostExpenditure={setPostExpenditure}
+                        setCurrentDraftPost={setCurrentDraftPost}
+                        fetchData={fetchData}
                     />
                 )}
 
@@ -258,22 +264,46 @@ function CampaignExpendituresContent() {
                             content: `Tôi vừa hoàn thành chi tiêu cho chiến dịch "${campaign.title}". Mời mọi người cùng theo dõi!`,
                             type: 'DISCUSSION',
                             visibility: 'PUBLIC',
-                            status: 'DRAFT',
+                            status: 'PUBLISHED',
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString(),
                             targetId: postExpenditure.id,
                             targetType: 'EXPENDITURE',
-                            targetName: 'evidence',
+                            targetName: 'Minh chứng giải ngân',
                             attachments: [],
                         }}
-                        draftMode={true}
-                        onPostCreated={() => {
+                        draftMode={false}
+                        onPostCreated={async (newPost) => {
+                            if (newPost && currentDraftPost?._evidenceId) {
+                                const evidenceId = Number(currentDraftPost._evidenceId);
+                                if (evidenceId) {
+                                    try {
+                                        const proofUrl = `${window.location.origin}/post/${newPost.id}`;
+                                        await expenditureService.submitEvidence(evidenceId, proofUrl);
+                                        toast.success('Đã nộp minh chứng thành công!');
+                                    } catch (err) {
+                                        console.error('Error linking evidence:', err);
+                                        toast.error('Lỗi khi liên kết minh chứng!');
+                                    }
+                                }
+                            }
                             setIsPostModalOpen(false);
                             setPostExpenditure(null);
                             setCurrentDraftPost(null);
                             fetchData();
                         }}
-                        onPostUpdated={() => {
+                        onPostUpdated={async (updatedPost) => {
+                            if (updatedPost && currentDraftPost?._evidenceId) {
+                                const evidenceId = Number(currentDraftPost._evidenceId);
+                                if (evidenceId) {
+                                    try {
+                                        const proofUrl = `${window.location.origin}/post/${updatedPost.id}`;
+                                        await expenditureService.submitEvidence(evidenceId, proofUrl);
+                                    } catch (err) {
+                                        console.error('Error linking evidence on update:', err);
+                                    }
+                                }
+                            }
                             setIsPostModalOpen(false);
                             setPostExpenditure(null);
                             setCurrentDraftPost(null);
@@ -298,8 +328,8 @@ function CampaignExpendituresContent() {
                         isOpen={!!galleryModalItemId}
                         onClose={() => setGalleryModalItemId(null)}
                         itemName={
-                            updateItemsData.find(i => i.id === galleryModalItemId)?.category ||
-                            expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.category ||
+                            updateItemsData.find(i => i.id === galleryModalItemId)?.name ||
+                            expenditures.flatMap(e => e.items || []).find(i => i.id === galleryModalItemId)?.name ||
                             'Vật phẩm'
                         }
                         media={itemMedia[galleryModalItemId] || []}

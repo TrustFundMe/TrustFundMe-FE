@@ -34,7 +34,7 @@ export default function CreateExpenditurePage() {
 function CreateExpenditureContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const campaignId = searchParams.get('campaignId');
+    const campaignId = searchParams?.get('campaignId');
     const { user, isAuthenticated, loading: authLoading } = useAuth();
 
     const [campaign, setCampaign] = useState<CampaignDto | null>(null);
@@ -50,7 +50,7 @@ function CreateExpenditureContent() {
         collapsed: boolean;
     }
     const [categories, setCategories] = useState<CategoryState[]>([
-        { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }
+        { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }], collapsed: false }
     ]);
 
     const [showImportModal, setShowImportModal] = useState(false);
@@ -146,9 +146,9 @@ function CreateExpenditureContent() {
                 'STT': idx + 1,
                 'Tên hàng hóa / Dịch vụ': item.name || '',
                 'Link mua hàng dự kiến': item.expectedPurchaseLink || '',
-                'Số lượng dự kiến': Number(item.quantity) || 0,
+                'Số lượng dự kiến': Number(item.expectedQuantity) || 0,
                 'Đơn giá dự kiến (VNĐ)': Number(item.expectedPrice) || 0,
-                'Thành tiền dự kiến (VNĐ)': (Number(item.quantity) || 0) * (Number(item.expectedPrice) || 0),
+                'Thành tiền dự kiến (VNĐ)': (Number(item.expectedQuantity) || 0) * (Number(item.expectedPrice) || 0),
                 'Ghi chú': item.note || '',
             }));
             const ws = XLSX.utils.json_to_sheet(data);
@@ -196,8 +196,8 @@ function CreateExpenditureContent() {
                 }
 
                 // Số lượng
-                const qty = Number(item.quantity);
-                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
+                const qty = Number(item.expectedQuantity);
+                if (item.expectedQuantity === undefined || item.expectedQuantity === null || isNaN(qty)) {
                     errs.push(`Dòng ${row}: Thiếu số lượng`);
                 } else if (qty <= 0) {
                     errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
@@ -256,9 +256,10 @@ function CreateExpenditureContent() {
         if (!importPreview || importPreview.length === 0) return;
         const normalized = importPreview.map(item => ({
             ...item,
-            price: 0,
             expectedPrice: item.expectedPrice,
-            quantity: item.quantity,
+            expectedQuantity: item.expectedQuantity,
+            actualPrice: item.actualPrice,
+            actualQuantity: item.actualQuantity
         }));
         const newCats = [...categories];
         newCats[importTargetCatIndex] = { ...newCats[importTargetCatIndex], items: normalized };
@@ -270,7 +271,7 @@ function CreateExpenditureContent() {
 
     // ── Category handlers ──
     const addCategory = () => {
-        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }], collapsed: false }]);
+        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }], collapsed: false }]);
     };
 
     const removeCategory = (catIndex: number) => {
@@ -302,7 +303,7 @@ function CreateExpenditureContent() {
 
     const addItem = (catIndex: number) => {
         const newCats = [...categories];
-        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { name: '', expectedPurchaseLink: '', quantity: 1, price: 0, expectedPrice: 0, note: '' }] };
+        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }] };
         setCategories(newCats);
     };
 
@@ -319,11 +320,11 @@ function CreateExpenditureContent() {
     };
 
     const calculateCategoryTotal = (catIndex: number) => {
-        return categories[catIndex].items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.expectedPrice)), 0);
+        return categories[catIndex].items.reduce((sum, item) => sum + (Number(item.expectedQuantity) * Number(item.expectedPrice)), 0);
     };
 
     const calculateTotal = () => {
-        return categories.reduce((sum, cat) => sum + cat.items.reduce((s, item) => s + (Number(item.quantity) * Number(item.expectedPrice)), 0), 0);
+        return categories.reduce((sum, cat) => sum + cat.items.reduce((s, item) => s + (Number(item.expectedQuantity) * Number(item.expectedPrice)), 0), 0);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -346,7 +347,7 @@ function CreateExpenditureContent() {
         }
 
         const allItems = getAllItems();
-        if (allItems.some(item => !item.name || item.quantity <= 0 || item.expectedPrice < 0)) {
+        if (allItems.some(item => !item.name || item.expectedQuantity <= 0 || item.expectedPrice < 0)) {
             toast.error('Vui lòng kiểm tra lại thông tin các hạng mục (Tên, Số lượng > 0, Đơn giá >= 0).');
             return;
         }
@@ -355,7 +356,7 @@ function CreateExpenditureContent() {
             toast.error('Tên hàng hóa / dịch vụ không được vượt quá 50 ký tự.');
             return;
         }
-        if (allItems.some(item => Number(item.quantity) > 10000)) {
+        if (allItems.some(item => Number(item.expectedQuantity) > 10000)) {
             toast.error('Số lượng dự kiến không được vượt quá 10.000.');
             return;
         }
@@ -407,8 +408,7 @@ function CreateExpenditureContent() {
                     withdrawalCondition: cat.withdrawalCondition,
                     items: cat.items.map(item => ({
                         ...item,
-                        quantity: Number(item.quantity),
-                        price: 0,
+                        expectedQuantity: Number(item.expectedQuantity),
                         expectedPrice: Number(item.expectedPrice)
                     }))
                 }))
@@ -654,8 +654,8 @@ function CreateExpenditureContent() {
                                                                     min="1"
                                                                     max={10000}
                                                                     className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 text-right"
-                                                                    value={item.quantity}
-                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'quantity', e.target.value)}
+                                                                    value={item.expectedQuantity}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'expectedQuantity', e.target.value)}
                                                                     required
                                                                 />
                                                             </td>
@@ -671,7 +671,7 @@ function CreateExpenditureContent() {
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-1 text-right font-semibold text-orange-600 text-xs">
-                                                                {new Intl.NumberFormat('vi-VN').format(Number(item.quantity) * Number(item.expectedPrice))}
+                                                                {new Intl.NumberFormat('vi-VN').format(Number(item.expectedQuantity) * Number(item.expectedPrice))}
                                                             </td>
                                                             <td className="px-2 py-1">
                                                                 <input
@@ -840,13 +840,13 @@ function CreateExpenditureContent() {
                                                 <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
                                                     <td className="px-3 py-2">{idx + 1}</td>
                                                     <td className="px-3 py-2 font-medium">{item.name || '(trống)'}</td>
-                                                    <td className="px-3 py-2 text-right">{item.quantity}</td>
+                                                    <td className="px-3 py-2 text-right">{item.expectedQuantity}</td>
                                                     <td className="px-3 py-2 text-right">
                                                         {new Intl.NumberFormat('vi-VN').format(Number(item.expectedPrice))}
                                                     </td>
                                                     <td className="px-3 py-2 text-right font-semibold text-orange-600">
                                                         {new Intl.NumberFormat('vi-VN').format(
-                                                            Number(item.quantity) * Number(item.expectedPrice)
+                                                            Number(item.expectedQuantity) * Number(item.expectedPrice)
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-2 text-gray-500">{item.note || '-'}</td>
@@ -859,7 +859,7 @@ function CreateExpenditureContent() {
                                                 <td className="px-3 py-2 text-right text-orange-600">
                                                     {new Intl.NumberFormat('vi-VN').format(
                                                         importPreview.reduce((sum, item) =>
-                                                            sum + Number(item.quantity) * Number(item.expectedPrice), 0)
+                                                            sum + Number(item.expectedQuantity) * Number(item.expectedPrice), 0)
                                                     )}
                                                 </td>
                                                 <td></td>
