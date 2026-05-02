@@ -15,6 +15,7 @@ import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
 import RejectModal from './RejectModal';
+import CorrectionModal from './CorrectionModal';
 import AIAnalysisModal from './AIAnalysisModal';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=2070&auto=format&fit=crop';
@@ -30,6 +31,7 @@ const STATUS_EXP: Record<string, { label: string; color: string; bg: string }> =
     'WITHDRAWAL_REQUESTED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
     'CLOSED': { label: 'Đã duyệt', color: '#10b981', bg: '#ecfdf5' },
     'REJECTED': { label: 'Từ chối', color: '#ef4444', bg: '#fef2f2' },
+    'ALLOWED_EDIT': { label: 'Yêu cầu sửa', color: '#f59e0b', bg: '#fffbeb' },
     'DISBURSED': { label: 'Đã giải ngân', color: '#0369a1', bg: '#e0f2fe' },
     'COMPLETED': { label: 'Hoàn tất', color: '#059669', bg: '#f0fdf4' },
 };
@@ -166,6 +168,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const [analyzingAI, setAnalyzingAI] = useState(false);
     const [aiResult, setAiResult] = useState<any>(null);
     const [showReject, setShowReject] = useState(false);
+    const [showCorrection, setShowCorrection] = useState(false);
 
     const loadItems = useCallback(async () => {
         if (!open || categories.length) return;
@@ -194,6 +197,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
             const updated = await method(exp.id, ...args);
             onUpdate(updated);
             setShowReject(false);
+            setShowCorrection(false);
             toast.success('Thành công');
         } catch { toast.error('Lỗi'); } finally { setLoading(false); }
     };
@@ -250,13 +254,35 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                             </div>
 
                             <div className="flex items-center gap-2 justify-end sm:justify-start">
-                                <button onClick={handleAIAnalyze} disabled={analyzingAI} className="h-9 px-4 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase flex items-center justify-center gap-2 border border-emerald-100 hover:bg-emerald-100 transition-colors whitespace-nowrap">
+                                <button
+                                    onClick={handleAIAnalyze}
+                                    disabled={analyzingAI || loading || exp.status === 'ALLOWED_EDIT'}
+                                    className="h-9 px-4 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase flex items-center justify-center gap-2 border border-emerald-100 hover:bg-emerald-100 transition-colors whitespace-nowrap disabled:opacity-50"
+                                >
                                     {analyzingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} PHÂN TÍCH AI
                                 </button>
-                                {(exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
+
+                                {exp.status === 'ALLOWED_EDIT' ? (
+                                    <div className="h-9 px-4 rounded-lg bg-orange-50/50 border border-orange-100 flex items-center gap-2">
+                                        <Clock className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
+                                        <span className="text-[10px] font-black text-orange-600 uppercase">Đang chờ chủ quỹ chỉnh sửa...</span>
+                                    </div>
+                                ) : (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
                                     <>
-                                        <button onClick={() => setShowReject(true)} className="h-9 px-4 rounded-lg border border-rose-100 text-rose-500 text-[10px] font-black uppercase hover:bg-rose-50 transition-colors whitespace-nowrap">TỪ CHỐI</button>
-                                        <button onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')} className="h-9 px-6 rounded-lg bg-[#ff5e14] text-white text-[10px] font-black uppercase hover:bg-[#e05313] transition-colors shadow-sm whitespace-nowrap">DUYỆT CHI TIÊU</button>
+                                        <button
+                                            onClick={() => setShowCorrection(true)}
+                                            disabled={loading}
+                                            className="h-9 px-4 rounded-lg border border-orange-100 text-orange-500 text-[10px] font-black uppercase hover:bg-orange-50 transition-colors whitespace-nowrap disabled:opacity-50"
+                                        >
+                                            YÊU CẦU CHỈNH SỬA
+                                        </button>
+                                        <button
+                                            onClick={() => handleAction(expenditureService.updateStatus, 'APPROVED')}
+                                            disabled={loading}
+                                            className="h-9 px-6 rounded-lg bg-[#ff5e14] text-white text-[10px] font-black uppercase hover:bg-[#e05313] transition-colors shadow-sm whitespace-nowrap disabled:opacity-50"
+                                        >
+                                            DUYỆT CHI TIÊU
+                                        </button>
                                     </>
                                 )}
                             </div>
@@ -265,6 +291,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                 </div>
             )}
             {showReject && <RejectModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
+            {showCorrection && <CorrectionModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'ALLOWED_EDIT', undefined, r)} onCancel={() => setShowCorrection(false)} />}
             {aiResult && <AIAnalysisModal result={aiResult} itemsProp={categories.flatMap(c => c.items || [])} mode="plan" exp={exp} onClose={() => setAiResult(null)} />}
         </div>
     );
@@ -429,7 +456,23 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                         <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                             <div className="flex items-center gap-2 mb-2 opacity-30"><LayoutDashboard className="h-3 w-3" /><span className="text-[9px] font-bold uppercase tracking-widest">Danh sách đợt chi</span></div>
                             {selected.expenditures.map((e: any) => <ExpenditureCard key={e.id} exp={e} campaignData={selected} onUpdate={(u: any) => {
-                                setGrouped(prev => prev.map(g => g.campaignId === selected.campaignId ? { ...g, expenditures: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex), needsAttention: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex).some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW') } : g));
+                                // Update grouped list
+                                setGrouped(prev => prev.map(g => g.campaignId === selected.campaignId ? {
+                                    ...g,
+                                    expenditures: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex),
+                                    needsAttention: g.expenditures.map((ex: any) => ex.id === u.id ? u : ex).some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW')
+                                } : g));
+
+                                // Also sync selected state so the child card receives new props immediately
+                                setSelected((prev: any) => {
+                                    if (!prev || prev.campaignId !== selected.campaignId) return prev;
+                                    const nextExps = prev.expenditures.map((ex: any) => ex.id === u.id ? u : ex);
+                                    return {
+                                        ...prev,
+                                        expenditures: nextExps,
+                                        needsAttention: nextExps.some((nx: any) => nx.status === 'PENDING' || nx.status === 'PENDING_REVIEW')
+                                    };
+                                });
                             }} />)}
                         </div>
                     </div>
