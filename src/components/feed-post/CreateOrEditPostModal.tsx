@@ -25,8 +25,8 @@ export type CreateOrEditPostModalProps = {
   initialData?: (FeedPost & { expenditureId?: number | null; category?: string | null }) | null;
   /** Khi true: submit luôn save DRAFT, không publish */
   draftMode?: boolean;
-  onPostCreated?: () => void;
-  onPostUpdated?: () => void;
+  onPostCreated?: (post: any) => void;
+  onPostUpdated?: (post: any) => void;
 };
 
 export default function CreateOrEditPostModal({
@@ -56,7 +56,7 @@ export default function CreateOrEditPostModal({
   /** Ảnh đang upload: preview local, xong thì done=true */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string; done: boolean }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName === "evidence");
+  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName?.startsWith("evidence"));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
   /** Snapshot of images when modal opens in EDIT mode — used to detect removed images */
@@ -73,7 +73,7 @@ export default function CreateOrEditPostModal({
         const rawTt = initialData.targetType;
         const tt: "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE" =
           rawTt === "CAMPAIGN" ? "CAMPAIGN" :
-          (rawTt === "EXPENDITURE" && initialData.targetName === "evidence") ? "EVIDENCE" :
+          (rawTt === "EXPENDITURE" && initialData.targetName?.startsWith("evidence")) ? "EVIDENCE" :
           rawTt === "EXPENDITURE" ? "EXPENDITURE" :
           rawTt === "EVIDENCE" ? "EVIDENCE" : "none";
         setLinkType(tt);
@@ -134,7 +134,7 @@ export default function CreateOrEditPostModal({
           setLinkedCampaignId(draft.campaignId || "");
           setLinkType(
             draft.targetType === "CAMPAIGN" || draft.targetType === "EXPENDITURE" || draft.targetType === "EVIDENCE"
-              ? (draft.targetType === "EXPENDITURE" && draft.targetName === "evidence") ? "EVIDENCE" : draft.targetType
+              ? (draft.targetType === "EXPENDITURE" && (draft.targetName === "evidence" || draft.targetName?.startsWith("evidence|"))) ? "EVIDENCE" : draft.targetType
               : "none"
           );
           setSelectedExpenditureId(null);
@@ -205,7 +205,7 @@ export default function CreateOrEditPostModal({
           : null;
 
       const effectiveTargetType = linkType === "EVIDENCE" ? "EXPENDITURE" : (linkType === "none" ? null : linkType);
-      const effectiveTargetName = linkType === "EVIDENCE" ? "evidence" : null;
+      const effectiveTargetName = linkType === "EVIDENCE" ? (initialData?.targetName?.startsWith("evidence|") ? initialData.targetName : "evidence") : null;
       if (visibility === "FOLLOWERS" && !effectiveTargetId) {
         alert("Bài viết chỉ người theo dõi cần gắn với một chiến dịch cụ thể.");
         return;
@@ -222,7 +222,7 @@ export default function CreateOrEditPostModal({
         // Step 1: update() FIRST — triggers snapshotRevision() which captures
         // the BEFORE state (old text + old media still linked). Must happen
         // before any media changes so the snapshot is accurate.
-        await feedPostService.update(postId, {
+        const updatedPost = await feedPostService.update(postId, {
           title: postTitle,
           content,
           status: draftMode ? "DRAFT" : nextStatus,
@@ -260,7 +260,7 @@ export default function CreateOrEditPostModal({
         }
 
         if (!initialData?.title && title) localStorage.removeItem(DRAFT_KEY);
-        onPostUpdated?.();
+        onPostUpdated?.(updatedPost);
       } else {
         // === CREATE MODE ===
         const newPost = await feedPostService.create({
@@ -291,7 +291,7 @@ export default function CreateOrEditPostModal({
         }
 
         localStorage.removeItem(DRAFT_KEY);
-        onPostCreated?.();
+        onPostCreated?.(newPost);
       }
 
       onClose();
@@ -369,6 +369,7 @@ export default function CreateOrEditPostModal({
           <div className="flex items-center gap-2 flex-wrap mb-4">
             <select
               value={visibility}
+              disabled={isLinkLocked}
               onChange={(e) => setVisibility(e.target.value === "FOLLOWERS" ? "FOLLOWERS" : "PUBLIC")}
               className="text-sm font-medium bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg px-3 py-1.5 border-none focus:ring-1 focus:ring-[#ff5e14] cursor-pointer"
             >

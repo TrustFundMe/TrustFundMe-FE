@@ -99,7 +99,7 @@ function DonationContent() {
             const mappedItems: ExpenditureItem[] = itemsData
               .map(item => ({
                 id: item.id.toString(),
-                name: item.category,
+                name: item.name,
                 description: item.note || '',
                 price: item.expectedPrice,
                 quantityLeft: item.quantityLeft ?? 0

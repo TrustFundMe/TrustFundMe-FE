@@ -2,7 +2,7 @@
 
 import DanboxLayout from '@/layout/DanboxLayout';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { XCircle } from 'lucide-react';
+import { Calendar, XCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
@@ -111,7 +111,7 @@ function formatVnDateRange(startDate?: string | null, endDate?: string | null, f
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const campaignIdStr = searchParams.get('id');
+  const campaignIdStr = searchParams?.get('id');
   const campaignId = campaignIdStr ? parseInt(campaignIdStr, 10) : null;
 
   const { isStaff, isAdmin } = usePermissions();
@@ -130,6 +130,15 @@ function CampaignDetailsInner() {
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  
+  const isDonationVisible = plans.some((p) => {
+    if (p.status !== 'APPROVED') return false;
+    const now = new Date();
+    const start = p.startDate ? new Date(p.startDate) : null;
+    const end = p.endDate ? new Date(p.endDate) : null;
+    if (!start || !end) return false;
+    return now >= start && now <= end;
+  });
 
 
   useEffect(() => {
@@ -515,7 +524,7 @@ function CampaignDetailsInner() {
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) : isDonationVisible ? (
                     <CampaignDonateCard
                       raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
                       goalAmount={progress?.goalAmount || campaign.goalAmount}
@@ -533,6 +542,16 @@ function CampaignDetailsInner() {
                       }}
                       onMoreDonorsClick={() => setShowDonorsModal(true)}
                     />
+                  ) : (
+                    <div className="p-8 rounded-3xl bg-slate-50 border-2 border-slate-200 border-dashed text-center space-y-4">
+                      <div className="inline-flex p-4 bg-slate-100 rounded-full">
+                        <Calendar className="h-8 w-8 text-slate-600" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-black text-slate-700 uppercase tracking-tight">Tạm dừng nhận quyên góp</div>
+                        <p className="text-xs font-bold text-slate-900/60 mt-1">Hiện không trong đợt chi tiêu được phê duyệt của chiến dịch này.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
 

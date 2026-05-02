@@ -22,10 +22,10 @@ export default function ExpenditureDetailPage() {
         handleItemMediaUpload, handleDeleteItemMedia, handleItemFileChange, itemUploadState
     } = useExpenditureDetailLogic(id, isAuthenticated, authLoading);
 
-    const totalActual = useMemo(() => items.reduce((sum, item) => sum + ((item.actualQuantity || 0) * (item.price || 0)), 0), [items]);
+    const totalActual = useMemo(() => items.reduce((sum, item) => sum + ((item.actualQuantity || 0) * (item.actualPrice || 0)), 0), [items]);
     const totalReceived = useMemo(() => (expenditure?.totalReceivedAmount != null) ? Number(expenditure.totalReceivedAmount) : 0, [expenditure]);
     const totalBalance = useMemo(() => (expenditure?.variance != null) ? Number(expenditure.variance) : 0, [expenditure]);
-    const totalPlan = useMemo(() => items.reduce((sum, item) => sum + (item.quantity || 0) * (item.expectedPrice || 0), 0), [items]);
+    const totalPlan = useMemo(() => items.reduce((sum, item) => sum + (item.expectedQuantity || 0) * (item.expectedPrice || 0), 0), [items]);
 
     const activeItemMedia = useMemo(() => galleryModalItemId ? (itemMedia[galleryModalItemId] || []) : [], [galleryModalItemId, itemMedia]);
 

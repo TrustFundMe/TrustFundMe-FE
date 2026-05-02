@@ -5,15 +5,15 @@ import { ArrowLeftRight } from 'lucide-react';
 interface ExpenditureStatsProps {
     campaignId: string | number;
     balance: number;
-    expendituresCount: number;
-    totalSpent: number;
+    withdrawalCount: number;
+    totalWithdrawnAmount: number;
 }
 
 const planeImg = '/assets/img/campaign/5.png';
 const blocksImg = '/assets/img/campaign/6.png';
 const infinityImg = '/assets/img/campaign/7.png';
 
-export default function ExpenditureStats({ campaignId, balance, expendituresCount, totalSpent }: ExpenditureStatsProps) {
+export default function ExpenditureStats({ campaignId, balance, withdrawalCount, totalWithdrawnAmount }: ExpenditureStatsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Card 1: Balance */}
@@ -43,22 +43,22 @@ export default function ExpenditureStats({ campaignId, balance, expendituresCoun
                 </div>
                 <div className="relative z-10">
                     <h3 className="text-xl font-black text-[#2d3a30] tracking-tighter leading-none mb-1">
-                        {expendituresCount} <span className="text-[10px] align-top opacity-40">KHOẢN</span>
+                        {withdrawalCount ?? 0} <span className="text-[10px] align-top opacity-40">LẦN</span>
                     </h3>
-                    <p className="text-[10px] font-black text-[#2d3a30]/50 uppercase tracking-[1px]">Tổng khoản chi</p>
+                    <p className="text-[10px] font-black text-[#2d3a30]/50 uppercase tracking-[1px]">Số lần đã rút tiền</p>
                 </div>
             </div>
 
-            {/* Card 3: Total Spent */}
+            {/* Card 3: Total Withdrawn */}
             <div className="relative h-[100px] bg-[#e3dec8] rounded-2xl p-4 flex flex-col justify-center group overflow-hidden transition-all duration-500 hover:shadow-lg border border-[#e3dec8]/50">
                 <div className="absolute top-[-25%] right-[-10%] w-[160px] h-[160px] pointer-events-none opacity-80 transition-transform group-hover:scale-110">
-                    <Image src={infinityImg} alt="Total Spent" width={160} height={160} className="w-full h-full object-contain" />
+                    <Image src={infinityImg} alt="Total Withdrawn" width={160} height={160} className="w-full h-full object-contain" />
                 </div>
                 <div className="relative z-10">
                     <h3 className="text-xl font-black text-[#2d3a30] tracking-tighter leading-none mb-1">
-                        {new Intl.NumberFormat('vi-VN').format(totalSpent)} <span className="text-[10px] align-top opacity-40">VNĐ</span>
+                        {new Intl.NumberFormat('vi-VN').format(totalWithdrawnAmount || 0)} <span className="text-[10px] align-top opacity-40">VNĐ</span>
                     </h3>
-                    <p className="text-[10px] font-black text-[#2d3a30]/50 uppercase tracking-[1px]">Tổng tiền đã chi</p>
+                    <p className="text-[10px] font-black text-[#2d3a30]/50 uppercase tracking-[1px]">Tổng tiền đã rút thực tế</p>
                 </div>
             </div>
         </div>

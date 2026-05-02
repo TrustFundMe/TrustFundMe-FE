@@ -53,9 +53,9 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 item.name,
                 item.expectedPurchaseLink || '',
                 item.unit,
-                item.quantity,
+                item.expectedQuantity,
                 item.price,
-                (item.quantity * item.price).toLocaleString('vi-VN'),
+                (item.expectedQuantity * item.price).toLocaleString('vi-VN'),
                 item.note,
             ]);
             const ws = XLSX.utils.aoa_to_sheet([
@@ -90,8 +90,8 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 if (!item.name || item.name.trim() === '') {
                     errs.push(`Dòng ${row}: Thiếu tên vật phẩm`);
                 }
-                const qty = Number(item.quantity);
-                if (item.quantity === undefined || item.quantity === null || isNaN(qty)) {
+                const qty = Number(item.expectedQuantity);
+                if (item.expectedQuantity === undefined || item.expectedQuantity === null || isNaN(qty)) {
                     errs.push(`Dòng ${row}: Thiếu số lượng`);
                 } else if (qty <= 0) {
                     errs.push(`Dòng ${row}: Số lượng phải lớn hơn 0`);
@@ -128,7 +128,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 name: item.name || '',
                 expectedPurchaseLink: item.expectedPurchaseLink || item.purchaseLink || '',
                 unit: item.unit || '',
-                quantity: Number(item.quantity) || 1,
+                quantity: Number(item.expectedQuantity) || 1,
                 price: Number(item.expectedPrice) || 0,
                 note: item.note || '',
             }));
@@ -146,7 +146,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     };
 
     const items: ExpenditureItem[] = data.expenditureItems || [];
-    const total = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const total = items.reduce((sum, item) => sum + (item.expectedQuantity * item.price), 0);
 
     // Pagination
     const totalPages = Math.ceil(items.length / PAGE_SIZE);
@@ -346,7 +346,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                         <td className="px-1 py-2">
                                             <input
                                                 type="number"
-                                                value={item.quantity}
+                                                value={item.expectedQuantity}
                                                 onChange={(e) => updateItem(item.id, 'quantity', Math.max(0, parseInt(e.target.value) || 0))}
                                                 className="w-12 text-center bg-gray-50/50 rounded-lg px-1 py-1 text-xs font-black border-none focus:ring-2 focus:ring-[#dc2626]/10 focus:bg-white transition-all block mx-auto"
                                             />
@@ -364,7 +364,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                         </td>
                                         <td className="px-2 py-2 text-right">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-xs font-black text-black">{(item.quantity * item.price).toLocaleString('vi-VN')}</span>
+                                                <span className="text-xs font-black text-black">{(item.expectedQuantity * item.price).toLocaleString('vi-VN')}</span>
                                                 <span className="text-[7px] font-bold text-black/10 uppercase tracking-tighter">VNĐ</span>
                                             </div>
                                         </td>
