@@ -120,7 +120,7 @@ export const expenditureService = {
             const data = error?.response?.data;
             let msg = 'Lỗi khi nhập dữ liệu từ Excel';
             if (status === 400) msg = data?.error || 'File không hợp lệ, vui lòng dùng đúng file mẫu';
-            else if (status === 500) msg = 'Lỗi máy chủ khi xử lý file';
+            else if (status === 500) msg = data?.error || 'Lỗi máy chủ khi xử lý file';
             else msg = data?.error || error?.message || msg;
             return { success: false, error: msg };
         }
@@ -158,7 +158,7 @@ export const expenditureService = {
     },
 
     /** Tải file mẫu Excel */
-    exportItemsToExcelTemplate: async (): Promise<Blob> => {
+    downloadTemplate: async (): Promise<Blob> => {
         const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
         const response = await axios.get(`${feOrigin}/api/expenditures/import/template`, {
             responseType: 'blob',

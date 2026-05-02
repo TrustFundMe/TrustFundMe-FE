@@ -63,10 +63,10 @@ export interface MilestoneCategoryItem {
   actualPrice: number;
   expectedPurchaseLink?: string;
   actualPurchaseLink?: string;
-  brand: string;
-  purchaseLocation: string;
-  unit: string;
-  note?: string;
+  expectedBrand: string;
+  expectedPurchaseLocation: string;
+  expectedUnit: string;
+  expectedNote?: string;
 }
 
 export interface MilestoneCategory {
@@ -82,7 +82,7 @@ export interface Milestone {
   title: string;
   description: string;
   plannedAmount: number;
-  releaseCondition: string;
+  evidenceDueAt?: string;
   startDate?: string;
   endDate?: string;
   categories: MilestoneCategory[];

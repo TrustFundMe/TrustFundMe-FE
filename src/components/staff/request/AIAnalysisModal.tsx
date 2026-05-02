@@ -269,9 +269,9 @@ export default function AIAnalysisModal({
                                                 return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                             });
 
-                                            const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
+                                            const sysQty = sysItem ? (sysItem.expectedQuantity || 1) : 1;
                                             const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                            const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0;
+                                            const sysVal = sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0)) : 0;
 
                                             // Handle "Product Not Found" case
                                             const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';
@@ -283,18 +283,18 @@ export default function AIAnalysisModal({
                                                     <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="font-bold text-slate-800 leading-tight uppercase">{item.plannedCategory || item.name}</div>
-                                                        {sysItem?.note && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.note}</div>}
+                                                        {sysItem?.expectedNote && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.expectedNote}</div>}
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
                                                         <div className="text-[10px] font-bold text-slate-700">
-                                                            {sysItem?.brand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem?.unit || '-'}
+                                                            {sysItem?.expectedBrand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem?.expectedUnit || '-'}
                                                         </div>
-                                                        <div className="text-[9px] text-slate-500 font-medium mt-0.5">{sysItem?.purchaseLocation || '-'}</div>
+                                                        <div className="text-[9px] text-slate-500 font-medium mt-0.5">{sysItem?.expectedPurchaseLocation || '-'}</div>
                                                     </td>
                                                     <td className="px-3 py-3 text-center border-r border-slate-50">
                                                         <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
                                                         <div className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">
-                                                            {sysItem ? (mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.price || 0)}`) : 'N/A'}
+                                                            {sysItem ? (mode === 'plan' ? `${sysQty} x ${fmtNum(sysPrice)}` : `${sysItem.actualQuantity || 0} x ${fmtNum(sysItem.actualPrice || 0)}`) : 'N/A'}
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-3 border-r border-slate-50">
@@ -303,7 +303,7 @@ export default function AIAnalysisModal({
                                                         </div>
                                                         {!isPNF && (
                                                             <div className={`text-[8px] font-bold uppercase mt-0.5 ${mode === 'plan' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                                                                {`${item.expectedQuantity || 1} x ${fmtNum(item.unitPrice)}`}
+                                                            {`${item.quantity || 1} x ${fmtNum(item.unitPrice)}`}
                                                             </div>
                                                         )}
                                                         {item.statusMessage && (
@@ -346,9 +346,9 @@ export default function AIAnalysisModal({
                                                     const s2 = (item.plannedCategory || item.name || '').toLowerCase().trim();
                                                     return s1 === s2 || s1.includes(s2) || s2.includes(s1);
                                                 });
-                                                const sysQty = sysItem ? (sysItem.expectedQuantity || sysItem.quantity || 1) : 1;
+                                                const sysQty = sysItem ? (sysItem.expectedQuantity || 1) : 1;
                                                 const sysPrice = sysItem ? (sysItem.expectedPrice || 0) : 0;
-                                                return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.price || 0)) : 0);
+                                                return acc + (sysItem ? (mode === 'plan' ? (sysQty * sysPrice) : (sysItem.actualQuantity || 0) * (sysItem.actualPrice || 0)) : 0);
                                             }, 0);
                                             const totalAI = detected.reduce((acc, item) => {
                                                 const isPNF = item.marketUnitPrice === -1 || item.statusMessage === 'Sản phẩm không tồn tại';

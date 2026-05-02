@@ -24,17 +24,16 @@ export interface ExpenditureItem {
     expectedPurchaseLink?: string;
     actualPurchaseLink?: string;
     expectedQuantity?: number;
-    quantityLeft?: number;
     actualQuantity?: number;
     expectedPrice: number;
     actualPrice?: number;
-    note?: string;
+    expectedNote?: string;
     catologyId?: number;
     catologyName?: string;
-    unit?: string;
+    expectedUnit?: string;
     expectedBrand?: string;
     actualBrand?: string;
-    purchaseLocation?: string;
+    expectedPurchaseLocation?: string;
     createdAt?: string;
     updatedAt?: string;
     /** Hình ảnh minh chứng cho item này (loaded separately) */
@@ -90,10 +89,11 @@ export interface CreateExpenditureItemRequest {
     expectedPrice: number;
     actualPrice?: number;
     actualQuantity?: number;
-    note?: string;
+    expectedNote?: string;
     expectedBrand?: string;
     actualBrand?: string;
-    unit?: string;
+    expectedUnit?: string;
+    expectedPurchaseLocation?: string;
 }
 
 export interface CreateExpenditureCatologyRequest {

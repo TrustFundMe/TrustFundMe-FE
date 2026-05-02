@@ -59,11 +59,12 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   useEffect(() => {
     if (!state.milestones.length) return;
-    let previousEnd = '';
+    let previousChainEnd = '';
     let changed = false;
     const nextMilestones = state.milestones.map((m, idx) => {
-      const expectedStart = idx === 0 ? firstMilestoneAutoStart : previousEnd || firstMilestoneAutoStart;
-      previousEnd = m.endDate || expectedStart;
+      const expectedStart = idx === 0 ? firstMilestoneAutoStart : previousChainEnd || firstMilestoneAutoStart;
+      // Chain link: startDate (N) = evidenceDueAt (N-1)
+      previousChainEnd = m.evidenceDueAt || m.endDate || expectedStart;
       if (m.startDate === expectedStart) return m;
       changed = true;
       return { ...m, startDate: expectedStart };
@@ -191,7 +192,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
           title: m.milestoneTitle,
           description: m.description || '',
           plannedAmount: 0,
-          releaseCondition: m.releaseCondition || '',
+          evidenceDueAt: formatDateForInput(m.evidenceDueAt),
           startDate: formatDateForInput(m.startDate),
           endDate: formatDateForInput(m.endDate),
           categories: (m.categories || []).map((cat: any) => ({
@@ -201,16 +202,16 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
             balance: 0,
             items: (cat.items || []).map((item: any) => ({
               id: `ci-${Math.random().toString(36).slice(2, 9)}`,
-              name: item.category, // Backend uses 'category' for item name in creation DTO
-              expectedQuantity: item.expectedQuantity,
+              name: item.name || '',
+              expectedQuantity: item.expectedQuantity || 0,
               actualQuantity: 0,
-              expectedPrice: item.expectedPrice,
+              expectedPrice: item.expectedPrice || 0,
               actualPrice: 0,
-              unit: item.unit || '',
-              brand: item.brand || '',
-              purchaseLocation: item.purchaseLocation || '',
-              expectedPurchaseLink: item.expectedPurchaseLink || item.purchaseLink || '',
-              note: item.note || ''
+              expectedUnit: item.expectedUnit || '',
+              expectedBrand: item.expectedBrand || '',
+              expectedPurchaseLocation: item.expectedPurchaseLocation || '',
+              expectedPurchaseLink: item.expectedPurchaseLink || '',
+              expectedNote: item.expectedNote || ''
             }))
           }))
         }));
@@ -240,7 +241,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
           title: `Đợt ${state.milestones.length + 1}`,
           description: '',
           plannedAmount: 0,
-          releaseCondition: '',
+          evidenceDueAt: autoStartDate,
           startDate: autoStartDate,
           endDate: autoStartDate,
           categories: [],
@@ -272,11 +273,11 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     actualQuantity: 0,
                     expectedPrice: 0,
                     actualPrice: 0,
-                    unit: '',
-                    brand: '',
-                    purchaseLocation: '',
+                    expectedUnit: '',
+                    expectedBrand: '',
+                    expectedPurchaseLocation: '',
                     expectedPurchaseLink: '',
-                    note: '',
+                    expectedNote: '',
                   },
                 ],
               },
@@ -310,11 +311,11 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                       actualQuantity: 0,
                       expectedPrice: 0,
                       actualPrice: 0,
-                      unit: '',
-                      brand: '',
-                      purchaseLocation: '',
+                      expectedUnit: '',
+                      expectedBrand: '',
+                      expectedPurchaseLocation: '',
                       expectedPurchaseLink: '',
-                      note: '',
+                      expectedNote: '',
                     },
                   ],
                 }
@@ -424,17 +425,18 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
         ? firstMilestoneAutoStart
         : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
     let count = 0;
-    if (!m.title.trim()) count += 1;
+    if (!(m.title?.trim())) count += 1;
     if (!campaignStart) count += 1;
     if (!m.startDate || m.startDate !== expectedStartDate) count += 1;
-    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate <= campaignStart) count += 1;
+    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate < campaignStart) count += 1;
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
+    if (!m.evidenceDueAt || (m.endDate && m.evidenceDueAt <= m.endDate)) count += 1;
     if (!m.categories || m.categories.length === 0) count += 1;
     (m.categories || []).forEach((cat) => {
-      if (!cat.name.trim()) count += 1;
+      if (!(cat.name?.trim())) count += 1;
       if (!cat.items || cat.items.length === 0) count += 1;
       (cat.items || []).forEach((item) => {
-        if (!item.name.trim()) count += 1;
+        if (!(item.name?.trim())) count += 1;
         if (!item.expectedQuantity || item.expectedQuantity <= 0) count += 1;
         if (!item.expectedPrice || item.expectedPrice <= 0) count += 1;
       });
@@ -444,13 +446,13 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   const getCategoryErrorCount = (cat: MilestoneCategory) => {
     let count = 0;
-    if (!cat.name.trim()) count += 1;
+    if (!(cat.name?.trim())) count += 1;
     if (!cat.items || cat.items.length === 0) count += 1;
     (cat.items || []).forEach((item) => {
-      if (!item.name.trim()) count += 1;
+      if (!(item.name?.trim())) count += 1;
       if (!item.expectedQuantity || item.expectedQuantity <= 0) count += 1;
       if (!item.expectedPrice || item.expectedPrice <= 0) count += 1;
-      if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) count += 1;
+      if (item.expectedPurchaseLink?.trim() && !URL_REGEX.test(item.expectedPurchaseLink)) count += 1;
     });
     return count;
   };
@@ -462,19 +464,20 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
         ? firstMilestoneAutoStart
         : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
     const issues: string[] = [];
-    if (!m.title.trim()) issues.push('Thiếu tên đợt giải ngân');
+    if (!(m.title?.trim())) issues.push('Thiếu tên đợt giải ngân');
     if (!campaignStart) issues.push('Cần chọn ngày bắt đầu quyên góp ở bước 2 trước khi lập các đợt');
     if (!m.startDate || m.startDate !== expectedStartDate) issues.push('Ngày bắt đầu đợt phải theo thứ tự nối tiếp từ đợt trước');
-    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate <= campaignStart) {
-      issues.push('Ngày bắt đầu đợt 1 phải sau ngày bắt đầu quyên góp');
+    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate < campaignStart) {
+      issues.push('Ngày bắt đầu đợt 1 phải từ ngày bắt đầu quyên góp trở đi');
     }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) issues.push('Ngày kết thúc phải sau ngày bắt đầu');
+    if (!m.evidenceDueAt || (m.endDate && m.evidenceDueAt <= m.endDate)) issues.push('Ngày nộp minh chứng phải sau ngày kết thúc đợt');
     if (!m.categories || m.categories.length === 0) issues.push('Chưa có danh mục chi tiêu');
     (m.categories || []).forEach((cat, catIdx) => {
-      if (!cat.name.trim()) issues.push(`Danh mục ${catIdx + 1}: thiếu tên danh mục`);
+      if (!(cat.name?.trim())) issues.push(`Danh mục ${catIdx + 1}: thiếu tên danh mục`);
       if (!cat.items || cat.items.length === 0) issues.push(`Danh mục ${catIdx + 1}: chưa có hạng mục`);
       (cat.items || []).forEach((item, itemIdx) => {
-        if (!item.name.trim()) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: thiếu tên mặt hàng`);
+        if (!(item.name?.trim())) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: thiếu tên mặt hàng`);
         if (!item.expectedQuantity || item.expectedQuantity <= 0) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: số lượng phải > 0`);
         if (!item.expectedPrice || item.expectedPrice <= 0) issues.push(`Danh mục ${catIdx + 1}, hạng mục ${itemIdx + 1}: đơn giá phải > 0`);
       });
@@ -676,8 +679,8 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                           <div className="flex-1 space-y-1">
                             <p className="text-sm font-semibold text-black">Thông tin đợt giải ngân</p>
                             <input
-                              className={`${inCls} w-full font-semibold ${shouldValidateMilestone && !activeMilestone.title.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
-                              value={activeMilestone.title}
+                              className={`${inCls} w-full font-semibold ${shouldValidateMilestone && !activeMilestone.title?.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
+                              value={activeMilestone.title || ''}
                               placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
                               spellCheck={false}
                               onBlur={() => markMilestoneTouched(activeMilestone.id)}
@@ -693,7 +696,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             <TrashIcon />
                           </button>
                         </div>
-                        {shouldValidateMilestone && !activeMilestone.title.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
+                        {shouldValidateMilestone && !activeMilestone.title?.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
 
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           <div className="space-y-1">
@@ -723,27 +726,29 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           <div className="space-y-1">
+                            <p className="text-sm font-semibold text-black">Ngày nộp minh chứng <span className="text-red-500">*</span></p>
+                            <input
+                              type="date"
+                              min={activeMilestone.endDate || today}
+                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.evidenceDueAt || (activeMilestone.endDate && activeMilestone.evidenceDueAt <= activeMilestone.endDate)) ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                              value={activeMilestone.evidenceDueAt || ''}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
+                            />
+                            <p className="text-[11px] font-medium text-gray-500">
+                              Đây là hạn chót để nộp chứng từ. Giai đoạn tiếp theo sẽ bắt đầu sau ngày này.
+                            </p>
+                          </div>
+                          <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Mô tả đợt</p>
                             <textarea
                               className={`${inCls} w-full resize-none text-sm leading-relaxed`}
                               rows={2}
                               placeholder="Mục tiêu chính..."
-                              value={activeMilestone.description}
+                              value={activeMilestone.description || ''}
                               spellCheck={false}
                               onBlur={() => markMilestoneTouched(activeMilestone.id)}
                               onChange={(e) => updateMilestone(activeMilestone.id, { description: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-black">Điều kiện giải ngân</p>
-                            <textarea
-                              className={`${inCls} w-full resize-none text-sm leading-relaxed`}
-                              rows={2}
-                              placeholder="Ví dụ: Hoàn tất báo cáo đợt cũ..."
-                              value={activeMilestone.releaseCondition}
-                              spellCheck={false}
-                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                              onChange={(e) => updateMilestone(activeMilestone.id, { releaseCondition: e.target.value })}
                             />
                           </div>
                         </div>
@@ -779,7 +784,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
                     {(activeMilestone.categories || []).map((cat, catIdx) => {
                       const shouldValidateCategory = Boolean(showErrors) || Boolean(touchedCategories[cat.id]);
-                      const catNameMissing = shouldValidateCategory && !cat.name.trim();
+                      const catNameMissing = shouldValidateCategory && !cat.name?.trim();
                       const catTotal = cat.items.reduce((sum, item) => sum + getItemTotal(item), 0);
                       const catErrorCount = getCategoryErrorCount(cat);
                       const isModalThis =
@@ -809,7 +814,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                 <input
                                   className={`${inCls} w-full py-1.5 text-sm font-semibold ${catNameMissing ? 'border-red-300 bg-red-50/50' : ''}`}
                                   placeholder={`Nhập tên danh mục ${catIdx + 1}`}
-                                  value={cat.name}
+                                  value={cat.name || ''}
                                   onBlur={() => markCategoryTouched(cat.id)}
                                   onChange={(e) => updateCategoryField(activeMilestone.id, cat.id, 'name', e.target.value)}
                                 />
@@ -869,7 +874,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
               <div className="min-w-0">
                 <p id="category-detail-modal-title" className="text-base font-bold text-black">
                   Danh mục {modalCatIdx + 1}
-                  {modalCategory.name.trim()
+                  {modalCategory.name?.trim()
                     ? ` — ${modalCategory.name.trim()}`
                     : ': chưa đặt tên'}
                 </p>
@@ -878,9 +883,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     Tên danh mục <span className="text-red-500">*</span>
                   </p>
                   <input
-                    className={`${inCls} w-full py-1.5 text-sm font-semibold ${showErrors && !modalCategory.name.trim() ? 'border-red-300 bg-red-50/50' : ''}`}
+                    className={`${inCls} w-full py-1.5 text-sm font-semibold ${showErrors && !modalCategory.name?.trim() ? 'border-red-300 bg-red-50/50' : ''}`}
                     placeholder={`Nhập tên danh mục ${modalCatIdx + 1}`}
-                    value={modalCategory.name}
+                    value={modalCategory.name || ''}
                     onChange={(e) => updateCategoryField(modalMilestone.id, modalCategory.id, 'name', e.target.value)}
                   />
                 </div>
@@ -912,7 +917,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                 <div className="mt-2 space-y-2.5">
                   {modalCategory.items.map((item, itemIdx) => {
                     const shouldValidateCategory = Boolean(showErrors) || Boolean(touchedCategories[modalCategory.id]);
-                    const nameErr = shouldValidateCategory && !item.name.trim();
+                    const nameErr = shouldValidateCategory && !item.name?.trim();
                     const qtyErr = shouldValidateCategory && (!item.expectedQuantity || item.expectedQuantity <= 0);
                     const priceErr = shouldValidateCategory && (!item.expectedPrice || item.expectedPrice <= 0);
                     return (
@@ -946,7 +951,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             <input
                               className={`${inCls} w-full ${nameErr ? 'border-red-300 bg-red-50/50' : ''}`}
                               placeholder="Gạo cứu trợ, áo ấm, thuốc..."
-                              value={item.name}
+                              value={item.name || ''}
                               onBlur={() => markCategoryTouched(modalCategory.id)}
                               onChange={(e) =>
                                 updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'name', e.target.value)
@@ -960,7 +965,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             <input
                               type="number"
                               className={`${inCls} w-full text-right tabular-nums ${qtyErr ? 'border-red-300 bg-red-50/50' : ''}`}
-                              value={item.expectedQuantity}
+                              value={item.expectedQuantity ?? 0}
                               onBlur={() => markCategoryTouched(modalCategory.id)}
                               onChange={(e) =>
                                 updateCategoryItem(
@@ -980,7 +985,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             <input
                               type="number"
                               className={`${inCls} w-full text-right tabular-nums ${priceErr ? 'border-red-300 bg-red-50/50' : ''}`}
-                              value={item.expectedPrice}
+                              value={item.expectedPrice ?? 0}
                               onBlur={() => markCategoryTouched(modalCategory.id)}
                               onChange={(e) =>
                                 updateCategoryItem(
@@ -1002,10 +1007,10 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                               <input
                                 className={inCls}
                                 placeholder="bao, chiếc..."
-                                value={item.unit}
+                                value={item.expectedUnit || ''}
                                 onBlur={() => markCategoryTouched(modalCategory.id)}
                                 onChange={(e) =>
-                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'unit', e.target.value)
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'expectedUnit', e.target.value)
                                 }
                               />
                             </div>
@@ -1014,10 +1019,10 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                               <input
                                 className={inCls}
                                 placeholder="Tên nhãn hàng"
-                                value={item.brand}
+                                value={item.expectedBrand || ''}
                                 onBlur={() => markCategoryTouched(modalCategory.id)}
                                 onChange={(e) =>
-                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'brand', e.target.value)
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'expectedBrand', e.target.value)
                                 }
                               />
                             </div>
@@ -1026,14 +1031,14 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                               <input
                                 className={inCls}
                                 placeholder="Chợ, siêu thị..."
-                                value={item.purchaseLocation}
+                                value={item.expectedPurchaseLocation || ''}
                                 onBlur={() => markCategoryTouched(modalCategory.id)}
                                 onChange={(e) =>
                                   updateCategoryItem(
                                     modalMilestone.id,
                                     modalCategory.id,
                                     item.id,
-                                    'purchaseLocation',
+                                    'expectedPurchaseLocation',
                                     e.target.value,
                                   )
                                 }
@@ -1066,10 +1071,10 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                 className={`${inCls} w-full resize-none`}
                                 rows={2}
                                 placeholder="Ghi chú thêm cho item"
-                                value={item.note || ''}
+                                value={item.expectedNote || ''}
                                 onBlur={() => markCategoryTouched(modalCategory.id)}
                                 onChange={(e) =>
-                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'note', e.target.value)
+                                  updateCategoryItem(modalMilestone.id, modalCategory.id, item.id, 'expectedNote', e.target.value)
                                 }
                               />
                             </div>

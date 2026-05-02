@@ -94,7 +94,7 @@ const CategoryTable = ({
                                 </tr>
                             ) : (
                                 cat.items.map((i: any, idx: number) => {
-                                    const expectedQty = i.expectedQuantity ?? i.quantity;
+                                    const expectedQty = i.expectedQuantity;
                                     return (
                                         <tr key={i.id || idx} className="hover:bg-gray-50 transition-colors">
                                             <td className="py-2 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-100">{idx + 1}</td>
@@ -111,12 +111,12 @@ const CategoryTable = ({
                                                 </td>
                                             )}
                                             <td className="py-2 px-3 border-r border-gray-100">
-                                                <div className="text-[11px] font-bold text-gray-800 uppercase leading-none mb-1">{i.category || 'Hàng hóa'}</div>
-                                                {i.note && <div className="text-[9px] text-gray-500 font-medium">{i.note}</div>}
+                                                <div className="text-[11px] font-bold text-gray-800 uppercase leading-none mb-1">{i.name || 'Hàng hóa'}</div>
+                                                {i.expectedNote && <div className="text-[9px] text-gray-500 font-medium">{i.expectedNote}</div>}
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
-                                                <div className="text-[10px] font-bold text-gray-700">{i.brand || '-'} <span className="font-normal text-gray-400">/</span> {i.unit || '-'}</div>
-                                                <div className="text-[9px] text-gray-500 font-medium mt-0.5">{i.purchaseLocation || '-'}</div>
+                                                <div className="text-[10px] font-bold text-gray-700">{i.expectedBrand || '-'} <span className="font-normal text-gray-400">/</span> {i.expectedUnit || '-'}</div>
+                                                <div className="text-[9px] text-gray-500 font-medium mt-0.5">{i.expectedPurchaseLocation || '-'}</div>
                                             </td>
                                             <td className="py-2 px-3 text-right">
                                                 <div className="text-[11px] font-black text-gray-800">{fmtNum(expectedQty * i.expectedPrice)}</div>

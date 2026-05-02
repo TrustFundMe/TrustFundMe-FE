@@ -176,17 +176,20 @@ export default function NewCampaignTestPage() {
   const effectiveStep0CanNext = TEMP_BYPASS_TO_STEP3 ? true : step0CanNext;
   const effectiveStep2CanNext = TEMP_BYPASS_TO_STEP3 ? true : step2CanNext;
 
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
+    const campaignStart = state.campaignCore.startDate;
     if (state.milestones.length < 1) return false;
     if (milestoneTotal !== target) return false;
-    const today = new Date().toISOString().split('T')[0];
     for (const m of state.milestones) {
       if (!m.title.trim()) return false;
       if (!m.startDate) return false;
       if (m.startDate < today) return false;
+      if (campaignStart && m.startDate < campaignStart) return false;
       if (!m.endDate) return false;
       if (m.endDate <= m.startDate) return false;
+      if (!m.evidenceDueAt || m.evidenceDueAt <= m.endDate) return false;
       if (!m.categories || m.categories.length === 0) return false;
       for (const cat of m.categories) {
         if (!cat.name.trim()) return false;
@@ -200,19 +203,22 @@ export default function NewCampaignTestPage() {
       }
     }
     return true;
-  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal, today, state.campaignCore.startDate]);
   const step3FailMessage = useMemo(() => {
     const target = state.campaignCore.targetAmount;
+    const campaignStart = state.campaignCore.startDate;
     if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
     if (milestoneTotal !== target) return `Tổng phân bổ (${milestoneTotal.toLocaleString('vi-VN')}đ) chưa khớp mục tiêu`;
-    const today = new Date().toISOString().split('T')[0];
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return `Đợt ${i + 1}: thiếu tên đợt`;
       if (!m.startDate) return `Đợt ${i + 1}: thiếu ngày bắt đầu`;
       if (m.startDate < today) return `Đợt ${i + 1}: ngày bắt đầu phải từ hôm nay`;
+      if (campaignStart && m.startDate < campaignStart) return `Đợt ${i + 1}: ngày bắt đầu phải từ ngày quyên góp`;
       if (!m.endDate) return `Đợt ${i + 1}: thiếu ngày kết thúc`;
       if (m.endDate <= m.startDate) return `Đợt ${i + 1}: ngày kết thúc phải sau ngày bắt đầu`;
+      if (!m.evidenceDueAt) return `Đợt ${i + 1}: thiếu ngày nộp minh chứng`;
+      if (m.evidenceDueAt <= m.endDate) return `Đợt ${i + 1}: ngày nộp minh chứng phải sau ngày kết thúc đợt`;
       if (!m.categories || m.categories.length === 0) return `Đợt ${i + 1}: cần ít nhất 1 danh mục`;
       for (let j = 0; j < m.categories.length; j += 1) {
         const cat = m.categories[j];
@@ -327,15 +333,15 @@ export default function NewCampaignTestPage() {
           name: cat.name || 'Chưa đặt tên',
           description: cat.description || '',
           items: cat.items.map(item => ({
-            category: item.name || cat.name || 'Hạng mục chi tiêu',
+            name: item.name || cat.name || 'Hạng mục chi tiêu',
             expectedQuantity: item.expectedQuantity || 1,
             actualPrice: 0,
             expectedPrice: item.expectedPrice || 0,
-            brand: item.brand || '',
-            purchaseLocation: item.purchaseLocation || '',
-            unit: item.unit || '',
+            expectedBrand: item.expectedBrand || '',
+            expectedPurchaseLocation: item.expectedPurchaseLocation || '',
+            expectedUnit: item.expectedUnit || '',
             expectedPurchaseLink: item.expectedPurchaseLink || '',
-            note: item.note || '',
+            expectedNote: item.expectedNote || '',
           })),
         }));
 
@@ -347,6 +353,7 @@ export default function NewCampaignTestPage() {
           plan: mil.title || 'Giai đoạn',
           startDate: `${milStartDate}T00:00:00`,
           endDate: `${milEndDate}T23:59:59`,
+          evidenceDueAt: mil.evidenceDueAt ? `${mil.evidenceDueAt}T23:59:59` : undefined,
           categories,
         };
 

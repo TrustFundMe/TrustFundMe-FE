@@ -85,7 +85,7 @@ function RejectModal({ onConfirm, onCancel }: { onConfirm: (r: string) => void; 
 
 /* ══════════════════════════════ ExpenditureItemRow ══════════════════════════════ */
 function ExpenditureItemRow({ item }: { item: ExpenditureItem }) {
-    const actualAmt = (item.actualQuantity ?? (item.expectedQuantity || 0)) * (item.expectedPrice || 0);
+    const actualAmt = (item.actualQuantity ?? 0) * (item.actualPrice || 0);
     const expectedAmt = (item.expectedQuantity || 0) * (item.expectedPrice || 0);
     const diff = actualAmt - expectedAmt;
     return (
@@ -249,7 +249,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                             </tr>
                                                         ) : (
                                                             cat.items.map((it: any, idx: number) => {
-                                                                const expectedQty = it.expectedQuantity ?? it.quantity;
+                                                                const expectedQty = it.expectedQuantity;
                                                                 return (
                                                                     <tr key={it.id} className="hover:bg-gray-50/50 transition-colors">
                                                                         <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-50">
@@ -269,12 +269,12 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                                             </td>
                                                                         )}
                                                                         <td className="py-2.5 px-3 border-r border-gray-50">
-                                                                            <div className="font-bold text-gray-800 uppercase leading-tight">{it.category}</div>
-                                                                            {it.note && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.note}</div>}
+                                                                            <div className="font-bold text-gray-800 uppercase leading-tight">{it.name}</div>
+                                                                            {it.expectedNote && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.expectedNote}</div>}
                                                                         </td>
                                                                         <td className="py-2.5 px-3 border-r border-gray-50">
-                                                                            <div className="text-[10px] font-bold text-gray-700">{it.brand || '-'} <span className="font-normal text-gray-400">/</span> {it.unit || '-'}</div>
-                                                                            <div className="text-[9px] text-gray-500 mt-0.5">{it.purchaseLocation || '-'}</div>
+                                                                            <div className="text-[10px] font-bold text-gray-700">{it.expectedBrand || '-'} <span className="font-normal text-gray-400">/</span> {it.expectedUnit || '-'}</div>
+                                                                            <div className="text-[9px] text-gray-500 mt-0.5">{it.expectedPurchaseLocation || '-'}</div>
                                                                         </td>
                                                                         <td className="py-2.5 px-3 text-right bg-blue-50/10 border-r border-gray-50">
                                                                             <div className="font-bold text-blue-700 leading-none">{fmt(expectedQty * it.expectedPrice)}</div>
