@@ -66,7 +66,7 @@ export default function FeedPostCard({
 
   const isAuthor = user?.id && String(user.id) === String(post.author.id);
 
-  const imageAttachments = (attachments || []).filter((a) => a.type === "image");
+  const imageAttachments = (attachments || []).filter((a) => a.type === "image" || (a as any).mediaType === "PHOTO" || (a as any).mediaType === "VIDEO");
   const seenUrls = new Set<string>();
   const images = imageAttachments.filter((a) => {
     if (seenUrls.has(a.url)) return false;

@@ -7,7 +7,7 @@ import { aiService } from '@/services/aiService';
 import { toast } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { ZoomIn, Shield, Camera, CheckCircle2, Fingerprint } from 'lucide-react';
+import { ZoomIn, IdCard, Camera, CheckCircle2, Fingerprint } from 'lucide-react';
 import FaceLivenessCheck, { type LivenessResult } from '@/components/kyc/FaceLivenessCheck';
 
 interface KYCInputFormProps {
@@ -422,7 +422,7 @@ export default function KYCInputForm({ userId, userName, onSuccess, onCancel, re
                 <div className="col-span-12 grid grid-cols-12 gap-3 mb-2">
                     <div className="col-span-9 bg-gray-50/50 rounded-2xl p-2 border border-gray-100">
                         <div className="flex items-center gap-2 mb-2 ml-1">
-                            <Shield className="h-3 w-3 text-gray-400" />
+                            <IdCard className="h-3 w-3 text-gray-400" />
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Giấy tờ tùy thân</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3">

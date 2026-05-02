@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { RefreshCw, Fingerprint } from 'lucide-react';
+import { RefreshCw, IdCard } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import KYCTab from '@/components/staff/request/KYCTab';
 
@@ -40,7 +40,7 @@ function StaffKYCContent() {
           <div className="flex items-end gap-2 h-full">
             <div className="relative px-6 py-2.5 text-sm font-bold bg-white text-[#ff5e14] rounded-t-2xl shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.05)] z-20 h-11">
               <div className="flex items-center gap-2">
-                <Fingerprint className="h-4 w-4 text-[#ff5e14]" />
+                <IdCard className="h-4 w-4 text-[#ff5e14]" />
                 <span className="whitespace-nowrap">Xác thực danh tính</span>
               </div>
               <div className="absolute -bottom-2 left-0 right-0 h-4 bg-white z-30" />

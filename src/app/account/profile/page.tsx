@@ -10,7 +10,7 @@ import {
   User, Mail, Phone, X, Pencil,
   Loader2, ChevronRight, Landmark, CheckCircle2,
   Star, ScrollText, Plus, Minus,
-  Shield, Info, Clock, XCircle, ZoomIn, FileDown
+  IdCard, Info, Clock, XCircle, ZoomIn, FileDown
 } from 'lucide-react';
 import { Suspense } from 'react';
 import { api } from '@/config/axios';
@@ -250,7 +250,7 @@ function UserKYCModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-3">
              <div className="h-9 w-9 rounded-xl bg-[#ff5e14] flex items-center justify-center text-white shadow-lg shadow-[#ff5e14]/20">
-                <Shield className="h-5 w-5" />
+                <IdCard className="h-5 w-5" />
              </div>
              <div>
                <h2 className="text-base font-black text-gray-800 uppercase tracking-tight">Xác thực danh tính (KYC)</h2>
@@ -711,7 +711,7 @@ function ProfileContent() {
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                       <div className="flex items-center gap-5">
                         <div className="h-14 w-14 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20 group-hover:rotate-6 transition-transform duration-500">
-                          <Shield className="h-7 w-7 text-white" />
+                          <IdCard className="h-7 w-7 text-white" />
                         </div>
                         <div className="text-left">
                           <h3 className="text-[15px] font-black uppercase tracking-tight mb-1 transition-colors whitespace-nowrap">

@@ -25,7 +25,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
 
     // Update state
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number; actualPurchaseLink?: string; }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; }[]>([]);
     const [updating, setUpdating] = useState(false);
     const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
 
@@ -73,7 +73,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
                 setUpdateItems(safeItems.map(item => ({
                     id: item.id,
                     actualQuantity: item.actualQuantity || 0,
-                    price: item.price || 0,
+                    actualPrice: item.actualPrice || 0,
                     actualPurchaseLink: item.actualPurchaseLink || ''
                 })));
 
@@ -120,7 +120,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
             setUpdateItems(items.map(item => ({
                 id: item.id,
                 actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
-                price: item.price !== undefined ? item.price : 0,
+                actualPrice: item.actualPrice !== undefined ? item.actualPrice : 0,
                 actualPurchaseLink: item.actualPurchaseLink || ''
             })));
             setPendingDeleteMediaIds([]);
@@ -129,7 +129,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
         setIsUpdateModalOpen(true);
     };
 
-    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price' | 'actualPurchaseLink', value: string) => {
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualPurchaseLink', value: string) => {
         const newItems = [...updateItems];
         if (field === 'actualPurchaseLink') {
             newItems[index] = { ...newItems[index], [field]: value };
@@ -245,9 +245,9 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
         const XLSX = await import('xlsx');
         const isAuthorized = campaign?.type === 'AUTHORIZED';
         const rows = items.map((item, idx) => {
-            const planAmt = (item.quantity || 0) * (item.expectedPrice || 0);
+            const planAmt = (item.expectedQuantity || 0) * (item.expectedPrice || 0);
             const receivedAmt = (donationSummary[item.id] || 0) * (item.expectedPrice || 0);
-            const actualAmt = (item.actualQuantity || 0) * (item.price || 0);
+            const actualAmt = (item.actualQuantity || 0) * (item.actualPrice || 0);
             return [
                 idx + 1,
                 item.name || '',

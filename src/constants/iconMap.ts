@@ -33,6 +33,8 @@ import {
     Database,
     BarChart,
     BrainCircuit,
+    Hash,
+    Fingerprint,
 } from "lucide-react"
 
 export const iconMap: Record<IconKey, LucideIcon> = {
@@ -68,4 +70,6 @@ export const iconMap: Record<IconKey, LucideIcon> = {
     history: History,
     database: Database,
     "chart-bar": BarChart,
+    hash: Hash,
+    fingerprint: Fingerprint,
 }

@@ -53,11 +53,11 @@ const ItemRow: React.FC<{
     setDonorModalItem: (v: { id: number, name: string } | null) => void;
 }> = ({ item, idx, campaign, itemMedia, donationSummary, isEvidenceSubmitted, setGalleryModalItemId, loadItemMedia, setDonorModalItem }) => {
     const media = itemMedia[item.id] || [];
-    const planTotal = (item.quantity || 0) * (item.expectedPrice || 0);
+    const planTotal = (item.expectedQuantity || 0) * (item.expectedPrice || 0);
     const progress = campaign?.type === 'AUTHORIZED'
-        ? ((item.actualQuantity || 0) / (item.quantity || 1)) * 100
-        : ((donationSummary[item.id] || 0) / (item.quantity || 1)) * 100;
-    const priceDiff = (item.price || 0) - (item.expectedPrice || 0);
+        ? ((item.actualQuantity || 0) / (item.expectedQuantity || 1)) * 100
+        : ((donationSummary[item.id] || 0) / (item.expectedQuantity || 1)) * 100;
+    const priceDiff = (item.actualPrice || 0) - (item.expectedPrice || 0);
     const priceColorClass = priceDiff > 0 ? "text-rose-500" : (priceDiff < 0 ? "text-[#065F46]" : "text-[#1E293B]");
 
     return (
@@ -105,7 +105,7 @@ const ItemRow: React.FC<{
             {campaign?.type === 'AUTHORIZED' ? (
                 <>
                     <td className="px-2 py-2 text-center text-[14px] text-[#64748B] border-r border-[#E2E8F0]">
-                        {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[15px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
+                        {(item.expectedQuantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[15px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
                     </td>
                     <td className="px-2 py-2 text-center text-base font-black text-blue-500 border-r border-[#E2E8F0]">
                         {new Intl.NumberFormat('vi-VN').format(planTotal)} đ
@@ -115,7 +115,7 @@ const ItemRow: React.FC<{
                             <>
                                 {(item.actualQuantity || 0)} <span className="mx-1">x</span>
                                 <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[15px]`}>
-                                    {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
+                                    {new Intl.NumberFormat('vi-VN').format(item.actualPrice || 0)}
                                     {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
                                     {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
                                 </span>
@@ -138,7 +138,7 @@ const ItemRow: React.FC<{
             ) : (
                 <>
                     <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
-                        {(item.quantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
+                        {(item.expectedQuantity || 0)} <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
                     </td>
                     <td className="px-2 py-2 text-center text-[11px] text-[#64748B] border-r border-[#E2E8F0]">
                         <span className="font-medium text-[#1E293B] text-[12px]">{(donationSummary[item.id] || 0)}</span> <span className="mx-1">x</span> <span className="font-bold text-[#1E293B] text-[12px]">{new Intl.NumberFormat('vi-VN').format(item.expectedPrice || 0)}</span>
@@ -148,7 +148,7 @@ const ItemRow: React.FC<{
                             <>
                                 <span className="font-bold text-[#1E293B] text-[12px]">{(item.actualQuantity || 0)}</span> <span className="mx-1">x</span>
                                 <span className={`inline-flex items-center gap-0.5 font-bold ${priceColorClass} text-[12px]`}>
-                                    {new Intl.NumberFormat('vi-VN').format(item.price || 0)}
+                                    {new Intl.NumberFormat('vi-VN').format(item.actualPrice || 0)}
                                     {priceDiff > 0 && <ArrowUp className="w-3 h-3" />}
                                     {priceDiff < 0 && <ArrowDown className="w-3 h-3" />}
                                 </span>

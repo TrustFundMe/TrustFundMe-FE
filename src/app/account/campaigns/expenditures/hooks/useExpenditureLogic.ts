@@ -42,7 +42,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
     // Update Modal States
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; price: number }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string }[]>([]);
     const [updateItemsData, setUpdateItemsData] = useState<ExpenditureItem[]>([]);
     const [updating, setUpdating] = useState(false);
     const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
@@ -268,7 +268,9 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
             setUpdateItems(itemsData.map(item => ({
                 id: item.id,
                 actualQuantity: item.actualQuantity ?? 0,
-                price: item.price ?? 0
+                actualPrice: item.actualPrice ?? 0,
+                actualPurchaseLink: item.actualPurchaseLink ?? '',
+                actualBrand: item.actualBrand ?? ''
             })));
             setPendingDeleteMediaIds([]);
             itemsData.forEach(item => loadItemMedia(item.id));
@@ -278,9 +280,9 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         }
     };
 
-    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'price', value: string) => {
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualPurchaseLink' | 'actualBrand', value: string) => {
         const newItems = [...updateItems];
-        newItems[index] = { ...newItems[index], [field]: Number(value) };
+        newItems[index] = { ...newItems[index], [field]: (field === 'actualPurchaseLink' || field === 'actualBrand') ? value : Number(value) };
         setUpdateItems(newItems);
     };
 
@@ -353,6 +355,20 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         }
     };
 
+    const { withdrawalCount, totalWithdrawnAmount } = useMemo(() => {
+        let count = 0;
+        let total = 0;
+        expenditures.forEach(exp => {
+            (exp.evidences || []).forEach(ev => {
+                if (ev.amount) {
+                    count++;
+                    total += Math.abs(ev.amount);
+                }
+            });
+        });
+        return { withdrawalCount: count, totalWithdrawnAmount: total };
+    }, [expenditures]);
+
     const totalSpent = useMemo(() => expenditures.reduce((sum, exp) => sum + exp.totalAmount, 0), [expenditures]);
 
     const { canCreate, blockReason, isDisabled } = useMemo(() => {
@@ -394,7 +410,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         currentDraftPost, setCurrentDraftPost, handleOpenUpdateModal,
         showRefundModal, setShowRefundModal, refundExpenditure, setRefundExpenditure,
         refundAmount, setRefundAmount, userBankAccounts,
-        totalSpent, canCreate, blockReason, isDisabled,
+        totalSpent, withdrawalCount, totalWithdrawnAmount, canCreate, blockReason, isDisabled,
         setUserBankAccounts, setExpenditures,
         handleGalleryFileChange, handleGalleryUploadSubmit, handleGalleryDeleteMedia
     };

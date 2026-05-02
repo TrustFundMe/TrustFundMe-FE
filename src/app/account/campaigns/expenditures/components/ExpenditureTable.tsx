@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
     FileText, Plus, CheckCircle, X, AlertCircle, ArrowUpRight,
-    Clock, ShieldCheck, DollarSign, Receipt, Image as ImageIcon,
-    User, Send
+    Clock, ShieldCheck, DollarSign, Receipt, Image as ImageIcon, User, Send, Camera, Edit3
 } from 'lucide-react';
 import { feedPostService } from '@/services/feedPostService';
 import { expenditureService } from '@/services/expenditureService';
@@ -39,7 +38,7 @@ export default function ExpenditureTable({
         const getStatusText = (s: string) => {
             switch (s) {
                 case 'PENDING': return 'Đang chờ xử lý';
-                case 'APPROVED': return 'Đã cập nhật thực tế';
+                case 'APPROVED': return 'Đã được duyệt';
                 case 'PENDING_REVIEW': return 'Chờ Quản trị viên duyệt';
                 case 'DISBURSED': return 'Đã giải ngân';
                 case 'REJECTED': return 'Bị từ chối';
@@ -48,6 +47,25 @@ export default function ExpenditureTable({
             }
         };
         return <span className="text-[10px] font-black uppercase tracking-widest text-black">{getStatusText(status)}</span>;
+    };
+
+    const handleOpenPostForEvidence = (exp: any, ev: any) => {
+        if (isDisabled) {
+            toast.error('Chiến dịch đã bị vô hiệu hóa.');
+            return;
+        }
+        setPostExpenditure(exp);
+        setCurrentDraftPost({
+            title: `Minh chứng chi tiêu: ${new Intl.NumberFormat('vi-VN').format(ev.amount)} VND`,
+            content: `Minh chứng thực hiện chi tiêu cho chiến dịch "${campaign.title}".\nSố tiền: ${new Intl.NumberFormat('vi-VN').format(ev.amount)} VND\n\n#MinhChungChiTieu #TrustFundMe`,
+            targetId: exp.id,
+            targetType: 'EXPENDITURE',
+            targetName: 'Minh chứng giải ngân',
+            _evidenceId: ev.id,
+            visibility: 'PUBLIC',
+            status: 'PUBLISHED'
+        });
+        setIsPostModalOpen(true);
     };
 
     return (
@@ -88,11 +106,6 @@ export default function ExpenditureTable({
                                                 <th scope="col" className="px-6 py-3 text-left text-[10px] font-black text-black uppercase tracking-[2px]">        
                                                     Trạng thái        
                                                 </th>        
-                                                {campaign.type === 'AUTHORIZED' && (        
-                                                    <th scope="col" className="px-6 py-3 text-left text-[10px] font-black text-black uppercase tracking-[2px]">        
-                                                        Ngày báo cáo        
-                                                    </th>        
-                                                )}        
                                                 <th scope="col" className="px-6 py-3 text-left text-[10px] font-black text-black uppercase tracking-[2px]">        
                                                     Ngày tạo        
                                                 </th>        
@@ -107,6 +120,17 @@ export default function ExpenditureTable({
                                         <tbody className="divide-y divide-black/5">        
                                             {expenditures.map((exp: any) => {        
                                                 const isExpanded = expandedRowId === exp.id;        
+                                                const evidences = exp.evidences || [];
+                                                const submittedCount = evidences.filter((ev: any) => ev.proofUrl).length;
+                                                const totalCount = evidences.length;
+                                                const pendingEvidences = evidences.filter((ev: any) => !ev.proofUrl);
+                                                const nextPendingEv = pendingEvidences[0];
+                                                
+                                                const earliestDeadline = pendingEvidences
+                                                    .map((ev: any) => ev.dueAt)
+                                                    .filter(Boolean)
+                                                    .sort()[0];
+                                                
                                                 return (        
                                                     <Fragment key={exp.id}>        
                                                         <tr        
@@ -133,16 +157,24 @@ export default function ExpenditureTable({
                                                             <td className="px-6 py-2 whitespace-nowrap text-black font-black">        
                                                                 {getStatusBadge(exp.status)}        
                                                             </td>        
-                                                            {campaign.type === 'AUTHORIZED' && (        
-                                                                <td className="px-6 py-2 whitespace-nowrap text-xs font-black text-black">        
-                                                                    {exp.evidenceDueAt ? new Date(exp.evidenceDueAt).toLocaleDateString() : '-'}        
-                                                                </td>        
-                                                            )}        
                                                             <td className="px-6 py-2 whitespace-nowrap text-xs font-black text-black">        
                                                                 {exp.createdAt ? new Date(exp.createdAt).toLocaleDateString() : '-'}        
                                                             </td>        
                                                             <td className="px-6 py-2">        
                                                                 <div className="flex items-center gap-3">        
+                                                                    {nextPendingEv && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleOpenPostForEvidence(exp, nextPendingEv);
+                                                                            }}
+                                                                            className="px-4 py-1.5 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center gap-1.5 whitespace-nowrap"
+                                                                        >
+                                                                            <Camera className="w-3.5 h-3.5" />
+                                                                            Nộp ngay
+                                                                        </button>
+                                                                    )}
+
                                                                     {exp.isWithdrawalRequested ? (        
                                                                         <span className="text-[10px] font-black uppercase text-black flex items-center gap-1">        
                                                                             <CheckCircle className="w-3.5 h-3.5" /> Đã yêu cầu        
@@ -187,12 +219,12 @@ export default function ExpenditureTable({
                                                         </tr>        
                 
                                                         <tr>        
-                                                            <td colSpan={campaign.type === 'AUTHORIZED' ? 6 : 5} className="p-0 border-none relative overflow-hidden">        
+                                                            <td colSpan={6} className="p-0 border-none relative overflow-hidden">        
                                                                 <div className={`grid transition-[grid-template-rows,opacity] duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>        
                                                                     <div className="overflow-hidden">        
                                                                         {isExpanded && (        
                                                                             <div className="px-6 py-6 bg-gray-50/30 border-t border-black/5">        
-                                                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">        
+                                                                                <div className="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-8">        
                                                                                     <div>        
                                                                                         <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40 mb-4 flex items-center gap-2">        
                                                                                             NHẬT KÝ QUY TRÌNH        
@@ -239,7 +271,7 @@ export default function ExpenditureTable({
                                                                                                         <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.disbursedAt || exp.status === 'DISBURSED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>        
                                                                                                         <div className="flex flex-col">        
                                                                                                             <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-emerald-900' : ((exp.disbursedAt || exp.status === 'DISBURSED') ? 'text-emerald-700' : 'text-orange-400')}`}>        
-                                                                                                                3. Admin giải ngân        
+                                                                                                                3. Minh chứng giao dịch        
                                                                                                             </span>        
                                                                                                             <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">        
                                                                                                                 {(exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : 'Đang xử lý'}        
@@ -254,7 +286,7 @@ export default function ExpenditureTable({
                                                                                                         <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>        
                                                                                                         <div className="flex flex-col">        
                                                                                                             <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-emerald-900' : ((exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'text-emerald-700' : 'text-orange-400')}`}>        
-                                                                                                                4. Minh chứng & Hoàn tiền        
+                                                                                                                4. Tổng kết & Thực chi        
                                                                                                             </span>        
                                                                                                             <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">        
                                                                                                                 {exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng' : exp.evidenceStatus === 'APPROVED' ? 'Đã xác nhận' : exp.evidenceStatus === 'ALLOWED_EDIT' ? 'Cho chỉnh sửa lại' : exp.status === 'DISBURSED' ? 'Cập nhật & Hoàn tiền' : 'Chưa giải ngân'}        
@@ -266,7 +298,7 @@ export default function ExpenditureTable({
                                                                                         </div>        
                                                                                     </div>        
                 
-                                                                                    <div className="flex flex-col lg:pl-12 lg:border-l border-black/5 min-h-[350px]">        
+                                                                                    <div className="flex flex-col lg:pl-8 lg:border-l border-black/5 min-h-[350px]">        
                                                                                         <div className="animate-in fade-in slide-in-from-right-4 duration-500">        
                                                                                             {selectedLogStep === 1 && (        
                                                                                                 <div className="space-y-4">        
@@ -360,7 +392,7 @@ export default function ExpenditureTable({
                                                                                                                 )}        
                                                                                                                 <p className="text-sm font-bold text-black/60 leading-relaxed italic">        
                                                                                                                     {campaign.type === 'AUTHORIZED'        
-                                                                                                                        ? (exp.status === 'PENDING_REVIEW' ? 'Kế hoạch chi tiêu của bạn đang được xét duyệt. Vui lòng đợi kết quả nhé.' : 'Kế hoạch chi tiêu của bạn đã được phê duyệt. Hệ thống đang tiến hành các bước giải ngân.')        
+                                                                                                                        ? (exp.status === 'PENDING_REVIEW' ? 'Kế hoạch chi tiêu của bạn đang được xét duyệt. Vui lòng đợi kết quả nhé.' : 'Kế hoạch chi tiêu của bạn đã được phê duyệt.')        
                                                                                                                         : ''}        
                                                                                                                 </p>        
                                                                                                                 <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-black/5">
@@ -396,346 +428,122 @@ export default function ExpenditureTable({
                                                                                                 </div>        
                                                                                             )}        
                 
-                                                                                            {selectedLogStep === 3 && (        
-                                                                                                <div className="space-y-4">        
-                                                                                                    <div className="flex items-center justify-between">        
-                                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHUYỂN KHOẢN</h4>        
-                                                                                                        {exp.status === 'DISBURSED' && (        
-                                                                                                            <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">Đã giải ngân</span>        
-                                                                                                        )}        
-                                                                                                    </div>        
-                                                                                                    {exp.disbursementProofUrl ? (        
-                                                                                                        <div className="space-y-4">        
-                                                                                                            <a        
-                                                                                                                href={exp.disbursementProofUrl}        
-                                                                                                                target="_blank"        
-                                                                                                                rel="noopener noreferrer"        
-                                                                                                                className="block relative aspect-[4/3] rounded-[2.5rem] bg-gray-100 border-2 border-white shadow-xl overflow-hidden group/evidence cursor-zoom-in"        
-                                                                                                            >        
-                                                                                                                <Image        
-                                                                                                                    src={exp.disbursementProofUrl}        
-                                                                                                                    alt="Minh chứng chuyển khoản"        
-                                                                                                                    fill        
-                                                                                                                    className="object-cover transition-transform duration-500 group-hover/evidence:scale-105"        
-                                                                                                                    unoptimized        
-                                                                                                                />        
-                                                                                                                <div className="absolute top-6 right-6 px-3 py-1.5 bg-orange-400 text-white text-[8px] font-black uppercase tracking-widest rounded-xl shadow-lg">Transaction Verified</div>        
-                                                                                                            </a>        
-                                                                                                            {exp.disbursedAt && (        
-                                                                                                                <p className="text-[10px] font-bold text-black/30 italic text-center">        
-                                                                                                                    Thực hiện vào {new Date(exp.disbursedAt).toLocaleString('vi-VN')}        
-                                                                                                                </p>        
-                                                                                                            )}        
-                                                                                                        </div>        
-                                                                                                    ) : (        
-                                                                                                        <div className="bg-white p-8 rounded-[1.5rem] border-2 border-dashed border-black/5 flex flex-col items-center text-center space-y-4">        
-                                                                                                            <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center">        
-                                                                                                                <FileText className="w-8 h-8 text-black/10" />        
-                                                                                                            </div>        
-                                                                                                            <div>        
-                                                                                                                <p className="text-sm font-black text-black/40 uppercase tracking-widest">Chưa có dữ liệu</p>        
-                                                                                                                <p className="text-[10px] font-bold text-black/20 uppercase mt-2">        
-                                                                                                                    {exp.status === 'DISBURSED'        
-                                                                                                                        ? 'Admin chưa tải lên hình chuyển khoản'        
-                                                                                                                        : 'Chờ admin thực hiện lệnh chuyển tiền'}        
-                                                                                                                </p>        
-                                                                                                            </div>        
-                                                                                                        </div>        
-                                                                                                    )}        
-                                                                                                </div>        
-                                                                                            )}        
+                                                                                            {selectedLogStep === 3 && (
+                                                                                                <div className="space-y-4">
+                                                                                                    <div className="flex items-center justify-between">
+                                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHI TIÊU</h4>
+                                                                                                    </div>
+                                                                                                    
+                                                                                                    {exp.disbursementProofUrl && (
+                                                                                                        <div className="bg-white p-4 rounded-2xl border border-black/5">
+                                                                                                            <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mb-3">Minh chứng giải ngân (Admin)</p>
+                                                                                                            <div className="flex items-center gap-4">
+                                                                                                                <a href={exp.disbursementProofUrl} target="_blank" rel="noopener noreferrer" className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
+                                                                                                                    <Image src={exp.disbursementProofUrl} alt="Disbursement" fill className="object-cover" unoptimized />
+                                                                                                                </a>
+                                                                                                                <div className="flex-1">
+                                                                                                                    <p className="text-xs font-bold text-gray-900">Tiền đã được chuyển vào tài khoản</p>
+                                                                                                                    <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-tight font-black">{exp.disbursedAt ? new Date(exp.disbursedAt).toLocaleString('vi-VN') : '—'}</p>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    )}
+
+                                                                                                    {evidences.length > 0 ? (
+                                                                                                        <div className="space-y-3">
+                                                                                                            {evidences.map((ev: any, idx: number) => (
+                                                                                                                <div key={ev.id || idx} className="bg-white p-3 rounded-2xl border border-black/5 shadow-sm space-y-2">
+                                                                                                                    <div className="flex items-center justify-between">
+                                                                                                                        <div className="flex items-center gap-3">
+                                                                                                                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 border border-orange-100 font-bold text-sm">#{idx + 1}</div>
+                                                                                                                            <div className="flex flex-col">
+                                                                                                                                   <p className="text-sm font-black text-black">Số tiền: -{new Intl.NumberFormat('vi-VN').format(Math.abs(ev.amount))} VND</p>
+                                                                                                                                <div className="flex items-center gap-2">
+                                                                                                                                    <p className="text-[9px] font-bold text-black/30 uppercase tracking-widest">{ev.status === 'APPROVED' ? 'Đã xác nhận' : ''}</p>
+                                                                                                                                    {ev.dueAt && (
+                                                                                                                                        <span className="text-xs font-black text-rose-500">Hạn nộp: {new Date(ev.dueAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                                                                                                                    )}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <button 
+                                                                                                                            onClick={(e) => { 
+                                                                                                                                e.stopPropagation(); 
+                                                                                                                                if (ev.proofUrl) {
+                                                                                                                                    window.open(ev.proofUrl, '_blank');
+                                                                                                                                } else {
+                                                                                                                                    handleOpenPostForEvidence(exp, ev);
+                                                                                                                                }
+                                                                                                                            }}
+                                                                                                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${ev.proofUrl ? 'bg-zinc-100 border-zinc-200 text-zinc-500' : 'bg-orange-500 border-orange-600 text-white shadow-lg shadow-orange-100 animate-pulse'}`}
+                                                                                                                        >
+                                                                                                                            {ev.proofUrl ? 'Xem minh chứng' : 'Nộp ngay'}
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                    {ev.description && (
+                                                                                                                        <div className="bg-slate-50 p-3 rounded-xl border border-black/5">
+                                                                                                                            <p className="text-[10px] text-gray-500 italic leading-relaxed">"{ev.description}"</p>
+                                                                                                                        </div>
+                                                                                                                    )}
+                                                                                                                    {ev.proofUrl && (
+                                                                                                                        <a href={ev.proofUrl} target="_blank" rel="noopener noreferrer" className="block text-[10px] font-bold text-blue-500 hover:underline">🔗 Xem bài viết minh chứng</a>
+                                                                                                                    )}
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    ) : (
+                                                                                                        <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-3xl">
+                                                                                                            <Clock className="w-8 h-8 text-gray-100 mx-auto mb-2" />
+                                                                                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Đang đợi giao dịch giải ngân</p>
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            )}
+
+                                                                                            {selectedLogStep === 4 && (
+                                                                                                <div className="space-y-4">
+                                                                                                    <div className="flex items-center justify-between">
+                                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">TỔNG KẾT THỰC CHI</h4>
+                                                                                                    </div>
+                                                                                                    
+                                                                                                    <div className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-sm space-y-6">
+                                                                                                        <div className="grid grid-cols-2 gap-6">
+                                                                                                            <div className="space-y-1">
+                                                                                                                <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block">Số lần đã rút tiền</label>
+                                                                                                                <p className="text-lg font-black text-gray-900">{exp.evidences?.length || 0} lần</p>
+                                                                                                            </div>
+                                                                                                            <div className="space-y-1">
+                                                                                                                <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block">Tổng tiền thực rút</label>
+                                                                                                                <p className="text-lg font-black text-emerald-600">
+                                                                                                                    {new Intl.NumberFormat('vi-VN').format(
+                                                                                                                        (exp.evidences || []).reduce((sum: number, ev: any) => sum + Math.abs(ev.amount || 0), 0)
+                                                                                                                    )} đ
+                                                                                                                </p>
+                                                                                                            </div>
+                                                                                                        </div>
                 
-                                                                                            {selectedLogStep === 4 && (        
-                                                                                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">        
-                                                                                                    <div className="flex items-center justify-between">        
-                                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-orange-900/40">MINH CHỨNG & HOÀN TIỀN</h4>        
-                                                                                                        {(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') && (        
-                                                                                                            <span className="px-3 py-1 bg-orange-50 text-orange-600 text-[8px] font-black uppercase tracking-widest rounded-full border border-orange-100">Đã nộp</span>        
-                                                                                                        )}        
-                                                                                                    </div>        
+                                                                                                        {exp.status === 'DISBURSED' && (
+                                                                                                            <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl">
+                                                                                                                <p className="text-[10px] font-medium text-orange-800 leading-relaxed italic">
+                                                                                                                    Bạn cần cập nhật số liệu thực tế đã mua và đăng bài viết tổng kết cuối cùng để hoàn tất đợt chi tiêu này.
+                                                                                                                </p>
+                                                                                                            </div>
+                                                                                                        )}
                 
-                                                                                                    {(exp.evidenceStatus !== 'SUBMITTED' && exp.evidenceStatus !== 'APPROVED') && (        
-                                                                                                        <EvidenceDeadlineBanner dueAt={exp.evidenceDueAt || ''} />        
-                                                                                                    )}        
-                
-                                                                                                    {(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') && (        
-                                                                                                        <div className="flex items-center gap-4 px-6 py-5 bg-emerald-50 border-2 border-emerald-100 rounded-[2rem] transition-all duration-500 shadow-sm">        
-                                                                                                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-100">        
-                                                                                                                <CheckCircle className="w-6 h-6 text-emerald-500" />        
-                                                                                                            </div>        
-                                                                                                            <div>        
-                                                                                                                <p className="text-xs font-black text-emerald-900 uppercase tracking-widest leading-none mb-1.5">Đã nộp minh chứng</p>        
-                                                                                                                {exp.evidenceSubmittedAt && (        
-                                                                                                                    <p className="text-sm font-black text-emerald-800/60 mt-2">        
-                                                                                                                        Lúc {new Date(exp.evidenceSubmittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}        
-                                                                                                                    </p>        
-                                                                                                                )}        
-                                                                                                            </div>        
-                                                                                                        </div>        
-                                                                                                    )}        
-                
-                                                                                                    <div className="space-y-4">        
-                                                                                                        {(exp.evidenceStatus === 'PENDING' || exp.evidenceStatus === 'PENDING_REVIEW' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
-                                                                                                            <>        
-                                                                                                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200 group/step">        
-                                                                                                                    <div className="flex items-center gap-4">        
-                                                                                                                        {(() => {        
-                                                                                                                            const isUpdated = (exp.totalAmount || 0) > 0;        
-                                                                                                                            return (        
-                                                                                                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isUpdated ? 'bg-emerald-100' : 'bg-white/50'}`}>        
-                                                                                                                                    <Receipt className={`w-5 h-5 ${isUpdated ? 'text-emerald-500' : 'text-orange-400'}`} />        
-                                                                                                                                </div>        
-                                                                                                                            );        
-                                                                                                                        })()}        
-                                                                                                                        <div>        
-                                                                                                                            <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Thực tế & Minh chứng</p>        
-                                                                                                                            <p className="text-[10px] text-black/40 leading-tight">Cập nhật số lượng, đơn giá thực tế và hóa đơn</p>        
-                                                                                                                        </div>        
-                                                                                                                    </div>        
-                                                                                                                    <button        
-                                                                                                                        onClick={() => handleOpenUpdateModal(exp)}        
-                                                                                                                        disabled={exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED')}        
-                                                                                                                        className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED') ? 'bg-gray-300 cursor-not-allowed' : ((exp.totalAmount || 0) > 0 ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500')}`}        
-                                                                                                                    >        
-                                                                                                                        {exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED') ? 'Đã hoàn tiền dư' : ((exp.totalAmount || 0) > 0 ? 'Chỉnh sửa' : 'Cập nhật')}        
-                                                                                                                    </button>        
-                                                                                                                </div>        
-                
-                                                                                                                {(() => {        
-                                                                                                                    const posts = expenditurePosts[exp.id] || [];        
-                                                                                                                    const publishedPost = posts.find((p: any) => p.status === 'PUBLISHED');        
-                                                                                                                    const draftPost = posts.find((p: any) => p.status === 'DRAFT');        
-                                                                                                                    const isPublished = !!publishedPost;        
-                                                                                                                    const isStepDone = posts.some((p: any) => p.status === 'PUBLISHED' || p.status === 'DRAFT');        
-                
-                                                                                                                    return (        
-                                                                                                                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-200 group/step">        
-                                                                                                                            <div className="flex items-center gap-4">        
-                                                                                                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${isStepDone ? 'bg-emerald-100' : 'bg-white/50'}`}>        
-                                                                                                                                    <ImageIcon className={`w-5 h-5 ${isStepDone ? 'text-emerald-500' : 'text-orange-400'}`} />        
-                                                                                                                                </div>        
-                                                                                                                                <div>        
-                                                                                                                                    <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Đăng bài post</p>        
-                                                                                                                                    <p className="text-[10px] text-black/40 leading-tight">        
-                                                                                                                                        {isPublished        
-                                                                                                                                            ? `Đã đăng lúc ${new Date(publishedPost.updatedAt || publishedPost.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`        
-                                                                                                                                            : draftPost        
-                                                                                                                                                ? 'Bài nháp đang chờ — bấm để tiếp tục sửa'        
-                                                                                                                                                : 'Chia sẻ minh chứng lên bảng tin để cộng đồng theo dõi'}        
-                                                                                                                                    </p>        
-                                                                                                                                </div>        
-                                                                                                                            </div>        
-                                                                                                                            <button        
-                                                                                                                                onClick={() => {        
-                                                                                                                                    setCurrentDraftPost(draftPost || publishedPost || null);        
-                                                                                                                                    setPostExpenditure(exp);        
-                                                                                                                                    setIsPostModalOpen(true);        
-                                                                                                                                }}        
-                                                                                                                                className={`px-5 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0 ${isStepDone ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-orange-400 hover:bg-orange-500'}`}        
-                                                                                                                            >        
-                                                                                                                                {isPublished ? 'Sửa bài' : draftPost ? 'Tiếp tục' : 'Viết bài'}        
-                                                                                                                            </button>        
-                                                                                                                        </div>        
-                                                                                                                    );        
-                                                                                                                })()}        
-                                                                                                            </>        
-                                                                                                        )}        
-                
-                                                                                                        {exp.status === 'DISBURSED' && (        
-                                                                                                            <div className="pt-4 border-t border-black/5 space-y-4">        
-                                                                                                                <div className="flex items-center gap-3">        
-                                                                                                                    <h4 className="text-[9px] font-black uppercase tracking-[2px] text-orange-900/40">HOÀN TIỀN DƯ</h4>        
-                                                                                                                    {(() => {        
-                                                                                                                        const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND');        
-                                                                                                                        if (refundTx?.status === 'COMPLETED') {        
-                                                                                                                            return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-emerald-200">Đã hoàn tất</span>;        
-                                                                                                                        }        
-                                                                                                                        if (refundTx) {        
-                                                                                                                            return <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-[7px] font-black uppercase tracking-widest rounded-full border border-gray-200 animate-pulse">Đang xử lý</span>;        
-                                                                                                                        }        
-                                                                                                                        return null;        
-                                                                                                                    })()}        
-                                                                                                                </div>        
-                
-                                                                                                                {(() => {        
-                                                                                                                    const refundTx = exp.transactions?.find((t: any) => t.type === 'REFUND' && t.status !== 'FAILED');        
-                                                                                                                    const variance = (exp.variance != null) ? Number(exp.variance) : ((exp.totalExpectedAmount || 0) - (exp.totalAmount || 0));        
-                                                                                                                    const needRefund = variance > 0;        
-                                                                                                                    const isActualsUpdated = (exp.totalAmount || 0) > 0;        
-                                                                                                                    const isRefunded = refundTx?.status === 'COMPLETED';        
-                
-                                                                                                                    if (refundTx) {        
-                                                                                                                        return (        
-                                                                                                                            <div className="space-y-3">        
-                                                                                                                                <div className={`p-3 rounded-2xl border flex items-center justify-between gap-4 ${isRefunded ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border border-black/5'}`}>        
-                                                                                                                                    <div className="flex items-center gap-4">        
-                                                                                                                                        <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">        
-                                                                                                                                            <CheckCircle className={`w-5 h-5 ${isRefunded ? 'text-emerald-500' : 'text-amber-500'}`} />        
-                                                                                                                                        </div>        
-                                                                                                                                        <div>        
-                                                                                                                                            <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>        
-                                                                                                                                            <p className={`text-[10px] font-bold ${isRefunded ? 'text-emerald-600/60' : 'text-amber-600/60'}`}>        
-                                                                                                                                                Đã hoàn {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundTx.amount)}        
-                                                                                                                                            </p>        
-                                                                                                                                        </div>        
-                                                                                                                                    </div>        
-                                                                                                                                    {isRefunded ? (        
-                                                                                                                                        refundTx.proofUrl && (        
-                                                                                                                                            <div className="w-20 h-14 rounded-xl border border-emerald-100 overflow-hidden shadow-sm hover:scale-105 transition-transform cursor-pointer relative group bg-white p-0.5" onClick={() => {}}>        
-                                                                                                                                                <img src={refundTx.proofUrl} alt="Minh chứng hoàn tiền" className="w-full h-full object-cover rounded-lg" />        
-                                                                                                                                                <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">        
-                                                                                                                                                    <ImageIcon className="w-4 h-4 text-white drop-shadow-md" />        
-                                                                                                                                                </div>        
-                                                                                                                                            </div>        
-                                                                                                                                        )        
-                                                                                                                                    ) : (        
-                                                                                                                                        <button        
-                                                                                                                                            onClick={() => {        
-                                                                                                                                                setRefundExpenditure(exp);        
-                                                                                                                                                setRefundAmount(Math.max(0, variance).toString());        
-                                                                                                                                                setShowRefundModal(true);        
-                                                                                                                                            }}        
-                                                                                                                                            className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"        
-                                                                                                                                        >        
-                                                                                                                                            Cập nhật        
-                                                                                                                                        </button>        
-                                                                                                                                    )}        
-                                                                                                                                </div>        
-                                                                                                                            </div>        
-                                                                                                                        );        
-                                                                                                                    }        
-                
-                                                                                                                    if (!needRefund) {        
-                                                                                                                        return (        
-                                                                                                                            <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-3 flex items-center gap-4">        
-                                                                                                                                <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">        
-                                                                                                                                    <ShieldCheck className="w-5 h-5 text-emerald-500" />        
-                                                                                                                                </div>        
-                                                                                                                                <div>        
-                                                                                                                                    <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Không có tiền dư</p>        
-                                                                                                                                    <p className="text-[10px] text-emerald-600/60 leading-tight">Tuyệt vời! Bạn đã chi tiêu đúng hoặc vượt ngân sách ban đầu.</p>        
-                                                                                                                                </div>        
-                                                                                                                            </div>        
-                                                                                                                        );        
-                                                                                                                    }        
-                
-                                                                                                                    if (!isActualsUpdated) {        
-                                                                                                                        return (        
-                                                                                                                            <div className="bg-gray-100 rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">        
-                                                                                                                                <div className="flex items-center gap-4">        
-                                                                                                                                    <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">        
-                                                                                                                                        <DollarSign className="w-5 h-5 text-gray-300" />        
-                                                                                                                                    </div>        
-                                                                                                                                    <div>        
-                                                                                                                                        <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>        
-                                                                                                                                        <p className="text-[10px] text-black/40 leading-tight">Cập nhật đơn giá thực tế để hiện số tiền dư cần hoàn</p>        
-                                                                                                                                    </div>        
-                                                                                                                                </div>        
-                                                                                                                                <span className="px-5 py-2.5 bg-gray-200 text-gray-400 text-[10px] font-black uppercase tracking-widest rounded-full cursor-not-allowed whitespace-nowrap flex-shrink-0">        
-                                                                                                                                    Chưa cập nhật        
-                                                                                                                                </span>        
-                                                                                                                            </div>        
-                                                                                                                        );        
-                                                                                                                    }        
-                
-                                                                                                                    return (        
-                                                                                                                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 flex items-center justify-between gap-4">        
-                                                                                                                            <div className="flex items-center gap-4">        
-                                                                                                                                <div className="w-10 h-10 rounded-xl bg-white/50 flex items-center justify-center flex-shrink-0">        
-                                                                                                                                    <DollarSign className="w-5 h-5 text-orange-400" />        
-                                                                                                                                </div>        
-                                                                                                                                <div>        
-                                                                                                                                    <p className="text-sm font-black text-black/80 uppercase tracking-widest mb-0.5">Hoàn tiền dư</p>        
-                                                                                                                                    <p className="text-[10px] text-black/40 leading-tight">Thực hiện hoàn trả số tiền còn dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(variance)}</p>        
-                                                                                                                                </div>        
-                                                                                                                            </div>        
-                                                                                                                            <button        
-                                                                                                                                onClick={() => {        
-                                                                                                                                    setRefundExpenditure(exp);        
-                                                                                                                                    setRefundAmount(Math.max(0, variance).toString());        
-                                                                                                                                    setShowRefundModal(true);        
-                                                                                                                                }}        
-                                                                                                                                className="px-5 py-2.5 bg-orange-400 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 active:scale-95 transition-all shadow-sm whitespace-nowrap flex-shrink-0"        
-                                                                                                                            >        
-                                                                                                                                Thực hiện        
-                                                                                                                            </button>        
-                                                                                                                        </div>        
-                                                                                                                    );        
-                                                                                                                })()}        
-                                                                                                            </div>        
-                                                                                                        )}        
-                
-                                                                                                        <div className="flex flex-col gap-3 pt-4 border-t border-black/5">        
-                                                                                                            {(() => {        
-                                                                                                                const posts = expenditurePosts[exp.id] || [];        
-                                                                                                                const hasEvidencePost = posts.length > 0;        
-                                                                                                                const isActualsUpdated = (exp.totalAmount || 0) > 0;        
-                                                                                                                const variance = (exp.variance != null) ? Number(exp.variance) : ((exp.totalExpectedAmount || 0) - (exp.totalAmount || 0));        
-                                                                                                                const needRefund = variance > 0;        
-                                                                                                                const isRefundDone = exp.transactions?.some((t: any) => t.type === 'REFUND' && t.status === 'COMPLETED');        
-                
-                                                                                                                const isReady = isActualsUpdated && hasEvidencePost && (!needRefund || isRefundDone);        
-                
-                                                                                                                const reasons = [];        
-                                                                                                                if (!isActualsUpdated) reasons.push("Chưa cập nhật số liệu thực tế");        
-                                                                                                                if (!hasEvidencePost) reasons.push("Chưa chuẩn bị bài chia sẻ minh chứng");        
-                                                                                                                if (needRefund && !isRefundDone) reasons.push("Chưa hoàn tất hoàn tiền dư");        
-                
-                                                                                                                return (        
-                                                                                                                    <>        
-                                                                                                                        {(exp.evidenceStatus === 'PENDING' || exp.evidenceStatus === 'PENDING_REVIEW' || !exp.evidenceStatus || exp.evidenceStatus === 'ALLOWED_EDIT') && (        
-                                                                                                                            <>        
-                                                                                                                                <button        
-                                                                                                                                    onClick={async () => {        
-                                                                                                                                        if (!isReady) return;        
-                                                                                                                                        try {        
-                                                                                                                                            setUploadingEvidence(true);        
-                                                                                                                                            const draftPost = posts.find((p: any) => p.status === 'DRAFT');        
-                                                                                                                                            if (draftPost) {        
-                                                                                                                                                await feedPostService.updateStatus(Number(draftPost.id), 'PUBLISHED');        
-                                                                                                                                            }        
-                                                                                                                                            await expenditureService.updateEvidenceStatus(exp.id, 'SUBMITTED');        
-                                                                                                                                            toast.success('Đã nộp minh chứng thành công!');        
-                                                                                                                                            fetchData();        
-                                                                                                                                        } catch (err: any) {        
-                                                                                                                                            toast.error(err.response?.data?.message || 'Nộp minh chứng thất bại.');        
-                                                                                                                                        } finally {        
-                                                                                                                                            setUploadingEvidence(false);        
-                                                                                                                                        }        
-                                                                                                                                    }}        
-                                                                                                                                    disabled={uploadingEvidence || !isReady}        
-                                                                                                                                    className={`w-full py-4 text-white text-xs font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3 ${isReady ? 'bg-orange-400 hover:bg-orange-500' : 'bg-gray-300 cursor-not-allowed shadow-none'}`}        
-                                                                                                                                >        
-                                                                                                                                    {uploadingEvidence ? (        
-                                                                                                                                        <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang nộp...</>        
-                                                                                                                                    ) : (        
-                                                                                                                                        <><Send className="w-4 h-4" /> NỘP MINH CHỨNG</>        
-                                                                                                                                    )}        
-                                                                                                                                </button>        
-                                                                                                                                {!isReady && (        
-                                                                                                                                    <div className="p-3 bg-gray-50 border border-black/5 rounded-xl">        
-                                                                                                                                        <p className="text-[9px] font-black text-black/80 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">        
-                                                                                                                                            <AlertCircle className="w-3 h-3 text-black/40" /> Cần hoàn thành các bước sau:        
-                                                                                                                                        </p>        
-                                                                                                                                        <ul className="space-y-1">        
-                                                                                                                                            {reasons.map((r, i) => (        
-                                                                                                                                                <li key={i} className="text-[9px] font-bold text-black/60 flex items-center gap-2">        
-                                                                                                                                                    <div className="w-1 h-1 rounded-full bg-black/20" /> {r}        
-                                                                                                                                                </li>        
-                                                                                                                                            ))}        
-                                                                                                                                        </ul>        
-                                                                                                                                    </div>        
-                                                                                                                                )}        
-                                                                                                                            </>        
-                                                                                                                        )}        
-                                                                                                                    </>        
-                                                                                                                );        
-                                                                                                            })()}        
-                                                                                                        </div>        
-                                                                                                    </div>        
-                                                                                                </div>        
-                                                                                            )}        
-                                                                                        </div>        
+                                                                                                        <button
+                                                                                                            onClick={(e) => { 
+                                                                                                                e.stopPropagation(); 
+                                                                                                                router.push(`/account/campaigns/expenditures/update/${exp.id}?campaignId=${campaign.id}`);
+                                                                                                            }}
+                                                                                                            className="w-full py-4 bg-black text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[2px] hover:bg-emerald-900 transition-all flex items-center justify-center gap-3 shadow-xl"
+                                                                                                        >
+                                                                                                            <Edit3 className="w-4 h-4" /> 
+                                                                                                            {exp.status === 'CLOSED' ? 'Xem / Chỉnh sửa thực chi' : 'Cập nhật thực chi & Tổng kết'}
+                                                                                                        </button>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
+                                                                                        </div>
                                                                                         <div className="mt-auto pt-6 border-t border-black/5 flex gap-4">        
                                                                                             <button        
                                                                                                 onClick={(e) => { e.stopPropagation(); router.push(`/account/campaigns/expenditures/${exp.id}?campaignId=${campaign.id}`); }}        
