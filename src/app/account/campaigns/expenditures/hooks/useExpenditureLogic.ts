@@ -117,7 +117,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                     return isEvidence && tType === 'EXPENDITURE' && Number(tid) === Number(e.id);
                 });
             });
-            exps.sort((a, b) => b.id - a.id);
+            exps.sort((a, b) => a.id - b.id);
             setExpenditurePosts(postsMap);
             setExpenditures(exps);
         } catch (err) {
@@ -376,8 +376,8 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chiến dịch đã bị vô hiệu hóa.', isDisabled: true };
         if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
         
-        // Lấy đợt chi tiêu mới nhất (đã sort desc theo ID ở trên)
-        const last = expenditures[0];
+        // Lấy đợt chi tiêu mới nhất (đã sort asc theo ID ở trên, nên lấy phần tử cuối cùng)
+        const last = expenditures[expenditures.length - 1];
         
         // Nếu đợt cuối bị từ chối thì cho phép tạo đợt mới
         if (last.status === 'REJECTED') return { canCreate: true, blockReason: null, isDisabled: false };

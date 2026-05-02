@@ -61,7 +61,7 @@ export default function ExpenditureTable({
             content: `Minh chứng thực hiện chi tiêu cho chiến dịch "${campaign.title}".\nSố tiền: ${new Intl.NumberFormat('vi-VN').format(ev.amount)} VND\n\n#MinhChungChiTieu #TrustFundMe`,
             targetId: exp.id,
             targetType: 'EXPENDITURE',
-            targetName: 'Minh chứng giải ngân',
+            targetName: `evidence|${ev.id}`,
             _evidenceId: ev.id,
             visibility: 'PUBLIC',
             status: 'PUBLISHED'
@@ -70,7 +70,6 @@ export default function ExpenditureTable({
     };
 
     return (
-
         <div className="bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.03)] rounded-[3rem] border border-black/5 overflow-hidden">
             <div className="px-10 py-3 border-b border-black/5 bg-white flex justify-between items-center">
                 <h2 className="text-[10px] font-black text-black uppercase tracking-[3px]">Danh sách các đợt chi tiêu</h2>
@@ -163,24 +162,25 @@ export default function ExpenditureTable({
                                             </td>
                                             <td className="px-6 py-2">
                                                 <div className="flex items-center gap-3">
-                                                    {nextPendingEv && (
+                                                    {pendingEvidences.length > 0 && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleOpenPostForEvidence(exp, nextPendingEv);
+                                                                if (expandedRowId !== exp.id) {
+                                                                    setExpandedRowId(exp.id);
+                                                                    setSelectedLogStep(3);
+                                                                } else {
+                                                                    setSelectedLogStep(3);
+                                                                }
                                                             }}
-                                                            className="px-4 py-1.5 bg-orange-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center gap-1.5 whitespace-nowrap"
+                                                            className="px-4 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-orange-100 transition-all flex items-center gap-1.5 whitespace-nowrap animate-pulse"
                                                         >
-                                                            <Camera className="w-3.5 h-3.5" />
-                                                            Nộp ngay
+                                                            <AlertCircle className="w-3.5 h-3.5" />
+                                                            Bạn cần nộp {pendingEvidences.length} bài minh chứng
                                                         </button>
                                                     )}
 
-                                                    {exp.isWithdrawalRequested ? (
-                                                        <span className="text-[10px] font-black uppercase text-black flex items-center gap-1">
-                                                            <CheckCircle className="w-3.5 h-3.5" /> Đã yêu cầu
-                                                        </span>
-                                                    ) : (
+                                                    {!exp.isWithdrawalRequested && (
                                                         <>
                                                             {(campaign.type === 'ITEMIZED' && (exp.status === 'APPROVED' || (exp.status as string) === 'CLOSED')) ? (
                                                                 <button
@@ -261,13 +261,13 @@ export default function ExpenditureTable({
                                                                                 onClick={(e) => { e.stopPropagation(); setSelectedLogStep(2); }}
                                                                                 className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 2 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
                                                                             >
-                                                                                <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${exp.status === 'REJECTED' ? 'bg-rose-500 ring-4 ring-rose-50' : (exp.isWithdrawalRequested ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50')}`}></div>
+                                                                                <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${exp.status === 'REJECTED' ? 'bg-rose-500 ring-4 ring-rose-50' : ((exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED' || exp.isWithdrawalRequested) ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50')}`}></div>
                                                                                 <div className="flex flex-col">
                                                                                     <span className={`text-sm font-black block leading-none mb-1 ${selectedLogStep === 2 ? 'text-emerald-900' : (exp.status === 'REJECTED' ? 'text-rose-600' : (exp.status === 'PENDING_REVIEW' && campaign.type === 'AUTHORIZED' ? 'text-amber-500' : (exp.isWithdrawalRequested || (campaign.type === 'AUTHORIZED' && exp.status !== 'PENDING_REVIEW') ? 'text-emerald-700' : 'text-orange-400')))}`}>
-                                                                                        2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (campaign.type === 'AUTHORIZED' ? (exp.status === 'PENDING_REVIEW' ? 'Đang xét duyệt' : 'Đã duyệt') : 'Yêu cầu rút tiền')}
+                                                                                        2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED') ? 'Đã duyệt' : (campaign.type === 'AUTHORIZED' && exp.status === 'PENDING_REVIEW') ? 'Đang xét duyệt' : 'Yêu cầu rút tiền'}
                                                                                     </span>
                                                                                     <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                        {exp.isWithdrawalRequested ? 'Đã thực hiện yêu cầu rút tiền' : 'Chưa thực hiện'}
+                                                                                        {(exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED') ? 'Đã duyệt' : exp.isWithdrawalRequested ? 'Đã thực hiện yêu cầu rút tiền' : 'Chưa thực hiện'}
                                                                                     </span>
                                                                                 </div>
                                                                             </button>
@@ -278,13 +278,13 @@ export default function ExpenditureTable({
                                                                                         onClick={(e) => { e.stopPropagation(); setSelectedLogStep(3); }}
                                                                                         className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 3 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
                                                                                     >
-                                                                                        <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.disbursedAt || exp.status === 'DISBURSED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>
+                                                                                        <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.disbursedAt || exp.status === 'DISBURSED' || (totalCount > 0 && submittedCount === totalCount)) ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>
                                                                                         <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-emerald-900' : ((exp.disbursedAt || exp.status === 'DISBURSED') ? 'text-emerald-700' : 'text-orange-400')}`}>
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 3 ? 'text-emerald-900' : ((exp.disbursedAt || exp.status === 'DISBURSED' || (totalCount > 0 && submittedCount === totalCount)) ? 'text-emerald-700' : 'text-orange-400')}`}>
                                                                                                 3. Minh chứng giao dịch
                                                                                             </span>
                                                                                             <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                {(exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : 'Đang xử lý'}
+                                                                                                {(exp.disbursedAt || exp.status === 'DISBURSED') ? 'Đã chuyển tiền' : (totalCount > 0 && submittedCount === totalCount) ? 'Đã up minh chứng' : 'Đang xử lý'}
                                                                                             </span>
                                                                                         </div>
                                                                                     </button>
@@ -348,7 +348,7 @@ export default function ExpenditureTable({
                                                                             {selectedLogStep === 2 && (
                                                                                 <div className="space-y-4">
                                                                                     <div className="flex items-center justify-between">
-                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">{exp.status === 'REJECTED' ? 'KẾT QUẢ PHẢN HỒI' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'XÉT DUYỆT CHI TIÊU' : 'YÊU CẦU RÚT TIỀN')}</h4>
+                                                                                        <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">{exp.status === 'REJECTED' ? 'KẾT QUẢ PHẢN HỒI' : ((exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED') ? 'KẾT QUẢ XÉT DUYỆT' : (campaign.type === 'AUTHORIZED' && exp.staffReviewId ? 'XÉT DUYỆT CHI TIÊU' : 'YÊU CẦU RÚT TIỀN'))}</h4>
                                                                                         {exp.status === 'REJECTED' ? (
                                                                                             <span className="px-3 py-1 bg-rose-50 text-rose-700 text-[8px] font-black uppercase tracking-widest rounded-full border border-rose-100">Từ chối</span>
                                                                                         ) : (campaign.type === 'AUTHORIZED' && exp.status !== 'PENDING_REVIEW') ? (

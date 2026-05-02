@@ -287,13 +287,8 @@ export default function FeedPostHeader({
             </div>
           )}
 
-          {/* Footer: Số tiền rút + Link */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a", fontFamily: "var(--font-dm-sans)" }}>
-              Số tiền rút: <span style={{ color: "#7C3AED" }}>
-                {(expenditure.totalReceivedAmount != null ? Number(expenditure.totalReceivedAmount) : Number(expenditure.totalExpectedAmount)).toLocaleString("vi-VN")}đ
-              </span>
-            </div>
+          {/* Footer: Link */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
             <a
               href={`/account/campaigns/expenditures/${post.targetId}`}
               target="_blank"

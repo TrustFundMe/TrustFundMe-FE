@@ -216,7 +216,9 @@ function CampaignDetailsInner() {
         );
         const categoryMap = new Map<number, any[]>(categoryEntries);
 
-        const mappedPlans: CampaignPlan[] = (expenditures || []).map((exp: any) => {
+        const sortedExpenditures = [...(expenditures || [])].sort((a: any, b: any) => a.id - b.id);
+
+        const mappedPlans: CampaignPlan[] = sortedExpenditures.map((exp: any) => {
           const rawCategories = (exp.categories && exp.categories.length > 0)
             ? exp.categories
             : (categoryMap.get(exp.id) || []);
