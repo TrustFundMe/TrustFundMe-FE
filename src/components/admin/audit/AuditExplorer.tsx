@@ -36,7 +36,14 @@ export default function AuditExplorer() {
     try {
       const data = await auditService.getAll(0, 20, query.trim());
       setAuditLogs(data.content);
-      setStats(prev => ({ ...prev, total: data.totalElements }));
+      
+      // Also fetch global stats
+      const globalStats = await auditService.getGlobalStatus();
+      setStats({ 
+        total: globalStats.total, 
+        integrity: globalStats.integrity 
+      });
+      
       if (query) setHasSearched(true);
     } catch (err) {
       console.error('Fetch logs error:', err);
@@ -234,8 +241,8 @@ export default function AuditExplorer() {
                            <span className="text-[11px] font-bold text-slate-900">{selectedAudit.actorName || 'Hệ thống'}</span>
                         </div>
                         <div className="bg-white p-2.5 rounded-lg border border-slate-100">
-                           <span className="text-[8px] font-bold text-slate-400 uppercase block">Địa chỉ IP</span>
-                           <span className="text-[11px] font-bold text-slate-900">{selectedAudit.ipAddress || 'Internal'}</span>
+                           <span className="text-[8px] font-bold text-slate-400 uppercase block">Trạng thái ghi nhận</span>
+                           <span className="text-[11px] font-bold text-slate-900 italic">Bản ghi bất biến</span>
                         </div>
                      </div>
 
@@ -282,7 +289,7 @@ export default function AuditExplorer() {
                            <span className={`text-[10px] font-bold uppercase ${
                              isVerifying ? 'text-slate-500' : integrityResult?.valid ? 'text-emerald-800' : 'text-red-800'
                            }`}>
-                             Trạng thái: {isVerifying ? 'Đang xác minh...' : integrityResult?.valid ? 'Toàn vẹn (Integrity Verified)' : 'CẢNH BÁO: DỮ LIỆU ĐÃ BỊ THAY ĐỔI!'}
+                             Trạng thái: {isVerifying ? 'Đang xác minh...' : integrityResult?.valid ? 'Toàn vẹn (Integrity Verified)' : !integrityResult?.dataValid ? 'CẢNH BÁO: DỮ LIỆU BỊ SỬA!' : 'CẢNH BÁO: PHÁT HIỆN GIAN LẬN!'}
                            </span>
                         </div>
                         <span className={`text-[9px] font-medium ${
@@ -292,7 +299,9 @@ export default function AuditExplorer() {
                             ? 'Vui lòng đợi trong giây lát...' 
                             : integrityResult?.valid 
                             ? 'Bản ghi này bất biến và không thể bị sửa đổi.' 
-                            : 'Mã Hash thực tế không khớp với mã Hash được niêm phong.'}
+                            : !integrityResult?.dataValid 
+                            ? 'Mã Hash dữ liệu hiện tại không khớp với mã niêm phong.'
+                            : `Dữ liệu của ${integrityResult?.tamperedEntity} đã bị thay đổi trái phép!`}
                         </span>
                      </div>
                   </div>

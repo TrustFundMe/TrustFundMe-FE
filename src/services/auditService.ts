@@ -36,6 +36,11 @@ export const auditService = {
     return res.data;
   },
 
+  async getGlobalStatus() {
+    const res = await api.get<{ integrity: string, total: number, status: string }>('/api/audit/integrity');
+    return res.data;
+  },
+
   async verifyIntegrity(auditId: number) {
     const res = await api.get<{ valid: boolean, currentHash: string }>(`/api/audit/${auditId}/verify`);
     return res.data;
