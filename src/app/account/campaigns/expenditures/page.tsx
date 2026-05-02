@@ -278,7 +278,7 @@ function CampaignExpendituresContent() {
                                 const evidenceId = Number(currentDraftPost._evidenceId);
                                 if (evidenceId) {
                                     try {
-                                        const proofUrl = `${window.location.origin}/post/${newPost.id}`;
+                                        const proofUrl = `/post/${newPost.id}`;
                                         await expenditureService.submitEvidence(evidenceId, proofUrl);
                                         toast.success('Đã nộp minh chứng thành công!');
                                     } catch (err) {
@@ -297,7 +297,7 @@ function CampaignExpendituresContent() {
                                 const evidenceId = Number(currentDraftPost._evidenceId);
                                 if (evidenceId) {
                                     try {
-                                        const proofUrl = `${window.location.origin}/post/${updatedPost.id}`;
+                                        const proofUrl = `/post/${updatedPost.id}`;
                                         await expenditureService.submitEvidence(evidenceId, proofUrl);
                                     } catch (err) {
                                         console.error('Error linking evidence on update:', err);

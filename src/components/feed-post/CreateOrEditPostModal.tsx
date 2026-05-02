@@ -56,7 +56,8 @@ export default function CreateOrEditPostModal({
   /** Ảnh đang upload: preview local, xong thì done=true */
   const [uploadingItems, setUploadingItems] = useState<{ file: File; preview: string; done: boolean }[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName?.startsWith("evidence"));
+  const isPreFilledLocked = !isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none";
+  const isLinkLocked = (isEdit && Boolean(initialData?.targetId) && initialData?.targetType !== "none") || (initialData?.targetName?.startsWith("evidence")) || isPreFilledLocked;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inFlightUploadsRef = useRef<Promise<{ url: string; mediaId: number } | void>[]>([]);
   /** Snapshot of images when modal opens in EDIT mode — used to detect removed images */

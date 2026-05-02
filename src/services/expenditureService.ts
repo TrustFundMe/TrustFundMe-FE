@@ -48,7 +48,7 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; }[], proofUrl?: string): Promise<Expenditure> => {
+    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string; actualUnit?: string; }[], proofUrl?: string): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items, proofUrl });
         return response.data;
     },
@@ -214,5 +214,8 @@ export const expenditureService = {
         await axiosInstance.post(`/api/expenditures/evidence/${evidenceId}/submit`, null, {
             params: { proofUrl }
         });
+    },
+    deleteCategory: async (id: number | string): Promise<void> => {
+        await axiosInstance.delete(`/api/expenditures/categories/${id}`);
     },
 };

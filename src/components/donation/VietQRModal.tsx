@@ -153,13 +153,6 @@ export default function VietQRModal({
             </div>
 
             <div className="w-full max-w-sm flex flex-col gap-3">
-              <button
-                onClick={onConfirm}
-                className="w-full py-4 bg-[#FF5E14] hover:bg-[#ea550c] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-brand/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
-              >
-                Đã chuyển khoản
-                <CheckCircle2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              </button>
               <div className="flex items-center justify-center gap-6 mt-1">
                 <button
                   onClick={onClose}

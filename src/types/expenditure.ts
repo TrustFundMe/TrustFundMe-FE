@@ -31,6 +31,7 @@ export interface ExpenditureItem {
     catologyId?: number;
     catologyName?: string;
     expectedUnit?: string;
+    unit?: string;
     expectedBrand?: string;
     actualBrand?: string;
     expectedPurchaseLocation?: string;
