@@ -158,6 +158,17 @@ const fallbackMenus: ModuleGroup[] = [
                 createdAt: "",
                 updatedAt: "",
             },
+            {
+                id: 112,
+                title: "Quản lý kiểm toán",
+                url: "/admin/audit",
+                icon: "hash",
+                moduleGroupId: 1,
+                displayOrder: 13,
+                isActive: true,
+                createdAt: "",
+                updatedAt: "",
+            },
         ],
         createdAt: "",
         updatedAt: "",
@@ -269,6 +280,17 @@ export function useSidebarMenus() {
                                     : undefined,
                         }
                     })
+
+                // Inject Audit Management for UI demonstration only into the main group
+                const isMainGroup = String(group.id) === "1" || group.name.toUpperCase().includes("MAIN") || group.name.toUpperCase().includes("TỔNG QUAN");
+                if (isMainGroup && !items.find(i => i.url.includes('/admin/audit'))) {
+                    items.push({
+                        title: "Quản lý kiểm toán",
+                        url: "/admin/audit",
+                        icon: iconMap["hash"],
+                        isActive: isActiveRoute("/admin/audit"),
+                    });
+                }
 
                 if (items.length === 0) return null
 
