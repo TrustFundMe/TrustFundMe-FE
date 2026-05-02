@@ -715,23 +715,45 @@ function ProfileContent() {
                         </div>
                         <div className="text-left">
                           <h3 className="text-[15px] font-black uppercase tracking-tight mb-1 transition-colors whitespace-nowrap">
-                            {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount ? 'Quản lý hồ sơ xác thực' : 'Xác thực danh tính ngay'}
+                            {kycData?.status === 'APPROVED' 
+                              ? 'Hồ sơ đã xác thực' 
+                              : kycData?.status === 'PENDING'
+                              ? 'Hồ sơ đang chờ duyệt'
+                              : 'Xác thực danh tính ngay'}
                           </h3>
                           <p className="text-[9px] font-bold text-gray-400 max-w-[280px] leading-relaxed uppercase tracking-widest">
-                            {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount 
-                              ? 'Xem và cập nhật thông tin định danh & ngân hàng của bạn'
-                              : 'Xác thực ngay để có thể mở quỹ thiện nguyện cho riêng bạn'}
+                            {kycData?.status === 'APPROVED' 
+                              ? 'Hồ sơ của bạn đã được hệ thống phê duyệt và xác thực thành công'
+                              : kycData?.status === 'PENDING'
+                              ? 'Hệ thống đang kiểm tra thông tin của bạn. Vui lòng đợi trong giây lát.'
+                              : 'Xác thực ngay để nâng cấp tài khoản và mở rộng quyền hạn'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex flex-col items-center md:items-center gap-2.5 shrink-0">
-                        <div className="px-5 py-2 rounded-xl bg-white text-black text-[9px] font-black uppercase tracking-widest flex items-center gap-2 group-hover:bg-gray-200 transition-all whitespace-nowrap">
-                          {kycData?.status === 'APPROVED' && user.cvUrl && bankAccount ? 'Xem chi tiết' : 'Bắt đầu ngay'} 
+                        <div className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all whitespace-nowrap ${
+                          kycData?.status === 'PENDING' 
+                          ? 'bg-amber-500 text-white animate-pulse' 
+                          : kycData?.status === 'APPROVED'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white text-black group-hover:bg-gray-200'
+                        }`}>
+                          {kycData?.status === 'APPROVED' 
+                            ? 'Xem chi tiết' 
+                            : kycData?.status === 'PENDING'
+                            ? 'Kiểm tra trạng thái'
+                            : 'Bắt đầu ngay'} 
                           <ChevronRight className="h-3 w-3" />
                         </div>
                         <div className="flex gap-1.5">
-                          <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${kycData?.status === 'APPROVED' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
+                          <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${
+                            kycData?.status === 'APPROVED' 
+                            ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' 
+                            : kycData?.status === 'PENDING'
+                            ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                            : 'bg-white/20'
+                          }`}></div>
                           <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${user.cvUrl ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
                           <div className={`h-1.5 w-1.5 rounded-full transition-all duration-500 ${bankAccount ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-white/20'}`}></div>
                         </div>

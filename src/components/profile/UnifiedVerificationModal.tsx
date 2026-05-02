@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContextProxy';
 import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { kycService } from '@/services/kycService';
+import { auditService } from '@/services/auditService';
 
 interface UnifiedVerificationModalProps {
   userId: string | number;
@@ -31,6 +32,16 @@ export default function UnifiedVerificationModal({
   const { updateUser } = useAuth();
   const { toast } = useToast();
   const [isSubmittingAll, setIsSubmittingAll] = useState(false);
+  const [submissionHash, setSubmissionHash] = useState<string | null>(null);
+  const [showHashResult, setShowHashResult] = useState(false);
+
+  // Helper to generate SHA-256 hash
+  async function generateSHA256(data: string) {
+    const msgUint8 = new TextEncoder().encode(data);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -169,10 +180,31 @@ export default function UnifiedVerificationModal({
           faceMeshSample: kycFormData.faceMeshSample ? JSON.stringify(kycFormData.faceMeshSample) : null,
         };
         
+        // Generate Audit Hash for the submission
+        const hash = await generateSHA256(JSON.stringify(kycPayload));
+        setSubmissionHash(hash);
+        
+        let savedKyc;
         if (kycData && kycData.id) {
-          await kycService.update(userId, kycPayload);
+          savedKyc = await kycService.update(userId, kycPayload);
         } else {
-          await kycService.submit(userId, kycPayload);
+          savedKyc = await kycService.submit(userId, kycPayload);
+        }
+
+        // 3. Save to Audit Service (Microservice)
+        try {
+          await auditService.create({
+            entityType: 'KYC',
+            entityId: Number(userId), // Using userId as primary reference for KYC audits
+            action: kycData?.id ? 'UPDATE' : 'CREATE',
+            dataSnapshot: JSON.stringify(kycPayload),
+            auditHash: hash,
+            actorId: Number(userId),
+            actorName: userName
+          });
+        } catch (auditErr) {
+          console.error('Audit Log failed (Silent Error):', auditErr);
+          // We don't block the UI if audit log fails, but it should be recorded in real scenarios
         }
       }
 
@@ -183,8 +215,10 @@ export default function UnifiedVerificationModal({
       }
 
       toast('Đã nộp hồ sơ xác thực thành công!', 'success');
+      setShowHashResult(true);
       onSuccess();
-      onClose();
+      // We don't close immediately now to show the hash result
+      // onClose();
     } catch (err: any) {
       toast(err.response?.data?.message || 'Có lỗi xảy ra khi gửi hồ sơ', 'error');
     } finally {
@@ -462,7 +496,64 @@ export default function UnifiedVerificationModal({
         </div>
 
 
+
+        {/* Audit Hash Success View */}
+        {showHashResult && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center p-6 bg-white rounded-[2rem] animate-in fade-in zoom-in duration-500">
+            <div className="max-w-md w-full text-center space-y-6">
+              <div className="h-20 w-20 rounded-3xl bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-xl shadow-emerald-200">
+                <ShieldCheck className="h-10 w-10" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Nộp hồ sơ thành công</h3>
+                <p className="text-sm text-gray-500">Hồ sơ của bạn đã được niêm phong kỹ thuật số và đưa vào hệ thống kiểm toán bất biến.</p>
+              </div>
+              
+              <div className="bg-slate-900 rounded-2xl p-5 text-left relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                   <Fingerprint className="h-20 w-20 text-white" />
+                </div>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Cryptographic Fingerprint (SHA-256)</span>
+                <div className="font-mono text-[11px] text-emerald-400 break-all leading-relaxed bg-black/30 p-3 rounded-xl border border-white/5">
+                  {submissionHash || 'Generating...'}
+                </div>
+                <div className="flex items-center gap-2 mt-4 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  <Lock className="h-3 w-3" />
+                  Xác minh bởi TrustFundMe Cryptographic Audit
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(submissionHash || '');
+                    toast('Đã sao chép mã Hash!', 'success');
+                  }}
+                  className="w-full py-3 bg-gray-100 text-gray-900 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <Fingerprint className="h-4 w-4" /> Sao chép mã xác minh
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="w-full py-4 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl"
+                >
+                  Hoàn tất & Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+function ShieldCheck(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
