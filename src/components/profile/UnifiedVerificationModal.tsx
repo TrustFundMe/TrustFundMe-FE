@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, ScrollText, Loader2, CheckCircle2, FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download, Clock, XCircle } from 'lucide-react';
+import { X, IdCard, ScrollText, Loader2, CheckCircle2, FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download, Clock, XCircle } from 'lucide-react';
 import KYCInputForm from '@/components/staff/request/KYCInputForm';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -271,7 +271,7 @@ export default function UnifiedVerificationModal({
         <div className="px-6 py-3 border-b border-gray-100 bg-gradient-to-br from-gray-50/50 to-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-black flex items-center justify-center text-white shadow-lg">
-              <Shield className="h-6 w-6" />
+              <IdCard className="h-6 w-6" />
             </div>
             <div>
               <h2 className="text-lg font-black text-gray-900 uppercase tracking-tight leading-none mb-1">Xác thực hồ sơ</h2>
@@ -294,7 +294,7 @@ export default function UnifiedVerificationModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-xl bg-black flex items-center justify-center text-white">
-                    <Shield className="h-4 w-4" />
+                    <IdCard className="h-4 w-4" />
                   </div>
                   <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Phần 1: Thông tin định danh cá nhân</h3>
                   {kycData?.status && (
