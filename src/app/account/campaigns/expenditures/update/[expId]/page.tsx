@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Check, AlertCircle, ExternalLink, Link as LinkIcon, Loader2, Save, ShoppingCart, Receipt, Image as ImageIcon, Trash2, Plus, PlusCircle, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle, ExternalLink, Link as LinkIcon, Loader2, Save, ShoppingCart, Receipt, Image as ImageIcon, Trash2, Plus, PlusCircle, X, ChevronRight, ChevronDown, Clock } from 'lucide-react';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { paymentService } from '@/services/paymentService';
@@ -428,6 +428,12 @@ export default function UpdateExpenditureActualsPage() {
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="px-2 py-0.5 bg-slate-100 text-[9px] font-black text-black rounded uppercase tracking-widest">Bước 4</span>
                                 <span className="text-[10px] font-bold text-black uppercase tracking-widest truncate max-w-[500px]">Chiến dịch: {campaign.title}</span>
+                                {expenditure.evidenceDueAt && (
+                                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${new Date(expenditure.evidenceDueAt) < new Date() ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                                        <Clock className="w-2.5 h-2.5" />
+                                        Hạn nộp: {new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -832,7 +838,7 @@ export default function UpdateExpenditureActualsPage() {
                         updatedAt: new Date().toISOString(),
                         targetId: expenditure.id,
                         targetType: 'EXPENDITURE',
-                        targetName: 'Biên lai tổng thực chi',
+                        targetName: 'evidence',
                         attachments: [],
                     }}
                     draftMode={false}

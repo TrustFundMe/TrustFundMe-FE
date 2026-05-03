@@ -82,6 +82,17 @@ export default function NewCampaignTestPage() {
     }, 0);
   }, [state.milestones]);
 
+  useEffect(() => {
+    if (!state.milestones.length) return;
+    const first = state.milestones[0];
+    const last = state.milestones[state.milestones.length - 1];
+    const autoStart = first.startDate || '';
+    const autoEnd = last.evidenceDueAt || '';
+    if (autoStart !== state.campaignCore.startDate || autoEnd !== state.campaignCore.endDate) {
+      patchState({ campaignCore: { ...state.campaignCore, startDate: autoStart, endDate: autoEnd } });
+    }
+  }, [state.milestones]);
+
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
     const core = state.campaignCore;
@@ -112,16 +123,6 @@ export default function NewCampaignTestPage() {
       Boolean(core.coverImageUrl?.trim());
     if (!coverOk) e.coverImage = 'Vui lòng thêm ít nhất một ảnh và chọn ảnh bìa.';
 
-    if (!core.startDate) e.startDate = 'Vui lòng chọn ngày bắt đầu.';
-    else {
-      const today = new Date().toISOString().split('T')[0];
-      if (core.startDate < today) e.startDate = 'Ngày bắt đầu không được trong quá khứ.';
-    }
-
-    if (!core.endDate) e.endDate = 'Vui lòng chọn ngày kết thúc.';
-    else if (core.startDate && core.endDate <= core.startDate)
-      e.endDate = 'Ngày kết thúc phải sau ngày bắt đầu.';
-
     return e;
   }, [state.campaignCore]);
 
@@ -137,7 +138,6 @@ export default function NewCampaignTestPage() {
       bankName.length > 0 &&
       accountHolderName.length >= 6 &&
       accountHolderName.length <= 255 &&
-      /^\d+$/.test(accountNumber) &&
       accountNumber.length >= 6 &&
       accountNumber.length <= 50 &&
       webhookKey.length > 0;
@@ -162,9 +162,8 @@ export default function NewCampaignTestPage() {
       return 'Tên chủ tài khoản phải từ 6-255 ký tự';
     }
     if (!accountNumber) return 'Thiếu số tài khoản nhận tiền';
-    if (!/^\d+$/.test(accountNumber)) return 'Số tài khoản chỉ được chứa chữ số';
     if (accountNumber.length < 6 || accountNumber.length > 50) {
-      return 'Số tài khoản phải từ 6-50 chữ số';
+      return 'Số tài khoản phải từ 6-50 ký tự';
     }
     if (!bankCode || !bankName) return 'Cần chọn ngân hàng nhận tiền';
     if (!webhookKey) return 'Cần nhập mã kết nối Casso';
@@ -176,20 +175,18 @@ export default function NewCampaignTestPage() {
   const effectiveStep0CanNext = TEMP_BYPASS_TO_STEP3 ? true : step0CanNext;
   const effectiveStep2CanNext = TEMP_BYPASS_TO_STEP3 ? true : step2CanNext;
 
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
-    const campaignStart = state.campaignCore.startDate;
     if (state.milestones.length < 1) return false;
     if (milestoneTotal !== target) return false;
-    for (const m of state.milestones) {
+    for (let i = 0; i < state.milestones.length; i += 1) {
+      const m = state.milestones[i];
       if (!m.title.trim()) return false;
       if (!m.startDate) return false;
-      if (m.startDate < today) return false;
-      if (campaignStart && m.startDate < campaignStart) return false;
       if (!m.endDate) return false;
       if (m.endDate <= m.startDate) return false;
-      if (!m.evidenceDueAt || m.evidenceDueAt <= m.endDate) return false;
+      if (!m.evidenceDueAt) return false;
+      if (m.endDate > m.evidenceDueAt) return false;
       if (!m.categories || m.categories.length === 0) return false;
       for (const cat of m.categories) {
         if (!cat.name.trim()) return false;
@@ -203,22 +200,19 @@ export default function NewCampaignTestPage() {
       }
     }
     return true;
-  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal, today, state.campaignCore.startDate]);
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
   const step3FailMessage = useMemo(() => {
     const target = state.campaignCore.targetAmount;
-    const campaignStart = state.campaignCore.startDate;
     if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
     if (milestoneTotal !== target) return `Tổng phân bổ (${milestoneTotal.toLocaleString('vi-VN')}đ) chưa khớp mục tiêu`;
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return `Đợt ${i + 1}: thiếu tên đợt`;
       if (!m.startDate) return `Đợt ${i + 1}: thiếu ngày bắt đầu`;
-      if (m.startDate < today) return `Đợt ${i + 1}: ngày bắt đầu phải từ hôm nay`;
-      if (campaignStart && m.startDate < campaignStart) return `Đợt ${i + 1}: ngày bắt đầu phải từ ngày quyên góp`;
       if (!m.endDate) return `Đợt ${i + 1}: thiếu ngày kết thúc`;
       if (m.endDate <= m.startDate) return `Đợt ${i + 1}: ngày kết thúc phải sau ngày bắt đầu`;
       if (!m.evidenceDueAt) return `Đợt ${i + 1}: thiếu ngày nộp minh chứng`;
-      if (m.evidenceDueAt <= m.endDate) return `Đợt ${i + 1}: ngày nộp minh chứng phải sau ngày kết thúc đợt`;
+      if (m.endDate > m.evidenceDueAt) return `Đợt ${i + 1}: ngày kết thúc phải trước hoặc bằng ngày nộp minh chứng`;
       if (!m.categories || m.categories.length === 0) return `Đợt ${i + 1}: cần ít nhất 1 danh mục`;
       for (let j = 0; j < m.categories.length; j += 1) {
         const cat = m.categories[j];

@@ -73,10 +73,6 @@ export default function Step2CampaignForm({
         return core.title.trim().length > 0;
       case 'targetAmount':
         return core.targetAmount > 0;
-      case 'startDate':
-        return Boolean(core.startDate);
-      case 'endDate':
-        return Boolean(core.endDate);
       case 'category':
         return Boolean(core.categoryId || core.category.trim());
       case 'objective':
@@ -215,42 +211,6 @@ export default function Step2CampaignForm({
                   onPatchCore({ targetAmount: Number(e.target.value) || 0 });
                 }}
                 onBlur={() => setTouched((prev) => ({ ...prev, targetAmount: true }))}
-              />
-            </Field>
-            <Field
-              label="Ngày bắt đầu"
-              required
-              error={getFieldError('startDate')}
-              reserveFeedbackSlot={showErrors || Boolean(touched.startDate) || hasValue('startDate')}
-            >
-              <input
-                className={inputClass('startDate', errors, shouldShowFieldError('startDate'))}
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={core.startDate}
-                onChange={(e) => {
-                  setTouched((prev) => ({ ...prev, startDate: true }));
-                  onPatchCore({ startDate: e.target.value });
-                }}
-                onBlur={() => setTouched((prev) => ({ ...prev, startDate: true }))}
-              />
-            </Field>
-            <Field
-              label="Ngày kết thúc"
-              required
-              error={getFieldError('endDate')}
-              reserveFeedbackSlot={showErrors || Boolean(touched.endDate) || hasValue('endDate')}
-            >
-              <input
-                className={inputClass('endDate', errors, shouldShowFieldError('endDate'))}
-                type="date"
-                min={core.startDate || new Date().toISOString().split('T')[0]}
-                value={core.endDate}
-                onChange={(e) => {
-                  setTouched((prev) => ({ ...prev, endDate: true }));
-                  onPatchCore({ endDate: e.target.value });
-                }}
-                onBlur={() => setTouched((prev) => ({ ...prev, endDate: true }))}
               />
             </Field>
             <Field

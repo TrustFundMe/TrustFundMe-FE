@@ -85,6 +85,7 @@ export const API_ENDPOINTS = {
     BY_USER: (userId: number | string) => `/api/bank-accounts/user/${userId}`,
     MY_ACCOUNTS: "/api/bank-accounts",
     CHECK_EXISTS: "/api/bank-accounts/check-exists",
+    CHECK_WEBHOOK_KEY_EXISTS: "/api/bank-accounts/check-webhook-key-exists",
   },
   EXPENDITURES: {
     BASE: "/api/expenditures",

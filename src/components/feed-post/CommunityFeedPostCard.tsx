@@ -85,7 +85,8 @@ export function CommunityFeedPostCard({
   });
   const text = post.content.replace(/<[^>]*>/g, "").trim();
   const isEvidence = post.targetName?.startsWith('evidence');
-  let evidencePlanName = post.targetName?.includes('|') ? post.targetName.split('|')[1] : null;
+  const rawEvidenceSuffix = post.targetName?.includes('|') ? post.targetName.split('|')[1] : null;
+  let evidencePlanName = rawEvidenceSuffix && /^\d+$/.test(rawEvidenceSuffix) ? null : rawEvidenceSuffix;
   if (!evidencePlanName && post.title?.includes('Cập nhật minh chứng chi tiêu:')) {
     evidencePlanName = post.title.replace('Cập nhật minh chứng chi tiêu: ', '').trim();
   }
@@ -198,12 +199,9 @@ export function CommunityFeedPostCard({
             >
               <FileText className="w-3.5 h-3.5" />
               {isEvidence ? (
-                <>
-                  <span className="text-purple-700 dark:text-purple-300 font-extrabold flex items-center gap-1">
-                    Minh chứng cho
-                  </span>
-                  <span className="ml-[2px] font-bold text-purple-900 dark:text-purple-100">{evidencePlanName || `#${post.targetId}`}</span>
-                </>
+                <span className="text-purple-700 dark:text-purple-300 font-extrabold">
+                  {evidencePlanName ? `Minh chứng cho ${evidencePlanName}` : 'Minh chứng'}
+                </span>
               ) : (
                 post.targetName || `Đợt chi tiêu #${post.targetId}`
               )}
