@@ -222,11 +222,9 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
     number:
       !bankNumberTrim
         ? 'Vui lòng nhập số tài khoản.'
-        : !/^\d+$/.test(bankNumberTrim)
-          ? 'Số tài khoản chỉ được chứa chữ số.'
-          : bankNumberTrim.length < 6 || bankNumberTrim.length > 50
-            ? 'Số tài khoản phải từ 6-50 chữ số.'
-            : '',
+        : bankNumberTrim.length < 6 || bankNumberTrim.length > 50
+          ? 'Số tài khoản phải từ 6-50 ký tự.'
+          : '',
     bank: !bankCodeTrim ? 'Vui lòng chọn ngân hàng nhận tiền.' : '',
     webhookKey: !state.bankInfo.webhookKey.trim() ? 'Vui lòng nhập mã kết nối Casso.' : '',
   };
@@ -452,7 +450,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
               <LabeledField
                 id="step1-account-number"
                 label="Số tài khoản"
-                hint="Nhập số tài khoản nhận giải ngân (chỉ chữ số)."
+                hint="Nhập số tài khoản nhận giải ngân."
               >
                 <input
                   id="step1-account-number"
@@ -666,7 +664,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
                       <li>Đăng nhập: <a href="https://casso.vn/" target="_blank" rel="noreferrer" className="text-blue-700 underline">https://casso.vn/</a></li>
                       <li>Vào Kết nối &gt; Tích hợp &gt; Thêm tích hợp</li>
                       <li>Chọn Webhook hoặc Webhook V2</li>
-                      <li>Nhập Webhook URL: <code className="select-all rounded bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-900">https://trust-fund-me-fe.vercel.app/api/payments/casso-webhook</code></li>
+                      <li>Nhập Webhook URL: <code className="select-all rounded bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-900">https://trust-fund-me-be.vercel.app/api/casso</code></li>
                       <li>Sao chép “Key bảo mật” do Casso tạo</li>
                       <li>Dán key đó vào ô này</li>
                       <li>Bấm “Gọi thử” để test và sau đó bấm “Lưu”</li>

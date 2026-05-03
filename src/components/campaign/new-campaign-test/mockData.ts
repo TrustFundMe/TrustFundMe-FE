@@ -83,8 +83,8 @@ export const seedState: NewCampaignTestState = {
     objective:
       'Huy động quỹ tổng để cung cấp nhu yếu phẩm, vận chuyển, và tổ chức phân phối an toàn cho 2.000 hộ dân.',
     targetAmount: 1000000000,
-    startDate: '2026-04-25',
-    endDate: '2026-05-25',
+    startDate: '',
+    endDate: '',
     category: 'Cứu trợ thiên tai',
     region: 'Quảng Bình - Quảng Trị',
     beneficiaryType: 'Hộ gia đình bị ảnh hưởng trực tiếp',

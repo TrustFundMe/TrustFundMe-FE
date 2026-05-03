@@ -63,14 +63,20 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     let changed = false;
     const nextMilestones = state.milestones.map((m, idx) => {
       const expectedStart = idx === 0 ? firstMilestoneAutoStart : previousChainEnd || firstMilestoneAutoStart;
-      // Chain link: startDate (N) = evidenceDueAt (N-1)
       previousChainEnd = m.evidenceDueAt || m.endDate || expectedStart;
-      if (m.startDate === expectedStart) return m;
+      const isLast = idx === state.milestones.length - 1;
+      const needStartFix = m.startDate !== expectedStart;
+      const needEvidenceFix = isLast && campaignEnd && m.evidenceDueAt !== campaignEnd;
+      if (!needStartFix && !needEvidenceFix) return m;
       changed = true;
-      return { ...m, startDate: expectedStart };
+      return {
+        ...m,
+        startDate: expectedStart,
+        ...(needEvidenceFix ? { evidenceDueAt: campaignEnd } : {}),
+      };
     });
     if (changed) onPatch({ milestones: nextMilestones });
-  }, [state.milestones, firstMilestoneAutoStart, onPatch]);
+  }, [state.milestones, firstMilestoneAutoStart, campaignEnd, onPatch]);
 
   const updateMilestone = (id: string, patch: Partial<Milestone>) => {
     onPatch({ milestones: state.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
@@ -430,7 +436,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     if (!m.startDate || m.startDate !== expectedStartDate) count += 1;
     if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate < campaignStart) count += 1;
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
-    if (!m.evidenceDueAt || (m.endDate && m.evidenceDueAt <= m.endDate)) count += 1;
+    const isLast = milestoneIndex === state.milestones.length - 1;
+    if (!m.evidenceDueAt) count += 1;
+    if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) count += 1;
     if (!m.categories || m.categories.length === 0) count += 1;
     (m.categories || []).forEach((cat) => {
       if (!(cat.name?.trim())) count += 1;
@@ -471,7 +479,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       issues.push('Ngày bắt đầu đợt 1 phải từ ngày bắt đầu quyên góp trở đi');
     }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) issues.push('Ngày kết thúc phải sau ngày bắt đầu');
-    if (!m.evidenceDueAt || (m.endDate && m.evidenceDueAt <= m.endDate)) issues.push('Ngày nộp minh chứng phải sau ngày kết thúc đợt');
+    if (!m.evidenceDueAt) issues.push('Thiếu ngày nộp minh chứng');
+    const isLast = milestoneIndex === state.milestones.length - 1;
+    if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) issues.push('Ngày nộp minh chứng đợt cuối phải trùng ngày kết thúc chiến dịch');
     if (!m.categories || m.categories.length === 0) issues.push('Chưa có danh mục chi tiêu');
     (m.categories || []).forEach((cat, catIdx) => {
       if (!(cat.name?.trim())) issues.push(`Danh mục ${catIdx + 1}: thiếu tên danh mục`);
@@ -626,7 +636,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                   </div>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] font-medium leading-snug text-black">
-                  <span>{m.startDate || 'Chưa có ngày bắt đầu'} → {m.endDate || 'Chưa có ngày kết thúc'}</span>
+                  <span>{m.startDate ? formatDateVi(m.startDate) : 'Chưa có ngày bắt đầu'} → {m.endDate ? formatDateVi(m.endDate) : 'Chưa có ngày kết thúc'}</span>
                   <span>• {(m.categories || []).length} danh mục</span>
                 </div>
                 {hasMilestoneErrors && issues.length > 0 && (
@@ -727,17 +737,36 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Ngày nộp minh chứng <span className="text-red-500">*</span></p>
-                            <input
-                              type="date"
-                              min={activeMilestone.endDate || today}
-                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.evidenceDueAt || (activeMilestone.endDate && activeMilestone.evidenceDueAt <= activeMilestone.endDate)) ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
-                              value={activeMilestone.evidenceDueAt || ''}
-                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                              onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
-                            />
-                            <p className="text-[11px] font-medium text-gray-500">
-                              Đây là hạn chót để nộp chứng từ. Giai đoạn tiếp theo sẽ bắt đầu sau ngày này.
-                            </p>
+                            {(() => {
+                              const isLastMilestone = state.milestones[state.milestones.length - 1]?.id === activeMilestone.id;
+                              return isLastMilestone && campaignEnd ? (
+                                <>
+                                  <input
+                                    type="date"
+                                    readOnly
+                                    className={`${inCls} w-full bg-gray-100 text-gray-600`}
+                                    value={campaignEnd}
+                                  />
+                                  <p className="text-[11px] font-medium text-amber-600">
+                                    Đợt cuối cùng: hạn nộp minh chứng tự động trùng với ngày kết thúc chiến dịch.
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <input
+                                    type="date"
+                                    min={activeMilestone.endDate || today}
+                                    className={`${inCls} w-full ${shouldValidateMilestone && !activeMilestone.evidenceDueAt ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                                    value={activeMilestone.evidenceDueAt || ''}
+                                    onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                                    onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
+                                  />
+                                  <p className="text-[11px] font-medium text-gray-500">
+                                    Đây là hạn chót để nộp chứng từ. Giai đoạn tiếp theo sẽ bắt đầu sau ngày này.
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Mô tả đợt</p>

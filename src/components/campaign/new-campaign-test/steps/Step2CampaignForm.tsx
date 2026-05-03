@@ -226,7 +226,6 @@ export default function Step2CampaignForm({
               <input
                 className={inputClass('startDate', errors, shouldShowFieldError('startDate'))}
                 type="date"
-                min={new Date().toISOString().split('T')[0]}
                 value={core.startDate}
                 onChange={(e) => {
                   setTouched((prev) => ({ ...prev, startDate: true }));
