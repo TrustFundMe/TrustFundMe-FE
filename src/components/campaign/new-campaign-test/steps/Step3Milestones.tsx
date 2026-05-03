@@ -55,28 +55,24 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   const today = new Date().toISOString().split('T')[0];
   const campaignStart = state.campaignCore.startDate;
   const campaignEnd = state.campaignCore.endDate;
-  const firstMilestoneAutoStart = campaignStart ? addDays(campaignStart, 1) : today;
 
   useEffect(() => {
     if (!state.milestones.length) return;
     let previousChainEnd = '';
     let changed = false;
     const nextMilestones = state.milestones.map((m, idx) => {
-      const expectedStart = idx === 0 ? firstMilestoneAutoStart : previousChainEnd || firstMilestoneAutoStart;
+      if (idx === 0) {
+        previousChainEnd = m.evidenceDueAt || m.endDate || m.startDate || today;
+        return m;
+      }
+      const expectedStart = previousChainEnd || today;
       previousChainEnd = m.evidenceDueAt || m.endDate || expectedStart;
-      const isLast = idx === state.milestones.length - 1;
-      const needStartFix = m.startDate !== expectedStart;
-      const needEvidenceFix = isLast && campaignEnd && m.evidenceDueAt !== campaignEnd;
-      if (!needStartFix && !needEvidenceFix) return m;
+      if (m.startDate === expectedStart) return m;
       changed = true;
-      return {
-        ...m,
-        startDate: expectedStart,
-        ...(needEvidenceFix ? { evidenceDueAt: campaignEnd } : {}),
-      };
+      return { ...m, startDate: expectedStart };
     });
     if (changed) onPatch({ milestones: nextMilestones });
-  }, [state.milestones, firstMilestoneAutoStart, campaignEnd, onPatch]);
+  }, [state.milestones, onPatch]);
 
   const updateMilestone = (id: string, patch: Partial<Milestone>) => {
     onPatch({ milestones: state.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)) });
@@ -238,7 +234,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   const addMilestone = () => {
     const newId = `m-${Math.random().toString(36).slice(2, 9)}`;
     const previousMilestone = state.milestones[state.milestones.length - 1];
-    const autoStartDate = previousMilestone?.endDate || firstMilestoneAutoStart;
+    const autoStartDate = previousMilestone?.evidenceDueAt || previousMilestone?.endDate || today;
     onPatch({
       milestones: [
         ...state.milestones,
@@ -426,19 +422,17 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   const getMilestoneErrorCount = (m: Milestone) => {
     const milestoneIndex = state.milestones.findIndex((x) => x.id === m.id);
-    const expectedStartDate =
-      milestoneIndex === 0
-        ? firstMilestoneAutoStart
-        : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
+    const prev = milestoneIndex > 0 ? state.milestones[milestoneIndex - 1] : null;
     let count = 0;
     if (!(m.title?.trim())) count += 1;
-    if (!campaignStart) count += 1;
-    if (!m.startDate || m.startDate !== expectedStartDate) count += 1;
-    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate < campaignStart) count += 1;
+    if (!m.startDate) count += 1;
+    if (milestoneIndex > 0) {
+      const expectedStart = prev?.evidenceDueAt || prev?.endDate || today;
+      if (m.startDate !== expectedStart) count += 1;
+    }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
-    const isLast = milestoneIndex === state.milestones.length - 1;
+    if (m.endDate && m.evidenceDueAt && m.endDate > m.evidenceDueAt) count += 1;
     if (!m.evidenceDueAt) count += 1;
-    if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) count += 1;
     if (!m.categories || m.categories.length === 0) count += 1;
     (m.categories || []).forEach((cat) => {
       if (!(cat.name?.trim())) count += 1;
@@ -467,21 +461,17 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   const getMilestoneIssues = (m: Milestone) => {
     const milestoneIndex = state.milestones.findIndex((x) => x.id === m.id);
-    const expectedStartDate =
-      milestoneIndex === 0
-        ? firstMilestoneAutoStart
-        : state.milestones[milestoneIndex - 1]?.endDate || firstMilestoneAutoStart;
+    const prev = milestoneIndex > 0 ? state.milestones[milestoneIndex - 1] : null;
     const issues: string[] = [];
     if (!(m.title?.trim())) issues.push('Thiếu tên đợt giải ngân');
-    if (!campaignStart) issues.push('Cần chọn ngày bắt đầu quyên góp ở bước 2 trước khi lập các đợt');
-    if (!m.startDate || m.startDate !== expectedStartDate) issues.push('Ngày bắt đầu đợt phải theo thứ tự nối tiếp từ đợt trước');
-    if (milestoneIndex === 0 && campaignStart && m.startDate && m.startDate < campaignStart) {
-      issues.push('Ngày bắt đầu đợt 1 phải từ ngày bắt đầu quyên góp trở đi');
+    if (!m.startDate) issues.push('Thiếu ngày bắt đầu đợt');
+    if (milestoneIndex > 0) {
+      const expectedStart = prev?.evidenceDueAt || prev?.endDate || today;
+      if (m.startDate && m.startDate !== expectedStart) issues.push('Ngày bắt đầu đợt phải theo thứ tự nối tiếp từ đợt trước');
     }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) issues.push('Ngày kết thúc phải sau ngày bắt đầu');
+    if (m.endDate && m.evidenceDueAt && m.endDate > m.evidenceDueAt) issues.push('Ngày kết thúc dự kiến phải trước hoặc bằng ngày nộp minh chứng');
     if (!m.evidenceDueAt) issues.push('Thiếu ngày nộp minh chứng');
-    const isLast = milestoneIndex === state.milestones.length - 1;
-    if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) issues.push('Ngày nộp minh chứng đợt cuối phải trùng ngày kết thúc chiến dịch');
     if (!m.categories || m.categories.length === 0) issues.push('Chưa có danh mục chi tiêu');
     (m.categories || []).forEach((cat, catIdx) => {
       if (!(cat.name?.trim())) issues.push(`Danh mục ${catIdx + 1}: thiếu tên danh mục`);
@@ -709,24 +699,36 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                         {shouldValidateMilestone && !activeMilestone.title?.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
 
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-black">Ngày bắt đầu đợt (tự động)</p>
-                            <input
-                              type="date"
-                              readOnly
-                              className={`${inCls} w-full bg-gray-100 text-gray-600 ${shouldValidateMilestone && (!activeMilestone.startDate || (campaignStart && activeMilestone.startDate <= campaignStart && state.milestones[0]?.id === activeMilestone.id)) ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
-                              value={activeMilestone.startDate || ''}
-                            />
-                            <p className="text-[11px] font-medium text-gray-500">
-                              Đợt 1 tự bắt đầu sau ngày bắt đầu quyên góp 1 ngày. Đợt sau tự bắt đầu bằng ngày kết thúc của đợt trước.
-                            </p>
-                          </div>
+                          {(() => {
+                            const isFirstMilestone = state.milestones[0]?.id === activeMilestone.id;
+                            return (
+                              <div className="space-y-1">
+                                <p className="text-sm font-semibold text-black">
+                                  {isFirstMilestone ? <>Ngày bắt đầu đợt <span className="text-red-500">*</span></> : 'Ngày bắt đầu đợt (tự động)'}
+                                </p>
+                                <input
+                                  type="date"
+                                  readOnly={!isFirstMilestone}
+                                  className={`${inCls} w-full ${!isFirstMilestone ? 'bg-gray-100 text-gray-600' : ''} ${shouldValidateMilestone && !activeMilestone.startDate ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                                  value={activeMilestone.startDate || ''}
+                                  onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                                  onChange={isFirstMilestone ? (e) => updateMilestone(activeMilestone.id, { startDate: e.target.value }) : undefined}
+                                />
+                                <p className="text-[11px] font-medium text-gray-500">
+                                  {isFirstMilestone
+                                    ? 'Ngày bắt đầu đợt 1 sẽ là ngày bắt đầu chiến dịch.'
+                                    : 'Tự động nối tiếp từ ngày nộp minh chứng đợt trước.'}
+                                </p>
+                              </div>
+                            );
+                          })()}
+
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
                             <input
                               type="date"
                               min={activeMilestone.startDate || today}
-                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.endDate || (activeMilestone.startDate && activeMilestone.endDate <= activeMilestone.startDate)) ? 'border-red-300 bg-red-50/50' : ''}`}
+                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.endDate || (activeMilestone.startDate && activeMilestone.endDate <= activeMilestone.startDate) || (activeMilestone.evidenceDueAt && activeMilestone.endDate > activeMilestone.evidenceDueAt)) ? 'border-red-300 bg-red-50/50' : ''}`}
                               value={activeMilestone.endDate || ''}
                               onBlur={() => markMilestoneTouched(activeMilestone.id)}
                               onChange={(e) => updateMilestone(activeMilestone.id, { endDate: e.target.value })}
@@ -737,36 +739,19 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Ngày nộp minh chứng <span className="text-red-500">*</span></p>
-                            {(() => {
-                              const isLastMilestone = state.milestones[state.milestones.length - 1]?.id === activeMilestone.id;
-                              return isLastMilestone && campaignEnd ? (
-                                <>
-                                  <input
-                                    type="date"
-                                    readOnly
-                                    className={`${inCls} w-full bg-gray-100 text-gray-600`}
-                                    value={campaignEnd}
-                                  />
-                                  <p className="text-[11px] font-medium text-amber-600">
-                                    Đợt cuối cùng: hạn nộp minh chứng tự động trùng với ngày kết thúc chiến dịch.
-                                  </p>
-                                </>
-                              ) : (
-                                <>
-                                  <input
-                                    type="date"
-                                    min={activeMilestone.endDate || today}
-                                    className={`${inCls} w-full ${shouldValidateMilestone && !activeMilestone.evidenceDueAt ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
-                                    value={activeMilestone.evidenceDueAt || ''}
-                                    onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                                    onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
-                                  />
-                                  <p className="text-[11px] font-medium text-gray-500">
-                                    Đây là hạn chót để nộp chứng từ. Giai đoạn tiếp theo sẽ bắt đầu sau ngày này.
-                                  </p>
-                                </>
-                              );
-                            })()}
+                            <input
+                              type="date"
+                              min={activeMilestone.endDate || today}
+                              className={`${inCls} w-full ${shouldValidateMilestone && !activeMilestone.evidenceDueAt ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                              value={activeMilestone.evidenceDueAt || ''}
+                              onBlur={() => markMilestoneTouched(activeMilestone.id)}
+                              onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
+                            />
+                            <p className="text-[11px] font-medium text-gray-500">
+                              {state.milestones[state.milestones.length - 1]?.id === activeMilestone.id
+                                ? 'Đợt cuối: ngày này sẽ là ngày kết thúc chiến dịch.'
+                                : 'Hạn chót nộp chứng từ. Đợt tiếp theo sẽ bắt đầu từ ngày này.'}
+                            </p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Mô tả đợt</p>

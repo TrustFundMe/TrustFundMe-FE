@@ -82,6 +82,17 @@ export default function NewCampaignTestPage() {
     }, 0);
   }, [state.milestones]);
 
+  useEffect(() => {
+    if (!state.milestones.length) return;
+    const first = state.milestones[0];
+    const last = state.milestones[state.milestones.length - 1];
+    const autoStart = first.startDate || '';
+    const autoEnd = last.evidenceDueAt || '';
+    if (autoStart !== state.campaignCore.startDate || autoEnd !== state.campaignCore.endDate) {
+      patchState({ campaignCore: { ...state.campaignCore, startDate: autoStart, endDate: autoEnd } });
+    }
+  }, [state.milestones]);
+
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
     const core = state.campaignCore;
@@ -111,12 +122,6 @@ export default function NewCampaignTestPage() {
       imgs.some((i) => i.id === core.coverImageId) &&
       Boolean(core.coverImageUrl?.trim());
     if (!coverOk) e.coverImage = 'Vui lòng thêm ít nhất một ảnh và chọn ảnh bìa.';
-
-    if (!core.startDate) e.startDate = 'Vui lòng chọn ngày bắt đầu.';
-
-    if (!core.endDate) e.endDate = 'Vui lòng chọn ngày kết thúc.';
-    else if (core.startDate && core.endDate <= core.startDate)
-      e.endDate = 'Ngày kết thúc phải sau ngày bắt đầu.';
 
     return e;
   }, [state.campaignCore]);
@@ -172,20 +177,16 @@ export default function NewCampaignTestPage() {
 
   const step3CanNext = useMemo(() => {
     const target = state.campaignCore.targetAmount;
-    const campaignStart = state.campaignCore.startDate;
-    const campaignEnd = state.campaignCore.endDate;
     if (state.milestones.length < 1) return false;
     if (milestoneTotal !== target) return false;
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return false;
       if (!m.startDate) return false;
-      if (campaignStart && m.startDate < campaignStart) return false;
       if (!m.endDate) return false;
       if (m.endDate <= m.startDate) return false;
       if (!m.evidenceDueAt) return false;
-      const isLast = i === state.milestones.length - 1;
-      if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) return false;
+      if (m.endDate > m.evidenceDueAt) return false;
       if (!m.categories || m.categories.length === 0) return false;
       for (const cat of m.categories) {
         if (!cat.name.trim()) return false;
@@ -199,23 +200,19 @@ export default function NewCampaignTestPage() {
       }
     }
     return true;
-  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal, state.campaignCore.startDate, state.campaignCore.endDate]);
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
   const step3FailMessage = useMemo(() => {
     const target = state.campaignCore.targetAmount;
-    const campaignStart = state.campaignCore.startDate;
-    const campaignEnd = state.campaignCore.endDate;
     if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
     if (milestoneTotal !== target) return `Tổng phân bổ (${milestoneTotal.toLocaleString('vi-VN')}đ) chưa khớp mục tiêu`;
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return `Đợt ${i + 1}: thiếu tên đợt`;
       if (!m.startDate) return `Đợt ${i + 1}: thiếu ngày bắt đầu`;
-      if (campaignStart && m.startDate < campaignStart) return `Đợt ${i + 1}: ngày bắt đầu phải từ ngày quyên góp`;
       if (!m.endDate) return `Đợt ${i + 1}: thiếu ngày kết thúc`;
       if (m.endDate <= m.startDate) return `Đợt ${i + 1}: ngày kết thúc phải sau ngày bắt đầu`;
       if (!m.evidenceDueAt) return `Đợt ${i + 1}: thiếu ngày nộp minh chứng`;
-      const isLast = i === state.milestones.length - 1;
-      if (isLast && campaignEnd && m.evidenceDueAt !== campaignEnd) return `Đợt cuối: hạn nộp minh chứng phải trùng ngày kết thúc chiến dịch`;
+      if (m.endDate > m.evidenceDueAt) return `Đợt ${i + 1}: ngày kết thúc phải trước hoặc bằng ngày nộp minh chứng`;
       if (!m.categories || m.categories.length === 0) return `Đợt ${i + 1}: cần ít nhất 1 danh mục`;
       for (let j = 0; j < m.categories.length; j += 1) {
         const cat = m.categories[j];
@@ -231,7 +228,7 @@ export default function NewCampaignTestPage() {
       }
     }
     return 'Vui lòng hoàn tất các mục bên trên';
-  }, [state.milestones, state.campaignCore.targetAmount, state.campaignCore.endDate, milestoneTotal]);
+  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
 
   const step4CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
 
