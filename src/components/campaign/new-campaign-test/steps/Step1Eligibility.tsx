@@ -138,6 +138,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
   const [checkingBankDup, setCheckingBankDup] = useState(false);
   const [checkingBankDupLive, setCheckingBankDupLive] = useState(false);
   const [bankDuplicateError, setBankDuplicateError] = useState('');
+  const [mounted, setMounted] = useState(false);
   const [bankTouched, setBankTouched] = useState<{ holder: boolean; number: boolean; bank: boolean; webhookKey: boolean }>({
     holder: false,
     number: false,
@@ -188,6 +189,7 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
 
   // Auto-fetch KYC + Bank on mount
   useEffect(() => {
+    setMounted(true);
     if (!user?.id) {
       return;
     }
@@ -348,6 +350,8 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
         label: 'Chưa xác thực danh tính',
       };
 
+  if (!mounted) return null;
+
   return (
     <div className="flex h-[calc(100dvh-6.75rem)] min-h-[calc(100dvh-6.75rem)] flex-col overflow-hidden rounded-xl bg-white p-2.5 md:p-3">
       <div className="campaign-step-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-0.5">
@@ -380,23 +384,15 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
           >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                {isIdentityVerified ? (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 shadow-sm shadow-emerald-100">
-                    <CheckBadgeIcon />
-                  </div>
-                ) : (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
-                    <InfoIcon />
-                  </div>
-                )}
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-sm ${identityTone.iconBg}`}>
+                  {isIdentityVerified ? <CheckBadgeIcon /> : <InfoIcon />}
+                </div>
                 <div>
-                  <p className={`text-[13px] font-bold ${isIdentityVerified ? 'text-emerald-900' : 'text-red-900'}`}>
+                  <p className={`text-[13px] font-bold ${identityTone.colorClass}`}>
                     {identityTone.label}
                   </p>
                   <p className="text-[11px] text-gray-500 mt-0.5">
-                    {isIdentityVerified 
-                      ? 'Hồ sơ của bạn đã đủ điều kiện để tạo chiến dịch.' 
-                      : 'Vui lòng hoàn tất xác minh KYC và tải lên CV tại trang cá nhân.'}
+                    {identityTone.subLabel}
                   </p>
                 </div>
               </div>

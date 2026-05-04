@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, Printer, FileCheck, ShieldCheck, Clock, UserCheck, Building2, AlertCircle, Timer, Edit3, X, Trash2 } from 'lucide-react';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
+import { auditService } from '@/services/auditService';
+import { generateSHA256 } from '@/utils/hash';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import SignaturePad from '@/components/common/SignaturePad';
 import Grainient from '@/components/common/Grainient';
@@ -36,6 +38,7 @@ export default function CommitmentPage() {
   const [ownerInfo, setOwnerInfo] = useState<UserInfo | null>(null);
   const [kycData, setKycData] = useState<KYCData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [signature, setSignature] = useState('');
   const [tempSignature, setTempSignature] = useState('');
@@ -69,16 +72,22 @@ export default function CommitmentPage() {
       try {
         const campaignData = await campaignService.getById(Number(id));
         setCampaign(campaignData);
-
-        const ownerRes = await userService.getUserById(campaignData.fundOwnerId);
-        if (ownerRes.success) {
-          setOwnerInfo(ownerRes.data!);
+        
+        try {
+          const ownerRes = await userService.getUserById(campaignData.fundOwnerId);
+          if (ownerRes.success) {
+            setOwnerInfo(ownerRes.data!);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch owner info:', e);
         }
 
         try {
           const kycRes = await userService.getUserKYC(campaignData.fundOwnerId);
           if (kycRes && kycRes.id) setKycData(kycRes);
-        } catch (e) { }
+        } catch (e) {
+          console.warn('Failed to fetch KYC data:', e);
+        }
 
         try {
           const commitmentData = await campaignService.getCommitment(Number(id));
@@ -87,12 +96,23 @@ export default function CommitmentPage() {
             setIsSavedData(true);
             if (commitmentData.fullName) setSavedFullName(commitmentData.fullName);
           }
-        } catch (e) { }
+        } catch (e) {
+          console.log('No commitment found yet for this campaign');
+        }
 
         if (campaignData.updatedAt) setTimeLeft(calculateTimeLeft(campaignData.updatedAt));
 
-      } catch (error) {
-        toast.error('Không thể tải thông tin');
+      } catch (error: any) {
+        console.error('FETCH_DATA_ERROR:', error);
+        const status = error.response?.status;
+        if (status === 404) {
+          setError('CHIẾN DỊCH KHÔNG TỒN TẠI (404)');
+        } else if (status === 401 || status === 403) {
+          setError('BẠN KHÔNG CÓ QUYỀN TRUY CẬP (401/403)');
+        } else {
+          setError('LỖI KẾT NỐI HỆ THỐNG');
+        }
+        toast.error('Không thể tải thông tin chiến dịch');
       } finally {
         setLoading(false);
       }
@@ -127,7 +147,7 @@ export default function CommitmentPage() {
     if (isExpired || !signature || isSavedData) return;
     setSubmitting(true);
     try {
-      const resolvedFullName = kycData?.fullName || ownerInfo?.fullName || 'N/A';
+      const resolvedFullName = kycData?.fullName || ownerInfo?.fullName || campaign?.ownerName || 'N/A';
       const payload = {
         campaignId: Number(id),
         userId: currentUser?.id,
@@ -143,7 +163,41 @@ export default function CommitmentPage() {
         signatureUrl: signature,
         status: 'SIGNED',
       };
-      await campaignService.signCommitment(payload);
+      const savedCommitment: any = await campaignService.signCommitment(payload);
+
+      try {
+        const snapshot = JSON.stringify({
+          commitmentId: savedCommitment?.id ?? null,
+          campaignId: payload.campaignId,
+          campaignTitle: campaign?.title ?? null,
+          userId: payload.userId,
+          fullName: payload.fullName,
+          address: payload.address,
+          workplace: payload.workplace,
+          taxId: payload.taxId,
+          idNumber: payload.idNumber,
+          issuePlace: payload.issuePlace,
+          issueDate: payload.issueDate,
+          phoneNumber: payload.phoneNumber,
+          content: payload.content,
+          signatureUrl: payload.signatureUrl,
+          status: payload.status,
+          signedAt: new Date().toISOString(),
+        });
+        const hash = await generateSHA256(snapshot);
+        await auditService.create({
+          entityType: 'CAMPAIGN_COMMITMENT',
+          entityId: savedCommitment?.id ?? payload.campaignId,
+          action: 'SIGN',
+          dataSnapshot: snapshot,
+          auditHash: hash,
+          actorId: Number(currentUser?.id),
+          actorName: currentUser?.fullName || currentUser?.email || `User#${currentUser?.id}`,
+        });
+      } catch (auditErr) {
+        console.error('Audit Log failed (Silent Error):', auditErr);
+      }
+
       toast.success('Nộp bản cam kết thành công!');
       setIsSavedData(true);
       setSavedFullName(resolvedFullName);
@@ -156,16 +210,51 @@ export default function CommitmentPage() {
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Đang xác thực hồ sơ...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !campaign) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-[32px] p-10 shadow-2xl shadow-blue-900/5 text-center space-y-6 border border-slate-100">
+          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Đã có lỗi xảy ra</h2>
+            <p className="text-slate-500 font-medium text-sm leading-relaxed">
+              {error || 'Không tìm thấy dữ liệu chiến dịch. Vui lòng kiểm tra lại ID hoặc liên hệ quản trị viên.'}
+            </p>
+          </div>
+          <div className="pt-4 flex flex-col gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-blue-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[2px] hover:bg-blue-800 transition-all shadow-xl shadow-blue-900/20"
+            >
+              Tải lại trang
+            </button>
+            <button
+              onClick={() => router.back()}
+              className="w-full py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-[10px] uppercase tracking-[2px] hover:bg-slate-200 transition-all"
+            >
+              Quay lại
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleExportPDF = async () => {
-    // Dynamic import to avoid "self is not defined" SSR error
     const html2pdf = (await import('html2pdf.js')).default;
-
     const element = document.getElementById('legal-document');
     if (!element) return;
 
@@ -197,7 +286,6 @@ export default function CommitmentPage() {
   return (
     <div className="min-h-screen relative flex justify-center py-12 px-6 bg-slate-50 overflow-x-hidden">
 
-      {/* BACKGROUND EFFECT - LIGHTER & SUBTLE */}
       <div className="fixed inset-0 z-0 opacity-40">
         <Grainient
           color1="#ffffff"
@@ -213,10 +301,8 @@ export default function CommitmentPage() {
 
       <div className="relative z-10 w-full max-w-[1440px] flex gap-10 items-start justify-center">
 
-        {/* SIDEBAR BÊN TRÁI - STICKY BLUE THEME */}
         <div className="hidden xl:flex flex-col w-[310px] space-y-6 flex-shrink-0 sticky top-10 no-print">
 
-          {/* Card Trạng thái */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[24px] p-6 shadow-xl shadow-blue-900/10 border border-blue-50">
             <div className="flex items-center gap-2 mb-4">
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -244,7 +330,6 @@ export default function CommitmentPage() {
             </div>
           </div>
 
-          {/* Card Bên A (Hệ thống) */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[24px] p-6 shadow-xl shadow-blue-900/10 border border-blue-50">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -262,7 +347,6 @@ export default function CommitmentPage() {
             </div>
           </div>
 
-          {/* Card Bên B (Chủ quỹ) */}
           <div className="bg-white/90 backdrop-blur-xl rounded-[24px] p-6 shadow-xl shadow-blue-900/10 border border-blue-50">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -273,7 +357,7 @@ export default function CommitmentPage() {
             <div className="space-y-3 text-[11px]">
               <div>
                 <p className="text-gray-400 mb-0.5">Họ và tên (CCCD):</p>
-                <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || '—'}</p>
+                <p className="font-bold text-blue-950 uppercase">{kycData?.fullName || ownerInfo?.fullName || campaign?.ownerName || '—'}</p>
               </div>
               <div>
                 <p className="text-gray-400 mb-0.5">Địa chỉ thường trú:</p>
@@ -289,7 +373,7 @@ export default function CommitmentPage() {
               </div>
               <div>
                 <p className="text-gray-400 mb-0.5">Số CCCD/CMND:</p>
-                <p className="font-bold text-blue-950">{kycData?.idNumber || '—'}</p>
+                <p className="font-bold text-gray-800">{kycData?.idNumber || '—'}</p>
               </div>
               <div>
                 <p className="text-gray-400 mb-0.5">Ngày cấp / Nơi cấp:</p>
@@ -310,7 +394,6 @@ export default function CommitmentPage() {
           </div>
         </div>
 
-        {/* VÙNG CHÍNH TỜ A4 */}
         <div className="flex flex-col items-center w-full max-w-[840px] flex-shrink-0">
 
           <div className="w-full flex justify-between items-center mb-10 no-print">
@@ -360,11 +443,11 @@ export default function CommitmentPage() {
               </p>
               <p className="flex border-b border-slate-100 pb-1">
                 <span className="w-52 shrink-0 text-slate-500">Tên cá nhân/tổ chức:</span>
-                <span className="font-bold uppercase tracking-tight text-blue-900">{kycData?.fullName || ownerInfo?.fullName || '...........................................'}</span>
+                <span className="font-bold uppercase tracking-tight text-blue-900">{kycData?.fullName || ownerInfo?.fullName || campaign?.ownerName || '...........................................'}</span>
               </p>
               <p className="flex border-b border-slate-100 pb-1">
                 <span className="w-52 shrink-0 text-slate-500">Địa chỉ cư trú/trụ sở:</span>
-                <span className="font-bold text-blue-900">{kycData?.address || '...........................................'}</span>
+                <span className="font-bold tracking-tight text-blue-900">{kycData?.address || '...........................................'}</span>
               </p>
               <p className="flex border-b border-slate-100 pb-1">
                 <span className="w-52 shrink-0 text-slate-500">Nơi làm việc (nếu có):</span>

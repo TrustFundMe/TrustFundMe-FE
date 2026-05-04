@@ -423,15 +423,16 @@ export default function NewCampaignTestPage() {
       {/* Top bar */}
       <header className="shrink-0 border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-2 md:px-8">
-          <button
-            type="button"
-            onClick={() => {
-              if (activeStep > 0) goToStep(activeStep - 1);
-              else if (typeof window !== 'undefined') window.history.back();
-            }}
-            className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
-            aria-label="Quay lại"
-          >
+            <button
+              type="button"
+              onClick={() => {
+                if (activeStep > 0) goToStep(activeStep - 1);
+                else if (typeof window !== 'undefined') window.history.back();
+              }}
+              className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+              aria-label="Quay lại"
+              suppressHydrationWarning
+            >
             <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" aria-hidden>
               <path
                 d="M12 4l-6 6 6 6"
