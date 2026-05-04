@@ -6,6 +6,21 @@ import { ChevronDown, ChevronUp, Calendar } from "lucide-react";
 
 type TimelineState = "completed" | "active" | "upcoming";
 
+function getStatusLabel(status: string): string {
+  switch ((status || "").toUpperCase()) {
+    case "PENDING": return "Chờ xử lý";
+    case "PENDING_REVIEW": return "Chờ duyệt";
+    case "APPROVED": return "Đã duyệt";
+    case "ALLOWED_EDIT": return "Yêu cầu chỉnh sửa";
+    case "WITHDRAWAL_REQUESTED": return "Đã yêu cầu rút tiền";
+    case "DISBURSED": return "Đã giải ngân";
+    case "COMPLETED": return "Hoàn thành";
+    case "CLOSED": return "Đã đóng";
+    case "REJECTED": return "Từ chối";
+    default: return status || "Chưa xác định";
+  }
+}
+
 export default function MilestoneTimeline({
   plans,
   raisedAmount = 0,
@@ -16,25 +31,20 @@ export default function MilestoneTimeline({
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const timeline = useMemo(() => {
-    let cumulative = 0;
-    return plans.map((plan, idx) => {
+    return plans.map((plan) => {
       const amount = Math.max(0, plan.amount || 0);
-      const min = cumulative;
-      const max = cumulative + amount;
-      cumulative = max;
+      const status = (plan.status || "").toUpperCase();
 
       let state: TimelineState = "upcoming";
-      if (raisedAmount >= max && amount > 0) state = "completed";
-      else if (raisedAmount > min || idx === 0) state = "active";
+      if (["DISBURSED", "COMPLETED", "CLOSED"].includes(status)) state = "completed";
+      else if (["APPROVED", "WITHDRAWAL_REQUESTED", "PENDING_REVIEW", "PENDING", "ALLOWED_EDIT"].includes(status)) state = "active";
 
-      return { ...plan, state, thresholdStart: min, thresholdEnd: max, requiredAmount: amount };
+      return { ...plan, state, requiredAmount: amount };
     });
-  }, [plans, raisedAmount]);
+  }, [plans]);
 
   if (!plans || plans.length === 0) return null;
 
-  const totalGoal = timeline[timeline.length - 1]?.thresholdEnd || 0;
-  const overallPercent = totalGoal > 0 ? Math.min(100, (raisedAmount / totalGoal) * 100) : 0;
   const completedCount = timeline.filter((t) => t.state === "completed").length;
 
   return (
@@ -77,8 +87,9 @@ export default function MilestoneTimeline({
             const isExpanded = expandedId === item.id;
             const isCompleted = item.state === "completed";
             const isActive = item.state === "active";
-            const accentColor = isCompleted ? "#10b981" : isActive ? "#ff5e14" : "#94a3b8";
-            const bgAccent = isCompleted ? "#ecfdf5" : isActive ? "#fff7ed" : "#f8fafc";
+            const isRejected = (item.status || "").toUpperCase() === "REJECTED";
+            const accentColor = isRejected ? "#ef4444" : isCompleted ? "#10b981" : isActive ? "#ff5e14" : "#94a3b8";
+            const bgAccent = isRejected ? "#fef2f2" : isCompleted ? "#ecfdf5" : isActive ? "#fff7ed" : "#f8fafc";
 
             return (
               <div key={item.id} style={{ position: "relative", zIndex: 1 }}>
@@ -140,7 +151,7 @@ export default function MilestoneTimeline({
                           {item.requiredAmount?.toLocaleString("vi-VN")}đ
                         </div>
                         <div style={{ fontSize: 9, fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          {isCompleted ? "Đã hoàn thành" : isActive ? "Đang thực hiện" : "Sắp tới"}
+                          {getStatusLabel(item.status || "")}
                         </div>
                       </div>
                     </div>

@@ -114,6 +114,7 @@ export const API_ENDPOINTS = {
     VERIFY: (id: number | string) => `/api/payments/donation/${id}/verify`,
     SYNC_QUANTITY: (id: number | string) => `/api/payments/donation/${id}/sync-quantity`,
     SYNC_BALANCE: (id: number | string) => `/api/payments/donation/${id}/sync-balance`,
+    CANCEL: (id: number | string) => `/api/payments/donation/${id}/cancel`,
     CHECK_ITEM_LIMIT: (id: number | string) => `/api/payments/expenditure-item/${id}/check`,
     CAMPAIGN_PROGRESS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/progress`,
     CAMPAIGN_RECENT_DONATIONS: (campaignId: number | string) => `/api/payments/campaign/${campaignId}/recent-donations`,

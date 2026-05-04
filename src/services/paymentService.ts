@@ -116,6 +116,14 @@ export const paymentService = {
             console.error(`❌ [Payment] Sync Quantity Error for donation ${donationId}:`, err);
         }
     },
+    async cancelDonation(donationId: number): Promise<void> {
+        try {
+            await api.post(API_ENDPOINTS.PAYMENTS.CANCEL(donationId));
+        } catch (err: any) {
+            console.error(`❌ [Payment] Cancel Error for donation ${donationId}:`, err);
+            throw err;
+        }
+    },
     async syncBalance(donationId: number): Promise<void> {
         console.log(`🔄 [Payment] Syncing balance for donation: ${donationId}`);
         try {

@@ -1,36 +1,72 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  ChevronLeft, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Smartphone, 
-  Copy, 
+import {
+  X,
+  ChevronLeft,
+  CheckCircle2,
+  ShieldCheck,
+  Smartphone,
+  Copy,
   Loader2,
   Clock
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+
+const TIMEOUT_SECONDS = 600; // 10 minutes
 
 interface VietQRModalProps {
   isOpen: boolean;
   onClose: () => void;
   qrUrl: string;
   donationId: number | null;
+  orderCode?: string | null;
   amount: number;
   onConfirm: () => void;
+  onTimeout?: () => void;
 }
 
-export default function VietQRModal({ 
-  isOpen, 
-  onClose, 
-  qrUrl, 
-  donationId, 
+export default function VietQRModal({
+  isOpen,
+  onClose,
+  qrUrl,
+  donationId,
+  orderCode,
   amount,
-  onConfirm 
+  onConfirm,
+  onTimeout,
 }: VietQRModalProps) {
   const { toast } = useToast();
   const [copying, setCopying] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(TIMEOUT_SECONDS);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const onTimeoutRef = useRef(onTimeout);
+  onTimeoutRef.current = onTimeout;
+
+  useEffect(() => {
+    if (isOpen) {
+      setSecondsLeft(TIMEOUT_SECONDS);
+      timerRef.current = setInterval(() => {
+        setSecondsLeft(prev => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            onTimeoutRef.current?.();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isOpen]);
+
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
+  const timeDisplay = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const isUrgent = secondsLeft <= 60;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -39,7 +75,7 @@ export default function VietQRModal({
     setTimeout(() => setCopying(false), 2000);
   };
 
-  const transferContent = `TF ${donationId}`;
+  const transferContent = `TF ${orderCode || donationId}`;
 
   // Prevent scroll when modal is open
   useEffect(() => {
@@ -113,12 +149,25 @@ export default function VietQRModal({
               </div>
             </div>
 
-            <div className="mt-8 flex items-center gap-3 py-3 px-4 bg-white/5 rounded-2xl border border-white/10">
+            <div className={`mt-8 flex items-center gap-3 py-3 px-4 rounded-2xl border ${isUrgent ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10'}`}>
               <div className="relative">
-                <Loader2 className="w-4 h-4 text-brand animate-spin" />
-                <div className="absolute inset-0 bg-brand/20 blur-sm animate-pulse" />
+                {secondsLeft > 0 ? (
+                  <>
+                    <Clock className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-brand'}`} />
+                    {isUrgent && <div className="absolute inset-0 bg-red-400/30 blur-sm animate-pulse" />}
+                  </>
+                ) : (
+                  <X className="w-4 h-4 text-red-400" />
+                )}
               </div>
-              <span className="text-[10px] font-medium text-gray-400">Đang chờ thanh toán...</span>
+              <div className="flex flex-col">
+                <span className={`font-mono text-sm font-bold ${isUrgent ? 'text-red-400' : 'text-white'}`}>
+                  {secondsLeft > 0 ? timeDisplay : 'Hết thời gian'}
+                </span>
+                <span className={`text-[10px] font-medium ${isUrgent ? 'text-red-300' : 'text-gray-400'}`}>
+                  {secondsLeft > 0 ? 'Thời gian còn lại để thanh toán' : 'Giao dịch đã bị huỷ'}
+                </span>
+              </div>
             </div>
           </div>
 
