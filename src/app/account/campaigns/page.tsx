@@ -14,6 +14,7 @@ import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 import { userService, UserInfo } from '@/services/userService';
 import AccountCampaignTabbar from './expenditures/components/AccountCampaignTabbar';
+import { expenditureService } from '@/services/expenditureService';
 
 export default function CampaignsPage() {
   return (
@@ -228,12 +229,35 @@ function CampaignsContent() {
     }
   };
 
+  // Pending evidence counts per campaign
+  const [pendingEvidenceMap, setPendingEvidenceMap] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    const loadPendingEvidence = async () => {
+      if (!user?.id) return;
+      try {
+        const data = await expenditureService.getPendingEvidenceByUser(user.id);
+        if (!data || data.length === 0) return;
+        const countMap: Record<number, number> = {};
+        for (const ev of data) {
+          const cid = ev.campaignId;
+          if (!cid) continue;
+          countMap[cid] = (countMap[cid] || 0) + 1;
+        }
+        setPendingEvidenceMap(countMap);
+      } catch (err) {
+        console.error('Failed to load pending evidence counts:', err);
+      }
+    };
+    loadPendingEvidence();
+  }, [user?.id]);
+
   return (
     <>
-      <div className="h-full bg-[#F8FAFC] flex flex-col overflow-hidden pt-4 pb-2">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col w-full min-h-0">
+      <div className="h-full bg-[#F8FAFC] flex flex-col overflow-hidden pb-2">
+        <div className="max-w-[1400px] mx-auto px-2 sm:px-3 lg:px-4 flex-1 flex flex-col w-full min-h-0">
           {/* Filters & Search Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-2 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2 mt-1">
             <div className="md:col-span-3 relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
@@ -294,6 +318,7 @@ function CampaignsContent() {
                           campaign={campaign}
                           assignedReviewerName={staffName}
                           hasStaff={!!staffId}
+                          pendingEvidenceCount={campaign.id ? (pendingEvidenceMap[campaign.id] || 0) : 0}
                           onChatClick={() => {
                             console.log('[Campaigns] Clicked chat for campaign:', campaign.id);
                             handleChatClick(campaign);

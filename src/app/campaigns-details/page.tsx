@@ -252,7 +252,7 @@ function CampaignDetailsInner() {
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
-  
+
   const isDonationVisible = plans.some((p) => {
     if (p.status !== 'APPROVED') return false;
     const now = new Date();
@@ -705,7 +705,17 @@ function CampaignDetailsInner() {
             <div style={{ minWidth: 0, marginTop: 16 }}>
               <div className="casues-sidebar-wrapper campaign-detail-sidebar">
                 <div style={{ marginBottom: 18 }}>
-                  {campaign.status === 'DISABLED' ? (
+                  {campaign.status === 'CLOSED' ? (
+                    <div className="p-8 rounded-3xl bg-slate-100 border-2 border-slate-300 border-dashed text-center space-y-4">
+                      <div className="inline-flex p-4 bg-slate-200 rounded-full">
+                        <XCircle className="h-8 w-8 text-slate-500" />
+                      </div>
+                      <div>
+                        <div className="text-lg font-black text-slate-700 uppercase tracking-tight">Chiến dịch đã đóng</div>
+                        <p className="text-xs font-bold text-slate-900/60 mt-1">Chiến dịch này đã kết thúc và không còn nhận quyên góp.</p>
+                      </div>
+                    </div>
+                  ) : campaign.status === 'DISABLED' ? (
                     <div className="p-8 rounded-3xl bg-red-50 border-2 border-red-200 border-dashed text-center space-y-4 animate-pulse">
                       <div className="inline-flex p-4 bg-red-100 rounded-full">
                         <XCircle className="h-8 w-8 text-red-600" />
@@ -898,7 +908,7 @@ function CampaignDetailsInner() {
           if (currentDonationId) {
             try {
               await paymentService.verifyPayment(currentDonationId);
-              paymentService.syncQuantity(currentDonationId).catch(() => {});
+              paymentService.syncQuantity(currentDonationId).catch(() => { });
             } catch { /* ignore */ }
           }
           setRedirecting(true);

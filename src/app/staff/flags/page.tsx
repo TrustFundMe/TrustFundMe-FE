@@ -187,7 +187,23 @@ export default function FlagsManagementPage() {
       const { userId, flagId } = banModal;
       await userService.banUser(userId, reason);
       await flagService.reviewFlag(flagId, 'RESOLVED');
-      toast.success('Đã khóa tài khoản và xử lý báo cáo');
+
+      // Close all campaigns owned by this user
+      try {
+        const campaignsData = await campaignService.getUserCampaignsPaginated(userId, 0, 1000);
+        const activeCampaigns = (campaignsData.content || []).filter(
+          (c: any) => !['CLOSED', 'REJECTED'].includes(c.status?.toUpperCase())
+        );
+        if (activeCampaigns.length > 0) {
+          await Promise.all(activeCampaigns.map((c: any) => campaignService.closeCampaign(c.id).catch(() => { })));
+          toast.success(`Đã khóa tài khoản, đóng ${activeCampaigns.length} chiến dịch và xử lý báo cáo`);
+        } else {
+          toast.success('Đã khóa tài khoản và xử lý báo cáo');
+        }
+      } catch {
+        toast.success('Đã khóa tài khoản và xử lý báo cáo (không thể đóng chiến dịch tự động)');
+      }
+
       const res = await userService.getUserById(userId);
       if (res.success && res.data) setTargetUser(res.data);
       fetchData();
@@ -242,8 +258,8 @@ export default function FlagsManagementPage() {
 
             const latestExp = expenditures && expenditures.length > 0
               ? [...expenditures]
-                  .filter((e: any) => e.status === 'DISBURSED' || e.status === 'APPROVED_DISBURSED' || e.status === 'PAID')
-                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+                .filter((e: any) => e.status === 'DISBURSED' || e.status === 'APPROVED_DISBURSED' || e.status === 'PAID')
+                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
               : null;
 
             setCampaignDetails({
@@ -338,52 +354,52 @@ export default function FlagsManagementPage() {
     try {
       const targetData = selectedTarget.type === 'CAMPAIGN'
         ? {
-            type: 'CAMPAIGN',
-            id: selectedTarget.targetId,
-            title: selectedTarget.flags[0]?.campaign?.title || selectedTarget.title,
-            description: selectedTarget.flags[0]?.campaign?.description,
-            status: selectedTarget.flags[0]?.campaign?.status,
-            raisedAmount: campaignDetails?.raisedAmount ?? selectedTarget.flags[0]?.campaign?.raisedAmount ?? 0,
-            goalAmount: campaignDetails?.goalAmount ?? 0,
-            authorName: selectedTarget.flags[0]?.campaign?.authorName,
-            authorId: selectedTarget.flags[0]?.campaign?.authorId,
-            createdAt: campaignDetails?.campaignCreatedAt || selectedTarget.flags[0]?.campaign?.createdAt,
-            totalFlags: selectedTarget.totalCount,
-            pendingFlags: selectedTarget.pendingCount,
-            ownerTrustScore: targetUser?.trustScore,
-            ownerJoinedAt: targetUser?.createdAt,
-            campaignStartDate: campaignDetails?.startDate,
-            campaignEndDate: campaignDetails?.endDate,
-            expenditureCount: campaignDetails?.expenditureCount,
-            donorCount: campaignDetails?.donorCount,
-            lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
-            currency: 'VND',
-            dashboardUrl: `https://trust-fund-me-fe.vercel.app/campaigns-details?id=${selectedTarget.targetId}`,
-            allExpenditures: selectedTarget.type === 'CAMPAIGN' ? campaignDetails?.allExpenditures : [],
-            ...campaignDetails,
-          }
+          type: 'CAMPAIGN',
+          id: selectedTarget.targetId,
+          title: selectedTarget.flags[0]?.campaign?.title || selectedTarget.title,
+          description: selectedTarget.flags[0]?.campaign?.description,
+          status: selectedTarget.flags[0]?.campaign?.status,
+          raisedAmount: campaignDetails?.raisedAmount ?? selectedTarget.flags[0]?.campaign?.raisedAmount ?? 0,
+          goalAmount: campaignDetails?.goalAmount ?? 0,
+          authorName: selectedTarget.flags[0]?.campaign?.authorName,
+          authorId: selectedTarget.flags[0]?.campaign?.authorId,
+          createdAt: campaignDetails?.campaignCreatedAt || selectedTarget.flags[0]?.campaign?.createdAt,
+          totalFlags: selectedTarget.totalCount,
+          pendingFlags: selectedTarget.pendingCount,
+          ownerTrustScore: targetUser?.trustScore,
+          ownerJoinedAt: targetUser?.createdAt,
+          campaignStartDate: campaignDetails?.startDate,
+          campaignEndDate: campaignDetails?.endDate,
+          expenditureCount: campaignDetails?.expenditureCount,
+          donorCount: campaignDetails?.donorCount,
+          lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
+          currency: 'VND',
+          dashboardUrl: `https://trust-fund-me-fe.vercel.app/campaigns-details?id=${selectedTarget.targetId}`,
+          allExpenditures: selectedTarget.type === 'CAMPAIGN' ? campaignDetails?.allExpenditures : [],
+          ...campaignDetails,
+        }
         : {
-            type: 'FEED_POST',
-            id: selectedTarget.targetId,
-            title: selectedTarget.flags[0]?.post?.title,
-            content: selectedTarget.flags[0]?.post?.content,
-            status: selectedTarget.flags[0]?.post?.status,
-            authorName: selectedTarget.flags[0]?.post?.authorName,
-            authorId: selectedTarget.flags[0]?.post?.authorId,
-            likeCount: selectedTarget.flags[0]?.post?.likeCount,
-            commentCount: selectedTarget.flags[0]?.post?.commentCount,
-            viewCount: selectedTarget.flags[0]?.post?.viewCount,
-            isLocked: selectedTarget.flags[0]?.post?.isLocked,
-            createdAt: selectedTarget.flags[0]?.post?.createdAt,
-            totalFlags: selectedTarget.totalCount,
-            pendingFlags: selectedTarget.pendingCount,
-            ownerTrustScore: targetUser?.trustScore,
-            ownerJoinedAt: targetUser?.createdAt,
-            lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
-            currency: 'VND',
-            campaignInfo: campaignDetails,
-            expenditureInfo: expenditureDetails,
-          };
+          type: 'FEED_POST',
+          id: selectedTarget.targetId,
+          title: selectedTarget.flags[0]?.post?.title,
+          content: selectedTarget.flags[0]?.post?.content,
+          status: selectedTarget.flags[0]?.post?.status,
+          authorName: selectedTarget.flags[0]?.post?.authorName,
+          authorId: selectedTarget.flags[0]?.post?.authorId,
+          likeCount: selectedTarget.flags[0]?.post?.likeCount,
+          commentCount: selectedTarget.flags[0]?.post?.commentCount,
+          viewCount: selectedTarget.flags[0]?.post?.viewCount,
+          isLocked: selectedTarget.flags[0]?.post?.isLocked,
+          createdAt: selectedTarget.flags[0]?.post?.createdAt,
+          totalFlags: selectedTarget.totalCount,
+          pendingFlags: selectedTarget.pendingCount,
+          ownerTrustScore: targetUser?.trustScore,
+          ownerJoinedAt: targetUser?.createdAt,
+          lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
+          currency: 'VND',
+          campaignInfo: campaignDetails,
+          expenditureInfo: expenditureDetails,
+        };
 
       const result = await aiService.analyzeFlag(targetData, selectedTarget.flags);
       setAiResult(result);
@@ -588,7 +604,7 @@ export default function FlagsManagementPage() {
               className={`inline-flex h-8 items-center rounded-full border px-4 text-[10px] font-black uppercase tracking-widest ${statusFilter === s
                 ? 'border-[#ff5e14]/30 bg-[#ff5e14]/10 text-[#ff5e14] shadow-sm'
                 : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-              }`}
+                }`}
             >
               {s === 'ALL' ? 'Tất cả' : s === 'PENDING' ? 'Chưa xử lý' : 'Đã xử lý'}
             </button>
@@ -647,17 +663,15 @@ export default function FlagsManagementPage() {
                       <tr
                         key={group.key}
                         onClick={() => setSelectedTarget(isSelected ? null : group)}
-                        className={`cursor-pointer ${
-                          isSelected
+                        className={`cursor-pointer ${isSelected
                             ? 'bg-[#ff5e14]/5 border-l-2 border-l-[#ff5e14]'
                             : 'hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <td className="px-3 py-2.5 text-[10px] font-bold text-gray-400">{idx + 1}</td>
                         <td className="px-3 py-2.5">
-                          <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                            isCampaign ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'
-                          }`}>
+                          <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${isCampaign ? 'bg-orange-50 text-orange-600' : 'bg-blue-50 text-blue-600'
+                            }`}>
                             {isCampaign ? 'Chiến dịch' : 'Bài viết'}
                           </span>
                         </td>
@@ -712,11 +726,10 @@ export default function FlagsManagementPage() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
-                        selectedTarget.type === 'CAMPAIGN'
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${selectedTarget.type === 'CAMPAIGN'
                           ? 'bg-orange-50 text-orange-600 border border-orange-200'
                           : 'bg-blue-50 text-blue-600 border border-blue-200'
-                      }`}>
+                        }`}>
                         {selectedTarget.type === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết'}
                       </span>
                       {selectedTarget.pendingCount > 0 && (
@@ -763,20 +776,20 @@ export default function FlagsManagementPage() {
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Tiến độ quyên góp</p>
                           <div className="flex items-center gap-1.5">
-                             <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                               <div
-                                 className="h-full bg-[#ff5e14]"
-                                 style={{ width: `${Math.min(campaignDetails?.progress || 0, 100)}%` }}
-                               />
-                             </div>
-                             <span className="text-[11px] font-bold text-[#ff5e14]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#ff5e14]"
+                                style={{ width: `${Math.min(campaignDetails?.progress || 0, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-bold text-[#ff5e14]">{loadingDetails ? '...' : Math.round(campaignDetails?.progress || 0)}%</span>
                           </div>
                         </div>
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Trạng thái</p>
                           <div className="flex items-center gap-1.5">
-                             <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                             <p className="text-[12px] font-bold text-orange-600 uppercase">{translateStatus(selectedTarget.flags[0].campaign.status)}</p>
+                            <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                            <p className="text-[12px] font-bold text-orange-600 uppercase">{translateStatus(selectedTarget.flags[0].campaign.status)}</p>
                           </div>
                         </div>
                         <div className="space-y-1">
@@ -804,17 +817,17 @@ export default function FlagsManagementPage() {
                           <p className="text-[12px] font-medium text-gray-600">{formatDate(selectedTarget.flags[0].campaign.createdAt)}</p>
                         </div>
                         <div className="space-y-1">
-                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Chủ tài khoản</p>
-                           <div className="flex items-center gap-2 mt-0.5">
-                              <div className="h-7 w-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase shadow-sm overflow-hidden flex-shrink-0">
-                                 {campaignDetails?.authorAvatar ? (
-                                    <img src={campaignDetails.authorAvatar} alt="" className="w-full h-full object-cover" />
-                                 ) : (selectedTarget.flags[0].campaign?.authorName?.[0] || 'U')}
-                              </div>
-                              <p className="text-[12px] font-bold text-gray-800 uppercase truncate">
-                                {selectedTarget.flags[0].campaign?.authorName || 'Vô danh'}
-                              </p>
-                           </div>
+                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Chủ tài khoản</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <div className="h-7 w-7 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase shadow-sm overflow-hidden flex-shrink-0">
+                              {campaignDetails?.authorAvatar ? (
+                                <img src={campaignDetails.authorAvatar} alt="" className="w-full h-full object-cover" />
+                              ) : (selectedTarget.flags[0].campaign?.authorName?.[0] || 'U')}
+                            </div>
+                            <p className="text-[12px] font-bold text-gray-800 uppercase truncate">
+                              {selectedTarget.flags[0].campaign?.authorName || 'Vô danh'}
+                            </p>
+                          </div>
                         </div>
                         <div className="col-span-2 lg:col-span-4 mt-2 pt-3 border-t border-gray-100">
                           <p className="text-[11px] font-black text-[#ff5e14] uppercase tracking-tight mb-2">Nội dung chi tiết chiến dịch</p>
@@ -826,7 +839,7 @@ export default function FlagsManagementPage() {
                     ) : selectedTarget.type === 'FEED_POST' && selectedTarget.flags[0]?.post ? (
                       <div className="space-y-6">
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                           {[
+                          {[
                             { label: 'Thích', value: selectedTarget.flags[0].post.likeCount ?? 0 },
                             { label: 'Bình luận', value: selectedTarget.flags[0].post.commentCount ?? 0 },
                             { label: 'Lượt xem', value: selectedTarget.flags[0].post.viewCount ?? 0 },
@@ -949,17 +962,17 @@ export default function FlagsManagementPage() {
                         )}
 
                         <div className="mt-2 pt-3 border-t border-gray-100 space-y-3">
-                           <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase overflow-hidden">
-                                 {selectedTarget.flags[0].post.authorAvatarUrl ? (
-                                    <img src={selectedTarget.flags[0].post.authorAvatarUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (selectedTarget.flags[0].post.authorName?.[0] || 'U')}
-                              </div>
-                              <p className="text-[12px] font-bold text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
-                           </div>
-                           <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#ff5e14]/10 italic">
-                             {selectedTarget.flags[0].post.content || '(Không có nội dung)'}
-                           </p>
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded bg-gray-50 border border-gray-100 flex items-center justify-center font-black text-[10px] text-[#ff5e14] uppercase overflow-hidden">
+                              {selectedTarget.flags[0].post.authorAvatarUrl ? (
+                                <img src={selectedTarget.flags[0].post.authorAvatarUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (selectedTarget.flags[0].post.authorName?.[0] || 'U')}
+                            </div>
+                            <p className="text-[12px] font-bold text-gray-800 uppercase">{selectedTarget.flags[0].post.authorName}</p>
+                          </div>
+                          <p className="text-[12px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap pl-4 border-l-2 border-[#ff5e14]/10 italic">
+                            {selectedTarget.flags[0].post.content || '(Không có nội dung)'}
+                          </p>
                         </div>
                       </div>
                     ) : null}
@@ -970,67 +983,65 @@ export default function FlagsManagementPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 px-1">
                   {/* Risk Analytics */}
                   <section>
-                     <div className="h-full bg-[#ff5e14]/5 border border-[#ff5e14]/10 rounded-lg p-4 overflow-hidden relative">
-                        <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4">Chỉ số rủi ro & Tài chính</h4>
+                    <div className="h-full bg-[#ff5e14]/5 border border-[#ff5e14]/10 rounded-lg p-4 overflow-hidden relative">
+                      <h4 className="text-[10px] font-black text-gray-700 uppercase tracking-widest mb-4">Chỉ số rủi ro & Tài chính</h4>
 
-                        {selectedTarget.type === 'CAMPAIGN' ? (
-                          <div className="space-y-4 relative z-10">
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Cường độ báo cáo tài chính</p>
-                                <div className="flex items-center gap-2">
-                                   <p className="text-sm font-black text-gray-800">
-                                     {selectedTarget.flags[0].campaign?.raisedAmount && selectedTarget.flags[0].campaign.raisedAmount > 0
-                                       ? (selectedTarget.totalCount / (selectedTarget.flags[0].campaign.raisedAmount / 1000000)).toFixed(2)
-                                       : selectedTarget.totalCount}
-                                   </p>
-                                   <span className="text-[9px] text-[#ff5e14] font-black">BC / 1TR VND</span>
-                                </div>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Đánh giá độ tin cậy</p>
-                                <div className="flex items-center gap-2">
-                                   <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${
-                                     (selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'bg-rose-500' : 'bg-[#ff5e14]'
-                                   }`}>
-                                     {(selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'RỦI RO BẤT THƯỜNG CAO' : 'TIN CẬY'}
-                                   </span>
-                                </div>
-                             </div>
-                             <div className="pt-2 border-t border-[#ff5e14]/10">
-                                <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
-                                  So sánh số báo cáo với doanh thu (BC/1tr VND) giúp phát hiện các chiến dịch có dấu hiệu bất thường khi chưa đạt được kết quả quyên góp lớn.
-                                </p>
-                             </div>
+                      {selectedTarget.type === 'CAMPAIGN' ? (
+                        <div className="space-y-4 relative z-10">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Cường độ báo cáo tài chính</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-black text-gray-800">
+                                {selectedTarget.flags[0].campaign?.raisedAmount && selectedTarget.flags[0].campaign.raisedAmount > 0
+                                  ? (selectedTarget.totalCount / (selectedTarget.flags[0].campaign.raisedAmount / 1000000)).toFixed(2)
+                                  : selectedTarget.totalCount}
+                              </p>
+                              <span className="text-[9px] text-[#ff5e14] font-black">BC / 1TR VND</span>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="space-y-4 relative z-10">
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Chỉ số gây tranh cãi</p>
-                                <div className="flex items-center gap-2">
-                                   <p className="text-sm font-black text-gray-800">
-                                     {selectedTarget.flags[0].post?.viewCount ? ((selectedTarget.totalCount / selectedTarget.flags[0].post.viewCount) * 100).toFixed(2) : '0'}%
-                                   </p>
-                                   <p className="text-[9px] text-gray-600 font-black uppercase">(BC / Lượt xem)</p>
-                                </div>
-                             </div>
-                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Xếp hạng nội dung</p>
-                                <div className="flex items-center gap-2">
-                                   <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${
-                                     (selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'bg-amber-500' : 'bg-[#ff5e14]'
-                                   }`}>
-                                      {(selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'CẦN GIÁM SÁT' : 'AN TOÀN'}
-                                   </span>
-                                </div>
-                             </div>
-                             <div className="pt-2 border-t border-[#ff5e14]/10">
-                                <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
-                                  Tỷ lệ báo cáo dựa trên lượt xem giúp phân loại bài viết có nội dung nhạy cảm nhanh chóng.
-                                </p>
-                             </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Đánh giá độ tin cậy</p>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${(selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'bg-rose-500' : 'bg-[#ff5e14]'
+                                }`}>
+                                {(selectedTarget.totalCount > 10 && (selectedTarget.flags[0].campaign?.raisedAmount || 0) < 500000) ? 'RỦI RO BẤT THƯỜNG CAO' : 'TIN CẬY'}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                     </div>
+                          <div className="pt-2 border-t border-[#ff5e14]/10">
+                            <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
+                              So sánh số báo cáo với doanh thu (BC/1tr VND) giúp phát hiện các chiến dịch có dấu hiệu bất thường khi chưa đạt được kết quả quyên góp lớn.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 relative z-10">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Chỉ số gây tranh cãi</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-black text-gray-800">
+                                {selectedTarget.flags[0].post?.viewCount ? ((selectedTarget.totalCount / selectedTarget.flags[0].post.viewCount) * 100).toFixed(2) : '0'}%
+                              </p>
+                              <p className="text-[9px] text-gray-600 font-black uppercase">(BC / Lượt xem)</p>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-gray-700 uppercase tracking-tight">Xếp hạng nội dung</p>
+                            <div className="flex items-center gap-2">
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase text-white shadow-sm ${(selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'bg-amber-500' : 'bg-[#ff5e14]'
+                                }`}>
+                                {(selectedTarget.totalCount / (selectedTarget.flags[0].post?.viewCount || 1)) > 0.01 ? 'CẦN GIÁM SÁT' : 'AN TOÀN'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-[#ff5e14]/10">
+                            <p className="text-[10px] font-bold text-gray-600 leading-relaxed italic">
+                              Tỷ lệ báo cáo dựa trên lượt xem giúp phân loại bài viết có nội dung nhạy cảm nhanh chóng.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </section>
 
                   {/* Reports List - Split by Status */}
@@ -1137,9 +1148,8 @@ export default function FlagsManagementPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-lg ${
-                            aiResult.riskLevel === 'HIGH' ? 'bg-rose-500' : aiResult.riskLevel === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}>
+                          <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-lg ${aiResult.riskLevel === 'HIGH' ? 'bg-rose-500' : aiResult.riskLevel === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}>
                             {aiResult.riskLevel === 'HIGH' ? 'RỦI RO CAO' : aiResult.riskLevel === 'MEDIUM' ? 'CẢNH BÁO' : 'AN TOÀN'}
                           </span>
                           <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-sm bg-[#ff5e14]/10 text-[#ff5e14] border-[#ff5e14]/20">
@@ -1169,15 +1179,15 @@ export default function FlagsManagementPage() {
                           </div>
 
                           <div className="p-4 rounded bg-[#ff5e14]/10 border border-[#ff5e14]/10">
-                             <p className="text-[10px] font-black text-[#ff5e14] uppercase tracking-widest mb-2">Đề xuất hành động</p>
-                             <p className="text-[12px] font-medium text-[#ff5e14] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
-                             <div className="flex flex-wrap gap-1.5">
-                               {aiResult.actionTypes.map((action, i) => (
-                                 <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#ff5e14] border-[#ff5e14]/20">
-                                   {action.replace('_', ' ')}
-                                 </span>
-                               ))}
-                             </div>
+                            <p className="text-[10px] font-black text-[#ff5e14] uppercase tracking-widest mb-2">Đề xuất hành động</p>
+                            <p className="text-[12px] font-medium text-[#ff5e14] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {aiResult.actionTypes.map((action, i) => (
+                                <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#ff5e14] border-[#ff5e14]/20">
+                                  {action.replace('_', ' ')}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>

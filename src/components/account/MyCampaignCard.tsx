@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Eye, Edit, BarChart, MessageSquare, AlertCircle } from 'lucide-react';
+import { Eye, Edit, BarChart, MessageSquare, AlertCircle, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { CampaignDto } from '@/types/campaign';
 import { withFallbackImage } from '@/lib/image';
@@ -14,10 +14,12 @@ interface MyCampaignCardProps {
     assignedReviewerName?: string;
     /** True when a staff member has been assigned to this campaign */
     hasStaff?: boolean;
+    /** Number of pending evidence items for this campaign */
+    pendingEvidenceCount?: number;
     onChatClick: (campaign: CampaignDto) => void;
 }
 
-const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, hasStaff, onChatClick }) => {
+const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, hasStaff, pendingEvidenceCount = 0, onChatClick }) => {
     const targetAmount = campaign.activeGoal?.targetAmount || 0;
     const progress = targetAmount > 0 ? Math.min(100, (campaign.balance / targetAmount) * 100) : 0;
 
@@ -89,20 +91,22 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                         sizes="(max-width: 768px) 100vw, 256px"
                         className={`object-cover ${isDisabled ? 'grayscale' : ''}`}
                     />
-                    <div className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-bold border z-10 ${getStatusColor(campaign.status)}`}>
-                        {getStatusLabel(campaign.status)}
-                    </div>
                 </div>
 
                 {/* Campaign Info */}
                 <div className="flex-1 p-4 md:p-5 flex flex-col justify-between">
                     <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="text-sm font-medium text-orange-600 uppercase tracking-wider">
-                                {campaign.categoryName || campaign.category || 'Campaign'}
-                            </span>
+                        <div className="flex justify-between items-start mb-1">
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusColor(campaign.status)}`}>
+                                {getStatusLabel(campaign.status)}
+                            </div>
                             <span className="text-xs font-bold px-2 py-0.5 rounded border bg-orange-50 text-orange-700 border-orange-200">
                                 {campaign.type === 'AUTHORIZED' ? 'Quỹ ủy quyền' : campaign.type === 'ITEMIZED' ? 'Quỹ vật phẩm' : 'Chiến dịch'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-orange-600 uppercase tracking-wider">
+                                {campaign.categoryName || campaign.category || 'Campaign'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
@@ -119,6 +123,21 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                         <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">
                             {campaign.title}
                         </h3>
+
+                        {pendingEvidenceCount > 0 && !isRejected && !isPending && (
+                            <Link
+                                href={`/account/campaigns/expenditures?campaignId=${campaign.id}`}
+                                className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3 hover:bg-amber-100 transition-colors group"
+                            >
+                                <div className="p-1 bg-amber-100 rounded-full shrink-0">
+                                    <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                                </div>
+                                <span className="text-xs font-bold text-amber-800">
+                                    Có <strong className="text-amber-900">{pendingEvidenceCount}</strong> giao dịch chưa nộp minh chứng
+                                </span>
+                                <ChevronRight className="w-3.5 h-3.5 text-amber-400 ml-auto group-hover:translate-x-0.5 transition-transform" />
+                            </Link>
+                        )}
 
                         {isDisabled ? (
                             <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 mb-4 animate-pulse">

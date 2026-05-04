@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CampaignsTab from './tabs/CampaignsTab';
 import ActivityFeedTab from './tabs/ActivityFeedTab';
 import ExpenditureTab from './tabs/ExpenditureTab';
+import ReconciliationTab from './tabs/ReconciliationTab';
 import { campaignService } from '@/services/campaignService';
 
 interface DocumentSectionProps {
@@ -28,7 +29,8 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
   const tabs = [
     { id: 'Campaigns', label: 'Chiến dịch', count: campaignCount },
     { id: 'Activity Feed', label: 'Nhật ký hoạt động' },
-    { id: 'Expenditure', label: 'Minh bạch chi tiêu' }
+    { id: 'Expenditure', label: 'Minh bạch chi tiêu' },
+    { id: 'Reconciliation', label: 'Đối Soát' }
   ];
 
   const renderTabContent = () => {
@@ -36,6 +38,7 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
       case 'Campaigns': return <CampaignsTab id={id} />;
       case 'Activity Feed': return <ActivityFeedTab id={id} />;
       case 'Expenditure': return <ExpenditureTab id={id} />;
+      case 'Reconciliation': return <ReconciliationTab id={id} />;
       default: return <CampaignsTab id={id} />;
     }
   };

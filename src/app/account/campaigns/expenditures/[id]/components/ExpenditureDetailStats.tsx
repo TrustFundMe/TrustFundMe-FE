@@ -73,7 +73,7 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
                         <div className="flex flex-col items-center mt-2 w-full text-center">
                             <span className="text-[10px] font-black text-[#1E293B] uppercase tracking-tighter mb-0.5 whitespace-nowrap">ĐÃ CHI</span>
                             <span className="text-sm font-black text-[#1E293B] tabular-nums leading-none">
-                                {isEvidenceSubmitted 
+                                {isEvidenceSubmitted
                                     ? <>{new Intl.NumberFormat('vi-VN').format(v3)} <span className="text-[10px] font-bold opacity-60">VNĐ</span></>
                                     : <span className="text-[10px] text-[#64748B]">Chưa cập nhật</span>
                                 }
@@ -88,7 +88,7 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
                         <div className="flex flex-col items-center mt-2 w-full text-center">
                             <span className="text-[10px] font-black text-[#1E293B] uppercase tracking-tighter mb-0.5 whitespace-nowrap">SỐ DƯ</span>
                             <span className="text-sm font-black text-[#1E293B] tabular-nums leading-none">
-                                {isEvidenceSubmitted 
+                                {isEvidenceSubmitted
                                     ? <>{new Intl.NumberFormat('vi-VN').format(v4)} <span className="text-[10px] font-bold opacity-60">VNĐ</span></>
                                     : <span className="text-[10px] text-[#64748B]">Chưa cập nhật</span>
                                 }
@@ -106,15 +106,15 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
                         <CheckCircle className="w-2.5 h-2.5" /> Đã giải ngân
                     </span>
                 </div>
-                
+
                 <div className="flex-1 bg-[#F8FAFC]/50 border border-slate-100 rounded-xl p-2.5 flex flex-col justify-center mb-1">
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-[9px] font-black text-[#64748B] tracking-widest uppercase">Tiến độ</span>
                         <span className="text-[#065F46] text-xs font-black">{Math.round((v3 / (v1 || 1)) * 100)}%</span>
                     </div>
                     <div className="w-full h-2 bg-[#F8FAFC] rounded-full overflow-hidden relative shadow-inner">
-                        <div 
-                            className="h-full  bg-[#065F46] rounded-full" 
+                        <div
+                            className="h-full  bg-[#065F46] rounded-full"
                             style={{ width: `${Math.round((v3 / (v1 || 1)) * 100)}%` }}
                         ></div>
                     </div>
@@ -143,7 +143,11 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
                                 {isLate ? 'Trễ hạn' : 'Đúng hạn'}
                             </span>
                         );
-                    })() : (
+                    })() : expenditure?.evidenceStatus === 'OVERDUE' ? (
+                        <span className="text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest shadow-sm text-red-600 bg-red-50 border-red-200">
+                            Quá hạn
+                        </span>
+                    ) : (
                         <span className="text-[9px] font-black px-2 py-1 rounded border uppercase tracking-widest shadow-sm text-amber-600 bg-amber-50 border-amber-100">
                             Chưa nộp
                         </span>

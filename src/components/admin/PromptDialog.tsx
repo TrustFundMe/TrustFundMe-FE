@@ -44,7 +44,7 @@ export function PromptDialog({ open, onOpenChange, config, onSuccess }: PromptDi
             systemConfigService.update(config!.configKey, data),
         onSuccess: () => {
             toast.success('Cập nhật prompt thành công');
-            queryClient.invalidateQueries({ queryKey: ['system-configs', 'AI'] });
+            queryClient.invalidateQueries({ queryKey: ['system-configs'] });
             onSuccess?.();
             onOpenChange(false);
         },

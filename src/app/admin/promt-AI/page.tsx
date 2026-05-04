@@ -21,8 +21,8 @@ export default function AdminPromptPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
 
     const { data: configs = [], isLoading } = useQuery({
-        queryKey: ['system-configs', 'AI'],
-        queryFn: () => systemConfigService.getByGroup('AI'),
+        queryKey: ['system-configs'],
+        queryFn: () => systemConfigService.getAll(),
     });
 
     const handleEdit = (config: SystemConfig) => {
@@ -43,6 +43,16 @@ export default function AdminPromptPage() {
                 <span className="font-black text-slate-900 text-sm tracking-tight">{row.getValue('configKey')}</span>
             ),
             meta: { title: 'Tên cấu hình' },
+        },
+        {
+            accessorKey: 'configGroup',
+            header: 'Nhóm',
+            cell: ({ row }) => (
+                <Badge variant="outline" className="rounded-full px-3 py-0.5 text-[11px] font-bold border-slate-200 text-slate-600 bg-slate-50">
+                    {row.getValue('configGroup') || '---'}
+                </Badge>
+            ),
+            meta: { title: 'Nhóm' },
         },
         {
             accessorKey: 'description',

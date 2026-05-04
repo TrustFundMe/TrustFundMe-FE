@@ -111,8 +111,15 @@ const ExpenditureDetailStats: React.FC<ExpenditureDetailStatsProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-[9px] font-black text-[#64748B] uppercase tracking-widest leading-none">Trạng thái</span>
-                        <span className="text-[10px] font-black text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-100 uppercase">
-                            {expenditure?.evidenceStatus === 'SUBMITTED' ? 'Đã nộp' : 'Chưa nộp'}
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded border uppercase ${expenditure?.evidenceStatus === 'OVERDUE' ? 'text-red-600 bg-red-50 border-red-200' :
+                                expenditure?.evidenceStatus === 'SUBMITTED' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
+                                    expenditure?.evidenceStatus === 'APPROVED' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
+                                        'text-amber-500 bg-amber-50 border-amber-100'
+                            }`}>
+                            {expenditure?.evidenceStatus === 'OVERDUE' ? 'Quá hạn' :
+                                expenditure?.evidenceStatus === 'SUBMITTED' ? 'Đã nộp' :
+                                    expenditure?.evidenceStatus === 'APPROVED' ? 'Đã duyệt' :
+                                        'Chưa nộp'}
                         </span>
                     </div>
                 </div>

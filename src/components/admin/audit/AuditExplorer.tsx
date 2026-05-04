@@ -18,6 +18,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { auditService, AuditLog } from '@/services/auditService';
+import { campaignService } from '@/services/campaignService';
+import { paymentService } from '@/services/paymentService';
+import { expenditureService } from '@/services/expenditureService';
+import { kycService } from '@/services/kycService';
 import { useToast } from '@/components/ui/Toast';
 
 export default function AuditExplorer() {
@@ -26,9 +30,10 @@ export default function AuditExplorer() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<AuditLog | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [integrityResult, setIntegrityResult] = useState<{ valid: boolean; currentHash?: string } | null>(null);
+  const [integrityResult, setIntegrityResult] = useState<{ valid: boolean; currentHash?: string; dataValid?: boolean; tamperedEntity?: string } | null>(null);
   const [stats, setStats] = useState({ total: 0, integrity: '100%' });
   const [hasSearched, setHasSearched] = useState(false);
+  const [isCheckingLive, setIsCheckingLive] = useState(false);
   const { toast } = useToast();
 
   const fetchLogs = async (query = '') => {
@@ -79,6 +84,87 @@ export default function AuditExplorer() {
       return;
     }
     fetchLogs(searchTerm.trim());
+  };
+
+  const checkLiveData = async () => {
+    if (!selectedAudit) return;
+    setIsCheckingLive(true);
+    try {
+      let liveData: any = null;
+      const entityId = Number(selectedAudit.entityId);
+
+      switch (selectedAudit.entityType) {
+        case 'CAMPAIGN':
+        case 'CAMPAIGN_APPROVAL':
+          try {
+            liveData = await campaignService.getById(entityId);
+          } catch (e: any) {
+            if (e.response?.status === 404) liveData = null;
+            else throw e;
+          }
+          break;
+        case 'DONATION':
+        case 'DONATION_TRANSACTION':
+          try {
+            liveData = await paymentService.getDonation(entityId);
+          } catch (e: any) {
+            if (e.response?.status === 404) liveData = null;
+            else throw e;
+          }
+          break;
+        case 'EVIDENCE_SUBMISSION':
+        case 'EVIDENCE_SUBMITTED':
+          try {
+            liveData = await expenditureService.getEvidenceById(entityId);
+          } catch (e: any) {
+            if (e.response?.status === 404) liveData = null;
+            else throw e;
+          }
+          break;
+        case 'KYC':
+        case 'USER_KYC':
+          try {
+            liveData = await kycService.getById(entityId);
+          } catch (e: any) {
+            if (e.response?.status === 404) liveData = null;
+            else throw e;
+          }
+          break;
+        default:
+          toast(`Không hỗ trợ kiểm tra live cho loại ${selectedAudit.entityType}`, 'info');
+          return;
+      }
+
+      if (!liveData) {
+        toast('Dữ liệu không tồn tại trên Live DB (Có thể đã bị xóa) 🗑️', 'warning');
+        return;
+      }
+
+      const snapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
+      let isMatch = true;
+      const mismatchedFields: string[] = [];
+      const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id'];
+
+      for (const key in snapshot) {
+        if (Object.prototype.hasOwnProperty.call(snapshot, key) && !fieldsToIgnore.includes(key)) {
+          if (String(snapshot[key]) !== String(liveData[key])) {
+            isMatch = false;
+            mismatchedFields.push(key);
+          }
+        }
+      }
+
+      if (isMatch) {
+        toast('Dữ liệu khớp hoàn toàn với Live DB ✅', 'success');
+      } else {
+        toast(`Phát hiện sai lệch tại các trường: ${mismatchedFields.join(', ')} ⚠️`, 'error');
+      }
+    } catch (err) {
+      console.error('Check live error:', err);
+      toast('Lỗi khi truy vấn dữ liệu Live DB', 'error');
+    } finally {
+      setIsCheckingLive(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -221,14 +307,22 @@ export default function AuditExplorer() {
                        <ShieldCheck className="h-4 w-4 text-slate-900" />
                        <h3 className="text-xs font-bold text-slate-900 uppercase">SNAPSHOT ID: #{selectedAudit.id}</h3>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => copyToClipboard(selectedAudit.auditHash)}
-                        className="text-[9px] font-bold px-2 py-1 border border-slate-200 rounded hover:bg-white bg-white shadow-sm flex items-center gap-1"
-                      >
-                        <Copy className="h-3 w-3" /> SAO CHÉP HASH
-                      </button>
-                    </div>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={checkLiveData}
+                          disabled={isCheckingLive}
+                          className="text-[9px] font-bold px-2 py-1 border border-emerald-200 text-emerald-700 rounded hover:bg-emerald-50 bg-white shadow-sm flex items-center gap-1"
+                        >
+                          {isCheckingLive ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />} 
+                          KIỂM TRA LIVE DB
+                        </button>
+                        <button 
+                          onClick={() => copyToClipboard(selectedAudit.auditHash)}
+                          className="text-[9px] font-bold px-2 py-1 border border-slate-200 rounded hover:bg-white bg-white shadow-sm flex items-center gap-1"
+                        >
+                          <Copy className="h-3 w-3" /> SAO CHÉP HASH
+                        </button>
+                      </div>
                   </div>
                   <div className="p-4">
                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
