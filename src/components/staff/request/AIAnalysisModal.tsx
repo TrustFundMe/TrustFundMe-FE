@@ -20,8 +20,8 @@ interface DetectedItem {
     deviationPercentage?: number;
     marketUnitPrice?: number;
     marketPriceRange?: string;
-    priceRangeMin?: number;
-    priceRangeMax?: number;
+    marketPriceMin?: number;
+    marketPriceMax?: number;
     productExists?: boolean;
     productExistsByBrand?: boolean;
     unit?: string;
@@ -162,7 +162,7 @@ export default function AIAnalysisModal({
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
                                         Kế hoạch (SL x Giá)
                                     </th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">
+                                    <th className="px-3 py-3 text-[9px] font-black text-indigo-500 uppercase tracking-wider border-r border-slate-100">
                                         Thẩm định & Link Thị Trường
                                     </th>
                                 </tr>
@@ -181,9 +181,6 @@ export default function AIAnalysisModal({
                                     const sysQty = sysItem.expectedQuantity || 1;
                                     const sysPrice = sysItem.expectedPrice || 0;
                                     const sysVal = sysQty * sysPrice;
-
-                                    const isPNF = aiItem?.marketUnitPrice === -1 || aiItem?.statusMessage === 'Sản phẩm không tồn tại';
-                                    const diff = aiItem && !isPNF ? sysVal - aiItem.total : null;
 
                                     return (
                                         <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
@@ -215,40 +212,46 @@ export default function AIAnalysisModal({
                                                     {`${sysQty} x ${fmtNum(sysPrice)}`}
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-3 border-r border-slate-50 min-w-[200px]">
-                                                {!aiItem ? (
-                                                    <div className="text-[9px] text-slate-300 italic">Chưa có dữ liệu AI</div>
-                                                ) : isPNF ? (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Không kiểm tra được</span>
-                                                        {aiItem.statusMessage && <span className="text-[8px] text-slate-400 italic font-medium">{aiItem.statusMessage}</span>}
-                                                    </div>
-                                                ) : (
+                                            <td className="px-3 py-3 border-r border-slate-50 min-w-[180px]">
+                                                {aiItem ? (
                                                     <div className="flex flex-col gap-1.5">
                                                         <div className="flex items-center justify-between">
-                                                            <div className="font-black text-[11px] tabular-nums text-slate-800">{fmtVND(aiItem.total)}</div>
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Giá tham chiếu (±15%):</span>
+                                                            <span className="text-[10px] font-black text-indigo-700">
+                                                                {aiItem.marketPriceMin && aiItem.marketPriceMax
+                                                                    ? `${fmtNum(aiItem.marketPriceMin)} - ${fmtNum(aiItem.marketPriceMax)}`
+                                                                    : aiItem.marketUnitPrice ? fmtVND(aiItem.marketUnitPrice) : '-'}
+                                                            </span>
                                                         </div>
-                                                        <div className="text-[8px] font-bold text-slate-500">{aiItem.quantity || 1} x {fmtNum(aiItem.unitPrice || 0)}</div>
-
-                                                        {/* Market Links Display */}
-                                                        <div className="mt-1 pt-1 border-t border-slate-100 flex flex-col gap-1">
-                                                            {aiItem.geographicEvidenceUrl && (
-                                                                <a href={aiItem.geographicEvidenceUrl} target="_blank" rel="noopener noreferrer"
-                                                                    className="text-[8px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider">
-                                                                    <Store className="h-2 w-2" /> Link vị trí thị trường
-                                                                </a>
-                                                            )}
-                                                            {Array.isArray(aiItem.evidenceUrls) && aiItem.evidenceUrls.length > 0 && (
-                                                                <div className="flex flex-col flex-wrap gap-0.5">
-                                                                    {aiItem.evidenceUrls.map((url, iUrl) => (
-                                                                        <a key={iUrl} href={url} target="_blank" rel="noopener noreferrer"
-                                                                            className="text-[8px] overflow-hidden whitespace-nowrap text-ellipsis max-w-[150px] text-indigo-500 hover:text-indigo-700 hover:underline">
-                                                                            [Link tham khảo {iUrl + 1}]
-                                                                        </a>
-                                                                    ))}
-                                                                </div>
-                                                            )}
+                                                        <div className="mt-1.5 pt-1 border-t border-slate-50">
+                                                            <div className={`text-[10px] font-bold ${aiItem.priceStatus === 'MATCHED' ? 'text-emerald-600' :
+                                                                aiItem.priceStatus === 'OVERPRICED' ? 'text-rose-600' :
+                                                                    aiItem.priceStatus === 'UNDERPRICED' ? 'text-amber-600' :
+                                                                        'text-slate-400'
+                                                                }`}>
+                                                                {aiItem.statusMessage || (aiItem.priceStatus === 'MATCHED' ? 'Giá hợp lý' : aiItem.priceStatus || 'N/A')}
+                                                            </div>
                                                         </div>
+                                                        {aiItem.evidenceUrls && aiItem.evidenceUrls.length > 0 && (
+                                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                                {aiItem.evidenceUrls.slice(0, 2).map((url, uidx) => (
+                                                                    <a
+                                                                        key={uidx}
+                                                                        href={url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md text-[9px] font-black border border-blue-100 transition-all hover:scale-105 active:scale-95"
+                                                                    >
+                                                                        <Store className="h-3 w-3" /> Link {uidx + 1}
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center py-2 opacity-30 select-none">
+                                                        <Loader2 className="h-4 w-4 animate-spin text-slate-300" />
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase mt-1">AI đang xử lý...</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -259,7 +262,7 @@ export default function AIAnalysisModal({
                             {/* Tfoot logic for Plan */}
                             <tfoot className="bg-slate-50 border-t-2 border-slate-200 sticky bottom-0">
                                 <tr className="font-black text-slate-800">
-                                    <td colSpan={10} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest text-slate-400">
+                                    <td colSpan={11} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest text-slate-400">
                                         Vui lòng xem chi tiết ở trên
                                     </td>
                                 </tr>

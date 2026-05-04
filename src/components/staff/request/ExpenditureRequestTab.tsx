@@ -81,7 +81,6 @@ const CategoryTable = ({
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 text-center">Đơn vị dự kiến</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng dự kiến</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Địa điểm mua dự kiến</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Link dự kiến mua</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Note dự kiến</th>
                 </tr>
             </thead>
@@ -126,11 +125,6 @@ const CategoryTable = ({
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
                                                 <div className="text-[10px] text-gray-700 font-medium break-all">{i.expectedPurchaseLocation || '-'}</div>
-                                            </td>
-                                            <td className="py-2 px-3 border-r border-gray-100">
-                                                {i.expectedPurchaseLink ? (
-                                                    <a href={i.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">Xem Link</a>
-                                                ) : <span className="text-[10px] text-gray-400">-</span>}
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
                                                 <div className="text-[9px] text-gray-500">{i.expectedNote || '-'}</div>

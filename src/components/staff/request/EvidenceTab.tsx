@@ -375,7 +375,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                                         <th className="py-2 px-3 text-center min-w-[100px]">Số lượng & Đơn vị</th>
                                         <th className="py-2 px-3 text-center min-w-[100px]">Thương hiệu</th>
                                         <th className="py-2 px-3 text-right min-w-[110px]">Đơn giá</th>
-                                        <th className="py-2 px-3 text-center min-w-[120px]">Địa điểm & Link</th>
+                                        <th className="py-2.5 px-3 text-[10px] font-black text-gray-400 uppercase border-r border-[#E2E8F0]">Địa điểm</th>
                                     </tr>
                                 </thead>
                                 <tbody className="">
@@ -421,14 +421,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                                                 <td className="pt-2 pb-0.5 px-3 text-center align-bottom min-w-[140px]">
                                                     <div className="flex items-center justify-center gap-1 leading-none">
                                                         <span className="text-[10px] font-medium text-gray-400 italic mr-0.5">Dự kiến:</span>
-                                                        {it.expectedPurchaseLink && !it.expectedPurchaseLink.includes('example.com') ? (
-                                                            <a href={it.expectedPurchaseLink} target="_blank" rel="noreferrer"
-                                                                className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5 truncate max-w-[100px]">
-                                                                {it.expectedPurchaseLocation || 'Xem link'} <ExternalLink className="h-2 w-2 flex-shrink-0" />
-                                                            </a>
-                                                        ) : (
-                                                            <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{it.expectedPurchaseLocation || '-'}</span>
-                                                        )}
+                                                        <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{it.expectedPurchaseLocation || '-'}</span>
                                                     </div>
                                                 </td>
                                             </tr>,
@@ -467,15 +460,9 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                                                 {/* 5. Actual Location */}
                                                 <td className="pt-0.5 pb-2 px-3 text-center align-top min-w-[140px]">
                                                     <div className="flex items-center justify-center gap-1 leading-none">
-                                                        <span className="text-[10px] font-black text-gray-500 italic mr-0.5">Thực tế:</span>
-                                                        {it.actualPurchaseLink && !it.actualPurchaseLink.includes('example.com') ? (
-                                                            <a href={it.actualPurchaseLink} target="_blank" rel="noreferrer"
-                                                                className="text-[10px] font-black text-blue-700 hover:underline flex items-center gap-0.5 truncate max-w-[100px]">
-                                                                Link thực tế <ExternalLink className="h-2 w-2 flex-shrink-0" />
-                                                            </a>
-                                                        ) : (
-                                                            <span className="text-[10px] font-bold text-gray-300 italic">No link</span>
-                                                        )}
+                                                        <div className="text-[10px] text-gray-700 font-bold leading-tight break-all">
+                                                            {it.actualPurchaseLocation || '-'}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>

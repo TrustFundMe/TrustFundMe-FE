@@ -228,7 +228,6 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                 <th className="py-2 px-3 text-center border-r border-white/20">Đơn vị dự kiến</th>
                                                 <th className="py-2 px-3 border-r border-white/20">Nhãn hàng dự kiến</th>
                                                 <th className="py-2 px-3 border-r border-white/20">Địa điểm mua dự kiến</th>
-                                                <th className="py-2 px-3 border-r border-white/20">Link dự kiến mua</th>
                                                 <th className="py-2 px-3 border-r border-white/20">Note dự kiến</th>
                                                 <th className="py-2 px-3 text-right border-r border-white/20 w-[110px]">Dự kiến (SL x Giá)</th>
                                                 <th className="py-2 px-3 text-right w-[110px]">Thực tế</th>
@@ -289,11 +288,6 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                                         </td>
                                                                         <td className="py-2.5 px-3 border-r border-gray-50">
                                                                             <div className="text-[10px] text-gray-700 font-medium break-all">{it.expectedPurchaseLocation || '-'}</div>
-                                                                        </td>
-                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
-                                                                            {it.expectedPurchaseLink ? (
-                                                                                <a href={it.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">Xem Link</a>
-                                                                            ) : <span className="text-[10px] text-gray-400">-</span>}
                                                                         </td>
                                                                         <td className="py-2.5 px-3 border-r border-gray-50">
                                                                             <div className="text-[9px] text-gray-500">{it.expectedNote || '-'}</div>
