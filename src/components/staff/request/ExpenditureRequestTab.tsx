@@ -11,6 +11,7 @@ import {
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { paymentService } from '@/services/paymentService';
+import { userService } from '@/services/userService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
@@ -192,7 +193,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
         try {
             setLoading(true);
             const updated = await method(exp.id, ...args);
-            
+
             // Audit Log for Step 3 (Expenditure)
             const status = args[0];
             if (status === 'APPROVED' || status === 'REJECTED' || status === 'ALLOWED_EDIT') {
@@ -362,7 +363,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                 campaignIds.map(id => campaignService.getById(id).catch(() => null))
             );
             const validCampaigns = campaigns.filter(c => c !== null);
-            
+
             // 4. Fetch owners for these campaigns
             const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
             const owners = await Promise.all(
