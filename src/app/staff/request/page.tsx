@@ -11,7 +11,6 @@ import ExpenditureRequestTab from '@/components/staff/request/ExpenditureRequest
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
 import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
-import { newFlowMockCampaigns } from '@/components/staff/request/newFlowMockData';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -78,7 +77,7 @@ function StaffRequestContent() {
         .map(t => t.targetId);
 
       if (campaignTaskIds.length === 0) {
-        setCampaignRows([...newFlowMockCampaigns]);
+        setCampaignRows([]);
         setIsLoading(false);
         return;
       }
@@ -140,7 +139,7 @@ function StaffRequestContent() {
           };
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      setCampaignRows([...buildCampaignRows(validCampaigns), ...newFlowMockCampaigns]);
+      setCampaignRows([...buildCampaignRows(validCampaigns)]);
       setTotalPages(1); // Task-based view usually doesn't need pagination for now
 
       // Auto-select from URL

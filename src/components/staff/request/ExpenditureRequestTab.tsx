@@ -71,12 +71,15 @@ const CategoryTable = ({
             <thead className="sticky top-0 bg-[#F1F5F9] z-10 border-b border-gray-200 shadow-sm">
                 <tr>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase w-10 text-center border-r border-gray-200">STT</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%]">Danh mục</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 w-[15%] text-right bg-orange-50/50">Tổng dự kiến danh mục</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Hàng hóa / Ghi chú</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng / Đơn</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Địa điểm mua / Link</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase text-right">Dự kiến chi (Số lượng x Đơn giá)</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Tên danh mục</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Tên</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 text-right">Giá dự kiến</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 text-center">Số lượng dự kiến</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 text-center">Đơn vị dự kiến</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng dự kiến</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Địa điểm mua dự kiến</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Link dự kiến mua</th>
+                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Note dự kiến</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
@@ -90,10 +93,7 @@ const CategoryTable = ({
                                     <td className="py-2 px-3 border-r border-gray-100 bg-orange-50/10">
                                         <div className="text-[11px] font-black text-gray-800 uppercase">{cat.name}</div>
                                     </td>
-                                    <td className="py-2 px-3 border-r border-gray-100 bg-orange-50/10 text-right">
-                                        <div className="text-[10px] font-bold text-[#ff5e14]">{fmtNum(cat.expectedAmount || 0)} đ</div>
-                                    </td>
-                                    <td colSpan={3} className="py-2 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
+                                    <td colSpan={8} className="py-2 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
                                 </tr>
                             ) : (
                                 cat.items.map((i: any, idx: number) => {
@@ -106,37 +106,31 @@ const CategoryTable = ({
                                                     <div className="text-[11px] font-black text-gray-800 uppercase leading-snug">{cat.name}</div>
                                                 </td>
                                             )}
-                                            {idx === 0 && (
-                                                <td rowSpan={rowSpan} className="py-2 px-3 border-r border-gray-100 bg-orange-50/10 align-top text-right">
-                                                    <div className="text-[10px] font-bold text-white bg-gradient-to-r from-orange-500 to-[#ff5e14] px-1.5 py-1 rounded shadow-sm inline-block">
-                                                        {fmtNum(cat.expectedAmount || 0)} đ
-                                                    </div>
-                                                </td>
-                                            )}
                                             <td className="py-2 px-3 border-r border-gray-100">
-                                                <div className="text-[11px] font-bold text-gray-800 uppercase leading-none mb-1">{i.name || 'Hàng hóa'}</div>
-                                                {i.expectedNote && <div className="text-[9px] text-gray-500 font-medium">{i.expectedNote}</div>}
+                                                <div className="text-[11px] font-bold text-gray-800 leading-tight">{i.name || '-'}</div>
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100 text-right">
+                                                <div className="text-[10px] font-bold text-gray-800">{fmtNum(i.expectedPrice || 0)}</div>
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100 text-center">
+                                                <div className="text-[10px] font-bold text-gray-800">{i.expectedQuantity || 0}</div>
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100 text-center">
+                                                <div className="text-[10px] font-bold text-gray-700">{i.expectedUnit || '-'}</div>
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
-                                                <div className="text-[10px] font-bold text-gray-700">{i.expectedBrand || '-'} <span className="font-normal text-gray-400">/</span> {i.expectedUnit || '-'}</div>
+                                                <div className="text-[10px] font-bold text-gray-700">{i.expectedBrand || '-'}</div>
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
-                                                <div className="text-[9px] text-gray-500 font-medium">{i.expectedPurchaseLocation || '-'}</div>
-                                                {i.expectedPurchaseLink && (
-                                                    <a
-                                                        href={i.expectedPurchaseLink}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1 mt-1"
-                                                    >
-                                                        <Store className="h-2.5 w-2.5" />
-                                                        Xem link mua
-                                                    </a>
-                                                )}
+                                                <div className="text-[10px] text-gray-700 font-medium break-all">{i.expectedPurchaseLocation || '-'}</div>
                                             </td>
-                                            <td className="py-2 px-3 text-right">
-                                                <div className="text-[11px] font-black text-gray-800">{fmtNum(expectedQty * i.expectedPrice)}</div>
-                                                <div className="text-[9px] text-gray-400 font-bold mt-0.5">{expectedQty} x {fmtNum(i.expectedPrice)}</div>
+                                            <td className="py-2 px-3 border-r border-gray-100">
+                                                {i.expectedPurchaseLink ? (
+                                                    <a href={i.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">Xem Link</a>
+                                                ) : <span className="text-[10px] text-gray-400">-</span>}
+                                            </td>
+                                            <td className="py-2 px-3 border-r border-gray-100">
+                                                <div className="text-[9px] text-gray-500">{i.expectedNote || '-'}</div>
                                             </td>
                                         </tr>
                                     );
@@ -145,13 +139,13 @@ const CategoryTable = ({
                         </React.Fragment>
                     );
                 }) : (
-                    <tr><td colSpan={6} className="py-10 text-center text-[10px] font-bold text-gray-300 uppercase">Trống</td></tr>
+                    <tr><td colSpan={10} className="py-10 text-center text-[10px] font-bold text-gray-300 uppercase">Trống</td></tr>
                 )}
             </tbody>
             <tfoot className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
                 <tr className="font-black text-gray-800">
-                    <td colSpan={5} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng kế hoạch:</td>
-                    <td className="py-2.5 px-3 text-right text-xs text-[#ff5e14]">{fmtNum(totalPlan)} đ</td>
+                    <td colSpan={2} className="py-2.5 px-3 text-[10px] font-black uppercase text-gray-500 text-right border-r border-gray-200">Σ Tổng cộng:</td>
+                    <td colSpan={8} className="py-2.5 px-3 text-left text-xs text-[#ff5e14]">{fmtNum(totalPlan)} đ</td>
                 </tr>
             </tfoot>
         </table>

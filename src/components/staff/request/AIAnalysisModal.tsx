@@ -153,16 +153,20 @@ export default function AIAnalysisModal({
                             <thead className="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10">
                                 <tr>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Hàng hóa / Ghi chú</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hiệu / Đơn vị</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Địa điểm mua (AI Audit)</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Tên</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right border-r border-slate-100">Giá dự kiến</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">SL dự kiến</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đơn vị dự kiến</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hàng dự kiến</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Địa điểm dự kiến mua</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Link dự kiến mua</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Note dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
-                                        Kế hoạch (Dự kiến)
+                                        Kế hoạch (SL x Giá)
                                     </th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">
-                                        Thẩm định (Giá thị trường)
+                                        Thẩm định & Link Thị Trường
                                     </th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center">Lệch</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -187,24 +191,32 @@ export default function AIAnalysisModal({
                                         <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                                             <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 border-r border-slate-50">{idx + 1}</td>
                                             <td className="px-3 py-3 border-r border-slate-50">
-                                                <div className="font-bold text-slate-800 leading-tight uppercase">{sysItem.name}</div>
-                                                {sysItem.expectedNote && <div className="text-[9px] text-slate-500 font-medium mt-1 uppercase italic opacity-70">{sysItem.expectedNote}</div>}
+                                                <div className="text-[11px] font-bold text-slate-800 leading-tight">{sysItem.name || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3 border-r border-slate-50 text-right">
+                                                <div className="text-[10px] font-bold text-slate-800">{fmtVND(sysPrice)}</div>
+                                            </td>
+                                            <td className="px-3 py-3 border-r border-slate-50 text-center">
+                                                <div className="text-[10px] font-bold text-slate-800">{sysQty}</div>
+                                            </td>
+                                            <td className="px-3 py-3 border-r border-slate-50 text-center">
+                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedUnit || '-'}</div>
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
-                                                <div className="text-[10px] font-bold text-slate-700">
-                                                    {sysItem.expectedBrand || '-'} <span className="font-normal text-slate-300">/</span> {sysItem.expectedUnit || '-'}
-                                                </div>
+                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedBrand || '-'}</div>
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="text-[9px] text-slate-500 font-medium">{sysItem.expectedPurchaseLocation || '-'}</div>
-                                                    {sysItem.expectedPurchaseLink && (
-                                                        <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer"
-                                                            className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1">
-                                                            <Store className="h-2.5 w-2.5" /> Link dự kiến mua
-                                                        </a>
-                                                    )}
-                                                </div>
+                                                <div className="text-[10px] text-slate-700 font-medium break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3 border-r border-slate-50">
+                                                {sysItem.expectedPurchaseLink ? (
+                                                    <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
+                                                        <Store className="h-2.5 w-2.5" /> Xem Link
+                                                    </a>
+                                                ) : <span className="text-[10px] text-slate-400">-</span>}
+                                            </td>
+                                            <td className="px-3 py-3 border-r border-slate-50">
+                                                <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>
                                             </td>
                                             <td className="px-3 py-3 text-center border-r border-slate-50">
                                                 <div className="text-[11px] font-black text-blue-700 tabular-nums">{fmtVND(sysVal)}</div>
@@ -221,27 +233,31 @@ export default function AIAnalysisModal({
                                                         {aiItem.statusMessage && <span className="text-[8px] text-slate-400 italic font-medium">{aiItem.statusMessage}</span>}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex flex-col gap-1">
+                                                    <div className="flex flex-col gap-1.5">
                                                         <div className="flex items-center justify-between">
                                                             <div className="font-black text-[11px] tabular-nums text-slate-800">{fmtVND(aiItem.total)}</div>
                                                         </div>
                                                         <div className="text-[8px] font-bold text-slate-500">{aiItem.quantity || 1} x {fmtNum(aiItem.unitPrice || 0)}</div>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                {!aiItem || isPNF ? (
-                                                    <span className="text-slate-300 text-[10px]">—</span>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <div className={`font-black text-[10px] tabular-nums ${diff! > 0 ? 'text-rose-600' : diff! < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                            {fmtVND(Math.abs(diff!))}
+
+                                                        {/* Market Links Display */}
+                                                        <div className="mt-1 pt-1 border-t border-slate-100 flex flex-col gap-1">
+                                                            {aiItem.geographicEvidenceUrl && (
+                                                                <a href={aiItem.geographicEvidenceUrl} target="_blank" rel="noopener noreferrer"
+                                                                    className="text-[8px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider">
+                                                                    <Store className="h-2 w-2" /> Link vị trí thị trường
+                                                                </a>
+                                                            )}
+                                                            {Array.isArray(aiItem.evidenceUrls) && aiItem.evidenceUrls.length > 0 && (
+                                                                <div className="flex flex-col flex-wrap gap-0.5">
+                                                                    {aiItem.evidenceUrls.map((url, iUrl) => (
+                                                                        <a key={iUrl} href={url} target="_blank" rel="noopener noreferrer"
+                                                                            className="text-[8px] overflow-hidden whitespace-nowrap text-ellipsis max-w-[150px] text-indigo-500 hover:text-indigo-700 hover:underline">
+                                                                            [Link tham khảo {iUrl + 1}]
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        {aiItem.priceStatus && (
-                                                            <div className={`text-[7px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest ${aiItem.priceStatus.includes('MATCHED') ? 'bg-emerald-50 text-emerald-600' : aiItem.priceStatus.includes('OVERPRICED') ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-                                                                {aiItem.priceStatus}
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 )}
                                             </td>
@@ -252,10 +268,9 @@ export default function AIAnalysisModal({
                             {/* Tfoot logic for Plan */}
                             <tfoot className="bg-slate-50 border-t-2 border-slate-200 sticky bottom-0">
                                 <tr className="font-black text-slate-800">
-                                    <td colSpan={6} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest">
+                                    <td colSpan={10} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest text-slate-400">
                                         Vui lòng xem chi tiết ở trên
                                     </td>
-                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -319,14 +334,19 @@ export default function AIAnalysisModal({
                     </div>
                 ) : (
                     <div className="flex-1 overflow-auto p-0">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse min-w-[1100px]">
                             <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm">
                                 <tr>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest w-10 text-center border-b border-slate-200">#</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 w-1/3">Hạng Mục</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Hệ Thống Phê Duyệt</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Bóc Tách Hóa Đơn</th>
-                                    <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 w-1/5 text-center">Kết quả Khớp</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest w-8 text-center border-b border-slate-200">#</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Tên</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Nhãn hàng</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Đơn vị</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Địa điểm mua</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Link mua</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Ghi chú</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Hệ Thống PD</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Bóc Tách HĐ</th>
+                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 w-[110px] text-center">Kết quả Khớp</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -349,33 +369,43 @@ export default function AIAnalysisModal({
                                     const isMatched = aiItem && (sysVal === aiVal || Math.abs(sysVal - aiVal) < 1000);
 
                                     return (
-                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors group">
-                                            <td className="px-4 py-4 text-center text-[11px] font-black text-slate-400 group-hover:text-blue-500">{idx + 1}</td>
-                                            <td className="px-4 py-4">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-12 text-[8px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded text-center">Hệ Thống</span>
-                                                        <span className="text-xs font-black text-slate-800">{sysItem.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-12 text-[8px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-50 px-1.5 py-0.5 rounded text-center border border-indigo-100">Hóa Đơn</span>
-                                                        <span className="text-[11px] font-bold text-indigo-700">{aiItem ? aiItem.name : <em className="text-slate-400 font-normal">Không tìm thấy trên Bill</em>}</span>
-                                                    </div>
-                                                </div>
+                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors group align-top">
+                                            <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 group-hover:text-blue-500">{idx + 1}</td>
+                                            <td className="px-3 py-3">
+                                                <div className="text-[11px] font-black text-slate-800 leading-tight">{sysItem.name || '-'}</div>
                                             </td>
-                                            <td className="px-4 py-4 text-right align-top pt-5">
-                                                <div className="text-xs font-black text-slate-800 tabular-nums">{fmtVND(sysVal)}</div>
+                                            <td className="px-3 py-3 text-center">
+                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedBrand || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedUnit || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                <div className="text-[9px] text-slate-600 break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                {sysItem.expectedPurchaseLink ? (
+                                                    <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[9px] text-blue-600 hover:underline flex items-center gap-1">
+                                                        <Store className="h-2.5 w-2.5" /> Xem Link
+                                                    </a>
+                                                ) : <span className="text-[9px] text-slate-400">-</span>}
+                                            </td>
+                                            <td className="px-3 py-3">
+                                                <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>
+                                            </td>
+                                            <td className="px-3 py-3 text-right">
+                                                <div className="text-[11px] font-black text-slate-800 tabular-nums">{fmtVND(sysVal)}</div>
                                                 <div className="text-[9px] font-bold text-slate-500 tabular-nums mt-0.5">{sysQty} x {fmtNum(sysPrice)} đ</div>
                                             </td>
-                                            <td className="px-4 py-4 text-right align-top pt-5">
+                                            <td className="px-3 py-3 text-right">
                                                 {aiItem ? (
                                                     <>
-                                                        <div className="text-xs font-black text-slate-800 tabular-nums">{fmtVND(aiVal)}</div>
+                                                        <div className="text-[11px] font-black text-indigo-700 tabular-nums">{fmtVND(aiVal)}</div>
                                                         <div className="text-[9px] font-bold text-slate-500 tabular-nums mt-0.5">{aiQty} x {fmtNum(aiPrice)} đ</div>
                                                     </>
                                                 ) : <span className="text-[10px] text-slate-300">—</span>}
                                             </td>
-                                            <td className="px-4 py-4 text-center align-middle">
+                                            <td className="px-3 py-3 text-center">
                                                 {!aiItem ? (
                                                     <span className="inline-block px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded border border-slate-200">
                                                         Thiếu sót
@@ -406,8 +436,8 @@ export default function AIAnalysisModal({
 
             {/* XÁC MINH HÓA ĐƠN ĐIỆN TỬ -> THAY THẾ KẾT LUẬN KIỂM TOÁN TẠI ĐÂY */}
             <div className={`flex-shrink-0 py-3 px-5 rounded-2xl shadow-xl flex items-center justify-between mt-2 border relative overflow-hidden transition-all ${result.isElectronicInvoice
-                    ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
+                ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white'
+                : 'bg-white border-slate-200 text-slate-800'
                 }`}>
                 <div className="flex items-center gap-4 relative z-10 w-full">
                     <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner ${result.isElectronicInvoice ? 'bg-indigo-500/40 border border-indigo-400' : 'bg-slate-100 border border-slate-200'

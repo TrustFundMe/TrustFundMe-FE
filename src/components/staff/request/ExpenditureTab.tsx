@@ -220,12 +220,17 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                         <thead className="bg-[#ff5e14] text-white">
                                             <tr className="text-[9px] font-black uppercase tracking-widest border-b border-[#ff5e14]">
                                                 <th className="py-2 px-3 text-center border-r border-white/20 w-[40px]">STT</th>
-                                                <th className="py-2 px-3 border-r border-white/20 w-[15%]">Danh mục</th>
+                                                <th className="py-2 px-3 border-r border-white/20 w-[15%]">Tên danh mục</th>
                                                 <th className="py-2 px-3 border-r border-white/20 w-[15%] bg-orange-500">Tổng DM</th>
-                                                <th className="py-2 px-3 border-r border-white/20">Hàng hóa / Ghi chú</th>
-                                                <th className="py-2 px-3 border-r border-white/20 min-w-[100px]">Nhãn / ĐV</th>
-                                                <th className="py-2 px-3 border-r border-white/20 min-w-[120px]">Địa điểm / Link</th>
-                                                <th className="py-2 px-3 text-right border-r border-white/20 w-[110px]">Kế hoạch</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Tên</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/20">Giá dự kiến</th>
+                                                <th className="py-2 px-3 text-center border-r border-white/20">Số lượng dự kiến</th>
+                                                <th className="py-2 px-3 text-center border-r border-white/20">Đơn vị dự kiến</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Nhãn hàng dự kiến</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Địa điểm mua dự kiến</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Link dự kiến mua</th>
+                                                <th className="py-2 px-3 border-r border-white/20">Note dự kiến</th>
+                                                <th className="py-2 px-3 text-right border-r border-white/20 w-[110px]">Dự kiến (SL x Giá)</th>
                                                 <th className="py-2 px-3 text-right w-[110px]">Thực tế</th>
                                             </tr>
                                         </thead>
@@ -240,13 +245,11 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                                 <td className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/10 align-top">
                                                                     <div className="text-[11px] font-black text-gray-800 uppercase leading-snug">{cat.name}</div>
                                                                 </td>
-                                                                <td className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/20 align-top">
-                                                                    <div className="text-[9px] font-bold text-[#ff5e14] flex flex-col gap-0.5">
-                                                                        <span>KH: {fmt(cat.expectedAmount || 0)}</span>
-                                                                        <span>TT: {fmt(cat.actualAmount || 0)}</span>
-                                                                    </div>
+                                                                <td className="py-2.5 px-3 text-[10px] font-black text-gray-400 text-center border-r border-gray-50">-</td>
+                                                                <td className="py-2.5 px-3 border-r border-gray-50 bg-orange-50/10 align-top">
+                                                                    <div className="text-[11px] font-black text-gray-800 uppercase leading-snug">{cat.name}</div>
                                                                 </td>
-                                                                <td colSpan={4} className="py-2.5 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
+                                                                <td colSpan={11} className="py-2.5 px-3 text-center text-[10px] text-gray-400 italic">Chưa có hạng mục chi tiết</td>
                                                             </tr>
                                                         ) : (
                                                             cat.items.map((it: any, idx: number) => {
@@ -270,25 +273,30 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                                             </td>
                                                                         )}
                                                                         <td className="py-2.5 px-3 border-r border-gray-50">
-                                                                            <div className="font-bold text-gray-800 uppercase leading-tight">{it.name}</div>
-                                                                            {it.expectedNote && <div className="text-[9px] text-gray-400 mt-0.5 font-medium leading-relaxed">{it.expectedNote}</div>}
+                                                                            <div className="text-[11px] font-bold text-gray-800 leading-tight">{it.name || '-'}</div>
                                                                         </td>
-                                                                        <td className="py-2 px-3 border-r border-gray-50 align-top">
-                                                                            <div className="text-[10px] font-bold text-gray-700">{it.expectedBrand || '-'} <span className="font-normal text-gray-400">/</span> {it.expectedUnit || '-'}</div>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50 text-right">
+                                                                            <div className="text-[10px] font-bold text-gray-800">{fmt(it.expectedPrice || 0)}</div>
                                                                         </td>
-                                                                        <td className="py-2 px-3 border-r border-gray-50 align-top">
-                                                                            <div className="text-[9px] text-gray-500 font-medium">{it.expectedPurchaseLocation || '-'}</div>
-                                                                            {it.expectedPurchaseLink && (
-                                                                                <a
-                                                                                    href={it.expectedPurchaseLink}
-                                                                                    target="_blank"
-                                                                                    rel="noopener noreferrer"
-                                                                                    className="text-[9px] text-blue-600 hover:underline font-bold flex items-center gap-1 mt-1"
-                                                                                >
-                                                                                    <Store className="h-2.5 w-2.5" />
-                                                                                    Chi tiết
-                                                                                </a>
-                                                                            )}
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50 text-center">
+                                                                            <div className="text-[10px] font-bold text-gray-800">{expectedQty || 0}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50 text-center">
+                                                                            <div className="text-[10px] font-bold text-gray-700">{it.expectedUnit || '-'}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            <div className="text-[10px] font-bold text-gray-700">{it.expectedBrand || '-'}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            <div className="text-[10px] text-gray-700 font-medium break-all">{it.expectedPurchaseLocation || '-'}</div>
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            {it.expectedPurchaseLink ? (
+                                                                                <a href={it.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">Xem Link</a>
+                                                                            ) : <span className="text-[10px] text-gray-400">-</span>}
+                                                                        </td>
+                                                                        <td className="py-2.5 px-3 border-r border-gray-50">
+                                                                            <div className="text-[9px] text-gray-500">{it.expectedNote || '-'}</div>
                                                                         </td>
                                                                         <td className="py-2.5 px-3 text-right bg-blue-50/10 border-r border-gray-50">
                                                                             <div className="font-bold text-blue-700 leading-none">{fmt(expectedQty * it.expectedPrice)}</div>
@@ -305,7 +313,7 @@ function ExpenditureRound({ exp: initialExp, index, campaignType, onModalToggle 
                                                     </React.Fragment>
                                                 );
                                             }) : (
-                                                <tr><td colSpan={7} className="py-8 text-center text-[10px] text-gray-300 italic font-bold uppercase tracking-widest">Không có dữ liệu</td></tr>
+                                                <tr><td colSpan={13} className="py-8 text-center text-[10px] text-gray-300 italic font-bold uppercase tracking-widest">Không có dữ liệu</td></tr>
                                             )}
                                         </tbody>
                                     </table>

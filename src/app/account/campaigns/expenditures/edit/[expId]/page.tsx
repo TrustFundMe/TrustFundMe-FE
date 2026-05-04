@@ -312,68 +312,105 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 ml-4">
-                                        <button onClick={e => { e.stopPropagation(); addItem(cIdx); }} className="p-1.5 text-gray-400 hover:text-emerald-500 transition-colors" title="Thêm hạng mục"><Plus className="w-4 h-4" /></button>
-                                        <button onClick={e => { e.stopPropagation(); removeCategory(cIdx); }} className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                        <button onClick={e => { e.stopPropagation(); addItem(cIdx); }} className="p-1.5 text-gray-400 hover:text-emerald-500 transition-colors bg-white rounded-lg border border-gray-100 shadow-sm" title="Thêm hạng mục"><Plus className="w-4 h-4" /></button>
                                     </div>
                                 </div>
 
                                 {!cat.collapsed && (
                                     <div className="p-0 border-t border-gray-100">
-                                        <div className="max-h-[400px] overflow-y-auto bg-white">
-                                            <table className="w-full table-fixed">
+                                        <div className="max-h-[400px] overflow-y-auto overflow-x-auto bg-white custom-scrollbar">
+                                            <table className="w-full table-auto min-w-[1200px]">
                                                 <thead className="sticky top-0 bg-gray-50 z-[5] shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                                                     <tr>
-                                                        <th className="px-4 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[45%]">Hàng hóa / Dịch vụ</th>
-                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[12%]">SL</th>
-                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[18%]">Đơn giá</th>
-                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[20%]">Thành tiền</th>
-                                                        <th className="px-2 py-2 w-[5%]"></th>
+                                                        <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[180px]">Hàng hóa / Dịch vụ</th>
+                                                        <th className="px-2 py-2 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest w-[80px]">Đơn vị</th>
+                                                        <th className="px-2 py-2 text-center text-[9px] font-black text-gray-400 uppercase tracking-widest w-[100px]">Nhãn hàng</th>
+                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[80px]">SL</th>
+                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[120px]">Đơn giá</th>
+                                                        <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[130px]">Thành tiền</th>
+                                                        <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[150px]">Địa điểm mua</th>
+                                                        <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[150px]">Link tham khảo</th>
+                                                        <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest min-w-[150px]">Ghi chú</th>
+                                                        <th className="px-2 py-2 w-[40px] text-center"></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50">
                                                     {cat.items.map((item, iIdx) => (
-                                                        <tr key={iIdx} className="hover:bg-gray-50/50 transition-colors group">
-                                                            <td className="p-2 px-4">
+                                                        <tr key={iIdx} className="hover:bg-gray-50/50 transition-colors group align-top">
+                                                            <td className="p-2 px-3">
                                                                 <input
-                                                                    className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-bold p-0 text-gray-800 placeholder:text-gray-300"
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-bold p-2 text-gray-800 placeholder:text-gray-300"
                                                                     value={item.name}
                                                                     onChange={e => handleItemChange(cIdx, iIdx, 'name', e.target.value)}
                                                                     placeholder="Tên sản phẩm/dịch vụ..."
                                                                 />
-                                                                <div className="flex items-center gap-1 mt-0.5">
-                                                                    <CreditCard className="w-3 h-3 text-gray-300" />
-                                                                    <input
-                                                                        className="flex-1 bg-transparent border-none focus:ring-0 text-[10px] text-blue-500 p-0 font-medium placeholder:text-gray-300"
-                                                                        value={item.expectedPurchaseLink}
-                                                                        onChange={e => handleItemChange(cIdx, iIdx, 'expectedPurchaseLink', e.target.value)}
-                                                                        placeholder="Link tham khảo (tại Tiki, Shopee, Web...)"
-                                                                    />
-                                                                </div>
                                                             </td>
-                                                            <td className="p-2 py-3">
+                                                            <td className="p-2 py-2">
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-center text-gray-700 placeholder:text-gray-300"
+                                                                    value={item.expectedUnit || ''}
+                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedUnit', e.target.value)}
+                                                                    placeholder="VD: Cái, Kg..."
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 py-2">
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-center text-gray-700 placeholder:text-gray-300"
+                                                                    value={item.expectedBrand || ''}
+                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedBrand', e.target.value)}
+                                                                    placeholder="Nhãn hàng..."
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 py-2">
                                                                 <input
                                                                     type="number"
-                                                                    className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-black p-0 text-right tabular-nums focus:text-orange-600 transition-colors"
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-black p-2 text-right tabular-nums focus:text-orange-600 transition-colors"
                                                                     value={item.expectedQuantity}
                                                                     onChange={e => handleItemChange(cIdx, iIdx, 'expectedQuantity', e.target.value)}
                                                                 />
                                                             </td>
-                                                            <td className="p-2 py-3">
+                                                            <td className="p-2 py-2">
                                                                 <input
                                                                     type="number"
-                                                                    className="w-full bg-transparent border-none focus:ring-0 text-[11px] font-black p-0 text-right tabular-nums focus:text-orange-600 transition-colors"
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-black p-2 text-right tabular-nums focus:text-orange-600 transition-colors"
                                                                     value={item.expectedPrice}
                                                                     onChange={e => handleItemChange(cIdx, iIdx, 'expectedPrice', e.target.value)}
                                                                 />
                                                             </td>
                                                             <td className="p-2 py-3 text-right">
-                                                                <span className="text-[11px] font-black text-gray-900 tabular-nums">
-                                                                    {new Intl.NumberFormat('vi-VN').format(Number(item.expectedQuantity) * Number(item.expectedPrice))}
-                                                                </span>
+                                                                <div className="bg-orange-50/50 border border-orange-100 rounded px-2 py-1.5 flex items-center justify-end">
+                                                                    <span className="text-[11px] font-black text-orange-600 tabular-nums truncate">
+                                                                        {new Intl.NumberFormat('vi-VN').format(Number(item.expectedQuantity) * Number(item.expectedPrice))} đ
+                                                                    </span>
+                                                                </div>
                                                             </td>
-                                                            <td className="p-2 text-center">
-                                                                <button onClick={() => removeItem(cIdx, iIdx)} className="p-1 text-gray-200 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
-                                                                    <X className="w-3.5 h-3.5" />
+                                                            <td className="p-2 py-2">
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-gray-700 placeholder:text-gray-300"
+                                                                    value={item.expectedPurchaseLocation || ''}
+                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedPurchaseLocation', e.target.value)}
+                                                                    placeholder="Địa điểm mua..."
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 py-2">
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-gray-700 placeholder:text-gray-300 text-blue-500"
+                                                                    value={item.expectedPurchaseLink || ''}
+                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedPurchaseLink', e.target.value)}
+                                                                    placeholder="Link shopee, tiki..."
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 py-2">
+                                                                <input
+                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-gray-700 placeholder:text-gray-300"
+                                                                    value={item.expectedNote || ''}
+                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedNote', e.target.value)}
+                                                                    placeholder="Ghi chú thêm..."
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 py-2 text-center align-middle relative">
+                                                                <button onClick={() => removeItem(cIdx, iIdx)} className="p-1.5 rounded-lg bg-rose-50 text-rose-400 hover:text-white hover:bg-rose-500 transition-colors opacity-100">
+                                                                    <Trash2 className="w-4 h-4" />
                                                                 </button>
                                                             </td>
                                                         </tr>
