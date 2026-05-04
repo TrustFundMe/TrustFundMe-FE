@@ -43,24 +43,24 @@ interface EvidenceRecord {
 
 /* ══ STATUS CONFIG ══ */
 const S: Record<string, { label: string; c: string; bg: string }> = {
-    PENDING:   { label: 'Chờ nộp', c: '#92400e', bg: '#fef3c7' },
-    SUBMITTED: { label: 'Đã nộp',  c: '#1d4ed8', bg: '#dbeafe' },
-    VERIFIED:  { label: 'Xác nhận',c: '#14532d', bg: '#dcfce7' },
-    APPROVED:  { label: 'Đã duyệt',c: '#14532d', bg: '#dcfce7' },
-    REJECTED:  { label: 'Từ chối', c: '#991b1b', bg: '#fee2e2' },
+    PENDING: { label: 'Chờ nộp', c: '#92400e', bg: '#fef3c7' },
+    SUBMITTED: { label: 'Đã nộp', c: '#1d4ed8', bg: '#dbeafe' },
+    VERIFIED: { label: 'Xác nhận', c: '#14532d', bg: '#dcfce7' },
+    APPROVED: { label: 'Đã duyệt', c: '#14532d', bg: '#dcfce7' },
+    REJECTED: { label: 'Từ chối', c: '#991b1b', bg: '#fee2e2' },
 };
 function Pill({ s }: { s: string }) {
     const cfg = S[s] ?? { label: s, c: '#374151', bg: '#f3f4f6' };
     return <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wide" style={{ color: cfg.c, background: cfg.bg }}>{cfg.label}</span>;
 }
 
-interface AIResult { 
-    riskScore: number; 
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'; 
-    summary: string; 
-    recommendation: string; 
-    redFlags: string[]; 
-    spendingAnalysis: string[]; 
+interface AIResult {
+    riskScore: number;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    summary: string;
+    recommendation: string;
+    redFlags: string[];
+    spendingAnalysis: string[];
     confidence: 'LOW' | 'MEDIUM' | 'HIGH';
 }
 
@@ -131,14 +131,14 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 toast.success('Đang chuyển đến cuộc hội thoại...');
                 router.push(`/staff/chat?conversationId=${res.data.id}`);
             } else { toast.error('Không thể tạo cuộc hội thoại'); }
-        } catch { toast.error('Lỗi kết nối chat'); } 
+        } catch { toast.error('Lỗi kết nối chat'); }
         finally { setIsChatting(false); }
     };
 
     const doAction = async (type: typeof confirm) => {
         setConfirm(null);
         try {
-            if (type === 'post_fraud') { 
+            if (type === 'post_fraud') {
                 await feedPostService.create({
                     campaignId: rec.campaignId,
                     targetId: rec.campaignId,
@@ -158,26 +158,26 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                     }
                 } catch (e) { console.error('Cache error:', e); }
 
-                toast.success('Đã đăng bài tố cáo thành công'); 
+                toast.success('Đã đăng bài tố cáo thành công');
                 setHasPostedFraud(true);
                 setTimeout(() => onRefresh(), 2000);
             }
-            else if (type === 'send_legal') { 
-                await notificationService.createEvent({ 
-                    userId: rec.ownerId, 
-                    type: 'LEGAL_WARNING', 
+            else if (type === 'send_legal') {
+                await notificationService.createEvent({
+                    userId: rec.ownerId,
+                    type: 'LEGAL_WARNING',
                     title: `CẢNH BÁO PHÁP LÝ: CHIẾN DỊCH "${rec.campaignTitle.toUpperCase()}"`,
                     content: `Bạn đã vi phạm nghiêm trọng các điều khoản cam kết minh bạch tài chính trong chiến dịch "${rec.campaignTitle}". Hệ thống của chúng tôi đang tiến hành bàn giao hồ sơ vi phạm và đối soát bằng chứng của bạn cho các cơ quan pháp luật có thẩm quyền để xử lý dựa trên Bản cam kết trách nhiệm mà bạn đã ký kết từ trước. Chúng tôi yêu cầu bạn thực hiện giải trình ngay lập tức để tránh các hậu quả pháp lý nghiêm trọng.`,
                     targetId: rec.campaignId,
                     targetType: 'CAMPAIGN',
                     data: { campaignTitle: rec.campaignTitle, plan: rec.plan }
-                }); 
-                toast.success('Đã gửi thông báo pháp lý thành công'); 
-                onRefresh(); 
+                });
+                toast.success('Đã gửi thông báo pháp lý thành công');
+                onRefresh();
             }
-        } catch (err: any) { 
+        } catch (err: any) {
             console.error('Action failed:', err);
-            toast.error(err?.response?.data?.message || 'Thao tác thất bại'); 
+            toast.error(err?.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
@@ -246,8 +246,8 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
     };
 
     const CONFIRMS = {
-        post_fraud:    { title: 'Đăng bài tố cáo',  message: `Đăng bài cảnh báo về chiến dịch "${rec.campaignTitle}" lên trang cộng đồng.`, confirmLabel: 'Xác nhận đăng', danger: true },
-        send_legal:    { title: 'Cảnh báo pháp lý', message: `Gửi email cảnh báo vi phạm hợp đồng đến "${rec.ownerEmail}".`, confirmLabel: 'Gửi cảnh báo', danger: false },
+        post_fraud: { title: 'Đăng bài tố cáo', message: `Đăng bài cảnh báo về chiến dịch "${rec.campaignTitle}" lên trang cộng đồng.`, confirmLabel: 'Xác nhận đăng', danger: true },
+        send_legal: { title: 'Cảnh báo pháp lý', message: `Gửi email cảnh báo vi phạm hợp đồng đến "${rec.ownerEmail}".`, confirmLabel: 'Gửi cảnh báo', danger: false },
     };
 
     const runAI = async () => {
@@ -256,12 +256,12 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
         try {
             const itemsToAnalyze = rec.expenditureItems.filter((i: any) => (i.actualQuantity ?? 0) > 0);
 
-            const result = await aiService.analyzeEvidence({ 
-                expenditureId: rec.expenditureId, 
-                plan: rec.plan, 
-                purpose: rec.purpose || '', 
-                totalAmount: rec.totalAmount, 
-                items: itemsToAnalyze.length > 0 ? itemsToAnalyze : rec.expenditureItems, 
+            const result = await aiService.analyzeEvidence({
+                expenditureId: rec.expenditureId,
+                plan: rec.plan,
+                purpose: rec.purpose || '',
+                totalAmount: rec.totalAmount,
+                items: itemsToAnalyze.length > 0 ? itemsToAnalyze : rec.expenditureItems,
                 photoUrls: rec.evidencePhotos,
                 createdAt: rec.createdAt
             });
@@ -276,12 +276,12 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
     return (
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {aiResult && (
-                <AIAnalysisModal 
-                    result={aiResult} 
+                <AIAnalysisModal
+                    result={aiResult}
                     itemsProp={rec.expenditureItems}
                     exp={{ id: rec.expenditureId } as any}
                     mode="evidence"
-                    onClose={() => setAiResult(null)} 
+                    onClose={() => setAiResult(null)}
                 />
             )}
             {lightbox && (
@@ -291,7 +291,7 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 </div>
             )}
             {confirm && <ConfirmModal {...CONFIRMS[confirm]} onConfirm={() => doAction(confirm)} onCancel={() => setConfirm(null)} />}
-            
+
             <BanUserModal
                 isOpen={banModal.isOpen}
                 onClose={() => setBanModal(prev => ({ ...prev, isOpen: false }))}
@@ -314,117 +314,214 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 message={confirmAction?.message || ''}
             />
 
-            {/* ── Header ── */}
+            {/* ── Combined Header & Owner Info ── */}
             <div className="flex-shrink-0 px-4 py-3 border-b border-gray-100 bg-gray-50/40">
-                <div className="flex items-center justify-between mb-3">
-                    <p className="text-[9px] font-black text-[#ff5e14] uppercase tracking-[0.2em]">Chi tiết bằng chứng</p>
-                </div>
-                <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide w-28 shrink-0 pt-0.5">Tên chiến dịch</span>
-                        <span className="text-[11px] font-bold text-gray-800 leading-snug">{rec.campaignTitle}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide w-28 shrink-0">Đợt chi</span>
-                        <span className="text-[11px] font-bold text-gray-800 uppercase">{rec.plan}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide w-28 shrink-0">Trạng thái</span>
-                        <Pill s={rec.evidenceStatus} />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide w-28 shrink-0">Hạn nộp</span>
-                        {rec.evidenceDueAt ? (
-                            <span className={`text-[11px] font-bold ${overdue ? 'text-red-600' : d !== null && d <= 3 ? 'text-amber-600' : 'text-gray-700'}`}>
-                                {fmtDate(rec.evidenceDueAt)}&nbsp;
-                                <span className="text-[10px] font-bold opacity-70">
-                                    {overdue ? `(Quá hạn ${Math.abs(d!)} ngày)` : `(Còn ${d} ngày)`}
-                                </span>
-                            </span>
-                        ) : <span className="text-[11px] text-gray-400 italic">Chưa đặt</span>}
-                    </div>
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide w-28 shrink-0">Tổng chi</span>
-                        <span className="text-sm font-black text-gray-900">{fmt(rec.totalAmount)}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 custom-scrollbar pr-1 max-h-full">
-
-                {/* Thông tin chủ quỹ */}
-                <div className="px-4 py-3">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2.5">Thông tin chủ quỹ</p>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-lg bg-[#ff5e14]/10 flex items-center justify-center text-xs font-black text-[#ff5e14] flex-shrink-0">{rec.ownerName[0]}</div>
-                            <div>
-                                <p className="text-xs font-bold text-gray-800 leading-tight">{rec.ownerName}</p>
-                                <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{rec.ownerEmail}</p>
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <div className="h-8 w-8 rounded-lg bg-[#ff5e14]/10 flex items-center justify-center text-xs font-black text-[#ff5e14] shrink-0">{rec.ownerName[0]}</div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black text-gray-800 leading-tight truncate">{rec.ownerName}</p>
+                                <p className="text-[10px] text-gray-500 leading-tight truncate">{rec.ownerEmail}</p>
                             </div>
                         </div>
+                        <div className="space-y-1">
+                            <p className="text-[11px] font-bold text-gray-800 leading-tight line-clamp-2">{rec.campaignTitle}</p>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wide">Đợt:</span>
+                                <span className="text-[10px] font-black text-[#ff5e14] uppercase">{rec.plan}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <Pill s={rec.evidenceStatus} />
+                        <div className="text-right">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Tổng chi</p>
+                            <p className="text-base font-black text-gray-900 leading-none">{fmt(rec.totalAmount)}</p>
+                        </div>
+                        {rec.evidenceDueAt && (
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border ${overdue ? 'border-red-100' : 'border-gray-100'}`}>
+                                <Calendar className={`h-3 w-3 ${overdue ? 'text-red-500' : 'text-gray-400'}`} />
+                                <span className={`text-[9px] font-black ${overdue ? 'text-red-600' : 'text-gray-600'}`}>
+                                    {fmtDate(rec.evidenceDueAt)} {overdue ? `(-${Math.abs(d!)}d)` : `(${d}d)`}
+                                </span>
+                            </div>
+                        )}
                         {rec.ownerPhone && (
-                            <a href={`tel:${rec.ownerPhone}`} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-700 text-xs font-bold hover:bg-gray-100 transition-colors">
-                                <Phone className="h-3.5 w-3.5" /> {rec.ownerPhone}
+                            <a href={`tel:${rec.ownerPhone}`} className="flex items-center gap-1 px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 text-[10px] font-black hover:bg-gray-100 transition-colors">
+                                <Phone className="h-3 w-3" /> {rec.ownerPhone}
                             </a>
                         )}
                     </div>
                 </div>
+            </div>
 
+            {/* ── Scrollable body (EXPANDED) ── */}
+            <div className="flex-1 overflow-y-auto min-h-0 divide-y divide-gray-100 custom-scrollbar pr-1">
 
                 {/* Mục tiêu chi */}
                 {rec.expenditureItems.length > 0 && (
-                    <div className="px-4 py-3">
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Mục tiêu sử dụng quỹ</p>
-                        <table className="w-full">
-                            <thead>
-                                <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-gray-100">
-                                    <th className="pb-2 text-left font-black">Hạng mục</th>
-                                    <th className="pb-2 text-right font-black" title="Đơn giá kế hoạch">Kế hoạch</th>
-                                    <th className="pb-2 text-right font-black">Thực tế</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {rec.expenditureItems.map((it: any, idx) => {
-                                    const over = (it.price || 0) > (it.expectedPrice || 0);
-                                    return (
-                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="py-2 text-xs font-medium text-gray-700">{it.category || it.description || `Hạng mục ${idx + 1}`}</td>
-                                            <td className="py-2 text-xs text-right text-gray-500">{fmt(it.expectedPrice || 0)}</td>
-                                            <td className={`py-2 text-xs text-right font-bold ${over ? 'text-red-600' : 'text-gray-800'}`}>{fmt(it.price || 0)}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                    <div className="px-4 py-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="h-5 w-1 bg-[#ff5e14] rounded-full"></div>
+                            <p className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Mục tiêu sử dụng quỹ</p>
+                        </div>
+                        <div className="bg-gray-50/50 rounded-xl border border-gray-100 overflow-x-auto custom-scrollbar">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="text-[9px] font-black text-gray-400 uppercase tracking-[0.1em] border-b border-gray-100 bg-gray-50/80">
+                                        <th className="py-2 px-3 text-left min-w-[120px]">Hạng mục / Loại</th>
+                                        <th className="py-2 px-3 text-center min-w-[100px]">Số lượng & Đơn vị</th>
+                                        <th className="py-2 px-3 text-center min-w-[100px]">Thương hiệu</th>
+                                        <th className="py-2 px-3 text-right min-w-[110px]">Đơn giá</th>
+                                        <th className="py-2 px-3 text-center min-w-[120px]">Địa điểm & Link</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="">
+                                    {rec.expenditureItems.flatMap((it: any, idx: number) => {
+                                        const priceOver = (it.price || it.actualPrice || 0) > (it.expectedPrice || 0);
+                                        const qtyDiff = (it.actualQuantity != null) && (it.actualQuantity !== it.expectedQuantity);
+
+                                        return [
+                                            <tr key={`exp-${idx}`} className="bg-white">
+                                                {/* 1. Name & Category - Spans 2 rows */}
+                                                <td rowSpan={2} className="py-2 px-3 align-middle min-w-[140px] border-b border-gray-100">
+                                                    <p className="text-[11px] font-bold text-gray-800 leading-tight line-clamp-2">{it.name || it.description || `Hạng mục ${idx + 1}`}</p>
+                                                    <span className="text-[9px] font-black text-[#ff5e14]/70 uppercase tracking-tighter bg-[#ff5e14]/5 px-1 rounded leading-none inline-block mt-1">
+                                                        {it.catologyName || it.category || 'N/A'}
+                                                    </span>
+                                                </td>
+
+                                                {/* 2. Expected Quantity */}
+                                                <td className="pt-2 pb-0.5 px-3 text-center align-bottom min-w-[110px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className="text-[10px] text-gray-400 opacity-60 italic whitespace-nowrap">Dự kiến:</span>
+                                                        <span className="text-[10px] text-gray-400 font-medium">{it.expectedQuantity || 0} {it.expectedUnit || '-'}</span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 3. Expected Brand */}
+                                                <td className="pt-2 pb-0.5 px-3 text-center align-bottom min-w-[100px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className="text-[10px] text-gray-400 opacity-60 italic whitespace-nowrap">Dự kiến:</span>
+                                                        <span className="text-[10px] text-gray-400 font-medium truncate max-w-[80px]">{it.expectedBrand || '-'}</span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 4. Expected Price */}
+                                                <td className="pt-2 pb-0.5 px-3 text-right align-bottom min-w-[110px]">
+                                                    <div className="flex items-center justify-end gap-1 leading-none">
+                                                        <span className="text-[10px] text-gray-400 opacity-60 italic whitespace-nowrap">Dự kiến:</span>
+                                                        <span className="text-[10px] text-gray-400 font-medium">{fmt(it.expectedPrice || 0)}</span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 5. Expected Location */}
+                                                <td className="pt-2 pb-0.5 px-3 text-center align-bottom min-w-[140px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className="text-[10px] font-medium text-gray-400 italic mr-0.5">Dự kiến:</span>
+                                                        {it.expectedPurchaseLink && !it.expectedPurchaseLink.includes('example.com') ? (
+                                                            <a href={it.expectedPurchaseLink} target="_blank" rel="noreferrer"
+                                                                className="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5 truncate max-w-[100px]">
+                                                                {it.expectedPurchaseLocation || 'Xem link'} <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-[10px] text-gray-400 truncate max-w-[100px]">{it.expectedPurchaseLocation || '-'}</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>,
+
+                                            <tr key={`act-${idx}`} className="bg-white border-b border-gray-100 last:border-0">
+                                                {/* 2. Actual Quantity */}
+                                                <td className="pt-0.5 pb-2 px-3 text-center align-top min-w-[110px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className={`text-[10px] opacity-40 italic whitespace-nowrap font-black ${qtyDiff ? 'text-amber-600' : 'text-gray-700'}`}>Thực tế:</span>
+                                                        <span className={`text-[10px] font-black ${qtyDiff ? 'text-amber-600' : 'text-gray-700'}`}>
+                                                            {it.actualQuantity ?? it.expectedQuantity ?? 0} {it.actualUnit ?? it.unit ?? it.expectedUnit ?? '-'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 3. Actual Brand */}
+                                                <td className="pt-0.5 pb-2 px-3 text-center align-top min-w-[100px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className={`text-[10px] opacity-40 italic whitespace-nowrap font-black ${it.actualBrand && it.actualBrand !== it.expectedBrand ? 'text-purple-600' : 'text-gray-700'}`}>Thực tế:</span>
+                                                        <span className={`text-[10px] font-black truncate max-w-[80px] ${it.actualBrand && it.actualBrand !== it.expectedBrand ? 'text-purple-600' : 'text-gray-700'}`}>
+                                                            {it.actualBrand || it.expectedBrand || '-'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 4. Actual Price */}
+                                                <td className="pt-0.5 pb-2 px-3 text-right align-top min-w-[110px]">
+                                                    <div className="flex items-center justify-end gap-1 leading-none">
+                                                        <span className={`text-[10px] font-black opacity-40 italic whitespace-nowrap ${priceOver ? 'text-red-500' : 'text-[#3a5c51]'}`}>Thực tế:</span>
+                                                        <span className={`text-[10px] font-extrabold ${priceOver ? 'text-red-500' : 'text-[#3a5c51]'}`}>
+                                                            {fmt(it.price || it.actualPrice || it.expectedPrice || 0)}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 5. Actual Location */}
+                                                <td className="pt-0.5 pb-2 px-3 text-center align-top min-w-[140px]">
+                                                    <div className="flex items-center justify-center gap-1 leading-none">
+                                                        <span className="text-[10px] font-black text-gray-500 italic mr-0.5">Thực tế:</span>
+                                                        {it.actualPurchaseLink && !it.actualPurchaseLink.includes('example.com') ? (
+                                                            <a href={it.actualPurchaseLink} target="_blank" rel="noreferrer"
+                                                                className="text-[10px] font-black text-blue-700 hover:underline flex items-center gap-0.5 truncate max-w-[100px]">
+                                                                Link thực tế <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-gray-300 italic">No link</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ];
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 
                 {/* Ảnh minh chứng */}
-                <div className="px-4 py-3">
-                    <button onClick={() => setPhotosOpen(v => !v)} className="flex items-center gap-1.5 text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2 w-full">
-                        {photosOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                        Ảnh minh chứng ({rec.evidencePhotos.length})
-                    </button>
+                <div className="px-4 py-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="h-5 w-1 bg-[#ff5e14] rounded-full"></div>
+                            <p className="text-[11px] font-black text-gray-800 uppercase tracking-widest">Ảnh minh chứng ({rec.evidencePhotos.length})</p>
+                        </div>
+                        {hasPhotos && (
+                            <button onClick={() => setPhotosOpen(v => !v)} className="text-[10px] font-black text-gray-400 hover:text-[#ff5e14] transition-colors flex items-center gap-1">
+                                {photosOpen ? 'Thu gọn' : 'Xem thêm'}
+                                {photosOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                            </button>
+                        )}
+                    </div>
+
                     {photosOpen && (
                         hasPhotos ? (
-                            <div className="grid grid-cols-4 gap-1.5">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                                 {rec.evidencePhotos
                                     .filter((u: any) => typeof u === 'string')
                                     .map((url: string, i: number) => (
-                                    <button key={i} onClick={() => setLightbox(url)}
-                                        className="aspect-square rounded-lg overflow-hidden border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all group relative">
-                                        <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-all">
-                                            <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
-                                        </div>
-                                    </button>
-                                ))}
+                                        <button key={i} onClick={() => setLightbox(url)}
+                                            className="aspect-[4/3] rounded-xl overflow-hidden border border-gray-100 hover:border-[#ff5e14] hover:shadow-md transition-all group relative bg-gray-50">
+                                            <img src={url} alt={`Ảnh ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
+                                                <ExternalLink className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all" />
+                                            </div>
+                                        </button>
+                                    ))}
                             </div>
                         ) : (
-                            <div className="py-8 flex flex-col items-center justify-center text-center border border-dashed border-gray-200 rounded-lg">
-                                <FileImage className="h-7 w-7 text-gray-300 mb-1.5" />
+                            <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
+                                <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                                    <FileImage className="h-6 w-6 text-gray-300" />
+                                </div>
                                 <p className="text-xs font-bold text-gray-400">Chưa có ảnh minh chứng</p>
                             </div>
                         )
@@ -432,22 +529,24 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                 </div>
             </div>
 
-            {/* ── Action Grid (8 Buttons) ── */}
-            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-gray-50/10">
-                <div className="grid grid-cols-2 gap-2">
+            {/* ── Action Grid (SHRUNK) ── */}
+            <div className="flex-shrink-0 px-4 py-2.5 border-t border-gray-100 bg-white">
+                <div className="grid grid-cols-4 gap-1.5">
+                    {/* Buttons set to h-8 instead of h-10, px-2 instead of px-3 */}
+
                     {/* 1. AI */}
                     <button onClick={runAI} disabled={analyzing || !hasPhotos}
-                        className="h-10 rounded-xl text-[10px] font-black text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-sm px-3"
+                        className="h-8 rounded-lg text-[9px] font-black text-white flex flex-col items-center justify-center transition-all active:scale-95 disabled:opacity-50 shadow-sm relative overflow-hidden group"
                         style={{ background: 'linear-gradient(135deg,#ff5e14,#6a8d83)' }}>
-                        <Sparkles className="h-4 w-4" />
-                        <span className="uppercase">AI Phân tích</span>
+                        <Sparkles className={`h-3.5 w-3.5 ${analyzing ? 'animate-spin' : ''}`} />
+                        <span className="uppercase mt-0.5">AI</span>
                     </button>
 
                     {/* 2. Message */}
                     <button onClick={startChat} disabled={isChatting}
-                        className="h-10 rounded-xl border border-gray-200 bg-white text-gray-700 text-[10px] font-black flex items-center justify-center gap-2 hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm px-3">
-                        <MessageSquare className="h-4 w-4 text-[#ff5e14]" />
-                        <span className="uppercase">Nhắn tin</span>
+                        className="h-8 rounded-lg border border-gray-100 bg-white text-gray-500 text-[9px] font-black flex flex-col items-center justify-center hover:bg-gray-50 transition-all disabled:opacity-50">
+                        <MessageSquare className="h-3.5 w-3.5 text-[#ff5e14]" />
+                        <span className="uppercase mt-0.5">Chat</span>
                     </button>
 
                     {/* 3. Lock Campaign */}
@@ -455,59 +554,55 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                         const isLocked = rec.campaignStatus?.toUpperCase() === 'DISABLED' || rec.campaignStatus?.toUpperCase() === 'LOCKED';
                         return (
                             <button onClick={handleLockCampaign} disabled={loading}
-                                className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
-                                    isLocked
-                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
-                                        : 'bg-white border-gray-100 text-gray-500 hover:border-red-200 hover:text-red-700 hover:bg-red-50'
-                                }`}>
-                                {isLocked ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                                <span>{isLocked ? 'Mở khóa CD' : 'Khóa chiến dịch'}</span>
+                                className={`flex flex-col items-center justify-center h-8 rounded-lg border text-[9px] font-black uppercase transition-all ${isLocked
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                    : 'bg-white border-gray-100 text-gray-500 hover:bg-red-50'
+                                    }`}>
+                                {isLocked ? <LockOpen className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                                <span className="mt-0.5">{isLocked ? 'Mở CD' : 'Khóa CD'}</span>
                             </button>
                         );
                     })()}
 
                     {/* 4. Ban Account */}
                     <button onClick={handleLockAccount} disabled={loading}
-                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
-                            !rec.ownerIsActive 
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
-                                : 'bg-white border-gray-100 text-gray-500 hover:border-red-200 hover:text-red-700 hover:bg-red-50'
-                        }`}>
-                        {!rec.ownerIsActive ? <CheckCircle className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                        <span>{!rec.ownerIsActive ? 'Mở tài khoản' : 'Đình chỉ TK'}</span>
+                        className={`flex flex-col items-center justify-center h-8 rounded-lg border text-[9px] font-black uppercase transition-all ${!rec.ownerIsActive
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                            : 'bg-white border-gray-100 text-gray-500 hover:bg-red-50'
+                            }`}>
+                        {!rec.ownerIsActive ? <CheckCircle className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                        <span className="mt-0.5">{!rec.ownerIsActive ? 'Mở TK' : 'Khóa TK'}</span>
                     </button>
 
                     {/* 5. Fraud Post */}
                     <button onClick={() => !hasPostedFraud && setConfirm('post_fraud')} disabled={loading || hasPostedFraud}
-                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
-                            hasPostedFraud 
-                                ? 'bg-amber-50 border-amber-200 text-amber-700' 
-                                : 'bg-white border-gray-100 text-gray-500 hover:border-amber-200 hover:text-amber-700 hover:bg-amber-50'
-                        }`}>
-                        {hasPostedFraud ? <CheckCircle className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />} 
-                        <span>{hasPostedFraud ? 'Đã tố cáo' : 'Đăng tố cáo'}</span>
+                        className={`flex flex-col items-center justify-center h-8 rounded-lg border text-[9px] font-black uppercase transition-all ${hasPostedFraud
+                            ? 'bg-amber-50 border-amber-100 text-amber-600'
+                            : 'bg-white border-gray-100 text-gray-500 hover:bg-amber-50'
+                            }`}>
+                        {hasPostedFraud ? <CheckCircle className="h-3.5 w-3.5" /> : <Megaphone className="h-3.5 w-3.5" />}
+                        <span className="mt-0.5">{hasPostedFraud ? 'Đã tố' : 'Tố cáo'}</span>
                     </button>
 
                     {/* 6. Legal Warning */}
                     <button onClick={() => setConfirm('send_legal')}
-                        className="flex items-center justify-center gap-2 h-10 px-3 rounded-xl border border-gray-100 bg-white text-gray-500 text-[10px] font-black uppercase hover:border-red-200 hover:text-red-700 hover:bg-red-50 transition-all shadow-sm">
-                        <ShieldAlert className="h-4 w-4" />
-                        <span>Cảnh báo pháp lý</span>
+                        className="flex flex-col items-center justify-center h-8 rounded-lg border border-gray-100 bg-white text-gray-500 text-[9px] font-black uppercase hover:bg-red-50 transition-all">
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        <span className="mt-0.5">Pháp lý</span>
                     </button>
 
                     {/* 7. Appointment */}
                     <button onClick={() => setShowSchedule(true)}
-                        className={`flex items-center justify-center gap-2 h-10 px-3 rounded-xl border text-[10px] font-black uppercase transition-all shadow-sm ${
-                            rec.hasAppointment 
-                                ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                                : 'bg-white border-gray-100 text-gray-500 hover:border-blue-200 hover:text-blue-700 hover:bg-blue-50'
-                        }`}>
-                        <Calendar className="h-4 w-4" /> 
-                        <span>{rec.hasAppointment ? 'Đã đặt lịch' : 'Tạo lịch hẹn'}</span>
+                        className={`flex flex-col items-center justify-center h-8 rounded-lg border text-[9px] font-black uppercase transition-all ${rec.hasAppointment
+                            ? 'bg-blue-50 border-blue-100 text-blue-600'
+                            : 'bg-white border-gray-100 text-gray-500 hover:bg-blue-50'
+                            }`}>
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span className="mt-0.5">{rec.hasAppointment ? 'Lịch' : 'Hẹn'}</span>
                     </button>
 
                     {/* 8. Allow Update */}
-                    <button 
+                    <button
                         onClick={() => setConfirmAction({
                             type: 'ALLOW_EDIT_EVIDENCE',
                             id: rec.expenditureId,
@@ -515,17 +610,17 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                             message: 'Chủ quỹ sẽ nhận được thông báo yêu cầu cập nhật lại minh chứng này. Trạng thái minh chứng sẽ chuyển sang "Từ chối" để mở quyền chỉnh sửa.'
                         })}
                         disabled={loading || rec.evidenceStatus === 'REJECTED' || rec.evidenceStatus === 'ALLOWED_EDIT'}
-                        className="flex items-center justify-center gap-2 h-10 px-3 rounded-xl border border-gray-100 bg-white text-gray-500 text-[10px] font-black uppercase hover:border-amber-200 hover:text-amber-700 hover:bg-amber-50 transition-all shadow-sm disabled:opacity-50"
+                        className="flex flex-col items-center justify-center h-8 rounded-lg border border-gray-100 bg-white text-gray-500 text-[9px] font-black uppercase hover:bg-amber-50 transition-all disabled:opacity-50"
                     >
-                        <RefreshCw className="h-4 w-4" />
-                        <span>Cho phép sửa</span>
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span className="mt-0.5">Sửa</span>
                     </button>
                 </div>
 
                 {showSchedule && (
-                    <CreateAppointmentModal 
+                    <CreateAppointmentModal
                         staffId={user?.id ? Number(user.id) : 0}
-                        onClose={() => setShowSchedule(false)} 
+                        onClose={() => setShowSchedule(false)}
                         onCreated={() => { onRefresh(); setShowSchedule(false); }}
                         initialCampaignId={rec.campaignId}
                         initialDonorId={rec.ownerId}
@@ -563,7 +658,7 @@ export default function EvidenceTab() {
                     const ownerRes = await userService.getUserById(camp.fundOwnerId);
                     const owner = ownerRes.data;
                     const items = await expenditureService.getItems(exp.id).catch(() => []);
-                    
+
                     // Lấy ảnh từ feedpost minh chứng (targetName = evidence, targetType = EXPENDITURE)
                     let evidencePhotos: string[] = [];
                     try {
@@ -572,7 +667,7 @@ export default function EvidenceTab() {
                             const tName = p.targetName || p.target_name || '';
                             return tName === 'evidence' || tName.startsWith('evidence|');
                         });
-                        
+
                         if (evidencePost) {
                             // Ưu tiên lấy từ attachments của post DTO nếu có
                             if (evidencePost.attachments && evidencePost.attachments.length > 0) {
@@ -595,8 +690,8 @@ export default function EvidenceTab() {
                             hasReport = true;
                         } else {
                             const posts = await feedPostService.getByTarget(camp.id, 'CAMPAIGN');
-                            hasReport = posts.some((p: any) => 
-                                (p.type === 'ANNOUNCEMENT' || p.type === 'TEXT') && 
+                            hasReport = posts.some((p: any) =>
+                                (p.type === 'ANNOUNCEMENT' || p.type === 'TEXT') &&
                                 (p.title?.toUpperCase().includes('CẢNH BÁO') || (p as any).category === 'Cảnh báo' || p.content?.includes('HỆ THỐNG CẢNH BÁO'))
                             );
                         }
@@ -605,22 +700,22 @@ export default function EvidenceTab() {
                     // Check for existing appointment
                     const appt = allAppointments.find((a: any) => a.donorId === camp.fundOwnerId && a.status !== 'CANCELLED');
 
-                    return { 
-                        taskId: task.id.toString(), 
-                        expenditureId: exp.id, 
-                        campaignId: camp.id, 
-                        campaignTitle: camp.title, 
-                        ownerName: owner?.fullName || `Chủ quỹ #${camp.fundOwnerId}`, 
-                        ownerEmail: owner?.email || '', 
-                        ownerPhone: owner?.phoneNumber || '', 
-                        ownerId: camp.fundOwnerId, 
-                        plan: exp.plan || `Đợt chi #${exp.id}`, 
-                        totalAmount: exp.totalAmount || 0, 
-                        evidenceStatus: exp.evidenceStatus || 'PENDING', 
-                        evidenceDueAt: (exp as any).evidenceDueAt || null, 
-                        createdAt: exp.createdAt || new Date().toISOString(), 
-                        evidencePhotos: evidencePhotos, 
-                        expenditureItems: items, 
+                    return {
+                        taskId: task.id.toString(),
+                        expenditureId: exp.id,
+                        campaignId: camp.id,
+                        campaignTitle: camp.title,
+                        ownerName: owner?.fullName || `Chủ quỹ #${camp.fundOwnerId}`,
+                        ownerEmail: owner?.email || '',
+                        ownerPhone: owner?.phoneNumber || '',
+                        ownerId: camp.fundOwnerId,
+                        plan: exp.plan || `Đợt chi #${exp.id}`,
+                        totalAmount: exp.totalAmount || 0,
+                        evidenceStatus: exp.evidenceStatus || 'PENDING',
+                        evidenceDueAt: (exp as any).evidenceDueAt || null,
+                        createdAt: exp.createdAt || new Date().toISOString(),
+                        evidencePhotos: evidencePhotos,
+                        expenditureItems: items,
                         purpose: (exp as any).purpose || '',
                         ownerIsActive: (owner as any)?.isActive ?? (owner as any)?.is_active ?? true,
                         campaignStatus: camp.status || 'APPROVED',
@@ -632,9 +727,9 @@ export default function EvidenceTab() {
             }));
             const valid = rows.filter((r): r is EvidenceRecord => r !== null);
             const sorted = [...valid].sort((a, b) => (daysLeft(a.evidenceDueAt) ?? 9999) - (daysLeft(b.evidenceDueAt) ?? 9999));
-            setRecords(sorted); 
+            setRecords(sorted);
             setFiltered(sorted);
-            
+
             // Sync selected record with new data if detail panel is open
             setSelected(prev => {
                 if (!prev) return null;
@@ -647,15 +742,15 @@ export default function EvidenceTab() {
     useEffect(() => { load(); }, [load]);
     useEffect(() => {
         let list = records;
-        if (filter === 'PENDING')   list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) >= 0);
+        if (filter === 'PENDING') list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) >= 0);
         else if (filter === 'SUBMITTED') list = list.filter(r => r.evidenceStatus === 'SUBMITTED');
-        else if (filter === 'OVERDUE')   list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) < 0);
-        else if (filter === 'APPROVED')  list = list.filter(r => r.evidenceStatus === 'APPROVED' || r.evidenceStatus === 'VERIFIED');
+        else if (filter === 'OVERDUE') list = list.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) < 0);
+        else if (filter === 'APPROVED') list = list.filter(r => r.evidenceStatus === 'APPROVED' || r.evidenceStatus === 'VERIFIED');
         if (search.trim()) list = list.filter(r => r.campaignTitle.toLowerCase().includes(search.toLowerCase()) || r.ownerName.toLowerCase().includes(search.toLowerCase()) || r.plan.toLowerCase().includes(search.toLowerCase()));
         setFiltered(list);
     }, [search, filter, records]);
 
-    const overdueN   = records.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) < 0).length;
+    const overdueN = records.filter(r => r.evidenceStatus === 'PENDING' && (daysLeft(r.evidenceDueAt) ?? 1) < 0).length;
     const submittedN = records.filter(r => r.evidenceStatus === 'SUBMITTED').length;
 
     if (loading) return <div className="flex h-40 items-center justify-center text-[10px] font-black text-gray-300 tracking-[0.2em] uppercase animate-pulse">Đang tải...</div>;
@@ -679,11 +774,11 @@ export default function EvidenceTab() {
                     </div>
                     <div className="flex gap-1">
                         {([
-                            { k: 'ALL',       v: 'Tất cả',  t: 'Hiển thị tất cả' },
-                            { k: 'PENDING',   v: 'Chờ nộp', t: 'Chưa nộp, chưa quá hạn' },
-                            { k: 'SUBMITTED', v: 'Đã nộp',  t: 'Đã nộp ảnh, chờ AI phân tích' },
-                            { k: 'OVERDUE',   v: 'Quá hạn', t: 'Đã quá hạn nộp minh chứng' },
-                            { k: 'APPROVED',  v: 'Đã duyệt', t: 'Minh chứng đã được xác nhận' },
+                            { k: 'ALL', v: 'Tất cả', t: 'Hiển thị tất cả' },
+                            { k: 'PENDING', v: 'Chờ nộp', t: 'Chưa nộp, chưa quá hạn' },
+                            { k: 'SUBMITTED', v: 'Đã nộp', t: 'Đã nộp ảnh, chờ AI phân tích' },
+                            { k: 'OVERDUE', v: 'Quá hạn', t: 'Đã quá hạn nộp minh chứng' },
+                            { k: 'APPROVED', v: 'Đã duyệt', t: 'Minh chứng đã được xác nhận' },
                         ] as const).map(f => (
                             <button key={f.k} onClick={() => setFilter(f.k)} title={f.t}
                                 className={`flex-1 py-1.5 rounded text-[9px] font-black uppercase whitespace-nowrap transition-all ${filter === f.k ? 'bg-[#ff5e14] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
