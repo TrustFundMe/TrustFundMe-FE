@@ -193,15 +193,19 @@ export default function UnifiedVerificationModal({
 
         // 3. Save to Audit Service (Microservice)
         try {
-          await auditService.create({
+          const savedAudit = await auditService.create({
             entityType: 'KYC',
             entityId: Number(userId), // Using userId as primary reference for KYC audits
             action: kycData?.id ? 'UPDATE' : 'CREATE',
             dataSnapshot: JSON.stringify(kycPayload),
             auditHash: hash,
             actorId: Number(userId),
-            actorName: userName
+            actorName: kycPayload.fullName || userName
           });
+          
+          if (savedAudit && savedAudit.auditHash) {
+            setSubmissionHash(savedAudit.auditHash);
+          }
         } catch (auditErr) {
           console.error('Audit Log failed (Silent Error):', auditErr);
           // We don't block the UI if audit log fails, but it should be recorded in real scenarios

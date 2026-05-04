@@ -36,6 +36,7 @@ type DonationItemLayoutProps = {
     onShowTerms: () => void;
     onSubmit: () => void;
     isGuest?: boolean;
+    onBack?: () => void;
 };
 
 export default function DonationItemLayout({
@@ -66,7 +67,8 @@ export default function DonationItemLayout({
     onAgreedChange,
     onShowTerms,
     onSubmit,
-    isGuest = false
+    isGuest = false,
+    onBack
 }: DonationItemLayoutProps) {
     const router = useRouter();
     const totalAmount = amount;
@@ -91,7 +93,7 @@ export default function DonationItemLayout({
                 <div className="flex items-start gap-4">
                     {/* Back Button */}
                     <button
-                        onClick={() => router.back()}
+                        onClick={() => onBack ? onBack() : router.back()}
                         className="mt-1 p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
                     >
                         <ArrowLeft className="w-5 h-5" />

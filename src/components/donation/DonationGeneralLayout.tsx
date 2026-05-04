@@ -22,6 +22,7 @@ type DonationGeneralLayoutProps = {
     onShowTerms: () => void;
     onSubmit: () => void;
     isGuest?: boolean;
+    onBack?: () => void;
 };
 
 export default function DonationGeneralLayout({
@@ -39,7 +40,8 @@ export default function DonationGeneralLayout({
     onAgreedChange,
     onShowTerms,
     onSubmit,
-    isGuest = false
+    isGuest = false,
+    onBack
 }: DonationGeneralLayoutProps) {
     const router = useRouter();
     const totalAmount = amount;
@@ -50,7 +52,7 @@ export default function DonationGeneralLayout({
             <div className="p-6 pb-2 flex flex-col gap-2 bg-white items-center text-center relative">
                 {/* Back Button */}
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => onBack ? onBack() : router.back()}
                     className="absolute top-6 left-6 p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
                 >
                     <ArrowLeft className="w-5 h-5" />

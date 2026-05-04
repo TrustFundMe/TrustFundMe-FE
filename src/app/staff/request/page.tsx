@@ -13,6 +13,11 @@ import HistoryTab from '@/components/staff/request/HistoryTab';
 import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
+import { bankAccountService } from '@/services/bankAccountService';
+import { expenditureService } from '@/services/expenditureService';
+import { fundraisingGoalService } from '@/services/fundraisingGoalService';
+import { auditService } from '@/services/auditService';
+import { generateSHA256 } from '@/utils/hash';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import type {
   CampaignRequest,
@@ -237,6 +242,64 @@ function StaffRequestContent() {
       await campaignService.reviewCampaign(targetCampaign.campaignId, status, reason);
       setCampaignRows((prev) => prev.map((r) => (r.id === targetCampaign.id ? { ...r, status } : r)));
       toast.success(isApprove ? 'Đã duyệt chiến dịch' : 'Đã từ chối chiến dịch');
+
+      // Audit log: ghi lại snapshot đầy đủ 3 bước (bank + campaign + expenditures)
+      // + hash SHA-256 khi staff duyệt/từ chối campaign.
+      if (currentUser) {
+        try {
+          const cid = targetCampaign.campaignId;
+
+          // Fetch song song dữ liệu 3 bước user đã nhập khi tạo campaign
+          const [campaignDetail, bankInfo, fundraisingGoals, expenditures] = await Promise.all([
+            campaignService.getById(cid).catch(() => null),
+            bankAccountService.getByCampaignId(cid).catch(() => null),
+            fundraisingGoalService.getByCampaignId(cid).catch(() => []),
+            campaignService.getExpendituresByCampaignId(cid).catch(() => []),
+          ]);
+
+          // Với từng expenditure, fetch thêm categories + items
+          const expendituresFull = await Promise.all(
+            (expenditures || []).map(async (exp: any) => {
+              const detail = await campaignService.getExpenditureById(exp.id).catch(() => exp);
+              return detail;
+            }),
+          );
+
+          const snapshot = JSON.stringify({
+            // Metadata duyệt
+            review: {
+              campaignId: cid,
+              previousStatus: targetCampaign.status,
+              newStatus: status,
+              rejectionReason: reason ?? null,
+              reviewedAt: new Date().toISOString(),
+              reviewedBy: {
+                id: currentUser.id,
+                fullName: currentUser.fullName,
+                email: currentUser.email,
+              },
+            },
+            // Bước 1: thông tin ngân hàng
+            step1_bank: bankInfo,
+            // Bước 2: thông tin campaign + mục tiêu gây quỹ
+            step2_campaign: campaignDetail,
+            step2_fundraisingGoals: fundraisingGoals,
+            // (Bước 3 - Chi tiêu sẽ được hash riêng khi duyệt expenditure)
+          });
+          const hash = await generateSHA256(snapshot);
+          await auditService.create({
+            entityType: 'CAMPAIGN',
+            entityId: cid,
+            action: isApprove ? 'APPROVE' : 'REJECT',
+            dataSnapshot: snapshot,
+            auditHash: hash,
+            actorId: Number(currentUser.id),
+            actorName: targetCampaign.requesterName, // Ghi tên chủ sở hữu chiến dịch thay vì tên Staff
+          });
+        } catch (auditErr) {
+          console.error('Audit Log failed (Silent Error):', auditErr);
+        }
+      }
     } catch (error) {
       console.error('Failed to review campaign:', error);
       toast.error('Cập nhật trạng thái thất bại');

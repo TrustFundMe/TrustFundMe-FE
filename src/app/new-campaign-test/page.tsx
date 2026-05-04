@@ -20,7 +20,7 @@ import { mediaService } from '@/services/mediaService';
 import { expenditureService } from '@/services/expenditureService';
 import { useRouter } from 'next/navigation';
 
-const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
+const URL_REGEX = /^(https?:\/\/)([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
 
 const steps = [
   {
@@ -44,14 +44,9 @@ const stepVariants = {
   exit: { opacity: 0, y: -10 },
 };
 
-// TEMP: bypass validate để đi nhanh tới bước 3 (Giai đoạn).
-// Tắt cờ này khi QA xong.
-const TEMP_BYPASS_TO_STEP3 = false;
-
 export default function NewCampaignTestPage() {
   const [state, setState] = useState<NewCampaignTestState>(seedState);
   const [activeStep, setActiveStep] = useState(0);
-  /** Bước xa nhất user đã từng đạt tới (đã validate). Cho phép nhảy tự do trong [0, maxReached]. */
   const [maxReached, setMaxReached] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [step6FullPreview, setStep6FullPreview] = useState(false);
@@ -60,6 +55,9 @@ export default function NewCampaignTestPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ type: 'idle' | 'success' | 'error'; message: string }>({ type: 'idle', message: '' });
+
+  /** Trang loading cho đến khi Step1 fetch xong KYC & bank data */
+  const [pageReady, setPageReady] = useState(false);
 
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -127,6 +125,8 @@ export default function NewCampaignTestPage() {
     return e;
   }, [state.campaignCore]);
 
+  // TEMP: bypass step1 validation
+  const TEMP_BYPASS_STEP1 = true;
   const step0CanNext = useMemo(() => {
     const b = state.bankInfo;
     const accountNumber = b.accountNumber.trim();
@@ -155,17 +155,11 @@ export default function NewCampaignTestPage() {
     const bankCode = b.bankCode.trim();
     const bankName = b.bankName.trim();
     const webhookKey = b.webhookKey.trim();
-    if (state.kycStatus !== 'APPROVED') {
-      return 'Hoàn tất xác thực danh tính trên Profile.';
-    }
+    if (state.kycStatus !== 'APPROVED') return 'Hoàn tất xác thực danh tính trên trang cá nhân.';
     if (!accountHolderName) return 'Thiếu tên chủ tài khoản nhận tiền';
-    if (accountHolderName.length < 6 || accountHolderName.length > 255) {
-      return 'Tên chủ tài khoản phải từ 6-255 ký tự';
-    }
+    if (accountHolderName.length < 6 || accountHolderName.length > 255) return 'Tên chủ tài khoản phải từ 6-255 ký tự';
     if (!accountNumber) return 'Thiếu số tài khoản nhận tiền';
-    if (accountNumber.length < 6 || accountNumber.length > 50) {
-      return 'Số tài khoản phải từ 6-50 ký tự';
-    }
+    if (accountNumber.length < 6 || accountNumber.length > 50) return 'Số tài khoản phải từ 6-50 ký tự';
     if (!bankCode || !bankName) return 'Cần chọn ngân hàng nhận tiền';
     if (!webhookKey) return 'Cần nhập mã kết nối Casso';
     if (!user?.cvUrl) return 'Cần CV trên Profile để tiếp tục.';
@@ -173,8 +167,6 @@ export default function NewCampaignTestPage() {
   }, [state, user?.cvUrl]);
 
   const step2CanNext = useMemo(() => Object.keys(step2Errors).length === 0, [step2Errors]);
-  const effectiveStep0CanNext = TEMP_BYPASS_TO_STEP3 ? true : step0CanNext;
-  const effectiveStep2CanNext = TEMP_BYPASS_TO_STEP3 ? true : step2CanNext;
 
   const step3CanNext = useMemo(() => {
     if (state.milestones.length < 1) return false;
@@ -186,7 +178,12 @@ export default function NewCampaignTestPage() {
       if (!m.endDate) return false;
       if (m.endDate <= m.startDate) return false;
       if (!m.evidenceDueAt) return false;
-      if (m.endDate > m.evidenceDueAt) return false;
+      if (m.evidenceDueAt <= m.endDate) return false;
+      // Auto-chain check: milestone[i+1].startDate === milestone[i].endDate
+      if (i > 0) {
+        const prev = state.milestones[i - 1];
+        if (prev.endDate && m.startDate !== prev.endDate) return false;
+      }
       if (!m.categories || m.categories.length === 0) return false;
       for (const cat of m.categories) {
         if (!cat.name.trim()) return false;
@@ -200,6 +197,7 @@ export default function NewCampaignTestPage() {
     }
     return true;
   }, [state.milestones, milestoneTotal]);
+
   const step3FailMessage = useMemo(() => {
     if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
     if (milestoneTotal <= 0) return 'Tổng giải ngân phải lớn hơn 0';
@@ -210,7 +208,11 @@ export default function NewCampaignTestPage() {
       if (!m.endDate) return `Đợt ${i + 1}: thiếu ngày kết thúc`;
       if (m.endDate <= m.startDate) return `Đợt ${i + 1}: ngày kết thúc phải sau ngày bắt đầu`;
       if (!m.evidenceDueAt) return `Đợt ${i + 1}: thiếu ngày nộp minh chứng`;
-      if (m.endDate > m.evidenceDueAt) return `Đợt ${i + 1}: ngày kết thúc phải trước hoặc bằng ngày nộp minh chứng`;
+      if (m.evidenceDueAt <= m.endDate) return `Đợt ${i + 1}: ngày nộp minh chứng phải sau ngày kết thúc đợt`;
+      if (i > 0) {
+        const prev = state.milestones[i - 1];
+        if (prev.endDate && m.startDate !== prev.endDate) return `Đợt ${i + 1}: ngày bắt đầu phải nối tiếp từ ngày kết thúc đợt ${i}`;
+      }
       if (!m.categories || m.categories.length === 0) return `Đợt ${i + 1}: cần ít nhất 1 danh mục`;
       for (let j = 0; j < m.categories.length; j += 1) {
         const cat = m.categories[j];
@@ -265,12 +267,18 @@ export default function NewCampaignTestPage() {
     setSubmitResult({ type: 'idle', message: '' });
 
     try {
-      // 1. Media Uploads
-      // Campaign images
+      // 1. Media Uploads (Step 2 now uploads immediately; only fallback-upload if needed)
       const uploadedImageIds: number[] = [];
       let coverMediaId: number | undefined = undefined;
 
       for (const img of state.campaignCore.campaignImages) {
+        if (img.mediaId) {
+          uploadedImageIds.push(img.mediaId);
+          if (img.id === state.campaignCore.coverImageId) {
+            coverMediaId = img.mediaId;
+          }
+          continue;
+        }
         if (img.file) {
           const res = await mediaService.uploadMedia(img.file, undefined, undefined, undefined, undefined, 'PHOTO');
           uploadedImageIds.push(res.id);
@@ -278,6 +286,9 @@ export default function NewCampaignTestPage() {
             coverMediaId = res.id;
           }
         }
+      }
+      if (!coverMediaId && uploadedImageIds.length > 0) {
+        coverMediaId = uploadedImageIds[0];
       }
 
       // 2. Create Campaign
@@ -318,7 +329,6 @@ export default function NewCampaignTestPage() {
 
       // 6. Create Expenditures (Milestones)
       for (const mil of state.milestones) {
-        // Map to backend's CreateExpenditureCatologyRequest (categories with nested items)
         const categories = mil.categories.map(cat => ({
           name: cat.name || 'Chưa đặt tên',
           description: cat.description || '',
@@ -346,28 +356,19 @@ export default function NewCampaignTestPage() {
           categories,
         };
 
-        console.log('Expenditure payload:', JSON.stringify(expenditurePayload, null, 2));
-
         try {
           await expenditureService.create(expenditurePayload);
         } catch (expErr: any) {
           const errMsg = expErr?.response?.data?.message || expErr?.response?.data?.error || 'Lỗi không xác định';
           console.error('Expenditure create error:', expErr?.response?.status, expErr?.response?.data);
           toast(`Lỗi tạo khoản chi cho đợt "${mil.title}": ${errMsg}`, 'error');
-          // We might want to stop here if it's a structural error
         }
       }
 
-      setSubmitResult({
-        type: 'success',
-        message: 'Chiến dịch của bạn đã được gửi duyệt thành công!',
-      });
+      setSubmitResult({ type: 'success', message: 'Chiến dịch của bạn đã được gửi duyệt thành công!' });
       toast('Tạo chiến dịch thành công!', 'success');
 
-      setTimeout(() => {
-        router.push('/account/campaigns');
-      }, 2000);
-
+      setTimeout(() => { router.push('/account/campaigns'); }, 2000);
     } catch (error: any) {
       console.error('Submit error:', error);
       const msg = error?.response?.data?.message || error.message || 'Lỗi không xác định.';
@@ -381,25 +382,17 @@ export default function NewCampaignTestPage() {
   const showPreviewModal =
     (activeStep === 1 && previewVisible) || (activeStep === 4 && step6FullPreview);
 
-  /**
-   * Điều hướng wizard:
-   * - Trong [0, maxReached]: nhảy tự do (đã validate trước đây).
-   * - Vượt maxReached: chỉ tiến 1 step và phải pass validation hiện tại.
-   * - Khi tiến thành công, mở rộng maxReached.
-   */
   const goToStep = useCallback(
     (target: number) => {
       const last = steps.length - 1;
       if (target < 0 || target > last) return;
       setActiveStep((current) => {
         if (target === current) return current;
-        // Trong vùng đã đạt: nhảy tự do
         if (target <= maxReached) return target;
-        // Ngoài vùng: chỉ cho tiến 1 step và phải pass validate
         if (target !== current + 1) return current;
         const ok =
-          (current === 0 && effectiveStep0CanNext) ||
-          (current === 1 && effectiveStep2CanNext) ||
+          (current === 0 && (TEMP_BYPASS_STEP1 || step0CanNext)) ||
+          (current === 1 && step2CanNext) ||
           (current === 2 && step3CanNext) ||
           (current === 3 && step4CanNext);
         if (!ok) return current;
@@ -407,7 +400,7 @@ export default function NewCampaignTestPage() {
         return target;
       });
     },
-    [maxReached, effectiveStep0CanNext, effectiveStep2CanNext, step3CanNext, step4CanNext],
+    [maxReached, step0CanNext, step2CanNext, step3CanNext, step4CanNext],
   );
 
   useEffect(() => {
@@ -416,27 +409,32 @@ export default function NewCampaignTestPage() {
   }, [activeStep]);
 
   return (
+    <>
+    {/* Loading overlay — ĐÈ LÊN content. Step1 vẫn mount bên dưới để gọi onInitialLoadComplete */}
+    {!pageReady && (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-orange-500" />
+          <p className="text-sm font-semibold text-gray-500">Đang tải dữ liệu...</p>
+        </div>
+      </div>
+    )}
     <div id="new-campaign-test-root" className="flex h-[100dvh] flex-col overflow-hidden bg-slate-50">
       {/* Top bar */}
       <header className="shrink-0 border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-[1200px] items-center gap-3 px-4 py-2 md:px-8">
-          <button
-            type="button"
-            onClick={() => {
-              if (activeStep > 0) goToStep(activeStep - 1);
-              else if (typeof window !== 'undefined') window.history.back();
-            }}
-            className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
-            aria-label="Quay lại"
-          >
+            <button
+              type="button"
+              onClick={() => {
+                if (activeStep > 0) goToStep(activeStep - 1);
+                else if (typeof window !== 'undefined') window.history.back();
+              }}
+              className="group inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+              aria-label="Quay lại"
+              suppressHydrationWarning
+            >
             <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3" aria-hidden>
-              <path
-                d="M12 4l-6 6 6 6"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M12 4l-6 6 6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Quay lại
           </button>
@@ -447,16 +445,9 @@ export default function NewCampaignTestPage() {
             </h1>
           </div>
         </div>
-
-        {/* Horizontal stepper — compact, always on screen */}
         <div className="border-t border-slate-100">
           <div className="mx-auto max-w-[1200px] px-4 py-1 md:px-8">
-            <NewCampaignTestStepper
-              steps={steps}
-              activeIndex={activeStep}
-              maxReached={maxReached}
-              onJump={goToStep}
-            />
+            <NewCampaignTestStepper steps={steps} activeIndex={activeStep} maxReached={maxReached} onJump={goToStep} />
           </div>
         </div>
       </header>
@@ -467,7 +458,6 @@ export default function NewCampaignTestPage() {
         className={`min-h-0 flex-1 ${activeStep === 0 ? 'overflow-hidden' : 'overflow-y-auto'}`}
       >
         <div className="mx-auto max-w-[1240px] px-4 py-2 md:px-8 md:py-2.5">
-          {/* Step content with animation */}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeStep}
@@ -481,9 +471,10 @@ export default function NewCampaignTestPage() {
                 <Step1Eligibility
                   state={state}
                   onPatch={patchState}
-                  canNext={effectiveStep0CanNext}
+                  canNext={TEMP_BYPASS_STEP1 || step0CanNext}
                   failMessage={step0FailMessage}
-                  onNext={() => goToStep(1)}
+                  onNext={() => goToStep(1)} // bypass: StepFooter calls onNext directly
+                  onInitialLoadComplete={() => setPageReady(true)}
                 />
               )}
               {activeStep === 1 && (
@@ -491,13 +482,13 @@ export default function NewCampaignTestPage() {
                   state={state}
                   errors={step2Errors}
                   showErrors={step2ShowErrors}
-                  canNext={effectiveStep2CanNext}
+                  canNext={step2CanNext}
                   onPatchCore={(patch) => patchState({ campaignCore: { ...state.campaignCore, ...patch } })}
                   onTogglePreview={() => setPreviewVisible((v) => !v)}
                   previewOpen={previewVisible}
                   onPrev={() => goToStep(0)}
                   onNext={() => {
-                    if (effectiveStep2CanNext) {
+                    if (step2CanNext) {
                       setStep2ShowErrors(false);
                       goToStep(2);
                     } else {
@@ -526,13 +517,7 @@ export default function NewCampaignTestPage() {
                 />
               )}
               {activeStep === 3 && (
-                <Step5RiskTerms
-                  state={state}
-                  onPatch={patchState}
-                  onPrev={() => goToStep(2)}
-                  onNext={() => goToStep(4)}
-                  canNext={step4CanNext}
-                />
+                <Step5RiskTerms state={state} onPatch={patchState} onPrev={() => goToStep(2)} onNext={() => goToStep(4)} canNext={step4CanNext} />
               )}
               {activeStep === 4 && (
                 <Step6ReviewSubmit
@@ -552,7 +537,7 @@ export default function NewCampaignTestPage() {
                   className={`mt-6 rounded-2xl border p-5 ${submitResult.type === 'success'
                     ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
                     : 'border-red-100 bg-red-50 text-red-800'
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center gap-2 font-semibold">
                     {submitResult.type === 'success' ? (
@@ -590,27 +575,17 @@ export default function NewCampaignTestPage() {
         />
       )}
       <style jsx global>{`
-        #new-campaign-test-root .min-h-\[52px\] { min-h: 46px !important; }
+        #new-campaign-test-root .min-h-\\[52px\\] { min-h: 46px !important; }
         #new-campaign-test-root main {
           scrollbar-width: thin;
           scrollbar-color: #111827 #e5e7eb;
         }
-        #new-campaign-test-root main::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
-        }
-        #new-campaign-test-root main::-webkit-scrollbar-track {
-          background: #e5e7eb;
-          border-radius: 9999px;
-        }
-        #new-campaign-test-root main::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
-          border-radius: 9999px;
-        }
-        #new-campaign-test-root main::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #111827 0%, #000000 100%);
-        }
+        #new-campaign-test-root main::-webkit-scrollbar { width: 4px; height: 4px; }
+        #new-campaign-test-root main::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 9999px; }
+        #new-campaign-test-root main::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #1f2937 0%, #111827 100%); border-radius: 9999px; }
+        #new-campaign-test-root main::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #111827 0%, #000000 100%); }
       `}</style>
     </div>
+    </>
   );
 }

@@ -83,14 +83,18 @@ export default function CampaignDonateCard({
   progressPercentage: number;
   donorCount?: number;
   recentDonors?: { donorName: string; donorAvatar?: string | null; amount: number; anonymous?: boolean; createdAt: string }[];
-  onDonate: (amount: number) => void;
+  onDonate: (amount: number, isAnonymous: boolean, isAgreed: boolean) => void;
   onMoreDonorsClick?: () => void;
 }) {
   const progress = Math.max(0, Math.min(100, progressPercentage || 0));
   const remainingAmount = Math.max(0, goalAmount - raisedAmount);
 
   const [amount, setAmount] = useState<number>(50000);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
   const normalizedAmount = Math.max(0, amount || 0);
+
+  const canDonate = isAgreed && normalizedAmount > 0;
 
   return (
     <div className="mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
@@ -152,8 +156,13 @@ export default function CampaignDonateCard({
           <motion.button
             type="button"
             whileTap={{ scale: 0.98 }}
-            onClick={() => onDonate(normalizedAmount)}
-            className="group inline-flex shrink-0 items-center gap-2 rounded-full bg-[#ff5e14] px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#ea550c]"
+            disabled={!canDonate}
+            onClick={() => onDonate(normalizedAmount, isAnonymous, isAgreed)}
+            className={`group inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+              canDonate
+                ? "bg-[#ff5e14] hover:bg-[#ea550c] cursor-pointer"
+                : "bg-slate-300 cursor-not-allowed"
+            }`}
           >
             Quyên góp
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5">
@@ -164,6 +173,40 @@ export default function CampaignDonateCard({
 
         <div className="mt-1.5 text-[11px] font-semibold text-slate-500">
           Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
+        </div>
+
+        {/* Checkboxes */}
+        <div className="mt-3 space-y-2.5 border-t border-[rgba(15,23,42,0.10)] pt-3">
+          <label className="flex cursor-pointer items-center gap-2.5 select-none">
+            <input
+              type="checkbox"
+              checked={isAnonymous}
+              onChange={(e) => setIsAnonymous(e.target.checked)}
+              className="h-4 w-4 shrink-0 rounded border-slate-300 text-[#ff5e14] accent-[#ff5e14]"
+            />
+            <span className="text-xs font-semibold text-slate-700">Quyên góp ẩn danh</span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2.5 select-none">
+            <input
+              type="checkbox"
+              checked={isAgreed}
+              onChange={(e) => setIsAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-[#ff5e14] accent-[#ff5e14]"
+            />
+            <span className="text-xs leading-relaxed text-slate-600">
+              Tôi đồng ý với{" "}
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-[#ff5e14] underline underline-offset-2 hover:text-[#ea550c]"
+              >
+                điều khoản sử dụng
+              </a>{" "}
+              của nền tảng
+            </span>
+          </label>
         </div>
 
         <div className="mt-3 border-t border-[rgba(15,23,42,0.10)] pt-3">

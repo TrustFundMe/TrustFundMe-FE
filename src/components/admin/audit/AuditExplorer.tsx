@@ -195,7 +195,9 @@ export default function AuditExplorer() {
                               {new Date(log.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <p className="text-[10px] font-medium text-slate-600 truncate">ID: {log.entityId} — {log.action}</p>
+                          <p className="text-[10px] font-bold text-slate-900 truncate">
+                            {log.actorName || 'Hệ thống'} — <span className="text-slate-500 font-medium">{log.action}</span>
+                          </p>
                         </div>
                       </div>
                     </div>
