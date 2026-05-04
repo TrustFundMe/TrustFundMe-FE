@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, CheckCircle, Ban, RefreshCw, HandCoins, Plus } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, RefreshCw, HandCoins, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -139,7 +139,7 @@ function StaffRequestContent() {
           };
         }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      setCampaignRows([...buildCampaignRows(validCampaigns)]);
+      setCampaignRows(buildCampaignRows(validCampaigns));
       setTotalPages(1); // Task-based view usually doesn't need pagination for now
 
       // Auto-select from URL
@@ -449,52 +449,6 @@ function StaffRequestContent() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </button>
-
-                                {r.status === 'PENDING' && (
-                                  <>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleReviewCampaign(true, undefined, r.campaignId);
-                                      }}
-                                      className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-all border border-green-100"
-                                      title="Duyệt nhanh"
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedCampaignId(r.id);
-                                        toast('Vui lòng nhập lý do từ chối ở bảng bên phải', {
-                                          icon: 'ℹ️',
-                                          duration: 3000
-                                        });
-                                      }}
-                                      className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
-                                      title="Từ chối (Yêu cầu nhập lý do)"
-                                    >
-                                      <XCircle className="h-4 w-4" />
-                                    </button>
-                                  </>
-                                )}
-
-                                {r.status === 'APPROVED' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedCampaignId(r.id);
-                                      toast('Cuộn xuống dưới cùng ở bảng bên phải để vô hiệu hóa', {
-                                        icon: '⚠️',
-                                        duration: 4000
-                                      });
-                                    }}
-                                    className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all border border-gray-200"
-                                    title="Vô hiệu hóa"
-                                  >
-                                    <Ban className="h-4 w-4" />
-                                  </button>
-                                )}
                               </div>
                             ),
                           },

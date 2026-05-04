@@ -296,6 +296,10 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
 
   const handleStepNext = async () => {
     if (!canNext || checkingBankDup) return;
+    if (bankDuplicateError || webhookKeyDupError) {
+      toast(bankDuplicateError || webhookKeyDupError, 'error');
+      return;
+    }
     const accountNumber = state.bankInfo.accountNumber.trim();
     const bankCode = state.bankInfo.bankCode.trim();
     if (!accountNumber || !bankCode) return;
@@ -306,6 +310,12 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
       if (exists) {
         setBankDuplicateError('Số tài khoản này đã tồn tại trong hệ thống. Vui lòng dùng tài khoản khác.');
         toast('Tài khoản ngân hàng bị trùng trong hệ thống', 'error');
+        return;
+      }
+      const webhookExists = await bankAccountService.checkWebhookKeyExists(state.bankInfo.webhookKey.trim());
+      if (webhookExists) {
+        setWebhookKeyDupError('Mã Casso này đã được đăng ký bởi tài khoản khác. Vui lòng dùng mã khác.');
+        toast('Mã Casso bị trùng trong hệ thống', 'error');
         return;
       }
       onNext();
@@ -609,9 +619,13 @@ export default function Step1Eligibility({ state, onPatch, onNext, canNext, fail
       </div>
 
       <StepFooter
-        canNext={canNext && !checkingBankDup && !checkingBankDupLive}
+        canNext={canNext && !checkingBankDup && !checkingBankDupLive && !bankDuplicateError && !webhookKeyDupError && !checkingWebhookKey}
         onNext={handleStepNext}
-        failMessage={checkingBankDup || checkingBankDupLive ? 'Đang kiểm tra trùng tài khoản ngân hàng...' : failMessage}
+        failMessage={
+          checkingBankDup || checkingBankDupLive || checkingWebhookKey
+            ? 'Đang kiểm tra trùng tài khoản...'
+            : bankDuplicateError || webhookKeyDupError || failMessage
+        }
       />
 
       <AnimatePresence>

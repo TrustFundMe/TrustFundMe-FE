@@ -50,8 +50,6 @@ function addDays(date: string, days: number): string {
 }
 
 export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext, showErrors, failMessage }: Props) {
-  const target = state.campaignCore.targetAmount;
-  const milestonesOk = milestoneTotal === target && target > 0;
   const today = new Date().toISOString().split('T')[0];
   const campaignStart = state.campaignCore.startDate;
   const campaignEnd = state.campaignCore.endDate;
@@ -542,9 +540,9 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       <div className="mt-1.5">
         <div className="mb-1.5 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-orange-50/80 px-2.5 py-1.5">
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-orange-200">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Tổng giải ngân</span>
-            <span className={`text-xs font-bold tabular-nums ${milestonesOk ? 'text-emerald-600' : 'text-red-600'}`}>
-              {formatVnd(milestoneTotal)} / {formatVnd(target)} đ
+            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Mục tiêu (tự tính)</span>
+            <span className={`text-xs font-bold tabular-nums ${milestoneTotal > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              {formatVnd(milestoneTotal)} đ
             </span>
           </div>
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-gray-200">
@@ -556,11 +554,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
             <span className="text-xs font-semibold text-black">{formatDateVi(campaignEnd)}</span>
           </div>
         </div>
-        {showErrors && !milestonesOk && (
-          <p className="mt-1 text-xs font-semibold text-red-600">
-            Tổng phân bổ các mốc ({formatVnd(milestoneTotal)}đ) phải bằng mục tiêu chiến dịch ({formatVnd(target)}đ).
-          </p>
-        )}
       </div>
 
       {/* Master-detail cho đợt giải ngân */}

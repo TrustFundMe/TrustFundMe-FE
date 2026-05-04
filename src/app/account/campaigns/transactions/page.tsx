@@ -235,7 +235,7 @@ function CampaignTransactionsContent() {
                                     <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[150px]">Ngày giờ</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[130px] text-right">Số tiền</th>
                                     <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nội dung</th>
-                                    <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[200px]">Từ</th>
+                                    <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-[200px]">Người gửi / Ghi chú</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -273,9 +273,13 @@ function CampaignTransactionsContent() {
                                                 )}
                                             </td>
                                             <td className="py-3 px-4">
-                                                 <span className="text-sm font-semibold text-[#1a2e2a] truncate block" title={t.donorName || formatSender(t)}>
-                                                     {t.donorName || formatSender(t)}
-                                                 </span>
+                                                 {t.amount < 0 ? (
+                                                     <span className="text-sm font-semibold text-rose-500 truncate block">Chi phí chiến dịch</span>
+                                                 ) : (
+                                                     <span className="text-sm font-semibold text-[#1a2e2a] truncate block" title={t.donorName || formatSender(t)}>
+                                                         {t.donorName || formatSender(t)}
+                                                     </span>
+                                                 )}
                                             </td>
                                         </tr>
                                     ))
