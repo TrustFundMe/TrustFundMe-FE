@@ -71,8 +71,6 @@ export default function Step2CampaignForm({
     switch (field) {
       case 'title':
         return core.title.trim().length > 0;
-      case 'targetAmount':
-        return core.targetAmount > 0;
       case 'category':
         return Boolean(core.categoryId || core.category.trim());
       case 'objective':
@@ -194,23 +192,6 @@ export default function Step2CampaignForm({
                   onPatchCore({ title: e.target.value });
                 }}
                 onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-              />
-            </Field>
-            <Field
-              label="Số tiền mục tiêu (đ)"
-              required
-              error={getFieldError('targetAmount')}
-              reserveFeedbackSlot={showErrors || Boolean(touched.targetAmount) || hasValue('targetAmount')}
-            >
-              <input
-                type="number"
-                className={inputClass('targetAmount', errors, shouldShowFieldError('targetAmount'))}
-                value={core.targetAmount}
-                onChange={(e) => {
-                  setTouched((prev) => ({ ...prev, targetAmount: true }));
-                  onPatchCore({ targetAmount: Number(e.target.value) || 0 });
-                }}
-                onBlur={() => setTouched((prev) => ({ ...prev, targetAmount: true }))}
               />
             </Field>
             <Field

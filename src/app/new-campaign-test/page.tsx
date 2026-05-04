@@ -88,10 +88,14 @@ export default function NewCampaignTestPage() {
     const last = state.milestones[state.milestones.length - 1];
     const autoStart = first.startDate || '';
     const autoEnd = last.evidenceDueAt || '';
-    if (autoStart !== state.campaignCore.startDate || autoEnd !== state.campaignCore.endDate) {
-      patchState({ campaignCore: { ...state.campaignCore, startDate: autoStart, endDate: autoEnd } });
+    const patch: Partial<typeof state.campaignCore> = {};
+    if (autoStart !== state.campaignCore.startDate) patch.startDate = autoStart;
+    if (autoEnd !== state.campaignCore.endDate) patch.endDate = autoEnd;
+    if (milestoneTotal !== state.campaignCore.targetAmount) patch.targetAmount = milestoneTotal;
+    if (Object.keys(patch).length > 0) {
+      patchState({ campaignCore: { ...state.campaignCore, ...patch } });
     }
-  }, [state.milestones]);
+  }, [state.milestones, milestoneTotal]);
 
   const step2Errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -109,9 +113,6 @@ export default function NewCampaignTestPage() {
     const thank = core.thankMessage.trim();
     if (!thank) e.thankMessage = 'Vui lòng nhập lời cảm ơn nhà tài trợ.';
     else if (thank.length < 10) e.thankMessage = 'Lời cảm ơn phải từ 10 ký tự trở lên.';
-
-    if (!core.targetAmount || core.targetAmount <= 0) e.targetAmount = 'Vui lòng nhập số tiền mục tiêu.';
-    else if (core.targetAmount < 10000) e.targetAmount = 'Số tiền mục tiêu tối thiểu là 10,000đ.';
 
     if (!core.categoryId) e.category = 'Vui lòng chọn danh mục chiến dịch.';
 
@@ -176,9 +177,8 @@ export default function NewCampaignTestPage() {
   const effectiveStep2CanNext = TEMP_BYPASS_TO_STEP3 ? true : step2CanNext;
 
   const step3CanNext = useMemo(() => {
-    const target = state.campaignCore.targetAmount;
     if (state.milestones.length < 1) return false;
-    if (milestoneTotal !== target) return false;
+    if (milestoneTotal <= 0) return false;
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return false;
@@ -200,11 +200,10 @@ export default function NewCampaignTestPage() {
       }
     }
     return true;
-  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
+  }, [state.milestones, milestoneTotal]);
   const step3FailMessage = useMemo(() => {
-    const target = state.campaignCore.targetAmount;
     if (state.milestones.length < 1) return 'Cần ít nhất 1 đợt giải ngân';
-    if (milestoneTotal !== target) return `Tổng phân bổ (${milestoneTotal.toLocaleString('vi-VN')}đ) chưa khớp mục tiêu`;
+    if (milestoneTotal <= 0) return 'Tổng giải ngân phải lớn hơn 0';
     for (let i = 0; i < state.milestones.length; i += 1) {
       const m = state.milestones[i];
       if (!m.title.trim()) return `Đợt ${i + 1}: thiếu tên đợt`;
@@ -228,16 +227,15 @@ export default function NewCampaignTestPage() {
       }
     }
     return 'Vui lòng hoàn tất các mục bên trên';
-  }, [state.milestones, state.campaignCore.targetAmount, milestoneTotal]);
+  }, [state.milestones, milestoneTotal]);
 
   const step4CanNext = useMemo(() => state.acknowledgements.termsAccepted, [state.acknowledgements.termsAccepted]);
 
   const finalValidations = useMemo(() => {
-    const target = state.campaignCore.targetAmount;
     const bank = state.bankInfo;
     return {
       coreOk: Object.keys(step2Errors).length === 0,
-      milestoneOk: milestoneTotal === target,
+      milestoneOk: milestoneTotal > 0,
       bankOk: Boolean(bank.accountHolderName && bank.accountNumber && bank.bankName && bank.bankCode),
       acknowledgementsOk:
         state.acknowledgements.termsAccepted &&
