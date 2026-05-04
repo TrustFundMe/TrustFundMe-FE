@@ -11,6 +11,11 @@ export interface SystemConfig {
 }
 
 export const systemConfigService = {
+    getAll: async (): Promise<SystemConfig[]> => {
+        const response = await api.get(`/api/system-configs`);
+        return response.data;
+    },
+
     getByKey: async (key: string): Promise<SystemConfig> => {
         const response = await api.get(`/api/system-configs/${key}`);
         return response.data;
