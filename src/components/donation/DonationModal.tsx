@@ -61,6 +61,7 @@ export default function DonationModal({
   const [showQR, setShowQR] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [currentDonationId, setCurrentDonationId] = useState<number | null>(null);
+  const [currentOrderCode, setCurrentOrderCode] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -190,6 +191,7 @@ export default function DonationModal({
       setShowQR(false);
       setQrUrl('');
       setCurrentDonationId(null);
+      setCurrentOrderCode(null);
       setRedirecting(false);
       setDataLoaded(false);
       setSuggestions([]);
@@ -366,6 +368,9 @@ export default function DonationModal({
         if (response.donationId) {
           setCurrentDonationId(response.donationId);
         }
+        if (response.paymentLinkId) {
+          setCurrentOrderCode(response.paymentLinkId);
+        }
         setShowQR(true);
       } else {
         window.location.href = `/donation/success?id=${campaignId}&amount=${amount}`;
@@ -419,6 +424,7 @@ export default function DonationModal({
               onClose={() => setShowQR(false)}
               qrUrl={qrUrl}
               donationId={currentDonationId}
+              orderCode={currentOrderCode}
               amount={amount}
               onConfirm={async () => {
                 if (currentDonationId) {
@@ -430,6 +436,16 @@ export default function DonationModal({
                 setRedirecting(true);
                 setShowQR(false);
                 router.push(`/thankyou-new?donationId=${currentDonationId}`);
+              }}
+              onTimeout={async () => {
+                if (currentDonationId) {
+                  try {
+                    await paymentService.cancelDonation(currentDonationId);
+                  } catch {}
+                }
+                setShowQR(false);
+                onClose();
+                toast('Hết thời gian thanh toán. Giao dịch đã bị huỷ.', 'error');
               }}
             />
 

@@ -61,6 +61,7 @@ function DonationContent() {
   const [showQR, setShowQR] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [currentDonationId, setCurrentDonationId] = useState<number | null>(null);
+  const [currentOrderCode, setCurrentOrderCode] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -376,6 +377,9 @@ function DonationContent() {
         if (response.donationId) {
           setCurrentDonationId(response.donationId);
         }
+        if (response.paymentLinkId) {
+          setCurrentOrderCode(response.paymentLinkId);
+        }
         setShowQR(true);
       } else {
         // Fallback to internal success page if no URL
@@ -400,11 +404,12 @@ function DonationContent() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
       
       <div className="relative z-10 w-full flex items-center justify-center">
-      <VietQRModal 
+      <VietQRModal
         isOpen={showQR}
         onClose={() => setShowQR(false)}
         qrUrl={qrUrl}
         donationId={currentDonationId}
+        orderCode={currentOrderCode}
         amount={amount}
         onConfirm={async () => {
           if (currentDonationId) {

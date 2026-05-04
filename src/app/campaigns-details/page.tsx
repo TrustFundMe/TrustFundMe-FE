@@ -244,6 +244,7 @@ function CampaignDetailsInner() {
   const [showQR, setShowQR] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [currentDonationId, setCurrentDonationId] = useState<number | null>(null);
+  const [currentOrderCode, setCurrentOrderCode] = useState<string | null>(null);
   const [donationAmount, setDonationAmount] = useState(0);
   const [redirecting, setRedirecting] = useState(false);
 
@@ -323,6 +324,9 @@ function CampaignDetailsInner() {
         setDonationAmount(amount);
         if (response.donationId) {
           setCurrentDonationId(response.donationId);
+        }
+        if (response.paymentLinkId) {
+          setCurrentOrderCode(response.paymentLinkId);
         }
         setShowQR(true);
       } else {
@@ -884,9 +888,11 @@ function CampaignDetailsInner() {
           setShowQR(false);
           setQrUrl('');
           setCurrentDonationId(null);
+          setCurrentOrderCode(null);
         }}
         qrUrl={qrUrl}
         donationId={currentDonationId}
+        orderCode={currentOrderCode}
         amount={donationAmount}
         onConfirm={async () => {
           if (currentDonationId) {
