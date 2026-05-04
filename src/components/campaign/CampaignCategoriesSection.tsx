@@ -201,15 +201,16 @@ export function CampaignCategoriesSection() {
       try {
         setError(null);
 
-        // 1. Fetch categories — hiện category bar ngay
+        // 1. Fetch categories TRƯỚC — hiện category bar ngay lập tức
         const cats = await campaignCategoryService.getAll();
         if (cancelled) return;
         setCategories(cats);
         setLoading(false);
 
-        // 2. Fetch campaigns per category song song — fill vào sau
+        // 2. Fetch campaigns per category SONG SONG — mỗi cái fail riêng, không ảnh hưởng nhau
+        //    Dùng getByCategory (public API, no auth) — chỉ lấy campaigns của category đó
         const campaignMap: Record<number, CampaignCardItem[]> = {};
-        await Promise.all(
+        await Promise.allSettled(
           cats.map(async (cat) => {
             try {
               const dtos = await campaignService.getByCategory(cat.id);
@@ -220,12 +221,11 @@ export function CampaignCategoriesSection() {
               });
             } catch (e) {
               console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
+              campaignMap[cat.id] = [];
             }
           })
         );
-
-        if (cancelled) return;
-        setCategoryCampaigns(campaignMap);
+        if (!cancelled) setCategoryCampaigns(campaignMap);
       } catch (e) {
         console.error("Failed to fetch categories:", e);
         if (!cancelled) {

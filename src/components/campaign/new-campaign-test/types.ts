@@ -22,6 +22,7 @@ export interface CampaignImage {
   id: string;
   url: string;
   file?: File;
+  mediaId?: number;
 }
 
 export interface CampaignCore {

@@ -2,7 +2,7 @@
 
 import DanboxLayout from '@/layout/DanboxLayout';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { Calendar, XCircle } from 'lucide-react';
+import { Calendar, XCircle, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
 
@@ -13,6 +13,7 @@ import PlansList from '@/components/campaign/PlansList';
 import PostsFeed from '@/components/campaign/PostsFeed';
 import DonorsModal from '@/components/campaign/DonorsModal';
 import TrustScoreLogsModal from '@/components/campaign/TrustScoreLogsModal';
+import VietQRModal from '@/components/donation/VietQRModal';
 import type { Campaign, CampaignPost, CampaignPlan, CampaignFollower, CampaignMedia } from '@/components/campaign/types';
 import { feedPostService } from '@/services/feedPostService';
 import type { FeedPostDto } from '@/types/feedPost';
@@ -23,9 +24,10 @@ import { userService } from '@/services/userService';
 import { withFallbackImage } from '@/lib/image';
 import { usePermissions } from '@/hooks/usePermissions';
 import { mediaService } from '@/services/mediaService';
-import { paymentService, CampaignProgress, RecentDonor } from '@/services/paymentService';
+import { paymentService, CampaignProgress, RecentDonor, CreatePaymentRequest } from '@/services/paymentService';
 import { flagService } from '@/services/flagService';
 import { trustScoreService } from '@/services/trustScoreService';
+import { authService } from '@/services/authService';
 import toast from 'react-hot-toast';
 
 const CampaignAnalyticsChart = dynamic(() => import('@/components/campaign/CampaignAnalyticsChart'), {
@@ -108,6 +110,117 @@ function formatVnDateRange(startDate?: string | null, endDate?: string | null, f
   return start || end || fallback || '';
 }
 
+/* ──────────────────── Skeleton Components ──────────────────── */
+
+function SkeletonHeaderSection() {
+  return (
+    <div className="animate-pulse space-y-4">
+      {/* Cover image */}
+      <div className="h-[360px] w-full rounded-3xl bg-slate-200" />
+      {/* Title */}
+      <div className="h-8 w-3/4 rounded-xl bg-slate-200" />
+      {/* Category + meta */}
+      <div className="flex items-center gap-3">
+        <div className="h-5 w-24 rounded-lg bg-slate-200" />
+        <div className="h-5 w-32 rounded-lg bg-slate-200" />
+      </div>
+      {/* Creator row */}
+      <div className="flex items-center gap-3 pt-2">
+        <div className="h-10 w-10 rounded-full bg-slate-200" />
+        <div className="space-y-1.5">
+          <div className="h-4 w-28 rounded bg-slate-200" />
+          <div className="h-3 w-20 rounded bg-slate-200" />
+        </div>
+      </div>
+      {/* Description */}
+      <div className="space-y-2 pt-4">
+        <div className="h-4 w-full rounded bg-slate-200" />
+        <div className="h-4 w-5/6 rounded bg-slate-200" />
+        <div className="h-4 w-2/3 rounded bg-slate-200" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonDonateCard() {
+  return (
+    <div className="animate-pulse rounded-[14px] border border-slate-100 bg-white p-4 space-y-4">
+      {/* Circular progress placeholder */}
+      <div className="flex items-center gap-3">
+        <div className="h-[84px] w-[84px] rounded-full bg-slate-200" />
+        <div className="space-y-1.5">
+          <div className="h-4 w-28 rounded bg-slate-200" />
+          <div className="h-3 w-36 rounded bg-slate-200" />
+        </div>
+      </div>
+      {/* Goal + stats */}
+      <div className="h-16 w-full rounded-xl bg-slate-200" />
+      {/* Quick amounts */}
+      <div className="flex gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-8 w-16 rounded-full bg-slate-200" />
+        ))}
+      </div>
+      {/* Input + button */}
+      <div className="flex items-center gap-2">
+        <div className="h-10 flex-1 rounded-full bg-slate-200" />
+        <div className="h-10 w-28 rounded-full bg-slate-200" />
+      </div>
+      {/* Donors */}
+      <div className="space-y-3 pt-2 border-t border-slate-100">
+        <div className="h-4 w-32 rounded bg-slate-200" />
+        {[1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-slate-200" />
+            <div className="flex-1 space-y-1">
+              <div className="h-3 w-24 rounded bg-slate-200" />
+              <div className="h-2.5 w-16 rounded bg-slate-200" />
+            </div>
+            <div className="h-3 w-16 rounded bg-slate-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SkeletonMilestones() {
+  return (
+    <div className="animate-pulse space-y-3 rounded-2xl border border-slate-100 bg-white p-4">
+      <div className="h-5 w-40 rounded bg-slate-200" />
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="flex items-start gap-3">
+          <div className="mt-1 h-5 w-5 rounded-full bg-slate-200" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-4 w-3/4 rounded bg-slate-200" />
+            <div className="h-3 w-1/2 rounded bg-slate-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SkeletonPosts() {
+  return (
+    <div className="animate-pulse rounded-[14px] border border-slate-100 bg-white p-4 space-y-4">
+      <div className="h-5 w-24 rounded bg-slate-200" />
+      {[1, 2].map((i) => (
+        <div key={i} className="space-y-2 rounded-xl border border-slate-100 p-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-slate-200" />
+            <div className="h-3 w-24 rounded bg-slate-200" />
+          </div>
+          <div className="h-3 w-full rounded bg-slate-200" />
+          <div className="h-3 w-4/5 rounded bg-slate-200" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ──────────────────── Main Component ──────────────────── */
+
 function CampaignDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -126,6 +239,14 @@ function CampaignDetailsInner() {
   const [recentDonors, setRecentDonors] = useState<RecentDonor[]>([]);
   const [showDonorsModal, setShowDonorsModal] = useState(false);
 
+  // Direct VietQR flow states (replaces DonationModal)
+  const [donateLoading, setDonateLoading] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [qrUrl, setQrUrl] = useState('');
+  const [currentDonationId, setCurrentDonationId] = useState<number | null>(null);
+  const [donationAmount, setDonationAmount] = useState(0);
+  const [redirecting, setRedirecting] = useState(false);
+
   const [posts, setPosts] = useState<CampaignPost[]>([]);
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
@@ -140,6 +261,80 @@ function CampaignDetailsInner() {
     return now >= start && now <= end;
   });
 
+  // Polling for payment status
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (showQR && currentDonationId) {
+      pollInterval = setInterval(async () => {
+        try {
+          const donation = await paymentService.getDonation(currentDonationId);
+          if (donation.status === 'PAID') {
+            clearInterval(pollInterval);
+            setRedirecting(true);
+            setShowQR(false);
+            router.push(`/thankyou-new?donationId=${currentDonationId}`);
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [showQR, currentDonationId, router]);
+
+  // Direct donate handler — calls payment API and opens VietQR
+  const handleDirectDonate = async (amount: number, isAnonymous: boolean) => {
+    if (!campaign || !campaignId || amount <= 0) return;
+
+    setDonateLoading(true);
+    try {
+      // Get current user session
+      let currentDonorId: number | null = null;
+      try {
+        const sessionData = await authService.getSession();
+        if (sessionData && sessionData.user) {
+          currentDonorId = sessionData.user.id;
+        }
+      } catch {
+        console.warn('User not logged in, proceeding anonymously');
+      }
+
+      const userIdStr = currentDonorId ? currentDonorId.toString() : 'GUEST';
+      const description = `USER${userIdStr}CAMPAIGN${campaign.id}`;
+
+      const request: CreatePaymentRequest = {
+        donorId: currentDonorId,
+        campaignId: Number(campaign.id),
+        donationAmount: amount,
+        tipAmount: 0,
+        description,
+        isAnonymous,
+        items: [],
+      };
+
+      const response = await paymentService.createPayment(request);
+
+      if (response.paymentUrl) {
+        setQrUrl(response.paymentUrl);
+        setDonationAmount(amount);
+        if (response.donationId) {
+          setCurrentDonationId(response.donationId);
+        }
+        setShowQR(true);
+      } else {
+        window.location.href = `/donation/success?id=${campaignId}&amount=${amount}`;
+      }
+    } catch (err) {
+      console.error('Error creating payment flow:', err);
+      toast.error('Có lỗi xảy ra khi khởi tạo thanh toán. Vui lòng thử lại sau.');
+    } finally {
+      setDonateLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -328,6 +523,7 @@ function CampaignDetailsInner() {
     };
   }, [campaignId]);
 
+  /* ── Skeleton loading state ── */
   if (loading) {
     return (
       <DanboxLayout header={4}>
@@ -343,19 +539,15 @@ function CampaignDetailsInner() {
                 alignItems: 'start',
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <div className="animate-pulse space-y-4">
-                  <div className="h-[400px] w-full bg-slate-200 rounded-3xl"></div>
-                  <div className="h-8 w-3/4 bg-slate-200 rounded-xl"></div>
-                  <div className="h-6 w-1/2 bg-slate-200 rounded-xl"></div>
-                  <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
-                </div>
+              {/* Left column skeletons */}
+              <div style={{ minWidth: 0 }} className="space-y-4">
+                <SkeletonHeaderSection />
+                <SkeletonMilestones />
               </div>
-              <div style={{ minWidth: 0, marginTop: 16 }}>
-                <div className="animate-pulse space-y-6">
-                  <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
-                  <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>
-                </div>
+              {/* Right column skeletons */}
+              <div style={{ minWidth: 0, marginTop: 16 }} className="space-y-4">
+                <SkeletonDonateCard />
+                <SkeletonPosts />
               </div>
             </div>
           </div>
@@ -522,28 +714,37 @@ function CampaignDetailsInner() {
                       {campaign.rejectionReason && (
                         <div className="pt-4 border-t border-red-200">
                           <p className="text-[11px] font-bold text-red-800 uppercase tracking-wider mb-1">Lý do:</p>
-                          <p className="text-sm text-red-700 italic">"{campaign.rejectionReason}"</p>
+                          <p className="text-sm text-red-700 italic">&quot;{campaign.rejectionReason}&quot;</p>
                         </div>
                       )}
                     </div>
                   ) : isDonationVisible ? (
-                    <CampaignDonateCard
-                      raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
-                      goalAmount={progress?.goalAmount || campaign.goalAmount}
-                      progressPercentage={progress?.progressPercentage || 0}
-                      donorCount={progress?.donorCount || 0}
-                      recentDonors={recentDonors}
-                      onDonate={(amount) => {
-                        const fundType = campaign.type?.toUpperCase() === 'ITEMIZED' ? 'item' : 'general';
-                        const params = new URLSearchParams({
-                          campaignId: String(campaignId),
-                          amount: String(amount),
-                          fundType,
-                        });
-                        router.push(`/donation?${params.toString()}`);
-                      }}
-                      onMoreDonorsClick={() => setShowDonorsModal(true)}
-                    />
+                    <>
+                      <CampaignDonateCard
+                        raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
+                        goalAmount={progress?.goalAmount || campaign.goalAmount}
+                        progressPercentage={progress?.progressPercentage || 0}
+                        donorCount={progress?.donorCount || 0}
+                        recentDonors={recentDonors}
+                        onDonate={(amount, isAnonymous) => {
+                          handleDirectDonate(amount, isAnonymous);
+                        }}
+                        onMoreDonorsClick={() => setShowDonorsModal(true)}
+                      />
+                      {/* Donate loading overlay */}
+                      {donateLoading && (
+                        <div
+                          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 backdrop-blur-md pointer-events-auto"
+                          aria-live="polite"
+                          aria-busy="true"
+                        >
+                          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-[0_30px_90px_rgba(2,6,23,0.45)]">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#ff5e14]" />
+                            <p className="text-sm font-bold text-slate-700">Đang khởi tạo thanh toán...</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="p-8 rounded-3xl bg-slate-50 border-2 border-slate-200 border-dashed text-center space-y-4">
                       <div className="inline-flex p-4 bg-slate-100 rounded-full">
@@ -675,6 +876,39 @@ function CampaignDetailsInner() {
           onClose={() => setShowTrustScoreLogs(false)}
         />
       )}
+
+      {/* VietQR Modal — direct flow */}
+      <VietQRModal
+        isOpen={showQR}
+        onClose={() => {
+          setShowQR(false);
+          setQrUrl('');
+          setCurrentDonationId(null);
+        }}
+        qrUrl={qrUrl}
+        donationId={currentDonationId}
+        amount={donationAmount}
+        onConfirm={async () => {
+          if (currentDonationId) {
+            try {
+              await paymentService.verifyPayment(currentDonationId);
+              paymentService.syncQuantity(currentDonationId).catch(() => {});
+            } catch { /* ignore */ }
+          }
+          setRedirecting(true);
+          setShowQR(false);
+          router.push(`/thankyou-new?donationId=${currentDonationId}`);
+        }}
+      />
+
+      {/* Redirecting overlay */}
+      {redirecting && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center">
+          <Loader2 className="w-12 h-12 text-[#ff5e14] animate-spin mb-4" />
+          <p className="text-lg font-bold text-gray-900">Đang chuẩn bị trang cảm ơn...</p>
+          <p className="text-sm text-gray-500">Cảm ơn tấm lòng hảo tâm của bạn!</p>
+        </div>
+      )}
     </DanboxLayout>
   );
 }
@@ -696,19 +930,13 @@ export default function CampaignDetailsPage() {
                   alignItems: 'start',
                 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-[400px] w-full bg-slate-200 rounded-3xl"></div>
-                    <div className="h-8 w-3/4 bg-slate-200 rounded-xl"></div>
-                    <div className="h-6 w-1/2 bg-slate-200 rounded-xl"></div>
-                    <div className="mt-8 h-20 w-full bg-slate-200 rounded-xl"></div>
-                  </div>
+                <div style={{ minWidth: 0 }} className="space-y-4">
+                  <SkeletonHeaderSection />
+                  <SkeletonMilestones />
                 </div>
-                <div style={{ minWidth: 0, marginTop: 16 }}>
-                  <div className="animate-pulse space-y-6">
-                    <div className="h-48 w-full bg-slate-200 rounded-3xl"></div>
-                    <div className="h-64 w-full bg-slate-200 rounded-3xl"></div>
-                  </div>
+                <div style={{ minWidth: 0, marginTop: 16 }} className="space-y-4">
+                  <SkeletonDonateCard />
+                  <SkeletonPosts />
                 </div>
               </div>
             </div>

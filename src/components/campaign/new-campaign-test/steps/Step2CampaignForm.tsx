@@ -4,6 +4,8 @@ import { useRef, useState } from 'react';
 import { CampaignImage, NewCampaignTestState } from '../types';
 import CategorySelector from '../parts/CategorySelector';
 import StepFooter from '../parts/StepFooter';
+import { mediaService } from '@/services/mediaService';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   state: NewCampaignTestState;
@@ -64,9 +66,11 @@ export default function Step2CampaignForm({
   const core = state.campaignCore;
   const images = core.campaignImages ?? [];
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragDepthRef = useRef(0);
+  const { toast } = useToast();
   const hasValue = (field: string) => {
     switch (field) {
       case 'title':
@@ -85,7 +89,7 @@ export default function Step2CampaignForm({
   };
   const shouldShowFieldError = (field: string) => showErrors || Boolean(touched[field]) || hasValue(field);
   const getFieldError = (field: string) => (shouldShowFieldError(field) ? errors[field] : undefined);
-  const coverErr = shouldShowFieldError('coverImage') && errors.coverImage;
+  const coverErr = !isUploadingImages && shouldShowFieldError('coverImage') && errors.coverImage;
   const reserveCoverFeedbackSlot = Boolean(showErrors) || Boolean(touched.coverImage) || hasValue('coverImage');
 
   const applyImages = (nextImages: CampaignImage[], preferredCoverId?: string) => {
@@ -101,26 +105,48 @@ export default function Step2CampaignForm({
     });
   };
 
-  const appendFiles = (fileList: FileList | File[] | null) => {
+  const appendFiles = async (fileList: FileList | File[] | null) => {
     if (!fileList?.length) return;
     setTouched((prev) => ({ ...prev, coverImage: true }));
-    const list = Array.from(fileList as FileList);
-    const additions: CampaignImage[] = [];
-    for (const file of list) {
-      if (!file.type.startsWith('image/')) continue;
-      additions.push({ id: newImageId(), url: URL.createObjectURL(file), file });
+    const list = Array.from(fileList as FileList).filter((file) => file.type.startsWith('image/'));
+    if (!list.length) {
+      toast('Chỉ chấp nhận file ảnh.', 'error');
+      return;
     }
-    if (!additions.length) return;
-    const merged = [...images, ...additions];
-    const nextCover =
-      core.coverImageId && merged.some((i) => i.id === core.coverImageId) ? core.coverImageId : additions[0]!.id;
-    applyImages(merged, nextCover);
+
+    setIsUploadingImages(true);
+    const uploaded: CampaignImage[] = [];
+    try {
+      for (const file of list) {
+        const res = await mediaService.uploadMedia(file, undefined, undefined, undefined, undefined, 'PHOTO');
+        uploaded.push({
+          id: newImageId(),
+          url: res.url,
+          mediaId: res.id,
+        });
+      }
+
+      if (!uploaded.length) return;
+      const merged = [...images, ...uploaded];
+      const nextCover =
+        core.coverImageId && merged.some((i) => i.id === core.coverImageId) ? core.coverImageId : uploaded[0]!.id;
+      applyImages(merged, nextCover);
+      toast(`Đã tải lên ${uploaded.length} ảnh.`, 'success');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Lỗi tải ảnh chiến dịch';
+      toast(msg, 'error');
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const removeImage = (id: string, ev: React.MouseEvent) => {
     ev.stopPropagation();
     setTouched((prev) => ({ ...prev, coverImage: true }));
     const img = images.find((i) => i.id === id);
+    if (img?.mediaId) {
+      mediaService.deleteMedia(img.mediaId).catch(() => {});
+    }
     if (img?.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
     const next = images.filter((i) => i.id !== id);
     applyImages(next, core.coverImageId === id ? undefined : core.coverImageId);
@@ -151,8 +177,8 @@ export default function Step2CampaignForm({
     if (dragDepthRef.current === 0) setIsDragging(false);
   };
 
-  const handleFileInput: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    appendFiles(e.target.files);
+  const handleFileInput: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    await appendFiles(e.target.files);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -324,24 +350,37 @@ export default function Step2CampaignForm({
               if (!isDragging) setIsDragging(true);
             }}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              if (isUploadingImages) return;
+              fileInputRef.current?.click();
+            }}
             role="button"
-            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-all duration-200 ${
+            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-all duration-200 ${
               coverErr && images.length === 0
                 ? 'border-red-200 bg-red-50/50'
                 : isDragging
                   ? 'border-brand bg-orange-50/70'
                   : 'border-gray-200 bg-white/80 hover:border-brand/50 hover:bg-orange-50/40'
-            }`}
+            } ${isUploadingImages ? 'cursor-wait opacity-80' : 'cursor-pointer'}`}
           >
             <UploadIcon />
             <p className="mt-1.5 px-2 text-center text-xs font-medium text-gray-600">
-              {isDragging ? 'Thả ảnh vào đây' : images.length ? 'Thêm ảnh (kéo thả hoặc bấm)' : 'Kéo thả hoặc bấm để thêm ảnh'}
+              {isUploadingImages
+                ? 'Đang tải ảnh lên hệ thống...'
+                : isDragging
+                  ? 'Thả ảnh vào đây'
+                  : images.length
+                    ? 'Thêm ảnh (kéo thả hoặc bấm)'
+                    : 'Kéo thả hoặc bấm để thêm ảnh'}
             </p>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileInput} />
           <div className={reserveCoverFeedbackSlot ? 'mt-1 min-h-5' : 'mt-1'} aria-live="polite">
-            {coverErr ? <p className="text-xs font-semibold leading-snug text-red-600">{errors.coverImage}</p> : null}
+            {isUploadingImages ? (
+              <p className="text-xs font-semibold leading-snug text-blue-700">Đang tải ảnh chiến dịch lên hệ thống...</p>
+            ) : coverErr ? (
+              <p className="text-xs font-semibold leading-snug text-red-600">{errors.coverImage}</p>
+            ) : null}
           </div>
         </div>
       </div>

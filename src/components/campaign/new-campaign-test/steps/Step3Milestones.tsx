@@ -37,9 +37,27 @@ function formatVnd(n: number): string {
 
 function formatDateVi(date?: string): string {
   if (!date) return 'Chưa chọn';
+  // Support yyyy-mm-dd input
+  const parts = date.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+  }
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString('vi-VN');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+/** Convert yyyy-mm-dd to dd/mm/yyyy for display */
+function toViDate(iso?: string): string {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+  }
+  return iso;
 }
 
 function addDays(date: string, days: number): string {
@@ -49,6 +67,131 @@ function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+function parseViDateToIso(value: string): string | null {
+  const raw = value.trim();
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const dd = Number(match[1]);
+  const mm = Number(match[2]);
+  const yyyy = Number(match[3]);
+  if (!Number.isInteger(dd) || !Number.isInteger(mm) || !Number.isInteger(yyyy)) return null;
+  if (yyyy < 1900 || mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  const date = new Date(yyyy, mm - 1, dd);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== yyyy ||
+    date.getMonth() !== mm - 1 ||
+    date.getDate() !== dd
+  ) {
+    return null;
+  }
+  return `${String(yyyy).padStart(4, '0')}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+
+function normalizeViDateInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function ViDateInput({
+  value,
+  onChangeIso,
+  className,
+  readOnly = false,
+  onBlur,
+  min,
+}: {
+  value?: string;
+  onChangeIso?: (iso: string) => void;
+  className?: string;
+  readOnly?: boolean;
+  onBlur?: () => void;
+  min?: string;
+}) {
+  const [displayValue, setDisplayValue] = useState<string>(toViDate(value));
+  const [isFocused, setIsFocused] = useState(false);
+  const hiddenDateRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isFocused) return;
+    setDisplayValue(toViDate(value));
+  }, [value, isFocused]);
+
+  const openNativePicker = () => {
+    if (readOnly) return;
+    hiddenDateRef.current?.showPicker?.();
+    hiddenDateRef.current?.focus();
+    hiddenDateRef.current?.click();
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="dd/mm/yyyy"
+        readOnly={readOnly}
+        className={className}
+        value={displayValue}
+        onChange={(e) => {
+          if (readOnly) return;
+          setDisplayValue(normalizeViDateInput(e.target.value));
+        }}
+        onFocus={(e) => {
+          if (readOnly) return;
+          setIsFocused(true);
+          e.currentTarget.select();
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          onBlur?.();
+          const iso = parseViDateToIso(displayValue);
+          if (iso && !readOnly) {
+            onChangeIso?.(iso);
+            setDisplayValue(toViDate(iso));
+            return;
+          }
+          setDisplayValue(toViDate(value));
+        }}
+      />
+      {!readOnly && (
+        <>
+          <button
+            type="button"
+            onClick={openNativePicker}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            tabIndex={-1}
+            aria-label="Chọn ngày"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+            </svg>
+          </button>
+          <input
+            ref={hiddenDateRef}
+            type="date"
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+            tabIndex={-1}
+            value={value || ""}
+            min={min}
+            onChange={(e) => {
+              if (readOnly) return;
+              const iso = e.target.value;
+              if (iso) {
+                onChangeIso?.(iso);
+                setDisplayValue(toViDate(iso));
+              }
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev, onNext, canNext, showErrors, failMessage }: Props) {
   const today = new Date().toISOString().split('T')[0];
   const campaignStart = state.campaignCore.startDate;
@@ -56,16 +199,16 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
   useEffect(() => {
     if (!state.milestones.length) return;
-    let previousChainEnd = '';
+    let previousEndDate = '';
     let changed = false;
     const nextMilestones = state.milestones.map((m, idx) => {
       if (idx === 0) {
-        previousChainEnd = m.evidenceDueAt || m.endDate || m.startDate || today;
+        previousEndDate = m.endDate || '';
         return m;
       }
-      const expectedStart = previousChainEnd || today;
-      previousChainEnd = m.evidenceDueAt || m.endDate || expectedStart;
-      if (m.startDate === expectedStart) return m;
+      const expectedStart = previousEndDate || '';
+      previousEndDate = m.endDate || '';
+      if (!expectedStart || m.startDate === expectedStart) return m;
       changed = true;
       return { ...m, startDate: expectedStart };
     });
@@ -232,7 +375,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
   const addMilestone = () => {
     const newId = `m-${Math.random().toString(36).slice(2, 9)}`;
     const previousMilestone = state.milestones[state.milestones.length - 1];
-    const autoStartDate = previousMilestone?.evidenceDueAt || previousMilestone?.endDate || today;
+    const autoStartDate = previousMilestone ? (previousMilestone.endDate || today) : today;
     onPatch({
       milestones: [
         ...state.milestones,
@@ -425,11 +568,11 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     if (!(m.title?.trim())) count += 1;
     if (!m.startDate) count += 1;
     if (milestoneIndex > 0) {
-      const expectedStart = prev?.evidenceDueAt || prev?.endDate || today;
-      if (m.startDate !== expectedStart) count += 1;
+      const expectedStart = prev?.endDate || '';
+      if (expectedStart && m.startDate !== expectedStart) count += 1;
     }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) count += 1;
-    if (m.endDate && m.evidenceDueAt && m.endDate > m.evidenceDueAt) count += 1;
+    if (m.endDate && m.evidenceDueAt && m.evidenceDueAt <= m.endDate) count += 1;
     if (!m.evidenceDueAt) count += 1;
     if (!m.categories || m.categories.length === 0) count += 1;
     (m.categories || []).forEach((cat) => {
@@ -464,11 +607,11 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
     if (!(m.title?.trim())) issues.push('Thiếu tên đợt giải ngân');
     if (!m.startDate) issues.push('Thiếu ngày bắt đầu đợt');
     if (milestoneIndex > 0) {
-      const expectedStart = prev?.evidenceDueAt || prev?.endDate || today;
-      if (m.startDate && m.startDate !== expectedStart) issues.push('Ngày bắt đầu đợt phải theo thứ tự nối tiếp từ đợt trước');
+      const expectedStart = prev?.endDate || '';
+      if (expectedStart && m.startDate && m.startDate !== expectedStart) issues.push('Ngày bắt đầu đợt phải nối tiếp từ ngày kết thúc đợt trước');
     }
     if (!m.endDate || (m.startDate && m.endDate <= m.startDate)) issues.push('Ngày kết thúc phải sau ngày bắt đầu');
-    if (m.endDate && m.evidenceDueAt && m.endDate > m.evidenceDueAt) issues.push('Ngày kết thúc dự kiến phải trước hoặc bằng ngày nộp minh chứng');
+    if (m.endDate && m.evidenceDueAt && m.evidenceDueAt <= m.endDate) issues.push('Ngày nộp minh chứng phải sau ngày kết thúc đợt');
     if (!m.evidenceDueAt) issues.push('Thiếu ngày nộp minh chứng');
     if (!m.categories || m.categories.length === 0) issues.push('Chưa có danh mục chi tiêu');
     (m.categories || []).forEach((cat, catIdx) => {
@@ -537,21 +680,21 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       </div>
 
       {/* Tổng quan nhanh */}
-      <div className="mt-1.5">
-        <div className="mb-1.5 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-orange-50/80 px-2.5 py-1.5">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-orange-200">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700">Mục tiêu (tự tính)</span>
-            <span className={`text-xs font-bold tabular-nums ${milestoneTotal > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+      <div className="mt-2">
+        <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <div className="inline-flex items-center gap-2 rounded-lg border border-orange-200 px-3 py-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-amber-700">Mục tiêu (tự tính)</span>
+            <span className={`text-sm font-bold tabular-nums ${milestoneTotal > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
               {formatVnd(milestoneTotal)} đ
             </span>
           </div>
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-gray-200">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Bắt đầu quyên góp</span>
-            <span className="text-xs font-semibold text-black">{formatDateVi(campaignStart)}</span>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Bắt đầu quyên góp</span>
+            <span className="text-sm font-semibold text-black">{formatDateVi(campaignStart)}</span>
           </div>
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-2 py-1 ring-1 ring-gray-200">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Kết thúc quyên góp</span>
-            <span className="text-xs font-semibold text-black">{formatDateVi(campaignEnd)}</span>
+          <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-gray-500">Kết thúc quyên góp</span>
+            <span className="text-sm font-semibold text-black">{formatDateVi(campaignEnd)}</span>
           </div>
         </div>
       </div>
@@ -619,7 +762,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                   </div>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] font-medium leading-snug text-black">
-                  <span>{m.startDate ? formatDateVi(m.startDate) : 'Chưa có ngày bắt đầu'} → {m.endDate ? formatDateVi(m.endDate) : 'Chưa có ngày kết thúc'}</span>
+                  <span className="text-gray-600">{m.startDate ? formatDateVi(m.startDate) : '—'} → {m.endDate ? formatDateVi(m.endDate) : '—'}</span>
                   <span>• {(m.categories || []).length} danh mục</span>
                 </div>
                 {hasMilestoneErrors && issues.length > 0 && (
@@ -661,18 +804,35 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                   Danh mục chi tiêu
                 </button>
               </div>
+              {showErrors && (!activeMilestone.categories || activeMilestone.categories.length === 0) && (
+                <div className="mb-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                  <p className="text-xs font-bold text-red-700">
+                    Bạn phải thêm ít nhất 1 danh mục chi tiêu cho đợt này.
+                  </p>
+                </div>
+              )}
 
               {activeDetailTab === 'info' && (
                 <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
                   {(() => {
                     const shouldValidateMilestone = Boolean(showErrors) || Boolean(touchedMilestones[activeMilestone.id]);
+                    const invalidDateRange = Boolean(
+                      activeMilestone.startDate &&
+                      activeMilestone.endDate &&
+                      activeMilestone.endDate <= activeMilestone.startDate
+                    );
+                    const invalidEvidenceDate = Boolean(
+                      activeMilestone.endDate &&
+                      activeMilestone.evidenceDueAt &&
+                      activeMilestone.evidenceDueAt <= activeMilestone.endDate
+                    );
                     return (
                       <>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 space-y-1">
                             <p className="text-sm font-semibold text-black">Thông tin đợt giải ngân</p>
                             <input
-                              className={`${inCls} w-full font-semibold ${shouldValidateMilestone && !activeMilestone.title?.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
+                              className={`${inCls} w-full font-semibold ${touchedMilestones[activeMilestone.id] && !activeMilestone.title?.trim() ? 'border-red-300 bg-red-50/50 focus:border-red-400 focus:ring-red-100' : ''}`}
                               value={activeMilestone.title || ''}
                               placeholder="Ví dụ: Đợt 1 - Cứu trợ khẩn cấp"
                               spellCheck={false}
@@ -689,7 +849,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                             <TrashIcon />
                           </button>
                         </div>
-                        {shouldValidateMilestone && !activeMilestone.title?.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
+                        {touchedMilestones[activeMilestone.id] && !activeMilestone.title?.trim() && <p className="mt-1 text-xs font-semibold text-red-600">Vui lòng nhập tên đợt giải ngân.</p>}
 
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           {(() => {
@@ -699,18 +859,17 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                 <p className="text-sm font-semibold text-black">
                                   {isFirstMilestone ? <>Ngày bắt đầu đợt <span className="text-red-500">*</span></> : 'Ngày bắt đầu đợt (tự động)'}
                                 </p>
-                                <input
-                                  type="date"
+                                <ViDateInput
                                   readOnly={!isFirstMilestone}
-                                  className={`${inCls} w-full ${!isFirstMilestone ? 'bg-gray-100 text-gray-600' : ''} ${shouldValidateMilestone && !activeMilestone.startDate ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                                  className={`${inCls} w-full ${!isFirstMilestone ? 'bg-gray-100 text-gray-600' : ''} ${touchedMilestones[activeMilestone.id] && !activeMilestone.startDate ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
                                   value={activeMilestone.startDate || ''}
                                   onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                                  onChange={isFirstMilestone ? (e) => updateMilestone(activeMilestone.id, { startDate: e.target.value }) : undefined}
+                                  onChangeIso={isFirstMilestone ? (iso) => updateMilestone(activeMilestone.id, { startDate: iso }) : undefined}
                                 />
                                 <p className="text-[11px] font-medium text-gray-500">
                                   {isFirstMilestone
                                     ? 'Ngày bắt đầu đợt 1 sẽ là ngày bắt đầu chiến dịch.'
-                                    : 'Tự động nối tiếp từ ngày nộp minh chứng đợt trước.'}
+                                    : 'Tự động nối tiếp từ ngày kết thúc đợt trước.'}
                                 </p>
                               </div>
                             );
@@ -718,32 +877,40 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
 
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Ngày kết thúc dự kiến <span className="text-red-500">*</span></p>
-                            <input
-                              type="date"
+                            <ViDateInput
                               min={activeMilestone.startDate || today}
-                              className={`${inCls} w-full ${shouldValidateMilestone && (!activeMilestone.endDate || (activeMilestone.startDate && activeMilestone.endDate <= activeMilestone.startDate) || (activeMilestone.evidenceDueAt && activeMilestone.endDate > activeMilestone.evidenceDueAt)) ? 'border-red-300 bg-red-50/50' : ''}`}
+                              className={`${inCls} w-full ${(touchedMilestones[activeMilestone.id] && (!activeMilestone.endDate || (activeMilestone.evidenceDueAt && activeMilestone.evidenceDueAt <= activeMilestone.endDate))) || invalidDateRange ? 'border-red-300 bg-red-50/50' : ''}`}
                               value={activeMilestone.endDate || ''}
                               onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                              onChange={(e) => updateMilestone(activeMilestone.id, { endDate: e.target.value })}
+                              onChangeIso={(iso) => updateMilestone(activeMilestone.id, { endDate: iso })}
                             />
+                            {invalidDateRange && (
+                              <p className="mt-1 text-xs font-semibold text-red-600">
+                                Ngày kết thúc phải sau ngày bắt đầu.
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         <div className="mt-2.5 grid gap-2.5 md:grid-cols-2">
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-black">Ngày nộp minh chứng <span className="text-red-500">*</span></p>
-                            <input
-                              type="date"
+                            <ViDateInput
                               min={activeMilestone.endDate || today}
-                              className={`${inCls} w-full ${shouldValidateMilestone && !activeMilestone.evidenceDueAt ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
+                              className={`${inCls} w-full ${(touchedMilestones[activeMilestone.id] && !activeMilestone.evidenceDueAt) || invalidEvidenceDate ? 'border-red-300 bg-red-50/50 text-red-700' : ''}`}
                               value={activeMilestone.evidenceDueAt || ''}
                               onBlur={() => markMilestoneTouched(activeMilestone.id)}
-                              onChange={(e) => updateMilestone(activeMilestone.id, { evidenceDueAt: e.target.value })}
+                              onChangeIso={(iso) => updateMilestone(activeMilestone.id, { evidenceDueAt: iso })}
                             />
+                            {invalidEvidenceDate && (
+                              <p className="mt-1 text-xs font-semibold text-red-600">
+                                Ngày nộp minh chứng phải sau ngày kết thúc.
+                              </p>
+                            )}
                             <p className="text-[11px] font-medium text-gray-500">
                               {state.milestones[state.milestones.length - 1]?.id === activeMilestone.id
                                 ? 'Đợt cuối: ngày này sẽ là ngày kết thúc chiến dịch.'
-                                : 'Hạn chót nộp chứng từ. Đợt tiếp theo sẽ bắt đầu từ ngày này.'}
+                                : 'Hạn chót nộp chứng từ cho đợt này.'}
                             </p>
                           </div>
                           <div className="space-y-1">
