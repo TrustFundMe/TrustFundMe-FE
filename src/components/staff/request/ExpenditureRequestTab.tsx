@@ -14,6 +14,8 @@ import { paymentService } from '@/services/paymentService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
+import { auditService } from '@/services/auditService';
+import { generateSHA256 } from '@/utils/hash';
 import RejectModal from './RejectModal';
 import CorrectionModal from './CorrectionModal';
 import AIAnalysisModal from './AIAnalysisModal';
@@ -163,6 +165,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const [aiResult, setAiResult] = useState<any>(null);
     const [showReject, setShowReject] = useState(false);
     const [showCorrection, setShowCorrection] = useState(false);
+    const { user: currentUser } = useAuth();
 
     const loadItems = useCallback(async () => {
         if (!open || categories.length) return;
@@ -189,6 +192,37 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
         try {
             setLoading(true);
             const updated = await method(exp.id, ...args);
+            
+            // Audit Log for Step 3 (Expenditure)
+            const status = args[0];
+            if (status === 'APPROVED' || status === 'REJECTED' || status === 'ALLOWED_EDIT') {
+                try {
+                    const snapshot = JSON.stringify({
+                        expenditure: updated,
+                        categories: categories, // Full Step 3 data
+                        reviewedBy: {
+                            id: currentUser?.id,
+                            fullName: currentUser?.fullName,
+                            email: currentUser?.email
+                        },
+                        reviewedAt: new Date().toISOString(),
+                        action: status === 'ALLOWED_EDIT' ? 'REQUEST_CORRECTION' : status
+                    });
+                    const hash = await generateSHA256(snapshot);
+                    await auditService.create({
+                        entityType: 'EXPENDITURE',
+                        entityId: updated.id,
+                        action: status === 'ALLOWED_EDIT' ? 'CORRECTION' : status,
+                        dataSnapshot: snapshot,
+                        auditHash: hash,
+                        actorId: Number(currentUser?.id),
+                        actorName: campaignData.ownerName // Ghi tên chủ sở hữu thay vì tên Staff
+                    });
+                } catch (auditErr) {
+                    console.error('Expenditure Audit Log failed:', auditErr);
+                }
+            }
+
             onUpdate(updated);
             setShowReject(false);
             setShowCorrection(false);
@@ -328,6 +362,19 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                 campaignIds.map(id => campaignService.getById(id).catch(() => null))
             );
             const validCampaigns = campaigns.filter(c => c !== null);
+            
+            // 4. Fetch owners for these campaigns
+            const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
+            const owners = await Promise.all(
+                uniqueOwnerIds.map(id => userService.getUserById(id).catch(() => null))
+            );
+            const ownerMap = new Map<number, string>();
+            owners.forEach(res => {
+                if (res?.success && res.data) {
+                    ownerMap.set(res.data.id, res.data.fullName);
+                }
+            });
+
             const campaignMap = new Map<number, any>();
             validCampaigns.forEach(c => campaignMap.set(c.id, c));
 
@@ -347,6 +394,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                         campaignProgress: (campaign.goalAmount > 0) ? ((campaign.raisedAmount ?? 0) / campaign.goalAmount) * 100 : 0,
                         campaignEnd: campaign.endDate || '',
                         campaignImageUrl: campaign.coverImageUrl,
+                        ownerName: ownerMap.get(campaign.fundOwnerId) || `Chủ quỹ #${campaign.fundOwnerId}`,
                         expenditures: [],
                         needsAttention: false
                     });

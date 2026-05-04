@@ -284,8 +284,7 @@ function StaffRequestContent() {
             // Bước 2: thông tin campaign + mục tiêu gây quỹ
             step2_campaign: campaignDetail,
             step2_fundraisingGoals: fundraisingGoals,
-            // Bước 3: chiến dịch chi tiêu + chi tiết hạng mục
-            step3_expenditures: expendituresFull,
+            // (Bước 3 - Chi tiêu sẽ được hash riêng khi duyệt expenditure)
           });
           const hash = await generateSHA256(snapshot);
           await auditService.create({
@@ -295,7 +294,7 @@ function StaffRequestContent() {
             dataSnapshot: snapshot,
             auditHash: hash,
             actorId: Number(currentUser.id),
-            actorName: currentUser.fullName || currentUser.email || `Staff#${currentUser.id}`,
+            actorName: targetCampaign.requesterName, // Ghi tên chủ sở hữu chiến dịch thay vì tên Staff
           });
         } catch (auditErr) {
           console.error('Audit Log failed (Silent Error):', auditErr);

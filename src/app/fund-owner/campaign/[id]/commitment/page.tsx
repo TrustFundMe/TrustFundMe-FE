@@ -185,15 +185,19 @@ export default function CommitmentPage() {
           signedAt: new Date().toISOString(),
         });
         const hash = await generateSHA256(snapshot);
-        await auditService.create({
+        const savedAudit = await auditService.create({
           entityType: 'CAMPAIGN_COMMITMENT',
           entityId: savedCommitment?.id ?? payload.campaignId,
           action: 'SIGN',
           dataSnapshot: snapshot,
           auditHash: hash,
           actorId: Number(currentUser?.id),
-          actorName: currentUser?.fullName || currentUser?.email || `User#${currentUser?.id}`,
+          actorName: resolvedFullName || currentUser?.fullName || `User#${currentUser?.id}`,
         });
+
+        if (savedAudit && savedAudit.auditHash) {
+          setSubmissionHash(savedAudit.auditHash);
+        }
       } catch (auditErr) {
         console.error('Audit Log failed (Silent Error):', auditErr);
       }
@@ -215,7 +219,7 @@ export default function CommitmentPage() {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 text-blue-600 animate-spin" />
-          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Đang xác thực hồ sơ...</p>
+          <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Đang tải hồ sơ...</p>
         </div>
       </div>
     );
