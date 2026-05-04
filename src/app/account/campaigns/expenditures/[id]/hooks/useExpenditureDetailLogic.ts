@@ -25,7 +25,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
 
     // Update state
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; }[]>([]);
     const [updating, setUpdating] = useState(false);
     const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
 
@@ -73,8 +73,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
                 setUpdateItems(safeItems.map(item => ({
                     id: item.id,
                     actualQuantity: item.actualQuantity || 0,
-                    actualPrice: item.actualPrice || 0,
-                    actualPurchaseLink: item.actualPurchaseLink || ''
+                    actualPrice: item.actualPrice || 0
                 })));
 
                 if (campaignData?.type === 'ITEMIZED' && safeItems.length > 0) {
@@ -120,8 +119,7 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
             setUpdateItems(items.map(item => ({
                 id: item.id,
                 actualQuantity: item.actualQuantity !== undefined ? item.actualQuantity : 0,
-                actualPrice: item.actualPrice !== undefined ? item.actualPrice : 0,
-                actualPurchaseLink: item.actualPurchaseLink || ''
+                actualPrice: item.actualPrice !== undefined ? item.actualPrice : 0
             })));
             setPendingDeleteMediaIds([]);
             items.forEach(item => loadItemMedia(item.id));
@@ -129,23 +127,13 @@ export function useExpenditureDetailLogic(id: string, isAuthenticated: boolean, 
         setIsUpdateModalOpen(true);
     };
 
-    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualPurchaseLink', value: string) => {
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice', value: string) => {
         const newItems = [...updateItems];
-        if (field === 'actualPurchaseLink') {
-            newItems[index] = { ...newItems[index], [field]: value };
-        } else {
-            newItems[index] = { ...newItems[index], [field]: Number(value) };
-        }
+        newItems[index] = { ...newItems[index], [field]: Number(value) };
         setUpdateItems(newItems);
     };
 
     const handleUpdateSubmit = async () => {
-        // Validation
-        const invalidLinks = updateItems.filter(item => item.actualPurchaseLink && item.actualPurchaseLink.trim() !== '' && !URL_REGEX.test(item.actualPurchaseLink));
-        if (invalidLinks.length > 0) {
-            toast.error('Có link mua hàng không đúng định dạng. Vui lòng kiểm tra lại.');
-            return;
-        }
 
         try {
             setUpdating(true);

@@ -166,7 +166,7 @@ export default function ExpenditureDetailPage() {
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-100">
                                         <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[240px]">Hạng mục</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[160px]">Link nơi mua</th>
+
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[140px]">Nơi mua / Hiệu</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[80px] text-center">SL</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[100px] text-center">ĐV</th>
@@ -200,13 +200,7 @@ export default function ExpenditureDetailPage() {
                                                             <td className="px-4 py-2.5">
                                                                 <p className="text-sm font-black text-slate-900 leading-tight">{item.name}</p>
                                                             </td>
-                                                            <td className="px-2 py-2">
-                                                                {item.actualPurchaseLink ? (
-                                                                    <a href={item.actualPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1 truncate">
-                                                                        <ExternalLink className="w-3 h-3 shrink-0" /> Link
-                                                                    </a>
-                                                                ) : <span className="text-[10px] text-slate-300">---</span>}
-                                                            </td>
+
                                                             <td className="px-2 py-2">
                                                                 {isEvidenceSubmitted
                                                                     ? <span className="text-xs font-bold text-slate-700">{item.actualBrand || '---'}</span>
@@ -247,13 +241,7 @@ export default function ExpenditureDetailPage() {
                                                                 <span className="text-[8px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-widest shrink-0">KẾ HOẠCH</span>
                                                                 <span className="text-[10px] font-bold text-slate-500 truncate">{item.name}</span>
                                                             </td>
-                                                            <td className="px-4 py-1.5 overflow-hidden">
-                                                                {item.expectedPurchaseLink ? (
-                                                                    <a href={item.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[160px]">
-                                                                        <ExternalLink className="w-2.5 h-2.5" /> Link đính kèm
-                                                                    </a>
-                                                                ) : <span className="text-[10px] font-bold text-slate-400 italic">---</span>}
-                                                            </td>
+
                                                             <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500">{item.expectedBrand || '---'}</span></td>
                                                             <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-black text-slate-500">{renderNumber(item.expectedQuantity || 0)}</span></td>
                                                             <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500 uppercase">{item.expectedUnit || item.unit || '---'}</span></td>

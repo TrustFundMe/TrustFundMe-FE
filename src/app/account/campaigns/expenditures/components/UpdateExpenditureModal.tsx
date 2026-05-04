@@ -14,11 +14,11 @@ interface UpdateExpenditureModalProps {
     campaign: CampaignDto;
     updateExpenditure: Expenditure;
     updateItemsData: ExpenditureItem[];
-    updateItems: { id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string }[];
+    updateItems: { id: number; actualQuantity: number; actualPrice: number; actualBrand?: string }[];
     itemMedia: Record<number, MediaUploadResponse[]>;
     donationSummary: Record<number, number>;
     isRefundDone: boolean;
-    handleUpdateItemChange: (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualPurchaseLink' | 'actualBrand', value: string) => void;
+    handleUpdateItemChange: (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualBrand', value: string) => void;
     handleUpdateSubmit: () => void;
     updating: boolean;
     setGalleryModalItemId: (id: number) => void;
@@ -70,7 +70,7 @@ export default function UpdateExpenditureModal({
     const [postTitle, setPostTitle] = useState(`Cập nhật minh chứng chi tiêu: ${campaign.title}`);
     const [postContent, setPostContent] = useState(`Tôi vừa hoàn thành chi tiêu cho chiến dịch "${campaign.title}". Mời mọi người cùng theo dõi!`);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // New states for Step 3 list
     const [evidenceProofUrls, setEvidenceProofUrls] = useState<Record<number, string>>(() => {
         const initial: Record<number, string> = {};
@@ -84,7 +84,7 @@ export default function UpdateExpenditureModal({
     const handleEvidenceSubmit = async (evidenceId: number) => {
         const proofUrl = evidenceProofUrls[evidenceId];
         if (!proofUrl) return;
-        
+
         try {
             setSubmittingEvidence(evidenceId);
             await expenditureService.submitEvidence(evidenceId, proofUrl);
@@ -157,11 +157,11 @@ export default function UpdateExpenditureModal({
                     </div>
                 </div>
                 <div className="mt-4 text-xs font-medium text-emerald-800 leading-relaxed bg-white/50 p-4 rounded-xl border border-emerald-100/50">
-                    Chào bạn! Quy trình cập nhật chi tiêu gồm 4 bước: 
-                    <br/>- <b>Bước 1</b>: Xem lại tổng số tiền.
-                    <br/>- <b>Bước 2</b>: Tải lên hình ảnh hóa đơn, vật phẩm cho từng hạng mục.
-                    <br/>- <b>Bước 3</b>: Nộp minh chứng cho các khoản đã giải ngân (đăng bài viết).
-                    <br/>- <b>Bước 4</b>: Cập nhật số liệu thực tế cuối cùng và tổng kết.
+                    Chào bạn! Quy trình cập nhật chi tiêu gồm 4 bước:
+                    <br />- <b>Bước 1</b>: Xem lại tổng số tiền.
+                    <br />- <b>Bước 2</b>: Tải lên hình ảnh hóa đơn, vật phẩm cho từng hạng mục.
+                    <br />- <b>Bước 3</b>: Nộp minh chứng cho các khoản đã giải ngân (đăng bài viết).
+                    <br />- <b>Bước 4</b>: Cập nhật số liệu thực tế cuối cùng và tổng kết.
                 </div>
             </div>
         </div>
@@ -319,7 +319,7 @@ export default function UpdateExpenditureModal({
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-12 text-center sm:p-0">
                 <div className="fixed inset-0 bg-gray-900/60 transition-opacity backdrop-blur-sm" aria-hidden="true" onClick={onClose}></div>
                 <div className="inline-block bg-[#f8fafc] rounded-[2.5rem] text-left overflow-hidden shadow-2xl transform transition-all align-middle sm:max-w-6xl w-full flex flex-col border border-white/40 ring-1 ring-gray-900/5 max-h-[95vh] relative z-20">
-                    
+
                     {/* Header */}
                     <div className="bg-white px-8 py-6 border-b border-gray-100 flex items-center justify-between shrink-0 shadow-sm relative z-30">
                         <div className="flex items-center gap-5">
@@ -328,7 +328,7 @@ export default function UpdateExpenditureModal({
                             </div>
                             <div className="leading-tight">
                                 <h3 className="text-2xl font-black text-gray-900 tracking-tight" id="modal-title">
-                                    Cập nhật Thực Tế & Minh Chứng 
+                                    Cập nhật Thực Tế & Minh Chứng
                                 </h3>
                                 <div className="flex items-center gap-2 mt-1">
                                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase rounded-md tracking-widest border border-emerald-200">Bước {currentStep}/3</span>

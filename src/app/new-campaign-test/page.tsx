@@ -195,7 +195,6 @@ export default function NewCampaignTestPage() {
           if (!item.name.trim()) return false;
           if (!item.expectedQuantity || item.expectedQuantity <= 0) return false;
           if (!item.expectedPrice || item.expectedPrice <= 0) return false;
-          if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) return false;
         }
       }
     }
@@ -222,7 +221,6 @@ export default function NewCampaignTestPage() {
           if (!item.name.trim()) return `Đợt ${i + 1}, danh mục ${j + 1}, hạng mục ${k + 1}: thiếu tên`;
           if (!item.expectedQuantity || item.expectedQuantity <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: số lượng phải > 0`;
           if (!item.expectedPrice || item.expectedPrice <= 0) return `Đợt ${i + 1}, hạng mục ${k + 1}: đơn giá phải > 0`;
-          if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) return `Đợt ${i + 1}, hạng mục ${k + 1}: link không đúng định dạng`;
         }
       }
     }
@@ -332,7 +330,6 @@ export default function NewCampaignTestPage() {
             expectedBrand: item.expectedBrand || '',
             expectedPurchaseLocation: item.expectedPurchaseLocation || '',
             expectedUnit: item.expectedUnit || '',
-            expectedPurchaseLink: item.expectedPurchaseLink || '',
             expectedNote: item.expectedNote || '',
           })),
         }));
@@ -553,8 +550,8 @@ export default function NewCampaignTestPage() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`mt-6 rounded-2xl border p-5 ${submitResult.type === 'success'
-                      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
-                      : 'border-red-100 bg-red-50 text-red-800'
+                    ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                    : 'border-red-100 bg-red-50 text-red-800'
                     }`}
                 >
                   <div className="flex items-center gap-2 font-semibold">

@@ -90,7 +90,6 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                         collapsed: false,
                         items: c.items.map(i => ({
                             name: i.name,
-                            expectedPurchaseLink: i.expectedPurchaseLink || '',
                             expectedQuantity: i.expectedQuantity || 0,
                             expectedPrice: i.expectedPrice || 0,
                             expectedNote: i.expectedNote || '',
@@ -115,7 +114,6 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                         collapsed: false,
                         items: expData.items.map(i => ({
                             name: i.name,
-                            expectedPurchaseLink: i.expectedPurchaseLink || '',
                             expectedQuantity: i.expectedQuantity || 0,
                             expectedPrice: i.expectedPrice || 0,
                             expectedNote: i.expectedNote || '',
@@ -131,7 +129,7 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                         , 0);
                     setOriginalTotal(total);
                 } else {
-                    setCategories([{ name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }]);
+                    setCategories([{ name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }]);
                     setOriginalTotal(0);
                 }
 
@@ -154,7 +152,7 @@ function EditExpenditureContent({ expId }: { expId: string }) {
     const handleExportItems = () => { /* ... similar logic ... */ };
     const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => { /* ... similar logic ... */ };
 
-    const addCategory = () => setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }]);
+    const addCategory = () => setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }]);
     const removeCategory = (idx: number) => categories.length > 1 && setCategories(categories.filter((_, i) => i !== idx));
     const updateCategory = (idx: number, field: string, value: string) => {
         const next = [...categories];
@@ -176,7 +174,7 @@ function EditExpenditureContent({ expId }: { expId: string }) {
     };
     const addItem = (catIdx: number) => {
         const next = [...categories];
-        next[catIdx].items.push({ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' });
+        next[catIdx].items.push({ name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' });
         setCategories(next);
     };
     const removeItem = (catIdx: number, itemIdx: number) => {
@@ -329,7 +327,6 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                                                         <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[120px]">Đơn giá</th>
                                                         <th className="px-2 py-2 text-right text-[9px] font-black text-gray-400 uppercase tracking-widest w-[130px]">Thành tiền</th>
                                                         <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[150px]">Địa điểm mua</th>
-                                                        <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest w-[150px]">Link tham khảo</th>
                                                         <th className="px-3 py-2 text-left text-[9px] font-black text-gray-400 uppercase tracking-widest min-w-[150px]">Ghi chú</th>
                                                         <th className="px-2 py-2 w-[40px] text-center"></th>
                                                     </tr>
@@ -392,14 +389,7 @@ function EditExpenditureContent({ expId }: { expId: string }) {
                                                                     placeholder="Địa điểm mua..."
                                                                 />
                                                             </td>
-                                                            <td className="p-2 py-2">
-                                                                <input
-                                                                    className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-gray-700 placeholder:text-gray-300 text-blue-500"
-                                                                    value={item.expectedPurchaseLink || ''}
-                                                                    onChange={e => handleItemChange(cIdx, iIdx, 'expectedPurchaseLink', e.target.value)}
-                                                                    placeholder="Link shopee, tiki..."
-                                                                />
-                                                            </td>
+
                                                             <td className="p-2 py-2">
                                                                 <input
                                                                     className="w-full bg-white border border-gray-200 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 text-[11px] font-medium p-2 text-gray-700 placeholder:text-gray-300"
