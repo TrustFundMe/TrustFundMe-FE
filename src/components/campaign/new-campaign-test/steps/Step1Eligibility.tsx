@@ -160,8 +160,6 @@ export default function Step1Eligibility({
   const [bankQuery, setBankQuery] = useState('');
   const [bankOpen, setBankOpen] = useState(false);
   const [cassoGuideOpen, setCassoGuideOpen] = useState(false);
-  const [webhookKeyDupError, setWebhookKeyDupError] = useState('');
-  const [checkingWebhookKey, setCheckingWebhookKey] = useState(false);
   const [refreshingStep1, setRefreshingStep1] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [checkingBankDup, setCheckingBankDup] = useState(false);
@@ -331,36 +329,15 @@ export default function Step1Eligibility({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bankDuplicateCheckKey, bankErrors.number, bankErrors.bank, bankNumberTrim, bankCodeTrim]);
 
-  const webhookKeyTrim = state.bankInfo.webhookKey.trim();
-  useEffect(() => {
-    if (!webhookKeyTrim) { setWebhookKeyDupError(''); return; }
-    let cancelled = false;
-    const t = window.setTimeout(async () => {
-      setCheckingWebhookKey(true);
-      try {
-        const exists = await bankAccountService.checkWebhookKeyExists(webhookKeyTrim);
-        if (cancelled) return;
-        setWebhookKeyDupError(
-          exists ? 'Mã Casso này đã được đăng ký bởi tài khoản khác. Vui lòng dùng mã khác.' : '',
-        );
-      } catch {
-        if (!cancelled) setWebhookKeyDupError('');
-      } finally {
-        if (!cancelled) setCheckingWebhookKey(false);
-      }
-    }, 450);
-    return () => { cancelled = true; window.clearTimeout(t); };
-  }, [webhookKeyTrim]);
 
   const handleStepNext = async () => {
-    // If canNext is true (e.g. bypassed), skip bank validation
-    if (canNext && !checkingBankDup && !checkingWebhookKey) {
+    if (canNext && !checkingBankDup) {
       onNext();
       return;
     }
-    if (!canNext || checkingBankDup || checkingWebhookKey || initialLoading || refreshingStep1) return;
-    if (bankDuplicateError || webhookKeyDupError) {
-      toast(bankDuplicateError || webhookKeyDupError, 'error');
+    if (!canNext || checkingBankDup || initialLoading || refreshingStep1) return;
+    if (bankDuplicateError) {
+      toast(bankDuplicateError, 'error');
       return;
     }
     const accountNumber = state.bankInfo.accountNumber.trim();
@@ -375,12 +352,6 @@ export default function Step1Eligibility({
         toast('Tài khoản ngân hàng bị trùng trong hệ thống', 'error');
         return;
       }
-      const webhookExists = await bankAccountService.checkWebhookKeyExists(state.bankInfo.webhookKey.trim());
-      if (webhookExists) {
-        setWebhookKeyDupError('Mã Casso này đã được đăng ký bởi tài khoản khác. Vui lòng dùng mã khác.');
-        toast('Mã Casso bị trùng trong hệ thống', 'error');
-        return;
-      }
       onNext();
     } catch {
       setBankDuplicateError('Không kiểm tra được trùng tài khoản. Vui lòng thử lại.');
@@ -392,11 +363,9 @@ export default function Step1Eligibility({
   const isStatusLoading = initialLoading || refreshingStep1;
   const stepFooterPendingMessage = isStatusLoading
     ? 'Đang cập nhật trạng thái hồ sơ...'
-    : checkingWebhookKey
-      ? 'Đang kiểm tra mã Casso...'
-      : checkingBankDup || checkingBankDupLive
-        ? 'Đang kiểm tra trùng tài khoản ngân hàng...'
-        : undefined;
+    : checkingBankDup || checkingBankDupLive
+      ? 'Đang kiểm tra trùng tài khoản ngân hàng...'
+      : undefined;
 
   const hasCv = Boolean(user?.cvUrl);
   const isIdentityVerified = state.kycStatus === 'APPROVED' && hasCv;
@@ -682,12 +651,6 @@ export default function Step1Eligibility({
                   {bankTouched.webhookKey && bankErrors.webhookKey && (
                     <p className="text-xs font-semibold text-red-600">{bankErrors.webhookKey}</p>
                   )}
-                  {checkingWebhookKey && (
-                    <p className="text-xs text-slate-400 mt-1">Đang kiểm tra mã Casso...</p>
-                  )}
-                  {!checkingWebhookKey && webhookKeyDupError && (
-                    <p className="text-xs font-semibold text-red-600 mt-1">{webhookKeyDupError}</p>
-                  )}
                 </LabeledField>
               </div>
             </SectionBlock>
@@ -696,10 +659,10 @@ export default function Step1Eligibility({
       </div>
 
       <StepFooter
-        canNext={canNext && !checkingBankDup && !checkingBankDupLive && !bankDuplicateError && !webhookKeyDupError && !checkingWebhookKey}
+        canNext={canNext && !checkingBankDup && !checkingBankDupLive && !bankDuplicateError}
         pendingMessage={stepFooterPendingMessage}
         onNext={handleStepNext}
-        failMessage={bankDuplicateError || webhookKeyDupError || failMessage}
+        failMessage={bankDuplicateError || failMessage}
       />
 
       <AnimatePresence>

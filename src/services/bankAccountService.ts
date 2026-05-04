@@ -32,13 +32,6 @@ export const bankAccountService = {
         await api.delete(API_ENDPOINTS.BANK_ACCOUNTS.BY_ID(id));
     },
 
-    async checkWebhookKeyExists(webhookKey: string): Promise<boolean> {
-        const res = await api.get<{ exists: boolean }>(API_ENDPOINTS.BANK_ACCOUNTS.CHECK_WEBHOOK_KEY_EXISTS, {
-            params: { webhookKey },
-        });
-        return res.data.exists;
-    },
-
     async checkExists(accountNumber: string, bankCode: string): Promise<boolean> {
         const res = await api.get<{ exists: boolean }>(API_ENDPOINTS.BANK_ACCOUNTS.CHECK_EXISTS, {
             params: { accountNumber, bankCode },
