@@ -53,7 +53,7 @@ export const expenditureService = {
         return response.data;
     },
 
-    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string; actualUnit?: string; }[], proofUrl?: string): Promise<Expenditure> => {
+    updateActuals: async (id: string | number, items: { id: number; actualQuantity: number; actualPrice: number; actualBrand?: string; actualUnit?: string; }[], proofUrl?: string): Promise<Expenditure> => {
         const response = await axiosInstance.put(`/api/expenditures/${id}/actuals`, { items, proofUrl });
         return response.data;
     },

@@ -66,33 +66,13 @@ const ItemRow: React.FC<{
             <td className="px-3 py-2 border-r border-[#E2E8F0] align-top">
                 <div className="text-[14px] font-bold text-[#1E293B] uppercase leading-tight line-clamp-2 mb-1">{item.name}</div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[9px] font-black uppercase tracking-wider">
-                    {item.actualPurchaseLink && (
-                        <a
-                            href={item.actualPurchaseLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-0.5"
-                            title="Link mua thực tế"
-                        >
-                            <ExternalLink className="w-2.5 h-2.5" /> TT
-                        </a>
-                    )}
+
                 </div>
                 {item.note && <div className="text-[11px] text-[#64748B] truncate italic mt-1 uppercase opacity-70 font-medium">{item.note}</div>}
             </td>
             <td className="px-3 py-2 border-r border-[#E2E8F0] align-top">
                 <div className="text-[10px] text-[#475569] font-medium line-clamp-1 mb-1">{item.purchaseLocation || '-'}</div>
-                {item.expectedPurchaseLink && (
-                    <a
-                        href={item.expectedPurchaseLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-[10px] font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline"
-                    >
-                        <ExternalLink className="w-2.5 h-2.5 mr-1" />
-                        Xem link
-                    </a>
-                )}
+
             </td>
             <td className="px-2 py-2 text-center border-r border-[#E2E8F0]">
                 <button

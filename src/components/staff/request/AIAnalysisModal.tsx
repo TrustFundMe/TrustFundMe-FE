@@ -29,7 +29,6 @@ interface DetectedItem {
     statusMessage?: string;
     isLinkMatched?: boolean;
     linkType?: string;
-    expectedPurchaseLink?: string;
     geographicEvidenceUrl?: string;
     logisticsScore?: number;
     vendorTrustScore?: number;
@@ -159,7 +158,6 @@ export default function AIAnalysisModal({
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đơn vị dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hàng dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Địa điểm dự kiến mua</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Link dự kiến mua</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Note dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
                                         Kế hoạch (SL x Giá)
@@ -207,13 +205,6 @@ export default function AIAnalysisModal({
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
                                                 <div className="text-[10px] text-slate-700 font-medium break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 border-r border-slate-50">
-                                                {sysItem.expectedPurchaseLink ? (
-                                                    <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline flex items-center gap-1">
-                                                        <Store className="h-2.5 w-2.5" /> Xem Link
-                                                    </a>
-                                                ) : <span className="text-[10px] text-slate-400">-</span>}
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
                                                 <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>
@@ -342,7 +333,6 @@ export default function AIAnalysisModal({
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Nhãn hàng</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Đơn vị</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Địa điểm mua</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Link mua</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Ghi chú</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Hệ Thống PD</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Bóc Tách HĐ</th>
@@ -382,13 +372,6 @@ export default function AIAnalysisModal({
                                             </td>
                                             <td className="px-3 py-3">
                                                 <div className="text-[9px] text-slate-600 break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                {sysItem.expectedPurchaseLink ? (
-                                                    <a href={sysItem.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[9px] text-blue-600 hover:underline flex items-center gap-1">
-                                                        <Store className="h-2.5 w-2.5" /> Xem Link
-                                                    </a>
-                                                ) : <span className="text-[9px] text-slate-400">-</span>}
                                             </td>
                                             <td className="px-3 py-3">
                                                 <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>

@@ -50,7 +50,7 @@ function CreateExpenditureContent() {
         collapsed: boolean;
     }
     const [categories, setCategories] = useState<CategoryState[]>([
-        { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }], collapsed: false }
+        { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }
     ]);
 
     const [showImportModal, setShowImportModal] = useState(false);
@@ -111,9 +111,9 @@ function CreateExpenditureContent() {
     const handleDownloadTemplate = () => {
         try {
             const sampleData = [
-                { 'STT': 1, 'Tên hàng hóa / Dịch vụ': 'Thùng mì tôm', 'Link mua hàng dự kiến': 'https://maps.app.goo.gl/xxx', 'Số lượng dự kiến': 100, 'Đơn giá dự kiến (VNĐ)': 7000, 'Thành tiền dự kiến (VNĐ)': 700000, 'Ghi chú': 'Mua tại siêu thị Co.opmart' },
-                { 'STT': 2, 'Tên hàng hóa / Dịch vụ': 'Nước đóng chai (lốc 6 chai)', 'Link mua hàng dự kiến': 'https://shopee.vn/xxx', 'Số lượng dự kiến': 50, 'Đơn giá dự kiến (VNĐ)': 18000, 'Thành tiền dự kiến (VNĐ)': 900000, 'Ghi chú': 'Nước suối bidrico 1500ml' },
-                { 'STT': 3, 'Tên hàng hóa / Dịch vụ': 'Gạo (kg)', 'Link mua hàng dự kiến': '', 'Số lượng dự kiến': 200, 'Đơn giá dự kiến (VNĐ)': 25000, 'Thành tiền dự kiến (VNĐ)': 5000000, 'Ghi chú': 'Gạo ST25 Việt Nam' },
+                { 'STT': 1, 'Tên hàng hóa / Dịch vụ': 'Thùng mì tôm', 'Số lượng dự kiến': 100, 'Đơn giá dự kiến (VNĐ)': 7000, 'Thành tiền dự kiến (VNĐ)': 700000, 'Ghi chú': 'Mua tại siêu thị Co.opmart' },
+                { 'STT': 2, 'Tên hàng hóa / Dịch vụ': 'Nước đóng chai (lốc 6 chai)', 'Số lượng dự kiến': 50, 'Đơn giá dự kiến (VNĐ)': 18000, 'Thành tiền dự kiến (VNĐ)': 900000, 'Ghi chú': 'Nước suối bidrico 1500ml' },
+                { 'STT': 3, 'Tên hàng hóa / Dịch vụ': 'Gạo (kg)', 'Số lượng dự kiến': 200, 'Đơn giá dự kiến (VNĐ)': 25000, 'Thành tiền dự kiến (VNĐ)': 5000000, 'Ghi chú': 'Gạo ST25 Việt Nam' },
             ];
             const ws = XLSX.utils.json_to_sheet(sampleData);
             const wb = XLSX.utils.book_new();
@@ -145,11 +145,10 @@ function CreateExpenditureContent() {
             const data = items.map((item, idx) => ({
                 'STT': idx + 1,
                 'Tên hàng hóa / Dịch vụ': item.name || '',
-                'Link mua hàng dự kiến': item.expectedPurchaseLink || '',
                 'Số lượng dự kiến': Number(item.expectedQuantity) || 0,
                 'Đơn giá dự kiến (VNĐ)': Number(item.expectedPrice) || 0,
                 'Thành tiền dự kiến (VNĐ)': (Number(item.expectedQuantity) || 0) * (Number(item.expectedPrice) || 0),
-                'Ghi chú': item.note || '',
+                'Ghi chú': item.expectedNote || '',
             }));
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
@@ -224,13 +223,8 @@ function CreateExpenditureContent() {
                 }
 
                 // Ghi chú: tối đa 100 ký tự
-                if (item.note && item.note.trim().length > 100) {
+                if (item.expectedNote && item.expectedNote.trim().length > 100) {
                     errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
-                }
-
-                // Link
-                if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) {
-                    errs.push(`Dòng ${row}: Link mua hàng không đúng định dạng`);
                 }
 
                 errors.push(...errs);
@@ -271,7 +265,7 @@ function CreateExpenditureContent() {
 
     // ── Category handlers ──
     const addCategory = () => {
-        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }], collapsed: false }]);
+        setCategories([...categories, { name: '', description: '', withdrawalCondition: '', items: [{ name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }], collapsed: false }]);
     };
 
     const removeCategory = (catIndex: number) => {
@@ -303,7 +297,7 @@ function CreateExpenditureContent() {
 
     const addItem = (catIndex: number) => {
         const newCats = [...categories];
-        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { name: '', expectedPurchaseLink: '', expectedQuantity: 1, expectedPrice: 0, note: '' }] };
+        newCats[catIndex] = { ...newCats[catIndex], items: [...newCats[catIndex].items, { name: '', expectedQuantity: 1, expectedPrice: 0, expectedNote: '' }] };
         setCategories(newCats);
     };
 
@@ -360,7 +354,7 @@ function CreateExpenditureContent() {
             toast.error('Số lượng dự kiến không được vượt quá 10.000.');
             return;
         }
-        if (allItems.some(item => (item.note || '').length > 100)) {
+        if (allItems.some(item => (item.expectedNote || '').length > 100)) {
             toast.error('Ghi chú không được vượt quá 100 ký tự.');
             return;
         }
@@ -616,7 +610,6 @@ function CreateExpenditureContent() {
                                                     <tr>
                                                         <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-5">STT</th>
                                                         <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600">Tên hàng hóa / Dịch vụ</th>
-                                                        <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-600 w-48">Link mua hàng</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-16">SL</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Đơn giá (VNĐ)</th>
                                                         <th className="px-2 py-1.5 text-right text-xs font-bold text-gray-600 w-24">Thành tiền</th>
@@ -637,15 +630,6 @@ function CreateExpenditureContent() {
                                                                     value={item.name}
                                                                     onChange={(e) => handleItemChange(catIndex, itemIndex, 'name', e.target.value)}
                                                                     required
-                                                                />
-                                                            </td>
-                                                            <td className="px-2 py-1">
-                                                                <input
-                                                                    type="text"
-                                                                    className={`w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1 ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'border-red-500 bg-red-50 text-red-600' : ''}`}
-                                                                    placeholder="https://..."
-                                                                    value={item.expectedPurchaseLink || ''}
-                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'expectedPurchaseLink', e.target.value)}
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-1">
@@ -679,8 +663,8 @@ function CreateExpenditureContent() {
                                                                     maxLength={100}
                                                                     className="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm border p-1"
                                                                     placeholder="Ghi chú..."
-                                                                    value={item.note || ''}
-                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'note', e.target.value)}
+                                                                    value={item.expectedNote || ''}
+                                                                    onChange={(e) => handleItemChange(catIndex, itemIndex, 'expectedNote', e.target.value)}
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-1 text-center">
@@ -849,7 +833,7 @@ function CreateExpenditureContent() {
                                                             Number(item.expectedQuantity) * Number(item.expectedPrice)
                                                         )}
                                                     </td>
-                                                    <td className="px-3 py-2 text-gray-500">{item.note || '-'}</td>
+                                                    <td className="px-3 py-2 text-gray-500">{item.expectedNote || '-'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
