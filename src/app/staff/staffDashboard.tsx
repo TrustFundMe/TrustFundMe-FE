@@ -583,7 +583,7 @@ export default function StaffDashboard() {
                       Trung tâm điều phối
                     </div>
                     <h1 className="mt-2 text-[2rem] md:text-[2.2rem] tracking-tight font-black text-zinc-900 leading-none">
-                      Staff Dashboard
+                      Quản trị nhân viên
                     </h1>
                     <p className="mt-1 text-sm font-medium text-zinc-500">
                       Xin chào {user?.fullName || currentUser?.fullName || 'Staff'} · {user?.role === 'ADMIN' ? 'Quản trị viên' : 'Nhân viên kiểm duyệt'}
