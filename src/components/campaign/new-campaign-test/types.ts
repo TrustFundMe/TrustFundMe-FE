@@ -62,8 +62,6 @@ export interface MilestoneCategoryItem {
   actualQuantity: number;
   expectedPrice: number;
   actualPrice: number;
-  expectedPurchaseLink?: string;
-  actualPurchaseLink?: string;
   expectedBrand: string;
   expectedPurchaseLocation: string;
   expectedUnit: string;

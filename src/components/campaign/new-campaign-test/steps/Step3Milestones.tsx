@@ -353,7 +353,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
               expectedUnit: item.expectedUnit || '',
               expectedBrand: item.expectedBrand || '',
               expectedPurchaseLocation: item.expectedPurchaseLocation || '',
-              expectedPurchaseLink: item.expectedPurchaseLink || '',
               expectedNote: item.expectedNote || ''
             }))
           }))
@@ -419,7 +418,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                     expectedUnit: '',
                     expectedBrand: '',
                     expectedPurchaseLocation: '',
-                    expectedPurchaseLink: '',
                     expectedNote: '',
                   },
                 ],
@@ -457,7 +455,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                       expectedUnit: '',
                       expectedBrand: '',
                       expectedPurchaseLocation: '',
-                      expectedPurchaseLink: '',
                       expectedNote: '',
                     },
                   ],
@@ -595,7 +592,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
       if (!(item.name?.trim())) count += 1;
       if (!item.expectedQuantity || item.expectedQuantity <= 0) count += 1;
       if (!item.expectedPrice || item.expectedPrice <= 0) count += 1;
-      if (item.expectedPurchaseLink?.trim() && !URL_REGEX.test(item.expectedPurchaseLink)) count += 1;
     });
     return count;
   };
@@ -842,7 +838,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                           </div>
                           <button
                             type="button"
-                    onClick={() => openDeleteMilestoneConfirm(activeMilestone.id)}
+                            onClick={() => openDeleteMilestoneConfirm(activeMilestone.id)}
                             className="mt-5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-400 ring-1 ring-gray-200 transition hover:bg-red-50 hover:text-red-600 hover:ring-red-200 disabled:cursor-not-allowed disabled:opacity-35"
                             aria-label="Xóa mốc"
                           >
@@ -1218,27 +1214,7 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                 }
                               />
                             </div>
-                            <div>
-                              <p className="mb-1 text-[11px] font-semibold text-black">Link mua hàng</p>
-                              <input
-                                className={`${inCls} ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink)
-                                  ? 'border-red-300 bg-red-50/50 text-red-600 font-semibold'
-                                  : ''
-                                  }`}
-                                placeholder="https://..."
-                                value={item.expectedPurchaseLink || ''}
-                                onBlur={() => markCategoryTouched(modalCategory.id)}
-                                onChange={(e) =>
-                                  updateCategoryItem(
-                                    modalMilestone.id,
-                                    modalCategory.id,
-                                    item.id,
-                                    'expectedPurchaseLink',
-                                    e.target.value,
-                                  )
-                                }
-                              />
-                            </div>
+
                             <div className="md:col-span-2">
                               <p className="mb-1 text-[11px] font-semibold text-black">Ghi chú</p>
                               <textarea

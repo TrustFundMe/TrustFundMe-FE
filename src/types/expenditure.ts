@@ -33,6 +33,7 @@ export interface ExpenditureItem {
     expectedBrand?: string;
     actualBrand?: string;
     expectedPurchaseLocation?: string;
+    actualPurchaseLocation?: string;
     createdAt?: string;
     updatedAt?: string;
     /** Hình ảnh minh chứng cho item này (loaded separately) */
@@ -92,6 +93,7 @@ export interface CreateExpenditureItemRequest {
     actualBrand?: string;
     expectedUnit?: string;
     expectedPurchaseLocation?: string;
+    actualPurchaseLocation?: string;
 }
 
 export interface CreateExpenditureCatologyRequest {

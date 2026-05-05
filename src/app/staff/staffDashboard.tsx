@@ -344,7 +344,16 @@ export default function StaffDashboard() {
       ).slice(0, 8);
 
       const expenditureResults = await Promise.allSettled(
-        expenditureTaskIds.map((id) => expenditureService.getById(id))
+        expenditureTaskIds.map(async (id) => {
+          try {
+            return await expenditureService.getById(id);
+          } catch (err: any) {
+            if (err.response?.status === 404) {
+              return null;
+            }
+            throw err;
+          }
+        })
       );
 
       const expDetailsMap = new Map<number, ExpenditureDetailLite>();
@@ -362,12 +371,21 @@ export default function StaffDashboard() {
       const campaignResults = await Promise.allSettled(
         Array.from(campaignIdsToFetch)
           .slice(0, 12)
-          .map((id) => campaignService.getById(id))
+          .map(async (id) => {
+            try {
+              return await campaignService.getById(id);
+            } catch (err: any) {
+              if (err.response?.status === 404) {
+                return null;
+              }
+              throw err;
+            }
+          })
       );
 
       const campaignNameMap = new Map<number, string>();
       campaignResults.forEach((result) => {
-        if (result.status === 'fulfilled') {
+        if (result.status === 'fulfilled' && result.value) {
           const campaign = result.value as CampaignLite;
           campaignNameMap.set(campaign.id, campaign.title || `#${campaign.id}`);
         }
@@ -435,7 +453,6 @@ export default function StaffDashboard() {
       case 'KYC': return 'Danh tính';
       case 'EXPENDITURE': return 'Chi tiêu';
       case 'EVIDENCE': return 'Minh chứng';
-      case 'SUPPORT': return 'Hỗ trợ';
       default: return 'Yêu cầu';
     }
   };
@@ -446,7 +463,6 @@ export default function StaffDashboard() {
       case 'CAMPAIGN': return '/staff/request?tab=CAMPAIGN';
       case 'EXPENDITURE': return '/staff/request?tab=EXPENDITURE';
       case 'EVIDENCE': return '/staff/request?tab=EVIDENCE';
-      case 'SUPPORT': return '/staff/request?tab=SUPPORT';
       case 'FLAG': return '/staff/flags';
       default: return '/staff/request';
     }
@@ -689,9 +705,9 @@ export default function StaffDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
           <div className="xl:col-span-8 rounded-[1.5rem] bg-black/5 p-1.5 ring-1 ring-black/5">
             <div className="rounded-[calc(1.5rem-0.375rem)] bg-white overflow-hidden shadow-[inset_0_1px_1px_rgba(255,255,255,0.65)] min-h-[calc(100dvh-220px)]">
-                <div className="flex items-center justify-between px-5 py-2.5 border-b border-zinc-100">
+              <div className="flex items-center justify-between px-5 py-2.5 border-b border-zinc-100">
                 <div>
-                    <h2 className="text-lg font-black tracking-tight text-zinc-900">Nhiệm vụ cần xử lý</h2>
+                  <h2 className="text-lg font-black tracking-tight text-zinc-900">Nhiệm vụ cần xử lý</h2>
                 </div>
                 <span className="rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-semibold text-zinc-600">
                   {pendingCount} đang mở
@@ -711,60 +727,66 @@ export default function StaffDashboard() {
                     <p className="text-sm font-semibold text-zinc-500">Không có nhiệm vụ cần xử lý.</p>
                   </div>
                 ) : (
-                  tasks.map((task) => {
-                    const TaskIcon = getTaskIcon(task.type);
-                    const isExpenseTask = task.type === 'EXPENDITURE' || task.type === 'EVIDENCE';
-                    const expenditureDetail =
-                      isExpenseTask && task.targetId ? expenditureDetailsById.get(Number(task.targetId)) : undefined;
-                    const mappedCampaignId = expenditureDetail?.campaignId;
-                    const campaignTitle = mappedCampaignId
-                      ? (campaignNames.get(mappedCampaignId) || `#${mappedCampaignId}`)
-                      : undefined;
-                    const batchLabel = formatBatchLabel(expenditureDetail);
-                    const taskTitle =
-                      task.type === 'CAMPAIGN' && task.targetId
-                        ? (campaignNames.get(task.targetId) || `#${task.targetId}`)
-                        : isExpenseTask && campaignTitle
-                          ? `${campaignTitle}${batchLabel ? ` · ${batchLabel}` : ''}`
-                          : isExpenseTask && task.targetId && expenditureTitleById.get(task.targetId)
-                            ? (expenditureTitleById.get(task.targetId) || `#${task.targetId}`)
-                          : `#${task.targetId || task.id}`;
+                  tasks
+                    .filter((task) => {
+                      // Filter out tasks with missing targets that result in 404
+                      if (task.type === 'CAMPAIGN') return campaignNames.has(task.targetId);
+                      if (task.type === 'EXPENDITURE' || task.type === 'EVIDENCE') return task.targetId && expenditureDetailsById.has(Number(task.targetId));
+                      return true;
+                    })
+                    .map((task) => {
+                      const TaskIcon = getTaskIcon(task.type);
+                      const isExpenseTask = task.type === 'EXPENDITURE' || task.type === 'EVIDENCE';
+                      const expenditureDetail =
+                        isExpenseTask && task.targetId ? expenditureDetailsById.get(Number(task.targetId)) : undefined;
+                      const mappedCampaignId = expenditureDetail?.campaignId;
+                      const campaignTitle = mappedCampaignId
+                        ? (campaignNames.get(mappedCampaignId) || `#${mappedCampaignId}`)
+                        : undefined;
+                      const batchLabel = formatBatchLabel(expenditureDetail);
+                      const taskTitle =
+                        task.type === 'CAMPAIGN' && task.targetId
+                          ? (campaignNames.get(task.targetId) || `#${task.targetId}`)
+                          : isExpenseTask && campaignTitle
+                            ? `${campaignTitle}${batchLabel ? ` · ${batchLabel}` : ''}`
+                            : isExpenseTask && task.targetId && expenditureTitleById.get(task.targetId)
+                              ? (expenditureTitleById.get(task.targetId) || `#${task.targetId}`)
+                              : `#${task.targetId || task.id}`;
 
-                    const resolvedTargetId = isExpenseTask ? (mappedCampaignId || task.targetId) : task.targetId;
+                      const resolvedTargetId = isExpenseTask ? (mappedCampaignId || task.targetId) : task.targetId;
 
-                    return (
-                      <button
-                        key={task.id}
-                        type="button"
-                        onClick={() => openTask(task.type, resolvedTargetId)}
-                        className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-zinc-50"
-                      >
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-700 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
-                          <TaskIcon className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-semibold text-zinc-800">
-                            {getTaskLabel(task.type)} · {taskTitle}
+                      return (
+                        <button
+                          key={task.id}
+                          type="button"
+                          onClick={() => openTask(task.type, resolvedTargetId)}
+                          className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-zinc-50"
+                        >
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-100 text-zinc-700 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:-translate-y-[1px]">
+                            <TaskIcon className="h-4 w-4" />
                           </span>
-                          <span className="mt-1 block text-xs text-zinc-500">
-                            Cập nhật {getTimeAgo(task.updatedAt || task.createdAt)}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-zinc-800">
+                              {getTaskLabel(task.type)} · {taskTitle}
+                            </span>
+                            <span className="mt-1 block text-xs text-zinc-500">
+                              Cập nhật {getTimeAgo(task.updatedAt || task.createdAt)}
+                            </span>
                           </span>
-                        </span>
-                        <span className="inline-flex items-center gap-2">
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                            task.status === 'PENDING'
+                          <span className="inline-flex items-center gap-2">
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${task.status === 'PENDING'
                               ? 'bg-amber-100 text-amber-700'
                               : task.status === 'COMPLETED'
                                 ? 'bg-emerald-100 text-emerald-700'
                                 : 'bg-zinc-100 text-zinc-600'
-                          }`}>
-                            {task.status}
+                              }`}>
+                              {task.status}
+                            </span>
+                            <ArrowTopRightIcon className="h-4 w-4 text-zinc-400" />
                           </span>
-                          <ArrowTopRightIcon className="h-4 w-4 text-zinc-400" />
-                        </span>
-                      </button>
-                    );
-                  })
+                        </button>
+                      );
+                    })
                 )}
               </div>
             </div>
