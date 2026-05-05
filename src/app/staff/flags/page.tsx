@@ -7,7 +7,6 @@ import { flagService, FlagDto } from '@/services/flagService';
 import { appointmentService } from '@/services/appointmentService';
 import { campaignService } from '@/services/campaignService';
 import { userService } from '@/services/userService';
-import { aiService, FlagAnalysisResult } from '@/services/aiService';
 import { chatService } from '@/services/chatService';
 import { paymentService } from '@/services/paymentService';
 import { feedPostService } from '@/services/feedPostService';
@@ -339,78 +338,10 @@ export default function FlagsManagementPage() {
       setCampaignDetails(null);
       setExpenditureDetails(null);
       setTargetUser(null);
-      setAiResult(null);
     }
   }, [selectedTarget?.key]);
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiResult, setAiResult] = useState<FlagAnalysisResult | null>(null);
 
-  const handleAIAnalysis = async () => {
-    if (!selectedTarget) return;
-    setIsAnalyzing(true);
-    setAiResult(null);
-
-    try {
-      const targetData = selectedTarget.type === 'CAMPAIGN'
-        ? {
-          type: 'CAMPAIGN',
-          id: selectedTarget.targetId,
-          title: selectedTarget.flags[0]?.campaign?.title || selectedTarget.title,
-          description: selectedTarget.flags[0]?.campaign?.description,
-          status: selectedTarget.flags[0]?.campaign?.status,
-          raisedAmount: campaignDetails?.raisedAmount ?? selectedTarget.flags[0]?.campaign?.raisedAmount ?? 0,
-          goalAmount: campaignDetails?.goalAmount ?? 0,
-          authorName: selectedTarget.flags[0]?.campaign?.authorName,
-          authorId: selectedTarget.flags[0]?.campaign?.authorId,
-          createdAt: campaignDetails?.campaignCreatedAt || selectedTarget.flags[0]?.campaign?.createdAt,
-          totalFlags: selectedTarget.totalCount,
-          pendingFlags: selectedTarget.pendingCount,
-          ownerTrustScore: targetUser?.trustScore,
-          ownerJoinedAt: targetUser?.createdAt,
-          campaignStartDate: campaignDetails?.startDate,
-          campaignEndDate: campaignDetails?.endDate,
-          expenditureCount: campaignDetails?.expenditureCount,
-          donorCount: campaignDetails?.donorCount,
-          lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
-          currency: 'VND',
-          dashboardUrl: `https://trust-fund-me-fe.vercel.app/campaigns-details?id=${selectedTarget.targetId}`,
-          allExpenditures: selectedTarget.type === 'CAMPAIGN' ? campaignDetails?.allExpenditures : [],
-          ...campaignDetails,
-        }
-        : {
-          type: 'FEED_POST',
-          id: selectedTarget.targetId,
-          title: selectedTarget.flags[0]?.post?.title,
-          content: selectedTarget.flags[0]?.post?.content,
-          status: selectedTarget.flags[0]?.post?.status,
-          authorName: selectedTarget.flags[0]?.post?.authorName,
-          authorId: selectedTarget.flags[0]?.post?.authorId,
-          likeCount: selectedTarget.flags[0]?.post?.likeCount,
-          commentCount: selectedTarget.flags[0]?.post?.commentCount,
-          viewCount: selectedTarget.flags[0]?.post?.viewCount,
-          isLocked: selectedTarget.flags[0]?.post?.isLocked,
-          createdAt: selectedTarget.flags[0]?.post?.createdAt,
-          totalFlags: selectedTarget.totalCount,
-          pendingFlags: selectedTarget.pendingCount,
-          ownerTrustScore: targetUser?.trustScore,
-          ownerJoinedAt: targetUser?.createdAt,
-          lastAppointmentAt: appointmentsMap.get(selectedTarget.key)?.createdAt,
-          currency: 'VND',
-          campaignInfo: campaignDetails,
-          expenditureInfo: expenditureDetails,
-        };
-
-      const result = await aiService.analyzeFlag(targetData, selectedTarget.flags);
-      setAiResult(result);
-      toast.success('AI đã hoàn tất phân tích!');
-    } catch (err: any) {
-      console.error('AI analysis failed:', err);
-      toast.error(err?.response?.data?.error || 'Phân tích AI thất bại. Vui lòng thử lại.');
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const [isStartingChat, setIsStartingChat] = useState(false);
   const handleMessage = async () => {
@@ -664,8 +595,8 @@ export default function FlagsManagementPage() {
                         key={group.key}
                         onClick={() => setSelectedTarget(isSelected ? null : group)}
                         className={`cursor-pointer ${isSelected
-                            ? 'bg-[#ff5e14]/5 border-l-2 border-l-[#ff5e14]'
-                            : 'hover:bg-gray-50'
+                          ? 'bg-[#ff5e14]/5 border-l-2 border-l-[#ff5e14]'
+                          : 'hover:bg-gray-50'
                           }`}
                       >
                         <td className="px-3 py-2.5 text-[10px] font-bold text-gray-400">{idx + 1}</td>
@@ -727,8 +658,8 @@ export default function FlagsManagementPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${selectedTarget.type === 'CAMPAIGN'
-                          ? 'bg-orange-50 text-orange-600 border border-orange-200'
-                          : 'bg-blue-50 text-blue-600 border border-blue-200'
+                        ? 'bg-orange-50 text-orange-600 border border-orange-200'
+                        : 'bg-blue-50 text-blue-600 border border-blue-200'
                         }`}>
                         {selectedTarget.type === 'CAMPAIGN' ? 'Chiến dịch' : 'Bài viết'}
                       </span>
@@ -1131,94 +1062,7 @@ export default function FlagsManagementPage() {
                   })()}
                 </div>
 
-                {/* AI Analysis */}
-                <div className="p-1 mt-4">
-                  {aiResult ? (
-                    <div className="rounded-lg border shadow-sm overflow-hidden bg-[#ff5e14]/5 border-[#ff5e14]/20">
-                      <div className="flex items-center justify-between p-4 border-b border-[#ff5e14]/10">
-                        <div className="flex items-center gap-2">
-                          <div className="p-1.5 rounded shadow-sm bg-white/80 border border-[#ff5e14]/10">
-                            <Info className="h-4 w-4 text-[#ff5e14]" />
-                          </div>
-                          <div>
-                            <h5 className="text-[13px] font-black uppercase tracking-widest text-[#ff5e14]">Kết quả phân tích AI</h5>
-                            <p className="text-[10px] text-[#ff5e14]/60 uppercase tracking-widest font-bold">
-                              Độ rủi ro: {aiResult.riskLevel === 'HIGH' ? 'CAO' : aiResult.riskLevel === 'MEDIUM' ? 'TRUNG BÌNH' : 'THẤP'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-lg ${aiResult.riskLevel === 'HIGH' ? 'bg-rose-500' : aiResult.riskLevel === 'MEDIUM' ? 'bg-amber-500' : 'bg-emerald-500'
-                            }`}>
-                            {aiResult.riskLevel === 'HIGH' ? 'RỦI RO CAO' : aiResult.riskLevel === 'MEDIUM' ? 'CẢNH BÁO' : 'AN TOÀN'}
-                          </span>
-                          <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest border shadow-sm bg-[#ff5e14]/10 text-[#ff5e14] border-[#ff5e14]/20">
-                            Điểm đánh giá rủi ro: {aiResult.riskScore}/100
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="p-4 space-y-4 text-[12px]">
-                        <div className="p-3 rounded bg-white/60 border border-[#ff5e14]/10">
-                          <p className="text-[13px] font-bold text-[#ff5e14] leading-relaxed">{renderLinkedText(aiResult.summary)}</p>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-[10px] font-black text-[#ff5e14]/60 uppercase tracking-widest mb-2">Phát hiện chính</p>
-                            <div className="space-y-1.5">
-                              {aiResult.keyFindings.map((finding, i) => (
-                                <div key={i} className="flex items-start gap-2 p-2 rounded bg-white/50 border border-[#ff5e14]/10">
-                                  <div className="h-4 w-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#ff5e14]/10">
-                                    <span className="text-[9px] font-black text-[#ff5e14]">{i + 1}</span>
-                                  </div>
-                                  <p className="text-[12px] font-medium text-[#ff5e14] leading-snug">{renderLinkedText(finding)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="p-4 rounded bg-[#ff5e14]/10 border border-[#ff5e14]/10">
-                            <p className="text-[10px] font-black text-[#ff5e14] uppercase tracking-widest mb-2">Đề xuất hành động</p>
-                            <p className="text-[12px] font-medium text-[#ff5e14] leading-relaxed mb-4">{renderLinkedText(aiResult.recommendation)}</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {aiResult.actionTypes.map((action, i) => (
-                                <span key={i} className="px-2.5 py-1 rounded-full text-[10px] font-medium uppercase tracking-widest border shadow-sm bg-white text-[#ff5e14] border-[#ff5e14]/20">
-                                  {action.replace('_', ' ')}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="px-4 py-3 border-t border-[#ff5e14]/10 bg-[#ff5e14]/5">
-                        <button
-                          onClick={handleAIAnalysis}
-                          className="text-[10px] font-black text-[#ff5e14] hover:text-[#ea550c] uppercase tracking-widest flex items-center gap-1.5"
-                        >
-                          <Info className="h-3 w-3" />
-                          Phân tích lại
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleAIAnalysis}
-                      disabled={isAnalyzing}
-                      className="w-full h-11 rounded-xl bg-[#ff5e14] text-white flex items-center justify-center gap-3 shadow-sm hover:bg-[#ea550c] active:scale-[0.98] border border-[#ff5e14]"
-                    >
-                      {isAnalyzing ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <>
-                          <Info className="h-4 w-4" />
-                          <span className="text-xs font-black uppercase tracking-[0.1em]">Dùng AI để phân tích</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
 
                 {/* Actions Panel */}
                 <div className="px-2 pb-2 mt-auto pt-4">

@@ -216,10 +216,10 @@ export default function AIAnalysisModal({
                                                 {aiItem ? (
                                                     <div className="flex flex-col gap-1.5">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Giá tham chiếu (±15%):</span>
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Giá tham chiếu (Khoảng giá):</span>
                                                             <span className="text-[10px] font-black text-indigo-700">
                                                                 {aiItem.marketPriceMin && aiItem.marketPriceMax
-                                                                    ? `${fmtNum(aiItem.marketPriceMin)} - ${fmtNum(aiItem.marketPriceMax)}`
+                                                                    ? `${fmtNum(aiItem.marketPriceMin)} - ${fmtNum(aiItem.marketPriceMax)} đ`
                                                                     : aiItem.marketUnitPrice ? fmtVND(aiItem.marketUnitPrice) : '-'}
                                                             </span>
                                                         </div>
@@ -229,12 +229,15 @@ export default function AIAnalysisModal({
                                                                     aiItem.priceStatus === 'UNDERPRICED' ? 'text-amber-600' :
                                                                         'text-slate-400'
                                                                 }`}>
-                                                                {aiItem.statusMessage || (aiItem.priceStatus === 'MATCHED' ? 'Giá hợp lý' : aiItem.priceStatus || 'N/A')}
+                                                                {aiItem.statusMessage || (aiItem.priceStatus === 'MATCHED' ? 'Giá hợp lý' :
+                                                                    aiItem.priceStatus === 'OVERPRICED' ? 'Giá cao hơn thị trường' :
+                                                                        aiItem.priceStatus === 'UNDERPRICED' ? 'Giá thấp hơn thị trường' :
+                                                                            aiItem.priceStatus || 'N/A')}
                                                             </div>
                                                         </div>
                                                         {aiItem.evidenceUrls && aiItem.evidenceUrls.length > 0 && (
                                                             <div className="mt-1 flex flex-wrap gap-1">
-                                                                {aiItem.evidenceUrls.slice(0, 2).map((url, uidx) => (
+                                                                {aiItem.evidenceUrls.slice(0, 4).map((url, uidx) => (
                                                                     <a
                                                                         key={uidx}
                                                                         href={url}
@@ -484,9 +487,7 @@ export default function AIAnalysisModal({
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className={`text-[11px] font-black px-4 py-1.5 rounded-lg border-2 uppercase tracking-widest shadow-sm ${getRiskStyles(result.riskScore)}`}>
-                            Mức Rủi ro: {result.riskScore}%
-                        </span>
+                        {/* Removed Risk Level as per request */}
                         <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors shadow-inner">
                             <X className="h-5 w-5 text-slate-500" />
                         </button>
