@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, RefreshCw, HandCoins, Plus } from 'lucide-react';
+import { Megaphone, DollarSign, Shield, XCircle, ShieldCheck, History, X, Eye, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import RequestTable from '@/components/staff/request/RequestTable';
 import RequestDetailPanel from '@/components/staff/request/RequestDetailPanel';
@@ -10,7 +10,7 @@ import CampaignNewFlowDetail from '@/components/staff/request/CampaignNewFlowDet
 import ExpenditureRequestTab from '@/components/staff/request/ExpenditureRequestTab';
 import EvidenceTab from '@/components/staff/request/EvidenceTab';
 import HistoryTab from '@/components/staff/request/HistoryTab';
-import SupportRequestManager from '@/components/staff/support/SupportRequestManager';
+
 import { campaignService } from '@/services/campaignService';
 import { userService, UserInfo } from '@/services/userService';
 import { bankAccountService } from '@/services/bankAccountService';
@@ -44,8 +44,8 @@ function StaffRequestContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const targetTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'HISTORY' | 'SUPPORT'>(
-    targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : targetTab === 'SUPPORT' ? 'SUPPORT' : 'CAMPAIGN'
+  const [activeTab, setActiveTab] = useState<'CAMPAIGN' | 'EXPENDITURE' | 'EVIDENCE' | 'HISTORY'>(
+    targetTab === 'EVIDENCE' ? 'EVIDENCE' : targetTab === 'EXPENDITURE' ? 'EXPENDITURE' : targetTab === 'HISTORY' ? 'HISTORY' : 'CAMPAIGN'
   );
   const [isLoading, setIsLoading] = useState(false);
 
@@ -358,7 +358,6 @@ function StaffRequestContent() {
               { id: 'CAMPAIGN', label: 'Duyệt chiến dịch', icon: Megaphone, count: campaignRows.length },
               { id: 'EXPENDITURE', label: 'Duyệt chi tiêu', icon: DollarSign },
               { id: 'EVIDENCE', label: 'Xác minh minh chứng', icon: Shield },
-              { id: 'SUPPORT', label: 'Yêu cầu hỗ trợ', icon: HandCoins },
               { id: 'HISTORY', label: 'Nhiệm vụ đã xong', icon: History },
             ].map((tab) => {
               const Icon = (tab as any).icon || Shield;
@@ -550,8 +549,6 @@ function StaffRequestContent() {
             <ExpenditureRequestTab initialCampaignId={targetId ? Number(targetId) : null} />
           ) : activeTab === 'EVIDENCE' ? (
             <EvidenceTab />
-          ) : activeTab === 'SUPPORT' ? (
-            <SupportRequestManager onModalToggle={setIsModalOpen} />
           ) : (
             <HistoryTab />
           )}

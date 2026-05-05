@@ -42,7 +42,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
     // Update Modal States
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [updateExpenditure, setUpdateExpenditure] = useState<Expenditure | null>(null);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualBrand?: string; actualPurchaseLocation?: string }[]>([]);
     const [updateItemsData, setUpdateItemsData] = useState<ExpenditureItem[]>([]);
     const [updating, setUpdating] = useState(false);
     const [pendingDeleteMediaIds, setPendingDeleteMediaIds] = useState<number[]>([]);
@@ -106,7 +106,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                 const myPage = await feedPostService.getMyPage({ status: 'ALL', size: 200 });
                 myPosts = myPage.content || [];
             } catch { myPosts = []; }
-            
+
             const postsMap: Record<number, any[]> = {};
             exps.forEach((e: any) => {
                 postsMap[e.id] = myPosts.filter((p: any) => {
@@ -269,8 +269,8 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                 id: item.id,
                 actualQuantity: item.actualQuantity ?? 0,
                 actualPrice: item.actualPrice ?? 0,
-                actualPurchaseLink: item.actualPurchaseLink ?? '',
-                actualBrand: item.actualBrand ?? ''
+                actualBrand: item.actualBrand ?? '',
+                actualPurchaseLocation: item.actualPurchaseLocation ?? ''
             })));
             setPendingDeleteMediaIds([]);
             itemsData.forEach(item => loadItemMedia(item.id));
@@ -280,9 +280,9 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         }
     };
 
-    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualPurchaseLink' | 'actualBrand', value: string) => {
+    const handleUpdateItemChange = (index: number, field: 'actualQuantity' | 'actualPrice' | 'actualBrand' | 'actualPurchaseLocation', value: string) => {
         const newItems = [...updateItems];
-        newItems[index] = { ...newItems[index], [field]: (field === 'actualPurchaseLink' || field === 'actualBrand') ? value : Number(value) };
+        newItems[index] = { ...newItems[index], [field]: (field === 'actualBrand' || field === 'actualPurchaseLocation') ? value : Number(value) };
         setUpdateItems(newItems);
     };
 
@@ -334,7 +334,7 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
                 ...prev,
                 [itemId]: { uploading: false, files: [], previews: [] }
             }));
-            
+
             toast.success(`Đã tải lên ${results.length} ảnh thành công!`);
         } catch (err) {
             toast.error('Tải ảnh lên thất bại.');
@@ -375,24 +375,24 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
         if (!campaign) return { canCreate: true, blockReason: null, isDisabled: false };
         if (campaign.status === 'DISABLED') return { canCreate: false, blockReason: 'Chiến dịch đã bị vô hiệu hóa.', isDisabled: true };
         if (expenditures.length === 0) return { canCreate: true, blockReason: null, isDisabled: false };
-        
+
         // Lấy đợt chi tiêu mới nhất (đã sort asc theo ID ở trên, nên lấy phần tử cuối cùng)
         const last = expenditures[expenditures.length - 1];
-        
+
         // Nếu đợt cuối bị từ chối thì cho phép tạo đợt mới
         if (last.status === 'REJECTED') return { canCreate: true, blockReason: null, isDisabled: false };
-        
+
         // Nếu chưa giải ngân thì không cho tạo đợt mới
         if (last.status !== 'DISBURSED') {
             return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa được giải ngân.' };
         }
-        
+
         // Nếu đã giải ngân, phải nộp minh chứng (SUBMITTED hoặc APPROVED) mới được tạo đợt tiếp theo
         const hasEvidence = last.evidenceStatus === 'SUBMITTED' || last.evidenceStatus === 'APPROVED';
         if (!hasEvidence) {
             return { canCreate: false, isDisabled: false, blockReason: 'Khoản chi gần nhất chưa hoàn tất nộp minh chứng.' };
         }
-        
+
         return { canCreate: true, blockReason: null, isDisabled: false };
     }, [campaign, expenditures]);
 

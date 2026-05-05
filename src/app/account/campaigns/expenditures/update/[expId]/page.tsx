@@ -25,7 +25,7 @@ export default function UpdateExpenditureActualsPage() {
     const [expenditure, setExpenditure] = useState<Expenditure | null>(null);
     const [itemsData, setItemsData] = useState<ExpenditureItem[]>([]);
     const [categories, setCategories] = useState<ExpenditureCatology[]>([]);
-    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualPurchaseLink?: string; actualBrand?: string; name?: string; catologyId?: number; isNew?: boolean; unit?: string }[]>([]);
+    const [updateItems, setUpdateItems] = useState<{ id: number; actualQuantity: number; actualPrice: number; actualBrand?: string; actualPurchaseLocation?: string; name?: string; catologyId?: number; isNew?: boolean; unit?: string }[]>([]);
     const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,7 +49,7 @@ export default function UpdateExpenditureActualsPage() {
 
     // Collapsible Categories
     const [collapsedCats, setCollapsedCats] = useState<Set<number | string>>(new Set());
-    
+
     // Pending Deletions (Local cache before Save)
     const [pendingDeletions, setPendingDeletions] = useState<{ categories: Set<number | string>, items: Set<number | string> }>({
         categories: new Set(),
@@ -91,12 +91,12 @@ export default function UpdateExpenditureActualsPage() {
                 expenditureService.getItems(expId),
                 expenditureService.getCategories(expId)
             ]);
-            
+
             setExpenditure(exp);
             setItemsData(items);
             setCategories(cats);
             if (exp.proofUrl) setGlobalProofUrl(exp.proofUrl);
-            
+
             // Sync updateItems with fetched items, keeping new unsaved items if any
             setUpdateItems(prevUpdateItems => {
                 const existingUnsaved = prevUpdateItems.filter(ui => ui.isNew);
@@ -104,8 +104,8 @@ export default function UpdateExpenditureActualsPage() {
                     id: item.id,
                     actualQuantity: item.actualQuantity ?? 0,
                     actualPrice: item.actualPrice ?? 0,
-                    actualPurchaseLink: item.actualPurchaseLink ?? '',
                     actualBrand: item.actualBrand ?? '',
+                    actualPurchaseLocation: item.actualPurchaseLocation ?? '',
                     unit: (item as any).actualUnit ?? item.unit ?? ''
                 }));
                 return [...fetched, ...existingUnsaved];
@@ -146,8 +146,8 @@ export default function UpdateExpenditureActualsPage() {
     }, [expId]);
 
     const handleItemChange = (itemId: number, field: string, value: any) => {
-        setUpdateItems(prevItems => prevItems.map(item => 
-            item.id === itemId 
+        setUpdateItems(prevItems => prevItems.map(item =>
+            item.id === itemId
                 ? { ...item, [field]: (field === 'actualQuantity' || field === 'actualPrice') ? Math.abs(Number(value)) : value }
                 : item
         ));
@@ -163,8 +163,8 @@ export default function UpdateExpenditureActualsPage() {
             catologyId: catId,
             actualQuantity: 1,
             actualPrice: 0,
-            actualPurchaseLink: '',
             actualBrand: '',
+            actualPurchaseLocation: '',
             unit: 'Cái',
             isNew: true
         }]);
@@ -248,7 +248,7 @@ export default function UpdateExpenditureActualsPage() {
     const handleSubmit = async () => {
         try {
             setIsSubmitting(true);
-            
+
             // 1. Process Deleted Categories
             for (const catId of Array.from(pendingDeletions.categories)) {
                 await expenditureService.deleteCategory(catId as number);
@@ -257,7 +257,7 @@ export default function UpdateExpenditureActualsPage() {
             // 2. Process New Categories and build ID map
             const newCats = categories.filter(c => c.id.toString().startsWith('temp-cat-'));
             const catIdMap: Record<string, number> = {};
-            
+
             for (const cat of newCats) {
                 const created = await expenditureService.createCategory(expId, cat.name);
                 catIdMap[cat.id.toString()] = created.id;
@@ -271,7 +271,7 @@ export default function UpdateExpenditureActualsPage() {
                 }
                 return it;
             });
-            
+
             // 4. Separate new items from existing ones
             const newItemsToCreate = finalUpdateItems.filter(it => it.isNew && it.name);
             const itemsToUpdate = finalUpdateItems.filter(it => !it.isNew);
@@ -285,8 +285,8 @@ export default function UpdateExpenditureActualsPage() {
                     expectedPrice: 0,
                     actualQuantity: it.actualQuantity,
                     actualPrice: it.actualPrice,
-                    actualPurchaseLink: it.actualPurchaseLink,
                     actualBrand: it.actualBrand,
+                    actualPurchaseLocation: it.actualPurchaseLocation,
                     actualUnit: it.unit || 'Cái',
                     expectedUnit: it.unit || 'Cái',
                 }));
@@ -298,8 +298,8 @@ export default function UpdateExpenditureActualsPage() {
                 id: it.id,
                 actualQuantity: it.actualQuantity,
                 actualPrice: it.actualPrice,
-                actualPurchaseLink: it.actualPurchaseLink,
                 actualBrand: it.actualBrand,
+                actualPurchaseLocation: it.actualPurchaseLocation,
                 actualUnit: it.unit
             }));
             await expenditureService.updateActuals(expId, itemsToUpdatePayload as any, globalProofUrl);
@@ -361,6 +361,60 @@ export default function UpdateExpenditureActualsPage() {
         }
     };
 
+    const handleDownloadTemplate = async () => {
+        try {
+            const blob = await expenditureService.downloadActualsTemplate();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Mau_Thuc_Chi_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '')}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            toast.error('Lỗi khi tải file mẫu');
+        }
+    };
+
+    const [isImporting, setIsImporting] = useState(false);
+    const handleImportActuals = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsImporting(true);
+        try {
+            const res = await expenditureService.importItemsFromExcel(file);
+            if (res.success && res.data) {
+                const imported = res.data;
+                // Match imported items with existing items by name
+                setUpdateItems(prevItems => {
+                    return prevItems.map(item => {
+                        const match = imported.find(imp => imp.name === item.name);
+                        if (match) {
+                            return {
+                                ...item,
+                                actualQuantity: match.actualQuantity ?? item.actualQuantity,
+                                actualPrice: match.actualPrice ?? item.actualPrice,
+                                actualBrand: match.actualBrand ?? item.actualBrand,
+                                actualPurchaseLocation: match.actualPurchaseLocation ?? item.actualPurchaseLocation,
+                                unit: match.expectedUnit ?? item.unit
+                            };
+                        }
+                        return item;
+                    });
+                });
+                toast.success(`Đã cập nhật ${imported.length} hạng mục từ Excel`);
+            } else {
+                toast.error(res.error || 'Lỗi khi nhập file');
+            }
+        } catch (err) {
+            toast.error('Lỗi hệ thống khi xử lý file');
+        } finally {
+            setIsImporting(false);
+            e.target.value = '';
+        }
+    };
+
     const groupedItems = useMemo(() => {
         const groups: Record<number | string, { cat: ExpenditureCatology | null, items: any[] }> = {};
 
@@ -394,7 +448,7 @@ export default function UpdateExpenditureActualsPage() {
     // Helpers & Derived Data (available in all scopes)
     const renderPrice = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.abs(n)) + ' đ';
     const renderNumber = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
-    
+
     const withdrawalCount = expenditure?.evidences?.length || 0;
     const totalWithdrawn = (expenditure?.evidences || []).reduce((sum, ev) => sum + Math.abs(ev.amount || 0), 0);
     const totalActualAmt = activeItems.reduce((sum, it) => sum + ((it.actualQuantity || 0) * (it.actualPrice || 0)), 0);
@@ -437,7 +491,7 @@ export default function UpdateExpenditureActualsPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => router.back()}
                             className="px-6 py-3 text-[10px] font-black text-black uppercase tracking-widest hover:text-emerald-600 transition-colors"
@@ -523,12 +577,12 @@ export default function UpdateExpenditureActualsPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            
+
                                             <div>
                                                 {hasProof ? (
-                                                    <a 
-                                                        href={ev.proofUrl} 
-                                                        target="_blank" 
+                                                    <a
+                                                        href={ev.proofUrl}
+                                                        target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
                                                     >
@@ -547,12 +601,14 @@ export default function UpdateExpenditureActualsPage() {
                 </div>
 
                 {/* SECTION 2: ACTUAL EXPENDITURE TABLE */}
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
-                            <ShoppingCart className="w-5 h-5" />
+                <div className="mt-8">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
+                                <ShoppingCart className="w-5 h-5" />
+                            </div>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-[2px]">Nhập số liệu thực chi & Phát sinh</h2>
                         </div>
-                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-[2px]">Nhập số liệu thực chi & Phát sinh</h2>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -561,10 +617,10 @@ export default function UpdateExpenditureActualsPage() {
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-100">
                                         <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[260px]">Ảnh minh chứng</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[160px]">Link GG Map nơi mua</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] h-10 w-[140px]">Nơi mua / Hiệu</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] h-10 w-[140px]">Nơi mua</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] h-10 w-[140px]">Hiệu</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[80px]">Số lượng</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[120px]">Đơn vị</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[110px]">Đơn vị</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[130px]">Đơn giá</th>
                                         <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right w-[130px]">Thành tiền</th>
                                         <th className="px-1 w-[36px]"></th>
@@ -573,28 +629,27 @@ export default function UpdateExpenditureActualsPage() {
                                 <tbody>
                                     {Object.entries(groupedItems).map(([id, group]) => (
                                         <Fragment key={id}>
-                                        {/* Category Header Row */}
-                                        <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => toggleCategory(id)}>
-                                            <td colSpan={8} className="px-6 py-1.5">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {collapsedCats.has(id) ? <ChevronRight className="w-4 h-4 text-emerald-600" /> : <ChevronDown className="w-4 h-4 text-emerald-600" />}
+                                            <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => toggleCategory(id)}>
+                                                <td colSpan={7} className="px-6 py-1.5">
+                                                    <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
-                                                            {id === 'other' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Phát sinh</span>}
-                                                            <span className="text-sm font-black text-emerald-800 uppercase tracking-widest">Danh mục: {group.cat?.name || (id === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}</span>
+                                                            {collapsedCats.has(id) ? <ChevronRight className="w-4 h-4 text-emerald-600" /> : <ChevronDown className="w-4 h-4 text-emerald-600" />}
+                                                            <div className="flex items-center gap-2">
+                                                                {id === 'other' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Phát sinh</span>}
+                                                                <span className="text-sm font-black text-emerald-800 uppercase tracking-widest">Danh mục: {group.cat?.name || (id === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}</span>
+                                                            </div>
                                                         </div>
+                                                        {id === 'other' ? (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleAddNewItem(undefined); }}
+                                                                className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase hover:text-amber-700 transition-colors"
+                                                            >
+                                                                <PlusCircle className="w-3 h-3" /> Thêm hạng mục
+                                                            </button>
+                                                        ) : <div />}
                                                     </div>
-                                                    {id === 'other' ? (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleAddNewItem(undefined); }}
-                                                            className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase hover:text-amber-700 transition-colors"
-                                                        >
-                                                            <PlusCircle className="w-3 h-3" /> Thêm hạng mục
-                                                        </button>
-                                                    ) : <div />}
-                                                </div>
-                                            </td>
-                                        </tr>
+                                                </td>
+                                            </tr>
                                             {!collapsedCats.has(id) && group.items.map((item) => {
                                                 const updateItem = updateItems.find(it => it.id === item.id);
                                                 const expectedQty = item.isNew ? 0 : (isItemized ? (donationSummary[item.id] || 0) : (item.expectedQuantity || 0));
@@ -604,13 +659,12 @@ export default function UpdateExpenditureActualsPage() {
 
                                                 return (
                                                     <Fragment key={item.id}>
-                                                        {/* ACTUAL ROW (INPUT) */}
                                                         <tr className="border-b border-slate-50 hover:bg-slate-50/10 transition-colors group">
                                                             <td className="px-6 py-2.5 align-middle">
                                                                 <div className="flex items-center justify-between gap-3">
                                                                     {item.isNew ? (
                                                                         <div className="relative flex-1">
-                                                                            <input 
+                                                                            <input
                                                                                 className="w-full bg-amber-50/50 border border-amber-200 rounded-lg px-2 py-1.5 text-sm font-black focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
                                                                                 placeholder="Tên hạng mục mới..."
                                                                                 value={updateItem?.name || ''}
@@ -622,7 +676,7 @@ export default function UpdateExpenditureActualsPage() {
                                                                         <p className="text-sm font-black text-slate-900 leading-tight flex-1">{item.name}</p>
                                                                     )}
                                                                     <div className="flex items-center gap-1.5 shrink-0">
-                                                                        <button 
+                                                                        <button
                                                                             onClick={() => setGalleryItemId(item.id)}
                                                                             disabled={item.isNew}
                                                                             className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${item.isNew ? 'opacity-20 cursor-not-allowed' : (mediaList.length > 0 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-black hover:bg-emerald-50 hover:text-emerald-600')}`}
@@ -634,10 +688,10 @@ export default function UpdateExpenditureActualsPage() {
                                                             </td>
                                                             <td className="px-2 py-2">
                                                                 <input
-                                                                    type="url"
-                                                                    className="w-full h-8 px-2 bg-slate-50 border border-slate-100 rounded-lg text-xs font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50 transition-all outline-none text-emerald-600"
-                                                                    value={updateItem?.actualPurchaseLink || ''}
-                                                                    onChange={(e) => handleItemChange(item.id, 'actualPurchaseLink', e.target.value)}
+                                                                    type="text"
+                                                                    className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-xs font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50 transition-all outline-none focus:border-emerald-500 ${hasError(item.id, 'actualPurchaseLocation') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
+                                                                    value={updateItem?.actualPurchaseLocation || ''}
+                                                                    onChange={(e) => handleItemChange(item.id, 'actualPurchaseLocation', e.target.value)}
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-2">
@@ -649,20 +703,20 @@ export default function UpdateExpenditureActualsPage() {
                                                                 />
                                                             </td>
                                                             <td className="px-2 py-2">
-                                                                    <input
-                                                                        type="number"
-                                                                        className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-black text-center focus:bg-white outline-none transition-all focus:border-emerald-500 ${hasError(item.id, 'actualQuantity') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
-                                                                        value={updateItem?.actualQuantity || ''}
-                                                                        onChange={(e) => handleItemChange(item.id, 'actualQuantity', e.target.value)}
-                                                                    />
+                                                                <input
+                                                                    type="number"
+                                                                    className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-black text-center focus:bg-white outline-none transition-all focus:border-emerald-500 ${hasError(item.id, 'actualQuantity') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
+                                                                    value={updateItem?.actualQuantity || ''}
+                                                                    onChange={(e) => handleItemChange(item.id, 'actualQuantity', e.target.value)}
+                                                                />
                                                             </td>
                                                             <td className="px-2 py-2">
-                                                                    <input
-                                                                        type="text"
-                                                                        className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-bold text-black uppercase focus:bg-white outline-none text-center transition-all focus:border-emerald-500 ${hasError(item.id, 'unit') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
-                                                                        value={updateItem?.unit || ''}
-                                                                        onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
-                                                                    />
+                                                                <input
+                                                                    type="text"
+                                                                    className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-bold text-black uppercase focus:bg-white outline-none text-center transition-all focus:border-emerald-500 ${hasError(item.id, 'unit') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
+                                                                    value={updateItem?.unit || ''}
+                                                                    onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                                                                />
                                                             </td>
                                                             <td className="px-2 py-2">
                                                                 <input
@@ -677,13 +731,13 @@ export default function UpdateExpenditureActualsPage() {
                                                             </td>
                                                             <td className="px-1 py-2.5 text-center align-middle">
                                                                 {item.isNew && (
-                                                                    <button 
+                                                                    <button
                                                                         onClick={() => {
                                                                             toast((t) => (
                                                                                 <div className="flex flex-col gap-2 p-1">
                                                                                     <p className="text-[10px] font-black text-black uppercase tracking-widest">Xóa hạng mục phát sinh này?</p>
                                                                                     <div className="flex items-center gap-2">
-                                                                                        <button 
+                                                                                        <button
                                                                                             onClick={() => {
                                                                                                 handleRemoveNewItem(item.id);
                                                                                                 toast.dismiss(t.id);
@@ -705,24 +759,17 @@ export default function UpdateExpenditureActualsPage() {
                                                             </td>
                                                         </tr>
 
-                                                        {/* PLAN ROW (DISPLAY) */}
                                                         {!item.isNew && (
                                                             <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                                <td colSpan={2} className="px-6 py-1.5 flex items-center gap-2">
+                                                                <td className="px-6 py-1.5 flex items-center gap-2">
                                                                     <span className="text-[8px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-widest shrink-0">KẾ HOẠCH</span>
                                                                     <span className="text-[10px] font-bold text-slate-500 truncate">{item.name}</span>
                                                                 </td>
-                                                                <td className="px-4 py-1.5 overflow-hidden">
-                                                                    {item.expectedPurchaseLink ? (
-                                                                        <a href={item.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-blue-400 hover:underline flex items-center gap-1 truncate max-w-[160px]">
-                                                                            <ExternalLink className="w-2.5 h-2.5" /> Link đính kèm
-                                                                        </a>
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-bold text-slate-400 italic">---</span>
-                                                                    )}
+                                                                <td className="px-4 py-1.5 text-center">
+                                                                    <span className="text-[10px] font-bold text-slate-500">{item.expectedPurchaseLocation || '---'}</span>
                                                                 </td>
                                                                 <td className="px-4 py-1.5 text-center">
-                                                                     <span className="text-[10px] font-bold text-slate-500">{item.expectedBrand || '---'}</span>
+                                                                    <span className="text-[10px] font-bold text-slate-500">{item.expectedBrand || '---'}</span>
                                                                 </td>
                                                                 <td className="px-4 py-1.5 text-center">
                                                                     <span className="text-[10px] font-black text-slate-500">{renderNumber(expectedQty)}</span>
@@ -736,6 +783,7 @@ export default function UpdateExpenditureActualsPage() {
                                                                 <td className="px-6 py-1.5 text-right">
                                                                     <span className="text-[10px] font-black text-slate-500">{renderPrice(expectedQty * expectedPrice)}</span>
                                                                 </td>
+                                                                <td className="px-1 w-[36px]"></td>
                                                             </tr>
                                                         )}
                                                     </Fragment>
@@ -753,48 +801,45 @@ export default function UpdateExpenditureActualsPage() {
                             </table>
                         </div>
                     </div>
-
                 </div>
 
                 {/* SECTION 3: TỔNG KẾT MINH CHỨNG */}
-                <div className="my-4 bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col">
-                    <div className="flex items-center gap-3 mb-4">
+                <div className="my-8 bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col">
+                    <div className="flex items-center gap-3 mb-6">
                         <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600">
                             <LinkIcon className="w-5 h-5" />
                         </div>
                         <h2 className="text-sm font-black text-black uppercase tracking-[2px]">Bài viết minh chứng tổng</h2>
                     </div>
                     {globalProofUrl ? (
-                         <div className="flex flex-col items-center justify-center p-4 bg-emerald-50 border border-emerald-100 rounded-3xl gap-4">
-                              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner">
-                                   <Check className="w-6 h-6" />
-                              </div>
-                              <div className="text-center">
-                                  <p className="text-sm text-emerald-800 font-black mb-1">Đã khởi tạo bài viết minh chứng thành công</p>
-                                  <a href={globalProofUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center justify-center gap-1">
-                                      <ExternalLink className="w-3 h-3" /> Nhấn vào đây để xem
-                                  </a>
-                              </div>
-                         </div>
+                        <div className="flex flex-col items-center justify-center p-8 bg-emerald-50 border border-emerald-100 rounded-3xl gap-4">
+                            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner">
+                                <Check className="w-6 h-6" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-emerald-800 font-black mb-1">Đã khởi tạo bài viết minh chứng thành công</p>
+                                <a href={globalProofUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center justify-center gap-1">
+                                    <ExternalLink className="w-3 h-3" /> Nhấn vào đây để xem
+                                </a>
+                            </div>
+                        </div>
                     ) : (
-                         <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                             <div className="w-16 h-16 bg-white shadow-sm border border-slate-100 flex items-center justify-center rounded-2xl text-black mb-6">
-                                 <PlusCircle className="w-8 h-8" />
-                             </div>
-                             <p className="text-xs text-black font-bold mb-6 text-center max-w-md leading-relaxed">Nhấn vào đây để tạo và xuất bản một bài viết minh chứng lên bảng tin dự án, giúp người quyên góp đối soát tiện lợi hơn.</p>
-                             <button 
-                                 onClick={() => setIsPostModalOpen(true)}
-                                 className="h-14 px-8 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[2px] hover:bg-emerald-600 transition-all flex items-center gap-3 shadow-xl hover:-translate-y-0.5"
-                             >
-                                 <Plus className="w-5 h-5" /> Soạn bài viết minh chứng
-                             </button>
-                         </div>
+                        <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                            <div className="w-16 h-16 bg-white shadow-sm border border-slate-100 flex items-center justify-center rounded-2xl text-black mb-6">
+                                <PlusCircle className="w-8 h-8" />
+                            </div>
+                            <p className="text-xs text-black font-bold mb-6 text-center max-w-md leading-relaxed">Nhấn vào đây để tạo và xuất bản một bài viết minh chứng lên bảng tin dự án, giúp người quyên góp đối soát tiện lợi hơn.</p>
+                            <button
+                                onClick={() => setIsPostModalOpen(true)}
+                                className="h-14 px-8 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-[2px] hover:bg-emerald-600 transition-all flex items-center gap-3 shadow-xl hover:-translate-y-0.5"
+                            >
+                                <Plus className="w-5 h-5" /> Soạn bài viết minh chứng
+                            </button>
+                        </div>
                     )}
                 </div>
-
             </div>
 
-            {/* GALLERY MODAL */}
             {galleryItemId && (
                 <ExpenditureGalleryModal
                     isOpen={!!galleryItemId}
@@ -811,7 +856,6 @@ export default function UpdateExpenditureActualsPage() {
                 />
             )}
 
-            {/* CREATE POST MODAL */}
             {isPostModalOpen && expenditure && (
                 <CreateOrEditPostModal
                     isOpen={isPostModalOpen}

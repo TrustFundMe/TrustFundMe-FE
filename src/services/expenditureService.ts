@@ -97,8 +97,7 @@ export const expenditureService = {
 
     /** Xuất Excel hạng mục chi tiêu theo campaignId */
     exportItemsToExcel: async (campaignId: string | number): Promise<Blob> => {
-        const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-        const response = await axios.get(`${feOrigin}/api/expenditures/campaign/${campaignId}/export`, {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/export`, {
             responseType: 'blob',
         });
         return response.data;
@@ -167,10 +166,17 @@ export const expenditureService = {
         }
     },
 
-    /** Tải file mẫu Excel */
+    /** Tải file mẫu Excel kế hoạch (có cột Đợt) - Dùng cho trang Tạo Campaign */
     downloadTemplate: async (): Promise<Blob> => {
-        const feOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-        const response = await axios.get(`${feOrigin}/api/expenditures/import/template`, {
+        const response = await axiosInstance.get(`/api/expenditures/import/template`, {
+            responseType: 'blob',
+        });
+        return response.data;
+    },
+
+    /** Tải file mẫu Excel thực chi (không có cột Đợt) - Dùng cho trang Cập Nhật Chi Tiêu */
+    downloadActualsTemplate: async (): Promise<Blob> => {
+        const response = await axiosInstance.get(`/api/expenditures/actuals-template`, {
             responseType: 'blob',
         });
         return response.data;
