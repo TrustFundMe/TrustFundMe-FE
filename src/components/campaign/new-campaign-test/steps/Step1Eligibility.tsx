@@ -331,15 +331,16 @@ export default function Step1Eligibility({
 
 
   const handleStepNext = async () => {
-    if (canNext && !checkingBankDup) {
-      onNext();
-      return;
-    }
-    if (!canNext || checkingBankDup || initialLoading || refreshingStep1) return;
+    // Block if loading or already checking
+    if (checkingBankDup || checkingBankDupLive || initialLoading || refreshingStep1) return;
+    // Block if form fields not yet valid
+    if (!canNext) return;
+    // If live check already found a duplicate, show error and stop
     if (bankDuplicateError) {
       toast(bankDuplicateError, 'error');
       return;
     }
+    // Always do a final duplicate check on submit (in case live check was skipped or stale)
     const accountNumber = state.bankInfo.accountNumber.trim();
     const bankCode = state.bankInfo.bankCode.trim();
     if (!accountNumber || !bankCode) return;
@@ -469,7 +470,7 @@ export default function Step1Eligibility({
                     value={state.bankInfo.accountHolderName}
                     onChange={(e) => {
                       setBankDuplicateError('');
-                      onPatch({ bankInfo: { ...state.bankInfo, accountHolderName: e.target.value } });
+                      onPatch({ bankInfo: { ...state.bankInfo, accountHolderName: e.target.value.toUpperCase() } });
                     }}
                     onBlur={() => setBankTouched((prev) => ({ ...prev, holder: true }))}
                     aria-describedby="step1-holder-name-hint"

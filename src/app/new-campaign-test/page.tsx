@@ -125,8 +125,6 @@ export default function NewCampaignTestPage() {
     return e;
   }, [state.campaignCore]);
 
-  // TEMP: bypass step1 validation
-  const TEMP_BYPASS_STEP1 = true;
   const step0CanNext = useMemo(() => {
     const b = state.bankInfo;
     const accountNumber = b.accountNumber.trim();
@@ -391,7 +389,7 @@ export default function NewCampaignTestPage() {
         if (target <= maxReached) return target;
         if (target !== current + 1) return current;
         const ok =
-          (current === 0 && (TEMP_BYPASS_STEP1 || step0CanNext)) ||
+          (current === 0 && step0CanNext) ||
           (current === 1 && step2CanNext) ||
           (current === 2 && step3CanNext) ||
           (current === 3 && step4CanNext);
@@ -471,7 +469,7 @@ export default function NewCampaignTestPage() {
                 <Step1Eligibility
                   state={state}
                   onPatch={patchState}
-                  canNext={TEMP_BYPASS_STEP1 || step0CanNext}
+                  canNext={step0CanNext}
                   failMessage={step0FailMessage}
                   onNext={() => goToStep(1)} // bypass: StepFooter calls onNext directly
                   onInitialLoadComplete={() => setPageReady(true)}
