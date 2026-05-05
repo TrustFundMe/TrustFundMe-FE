@@ -36,6 +36,23 @@ export const auditService = {
     return res.data;
   },
 
+  async getByUser(actorId: string | number, page = 0, size = 20) {
+    const res = await api.get<Page<AuditLog>>(`/api/audit/user/${actorId}`, {
+      params: { page, size }
+    });
+    return res.data;
+  },
+
+  async getReconciliationLogs(userId: string | number, campaignIds: (string | number)[], page = 0, size = 500) {
+    const res = await api.post<Page<AuditLog>>('/api/audit/reconciliation', {
+      userId,
+      campaignIds
+    }, {
+      params: { page, size }
+    });
+    return res.data;
+  },
+
   async getGlobalStatus() {
     const res = await api.get<{ integrity: string, total: number, status: string }>('/api/audit/integrity');
     return res.data;

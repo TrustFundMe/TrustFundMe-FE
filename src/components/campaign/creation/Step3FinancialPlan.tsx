@@ -11,8 +11,6 @@ const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
 interface ExpenditureItem {
     id: string;
     name: string;
-    expectedPurchaseLink?: string;
-    actualPurchaseLink?: string;
     unit: string;
     quantity: number;
     price: number;
@@ -36,10 +34,10 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     // ── Excel Import / Export ───────────────────────────────────────────────
     const handleDownloadTemplate = () => {
         import('xlsx').then((XLSX) => {
-            const headers = [['STT', 'Tên vật phẩm', 'Link mua dự kiến', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Ghi chú']];
-            const example = [[1, 'Ví dụ: Mì tôm', 'https://maps.app.goo.gl/xxx', 'thùng', 10, 50000, 'Chi tiêu đợt 1']];
+            const headers = [['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Ghi chú']];
+            const example = [[1, 'Ví dụ: Mì tôm', 'thùng', 10, 50000, 'Chi tiêu đợt 1']];
             const ws = XLSX.utils.aoa_to_sheet([...headers, ...example]);
-            ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 25 }];
+            ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 15 }, { wch: 25 }];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Mẫu');
             XLSX.writeFile(wb, 'Mau_KeHoach_ChiTieu.xlsx');
@@ -51,15 +49,14 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             const rows = items.map((item, idx) => [
                 idx + 1,
                 item.name,
-                item.expectedPurchaseLink || '',
                 item.unit,
-                item.expectedQuantity,
+                item.quantity,
                 item.price,
-                (item.expectedQuantity * item.price).toLocaleString('vi-VN'),
+                (item.quantity * item.price).toLocaleString('vi-VN'),
                 item.note,
             ]);
             const ws = XLSX.utils.aoa_to_sheet([
-                ['STT', 'Tên vật phẩm', 'Link mua dự kiến', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Thành tiền (VNĐ)', 'Ghi chú'],
+                ['STT', 'Tên vật phẩm', 'Đơn vị', 'Số lượng', 'Đơn giá (VNĐ)', 'Thành tiền (VNĐ)', 'Ghi chú'],
                 ...rows,
             ]);
             ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 18 }, { wch: 25 }];
@@ -109,11 +106,8 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                 if (item.name && item.name.trim().length > 50) {
                     errs.push(`Dòng ${row}: Tên vật phẩm không được vượt quá 50 ký tự`);
                 }
-                if (item.note && item.note.trim().length > 100) {
+                if (item.expectedNote && item.expectedNote.trim().length > 100) {
                     errs.push(`Dòng ${row}: Ghi chú không được vượt quá 100 ký tự`);
-                }
-                if (item.expectedPurchaseLink && item.expectedPurchaseLink.trim() !== '' && !URL_REGEX.test(item.expectedPurchaseLink)) {
-                    errs.push(`Dòng ${row}: Link mua hàng không đúng định dạng`);
                 }
                 errors.push(...errs);
             });
@@ -126,7 +120,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
             const newItems: ExpenditureItem[] = result.data.map((item: any) => ({
                 id: Math.random().toString(36).substr(2, 9),
                 name: item.name || '',
-                expectedPurchaseLink: item.expectedPurchaseLink || item.purchaseLink || '',
                 unit: item.unit || '',
                 quantity: Number(item.expectedQuantity) || 1,
                 price: Number(item.expectedPrice) || 0,
@@ -146,7 +139,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
     };
 
     const items: ExpenditureItem[] = data.expenditureItems || [];
-    const total = items.reduce((sum, item) => sum + (item.expectedQuantity * item.price), 0);
+    const total = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
     // Pagination
     const totalPages = Math.ceil(items.length / PAGE_SIZE);
@@ -156,7 +149,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
         const newItem: ExpenditureItem = {
             id: Math.random().toString(36).substr(2, 9),
             name: '',
-            expectedPurchaseLink: '',
             unit: '',
             quantity: 1,
             price: 0,
@@ -303,7 +295,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                             <tr className="text-[9px] font-black text-black/20 uppercase tracking-widest border-b border-gray-50">
                                 <th className="px-2 py-2 text-left font-black w-8">#</th>
                                 <th className="px-2 py-2 text-left font-black w-32">Vật phẩm</th>
-                                <th className="px-2 py-2 text-left font-black">Link địa chỉ</th>
                                 <th className="px-2 py-2 text-left font-black w-24">Ghi chú</th>
                                 <th className="px-1 py-2 text-center font-black w-14">SL</th>
                                 <th className="px-1 py-2 text-right font-black w-20">Đơn giá</th>
@@ -329,15 +320,6 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                         <td className="px-2 py-2">
                                             <input
                                                 type="text"
-                                                value={item.expectedPurchaseLink || ''}
-                                                onChange={(e) => updateItem(item.id, 'expectedPurchaseLink', e.target.value)}
-                                                className={`w-full bg-gray-50/50 rounded px-1.5 py-1 text-[10px] font-bold border-none focus:ring-1 focus:ring-[#dc2626]/20 ${item.expectedPurchaseLink && !URL_REGEX.test(item.expectedPurchaseLink) ? 'text-rose-500 bg-rose-50' : 'text-blue-500'}`}
-                                                placeholder="https://..."
-                                            />
-                                        </td>
-                                        <td className="px-2 py-2">
-                                            <input
-                                                type="text"
                                                 value={item.note}
                                                 onChange={(e) => updateItem(item.id, 'note', e.target.value)}
                                                 className="w-full bg-transparent border-none p-0 text-[10px] font-bold text-black/50 placeholder:text-black/5 focus:ring-0"
@@ -346,7 +328,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                         <td className="px-1 py-2">
                                             <input
                                                 type="number"
-                                                value={item.expectedQuantity}
+                                                value={item.quantity}
                                                 onChange={(e) => updateItem(item.id, 'quantity', Math.max(0, parseInt(e.target.value) || 0))}
                                                 className="w-12 text-center bg-gray-50/50 rounded-lg px-1 py-1 text-xs font-black border-none focus:ring-2 focus:ring-[#dc2626]/10 focus:bg-white transition-all block mx-auto"
                                             />
@@ -364,7 +346,7 @@ export default function Step3FinancialPlan({ data, onChange, onPrev, onNext }: S
                                         </td>
                                         <td className="px-2 py-2 text-right">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-xs font-black text-black">{(item.expectedQuantity * item.price).toLocaleString('vi-VN')}</span>
+                                                <span className="text-xs font-black text-black">{(item.quantity * item.price).toLocaleString('vi-VN')}</span>
                                                 <span className="text-[7px] font-bold text-black/10 uppercase tracking-tighter">VNĐ</span>
                                             </div>
                                         </td>

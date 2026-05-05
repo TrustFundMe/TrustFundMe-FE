@@ -14,6 +14,11 @@ export const expenditureService = {
         return response.data;
     },
 
+    getEvidenceById: async (id: string | number): Promise<any> => {
+        const response = await axiosInstance.get(`/api/expenditures/evidence/${id}`);
+        return response.data;
+    },
+
     create: async (data: CreateExpenditureRequest): Promise<Expenditure> => {
         const response = await axiosInstance.post('/api/expenditures', data);
         return response.data;

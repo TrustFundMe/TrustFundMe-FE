@@ -11,6 +11,7 @@ import {
 import { campaignService } from '@/services/campaignService';
 import { expenditureService } from '@/services/expenditureService';
 import { paymentService } from '@/services/paymentService';
+import { userService } from '@/services/userService';
 import { Expenditure, ExpenditureItem } from '@/types/expenditure';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { toast } from 'react-hot-toast';
@@ -80,7 +81,6 @@ const CategoryTable = ({
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200 text-center">Đơn vị dự kiến</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Nhãn hàng dự kiến</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Địa điểm mua dự kiến</th>
-                    <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Link dự kiến mua</th>
                     <th className="py-2 px-3 text-[10px] font-black text-gray-600 uppercase border-r border-gray-200">Note dự kiến</th>
                 </tr>
             </thead>
@@ -125,11 +125,6 @@ const CategoryTable = ({
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
                                                 <div className="text-[10px] text-gray-700 font-medium break-all">{i.expectedPurchaseLocation || '-'}</div>
-                                            </td>
-                                            <td className="py-2 px-3 border-r border-gray-100">
-                                                {i.expectedPurchaseLink ? (
-                                                    <a href={i.expectedPurchaseLink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 hover:underline">Xem Link</a>
-                                                ) : <span className="text-[10px] text-gray-400">-</span>}
                                             </td>
                                             <td className="py-2 px-3 border-r border-gray-100">
                                                 <div className="text-[9px] text-gray-500">{i.expectedNote || '-'}</div>
@@ -192,7 +187,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
         try {
             setLoading(true);
             const updated = await method(exp.id, ...args);
-            
+
             // Audit Log for Step 3 (Expenditure)
             const status = args[0];
             if (status === 'APPROVED' || status === 'REJECTED' || status === 'ALLOWED_EDIT') {
@@ -362,7 +357,7 @@ export default function ExpenditureRequestTab({ initialCampaignId }: { initialCa
                 campaignIds.map(id => campaignService.getById(id).catch(() => null))
             );
             const validCampaigns = campaigns.filter(c => c !== null);
-            
+
             // 4. Fetch owners for these campaigns
             const uniqueOwnerIds = [...new Set(validCampaigns.map(c => c.fundOwnerId))];
             const owners = await Promise.all(
