@@ -427,28 +427,12 @@ export default function ExpenditureTable({
                                                                                                         ? (exp.status === 'PENDING_REVIEW' ? 'Kế hoạch chi tiêu của bạn đang được xét duyệt. Vui lòng đợi kết quả nhé.' : 'Kế hoạch chi tiêu của bạn đã được phê duyệt.')
                                                                                                         : ''}
                                                                                                 </p>
-                                                                                                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-black/5">
-                                                                                                    <div>
-                                                                                                        <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Số tiền rút</label>
-                                                                                                        <p className="text-xl font-black text-black tracking-tight">
-                                                                                                            {(() => {
-                                                                                                                const withdrawalTx = exp.transactions?.find((t: any) =>
-                                                                                                                    t.type === 'WITHDRAWAL' ||
-                                                                                                                    t.type === 'DISBURSEMENT' ||
-                                                                                                                    t.type === 'PAYOUT'
-                                                                                                                );
-                                                                                                                const amount = withdrawalTx ? withdrawalTx.amount : (exp.totalAmount || exp.totalReceivedAmount || 0);
-                                                                                                                return new Intl.NumberFormat('vi-VN').format(amount);
-                                                                                                            })()} đ
-                                                                                                        </p>
+                                                                                                {exp.evidenceDueAt && (
+                                                                                                    <div className="mt-4 pt-4 border-t border-black/5">
+                                                                                                        <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Hạn nộp minh chứng</label>
+                                                                                                        <p className="text-sm font-black text-rose-500">{new Date(exp.evidenceDueAt).toLocaleDateString('vi-VN')}</p>
                                                                                                     </div>
-                                                                                                    {exp.evidenceDueAt && (
-                                                                                                        <div>
-                                                                                                            <label className="text-[9px] font-black uppercase text-black/30 tracking-widest block mb-1">Hạn nộp minh chứng</label>
-                                                                                                            <p className="text-sm font-black text-rose-500">{new Date(exp.evidenceDueAt).toLocaleDateString('vi-VN')}</p>
-                                                                                                        </div>
-                                                                                                    )}
-                                                                                                </div>
+                                                                                                )}
                                                                                             </div>
                                                                                         ) : (
                                                                                             <div className="text-center py-10 space-y-4">
