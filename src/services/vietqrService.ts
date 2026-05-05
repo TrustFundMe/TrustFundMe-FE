@@ -7,12 +7,26 @@ export interface VietQRBank {
     logo: string;
 }
 
+/**
+ * Map VietQR bank codes to the codes used in our system.
+ * VietQR returns "MB" for MB Bank, but our system uses "MBB".
+ */
+const BANK_CODE_MAP: Record<string, string> = {
+    MB: 'MBB',
+};
+
+function normalizeBankCode(code: string): string {
+    return BANK_CODE_MAP[code] ?? code;
+}
+
 export const vietqrService = {
     async getBanks(): Promise<VietQRBank[]> {
         try {
             const res = await fetch('https://api.vietqr.io/v2/banks');
             const data = await res.json();
-            return data.data || [];
+            const banks: VietQRBank[] = data.data || [];
+            // Normalize bank codes to match our system's expected codes
+            return banks.map((b) => ({ ...b, code: normalizeBankCode(b.code) }));
         } catch (error) {
             console.error('Failed to fetch banks from VietQR:', error);
             return [];

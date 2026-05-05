@@ -6,8 +6,6 @@ import { useToast } from '@/components/ui/Toast';
 import { expenditureService } from '@/services/expenditureService';
 import StepFooter from '../parts/StepFooter';
 
-const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/;
-
 interface Props {
   state: NewCampaignTestState;
   milestoneTotal: number;
@@ -1214,7 +1212,6 @@ export default function Step3Milestones({ state, milestoneTotal, onPatch, onPrev
                                 }
                               />
                             </div>
-
                             <div className="md:col-span-2">
                               <p className="mb-1 text-[11px] font-semibold text-black">Ghi chú</p>
                               <textarea

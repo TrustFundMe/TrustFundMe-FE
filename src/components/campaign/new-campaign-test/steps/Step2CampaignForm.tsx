@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { CampaignImage, NewCampaignTestState } from '../types';
 import CategorySelector from '../parts/CategorySelector';
 import StepFooter from '../parts/StepFooter';
+import AIDescriptionModal from '@/components/campaign/creation/AIDescriptionModal';
 import { mediaService } from '@/services/mediaService';
 import { useToast } from '@/components/ui/Toast';
 
@@ -67,10 +68,17 @@ export default function Step2CampaignForm({
   const images = core.campaignImages ?? [];
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragDepthRef = useRef(0);
   const { toast } = useToast();
+
+  const handleAIApply = (title: string, description: string) => {
+    onPatchCore({ title, objective: description });
+    setTouched((prev) => ({ ...prev, title: true, objective: true }));
+    toast('Đã cập nhật tiêu đề và mô tả từ AI!', 'success');
+  };
   const hasValue = (field: string) => {
     switch (field) {
       case 'title':
@@ -145,7 +153,7 @@ export default function Step2CampaignForm({
     setTouched((prev) => ({ ...prev, coverImage: true }));
     const img = images.find((i) => i.id === id);
     if (img?.mediaId) {
-      mediaService.deleteMedia(img.mediaId).catch(() => {});
+      mediaService.deleteMedia(img.mediaId).catch(() => { });
     }
     if (img?.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
     const next = images.filter((i) => i.id !== id);
@@ -192,9 +200,8 @@ export default function Step2CampaignForm({
         <button
           type="button"
           onClick={onTogglePreview}
-          className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition ${
-            previewOpen ? 'bg-black text-white' : 'border border-gray-200 bg-white text-black hover:bg-gray-50'
-          }`}
+          className={`flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition ${previewOpen ? 'bg-black text-white' : 'border border-gray-200 bg-white text-black hover:bg-gray-50'
+            }`}
         >
           <EyeIcon />
           {previewOpen ? 'Đang xem trước' : 'Xem trước'}
@@ -241,6 +248,19 @@ export default function Step2CampaignForm({
             required
             error={getFieldError('objective')}
             reserveFeedbackSlot={showErrors || Boolean(touched.objective) || hasValue('objective')}
+            action={
+              <button
+                type="button"
+                onClick={() => setIsAIModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-700 ring-1 ring-orange-200 transition hover:bg-orange-100 hover:text-orange-900"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                  <path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" />
+                </svg>
+                AI Viết bài
+              </button>
+            }
           >
             <textarea
               rows={3}
@@ -274,9 +294,8 @@ export default function Step2CampaignForm({
         </div>
 
         <div
-          className={`mt-2 rounded-xl lg:mt-0 lg:bg-gray-50/60 lg:p-2 ring-2 transition-colors ${
-            coverErr ? 'ring-red-200' : 'ring-gray-100'
-          }`}
+          className={`mt-2 rounded-xl lg:mt-0 lg:bg-gray-50/60 lg:p-2 ring-2 transition-colors ${coverErr ? 'ring-red-200' : 'ring-gray-100'
+            }`}
         >
           <label className="mb-1.5 block text-sm font-semibold text-gray-900">
             Ảnh chiến dịch <span className="text-red-600">*</span>
@@ -305,9 +324,8 @@ export default function Step2CampaignForm({
                 return (
                   <div
                     key={img.id}
-                    className={`relative shrink-0 overflow-hidden rounded-lg bg-gray-200 ring-2 transition cursor-pointer ${
-                      isCover ? 'ring-brand' : 'ring-transparent hover:ring-gray-300'
-                    }`}
+                    className={`relative shrink-0 overflow-hidden rounded-lg bg-gray-200 ring-2 transition cursor-pointer ${isCover ? 'ring-brand' : 'ring-transparent hover:ring-gray-300'
+                      }`}
                     style={{ width: 80 }}
                     onClick={() => setCover(img.id)}
                   >
@@ -355,13 +373,12 @@ export default function Step2CampaignForm({
               fileInputRef.current?.click();
             }}
             role="button"
-            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-all duration-200 ${
-              coverErr && images.length === 0
-                ? 'border-red-200 bg-red-50/50'
-                : isDragging
-                  ? 'border-brand bg-orange-50/70'
-                  : 'border-gray-200 bg-white/80 hover:border-brand/50 hover:bg-orange-50/40'
-            } ${isUploadingImages ? 'cursor-wait opacity-80' : 'cursor-pointer'}`}
+            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-all duration-200 ${coverErr && images.length === 0
+              ? 'border-red-200 bg-red-50/50'
+              : isDragging
+                ? 'border-brand bg-orange-50/70'
+                : 'border-gray-200 bg-white/80 hover:border-brand/50 hover:bg-orange-50/40'
+              } ${isUploadingImages ? 'cursor-wait opacity-80' : 'cursor-pointer'}`}
           >
             <UploadIcon />
             <p className="mt-1.5 px-2 text-center text-xs font-medium text-gray-600">
@@ -386,6 +403,12 @@ export default function Step2CampaignForm({
       </div>
 
       <StepFooter canNext={canNext} onPrev={onPrev} onNext={onNext} />
+
+      <AIDescriptionModal
+        open={isAIModalOpen}
+        onOpenChange={setIsAIModalOpen}
+        onApply={handleAIApply}
+      />
     </div>
   );
 }
@@ -395,21 +418,26 @@ function Field({
   required,
   children,
   error,
+  action,
   reserveFeedbackSlot,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   error?: string;
+  action?: React.ReactNode;
   reserveFeedbackSlot: boolean;
 }) {
   const showMessage = Boolean(error);
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-semibold text-gray-900">
-        {label}
-        {required ? <span className="text-red-600"> *</span> : null}
-      </label>
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
+        <label className="text-sm font-semibold text-gray-900">
+          {label}
+          {required ? <span className="text-red-600"> *</span> : null}
+        </label>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
       {children}
       <div className={reserveFeedbackSlot ? 'min-h-5' : ''} aria-live="polite">
         {showMessage ? (
