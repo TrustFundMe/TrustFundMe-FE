@@ -56,6 +56,14 @@ function AccountChatContent() {
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const autoSelectedRef = useRef<boolean>(false);
+    const [refreshCounter, setRefreshCounter] = useState(0);
+
+    // Reset hasFetchedRef và trigger re-fetch
+    const handleRefresh = useCallback(() => {
+        hasFetchedRef.current = false;
+        autoSelectedRef.current = false;
+        setRefreshCounter(c => c + 1);
+    }, []);
 
     // Connect WebSocket on mount
     useEffect(() => {
@@ -70,7 +78,6 @@ function AccountChatContent() {
         const fetchConversations = async () => {
             // Prevent duplicate fetch in Strict Mode
             if (hasFetchedRef.current) return;
-            hasFetchedRef.current = true;
 
             setIsLoading(true);
             try {
@@ -176,8 +183,11 @@ function AccountChatContent() {
                         autoSelectedRef.current = true;
                     }
                 }
+
+                hasFetchedRef.current = true; // Chỉ set true khi fetch thành công
             } catch (error) {
                 console.error("Failed to fetch conversations:", error);
+                // Không set hasFetchedRef = true → cho phép retry
             } finally {
                 setIsLoading(false);
             }
@@ -185,7 +195,7 @@ function AccountChatContent() {
 
         fetchConversations();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [refreshCounter]);
 
     // Format time helper
     const formatTimeAgo = useCallback((timestamp: string): string => {
@@ -573,6 +583,7 @@ function AccountChatContent() {
                     onConversationClick={setActiveId}
                     onShowNewClick={() => { }}
                     newCustomersCount={0}
+                    onRefresh={handleRefresh}
                 />
 
                 <ChatMessages

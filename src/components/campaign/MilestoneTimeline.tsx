@@ -60,7 +60,7 @@ export default function MilestoneTimeline({
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
-          Tiến Độ Chi Tiêu
+          Giai Đoạn Của Chiến Dịch
         </h4>
         <span style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8" }}>
           {completedCount}/{timeline.length} đợt đã hoàn thành

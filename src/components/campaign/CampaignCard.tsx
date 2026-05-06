@@ -54,7 +54,7 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
 
         <div className="flex min-w-0 flex-1 flex-col justify-between p-4">
           <div>
-            <h3 className="text-lg font-bold leading-snug text-slate-900 line-clamp-2">
+            <h3 className="text-lg font-bold leading-snug text-slate-900 line-clamp-2 min-h-[3rem]">
               {item.title}
             </h3>
             <p className="mt-1 text-sm text-slate-600 line-clamp-1">
@@ -76,7 +76,7 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
               />
             </div>
             <div className="mt-2 flex items-center justify-between text-sm font-semibold text-slate-700">
-              <span>{targetAmount.toLocaleString("vi-VN")} VNĐ</span>
+              <span>{raisedAmount.toLocaleString("vi-VN")} VNĐ</span>
               <span>{progress}%</span>
             </div>
           </div>

@@ -16,6 +16,7 @@ import { flagService } from "@/services/flagService";
 import { mediaService } from "@/services/mediaService";
 import { expenditureService } from "@/services/expenditureService";
 import { seenService } from "@/services/seenService";
+import { paymentService } from "@/services/paymentService";
 import type { Expenditure } from "@/types/expenditure";
 import { dtoToFeedPost } from "@/lib/feedPostUtils";
 import type { FeedPost } from "@/types/feedPost";
@@ -55,6 +56,35 @@ const FeedPostDetailPage = () => {
       const dto = await feedPostService.getById(id);
       const feedPost = dtoToFeedPost(dto) as FeedPost & { campaign?: CampaignInfo };
       setPost(feedPost);
+
+      const buildCampaignInfo = async (campaign: CampaignDto): Promise<CampaignInfo> => {
+        let coverImageUrl = campaign.coverImageUrl;
+        if (!coverImageUrl) {
+          const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
+          coverImageUrl = firstImage?.url || campaign.coverImageUrl;
+        }
+
+        const [progressData, activeGoal] = await Promise.all([
+          paymentService.getCampaignProgress(campaign.id).catch(() => null),
+          campaign.activeGoal
+            ? Promise.resolve(campaign.activeGoal)
+            : campaignService.getActiveGoalByCampaignId(campaign.id).catch(() => null),
+        ]);
+
+        const raised = Math.max(0, progressData?.raisedAmount ?? 0);
+        const goal = Math.max(1, progressData?.goalAmount ?? activeGoal?.targetAmount ?? 0);
+        const progress = Math.max(0, Math.min(100, Math.round((raised / goal) * 100)));
+
+        return {
+          id: String(campaign.id),
+          title: campaign.title ?? "",
+          image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
+          raised,
+          goal,
+          progress,
+          status: campaign.status,
+        };
+      };
 
       // Mark this post as seen — only for logged-in users, idempotent on backend
       if (user) {
@@ -97,24 +127,12 @@ const FeedPostDetailPage = () => {
             if (exp.campaignId) {
               try {
                 const campaign = await campaignService.getById(exp.campaignId);
-                let coverImageUrl = campaign.coverImageUrl;
-                if (!coverImageUrl) {
-                  const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
-                  coverImageUrl = firstImage?.url || campaign.coverImageUrl;
-                }
+                const campaignInfo = await buildCampaignInfo(campaign);
                 setPost((prev) =>
                   prev
                     ? {
                         ...prev,
-                        campaign: {
-                          id: String(campaign.id),
-                          title: campaign.title ?? "",
-                          image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
-                          raised: campaign.balance ?? 0,
-                          goal: (campaign.balance ?? 0) > 0 ? campaign.balance ?? 0 : 1,
-                          progress: (campaign.balance ?? 0) > 0 ? Math.min(100, Math.round(((campaign.balance ?? 0) / ((campaign.balance ?? 0) > 0 ? campaign.balance ?? 0 : 1)) * 100)) : 0,
-                          status: campaign.status,
-                        } as CampaignInfo,
+                        campaign: campaignInfo,
                       }
                     : null
                 );
@@ -129,28 +147,13 @@ const FeedPostDetailPage = () => {
           // CAMPAIGN type — fetch campaign directly with targetId
           try {
             const campaign = await campaignService.getById(dto.targetId);
-            const raised = campaign.balance ?? 0;
-            const goal = raised > 0 ? raised : 1;
-
-            let coverImageUrl = campaign.coverImageUrl;
-            if (!coverImageUrl) {
-              const firstImage = await mediaService.getCampaignFirstImage(campaign.id).catch(() => null);
-              coverImageUrl = firstImage?.url || campaign.coverImageUrl;
-            }
+            const campaignInfo = await buildCampaignInfo(campaign);
 
             setPost((prev) =>
               prev
                 ? {
                     ...prev,
-                    campaign: {
-                      id: String(campaign.id),
-                      title: campaign.title ?? "",
-                      image: String(coverImageUrl ?? "https://placehold.co/400x200?text=Campaign"),
-                      raised,
-                      goal,
-                      progress: goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0,
-                      status: campaign.status,
-                    } as CampaignInfo,
+                    campaign: campaignInfo,
                   }
                 : null
             );

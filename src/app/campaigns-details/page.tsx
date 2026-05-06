@@ -1,7 +1,8 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, XCircle, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import type { CampaignDto, FundraisingGoal } from '@/types/campaign';
@@ -56,9 +57,10 @@ const mapCampaignDtoToUi = (
     galleryImages: galleryUrls.length > 0 ? galleryUrls : (finalCover ? [finalCover] : []),
     goalAmount: activeGoal ? activeGoal.targetAmount : 0,
     raisedAmount: dto.balance ?? 0,
+    endDate: dto.endDate,
     creator: {
       id: String(dto.fundOwnerId),
-      name: owner?.name || `Người tạo #${dto.fundOwnerId}`,
+      name: owner?.name || 'Người tạo chiến dịch',
       avatar: owner?.avatar || '/assets/img/defaul.jpg',
       trustScore,
     },
@@ -252,6 +254,9 @@ function CampaignDetailsInner() {
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [plansLoaded, setPlansLoaded] = useState(false);
+  const [postsLoaded, setPostsLoaded] = useState(false);
+  const [creatorLoaded, setCreatorLoaded] = useState(false);
 
   const isDonationVisible = plans.some((p) => {
     if (p.status !== 'APPROVED') return false;
@@ -261,6 +266,17 @@ function CampaignDetailsInner() {
     if (!start || !end) return false;
     return now >= start && now <= end;
   });
+
+  const lastMilestoneEndDate = useMemo(() => {
+    const validDates = plans
+      .map((p) => p.endDate)
+      .filter((d): d is string => !!d)
+      .map((d) => new Date(d))
+      .filter((d) => !Number.isNaN(d.getTime()));
+
+    if (validDates.length === 0) return null;
+    return new Date(Math.max(...validDates.map((d) => d.getTime()))).toISOString();
+  }, [plans]);
 
   // Polling for payment status
   useEffect(() => {
@@ -397,6 +413,9 @@ function CampaignDetailsInner() {
         setCampaign(campaignData);
         setProgress(progressData);
         setRecentDonors(recentDonorsData);
+        setPlansLoaded(false);
+        setPostsLoaded(false);
+        setCreatorLoaded(false);
         setLoading(false); // Page visible now!
 
         // Process expenditure plans (only fetch categories if not nested)
@@ -456,6 +475,7 @@ function CampaignDetailsInner() {
 
         if (!mounted) return;
         setPlans(mappedPlans);
+        setPlansLoaded(true);
 
         // Phase 2: Non-blocking — owner details, follow info, flags, trust score, posts
         const [
@@ -505,6 +525,7 @@ function CampaignDetailsInner() {
         updatedCampaign.followerCount = followerCount;
         updatedCampaign.flagged = alreadyFlagged;
         setCampaign(updatedCampaign);
+        setCreatorLoaded(true);
         setFollowers(followersData);
 
         if (postsResult) {
@@ -512,6 +533,7 @@ function CampaignDetailsInner() {
           setPostsTotal(postsResult.totalElements);
           postsLoadedRef.current = true;
         }
+        if (mounted) setPostsLoaded(true);
       } catch (err) {
         console.error('Fetch campaign detail error:', err);
         if (!mounted) return;
@@ -608,6 +630,7 @@ function CampaignDetailsInner() {
               <CampaignHeader
                 campaign={campaign}
                 followers={followers}
+                creatorLoading={!creatorLoaded}
                 onShowTrustScore={() => setShowTrustScoreLogs(true)}
                 onToggleFollow={async () => {
                   if (!campaignId) return;
@@ -705,7 +728,9 @@ function CampaignDetailsInner() {
             <div style={{ minWidth: 0, marginTop: 16 }}>
               <div className="casues-sidebar-wrapper campaign-detail-sidebar">
                 <div style={{ marginBottom: 18 }}>
-                  {campaign.status === 'CLOSED' ? (
+                  {!plansLoaded ? (
+                    <SkeletonDonateCard />
+                  ) : campaign.status === 'CLOSED' ? (
                     <div className="p-8 rounded-3xl bg-slate-100 border-2 border-slate-300 border-dashed text-center space-y-4">
                       <div className="inline-flex p-4 bg-slate-200 rounded-full">
                         <XCircle className="h-8 w-8 text-slate-500" />
@@ -738,6 +763,7 @@ function CampaignDetailsInner() {
                         raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
                         goalAmount={progress?.goalAmount || campaign.goalAmount}
                         progressPercentage={progress?.progressPercentage || 0}
+                        campaignEndDate={lastMilestoneEndDate || campaign.endDate}
                         donorCount={progress?.donorCount || 0}
                         recentDonors={recentDonors}
                         onDonate={(amount, isAnonymous) => {
@@ -746,17 +772,18 @@ function CampaignDetailsInner() {
                         onMoreDonorsClick={() => setShowDonorsModal(true)}
                       />
                       {/* Donate loading overlay */}
-                      {donateLoading && (
+                      {donateLoading && typeof window !== 'undefined' && createPortal(
                         <div
-                          className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 backdrop-blur-md pointer-events-auto"
+                          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm pointer-events-auto"
                           aria-live="polite"
                           aria-busy="true"
                         >
-                          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-[0_30px_90px_rgba(2,6,23,0.45)]">
+                          <div className="relative z-[2147483647] flex flex-col items-center gap-3 rounded-2xl bg-white px-8 py-6 shadow-[0_30px_90px_rgba(2,6,23,0.45)]">
                             <Loader2 className="h-8 w-8 animate-spin text-[#ff5e14]" />
                             <p className="text-sm font-bold text-slate-700">Đang khởi tạo thanh toán...</p>
                           </div>
-                        </div>
+                        </div>,
+                        document.body
                       )}
                     </>
                   ) : (
@@ -773,65 +800,73 @@ function CampaignDetailsInner() {
                 </div>
 
                 <div style={{ marginBottom: 18 }}>
-                  <PlansList
-                    plans={plans}
-                    onOpenPlan={(planId) => {
-                      router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
-                    }}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    border: '1px solid rgba(15,23,42,0.10)',
-                    borderRadius: 14,
-                    padding: '16px 14px',
-                    background: '#fff',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      justifyContent: 'space-between',
-                      marginBottom: 12,
-                    }}
-                  >
-                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
-                      Bài viết{postsTotal > 0 ? ` (${postsTotal})` : ''}
-                    </h4>
-
-                    {postsTotal > 4 && (
-                      <button
-                        type="button"
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          padding: 0,
-                          fontSize: 12,
-                          color: '#ff5e14',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => router.push(`/post?campaignId=${campaignId}`)}
-                      >
-                        Xem thêm
-                      </button>
-                    )}
-                  </div>
-
-                  {posts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8', fontSize: 13 }}>
-                      Chưa có bài viết nào
-                    </div>
+                  {!plansLoaded ? (
+                    <SkeletonMilestones />
                   ) : (
-                    <PostsFeed
-                      posts={posts}
-                      campaignCreatorId={campaign.creator.id}
-                      onOpenPost={(postId) => router.push(`/post/${postId}`)}
+                    <PlansList
+                      plans={plans}
+                      onOpenPlan={(planId) => {
+                        router.push(`/account/campaigns/expenditures/${planId}?campaignId=${campaignId}`);
+                      }}
                     />
                   )}
                 </div>
+
+                {!postsLoaded ? (
+                  <SkeletonPosts />
+                ) : (
+                  <div
+                    style={{
+                      border: '1px solid rgba(15,23,42,0.10)',
+                      borderRadius: 14,
+                      padding: '16px 14px',
+                      background: '#fff',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        marginBottom: 12,
+                      }}
+                    >
+                      <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                        Bài viết{postsTotal > 0 ? ` (${postsTotal})` : ''}
+                      </h4>
+
+                      {postsTotal > 4 && (
+                        <button
+                          type="button"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            padding: 0,
+                            fontSize: 12,
+                            color: '#ff5e14',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => router.push(`/post?campaignId=${campaignId}`)}
+                        >
+                          Xem thêm
+                        </button>
+                      )}
+                    </div>
+
+                    {posts.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '20px 0', color: '#94a3b8', fontSize: 13 }}>
+                        Chưa có bài viết nào
+                      </div>
+                    ) : (
+                      <PostsFeed
+                        posts={posts}
+                        campaignCreatorId={campaign.creator.id}
+                        onOpenPost={(postId) => router.push(`/post/${postId}`)}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -51,7 +51,7 @@ const CampaignCard = ({ campaign }: { campaign: CampaignDto }) => {
     };
 
     return (
-        <Link href={`/campaigns/${campaign.id}`} className="campaign-card-link">
+        <Link href={`/campaigns-details?id=${campaign.id}`} className="campaign-card-link">
             <div className="campaign-card">
                 <div className="card-image">
                     <Image

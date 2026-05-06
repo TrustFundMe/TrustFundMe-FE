@@ -63,7 +63,7 @@ export default function ChatSidebar({
                 {isLoading ? (
                     <div className="text-center py-4 text-sm text-gray-500">Đang tải...</div>
                 ) : conversations.length === 0 ? (
-                    <div className="text-center py-4 text-sm text-gray-500">Không có conversation Tổng quyên góp</div>
+                    <div className="text-center py-4 text-sm text-gray-500">Chưa có cuộc hội thoại nào</div>
                 ) : (
                     conversations.map((c) => {
                         const active = c.id === activeId;

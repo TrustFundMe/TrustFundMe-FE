@@ -82,6 +82,7 @@ export type Campaign = {
   galleryImages?: string[];
   goalAmount: number;
   raisedAmount: number;
+  endDate?: string | null;
   creator: User;
   followers: User[];
   followed: boolean;

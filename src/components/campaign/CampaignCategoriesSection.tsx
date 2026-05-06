@@ -26,6 +26,7 @@ import CampaignCard, { type CampaignCardItem } from "@/components/campaign/Campa
 
 import { campaignCategoryService } from "@/services/campaignCategoryService";
 import { campaignService } from "@/services/campaignService";
+import { paymentService } from "@/services/paymentService";
 import type { CampaignCategory, CampaignDto } from "@/types/campaign";
 import { withFallbackImage } from "@/lib/image";
 import { TopFundOwnersSection } from "./TopFundOwnersSection";
@@ -69,13 +70,13 @@ function getIcon(title: string = "") {
   return HeartHandshake;
 }
 
-function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0): CampaignCardItem {
+function mapDtoToCardItem(dto: CampaignDto, targetAmount: number = 0, raisedAmount: number = 0): CampaignCardItem {
   return {
     id: dto.id.toString(),
     title: dto.title,
     type: dto.type || dto.categoryName || dto.category || "Chung",
     fundDetail: dto.description?.trim() || dto.categoryName || dto.category || undefined,
-    raised: dto.balance || 0,
+    raised: Math.max(0, raisedAmount),
     goal: targetAmount,
     image: withFallbackImage(dto.coverImageUrl || "", "/assets/img/campaign/1.png"),
     status: dto.status,
@@ -215,10 +216,17 @@ export function CampaignCategoriesSection() {
             try {
               const dtos = await campaignService.getByCategory(cat.id);
               const approvedDtos = dtos.filter((dto) => dto.status === "APPROVED");
-              campaignMap[cat.id] = approvedDtos.map((dto) => {
-                const goalAmount = dto.activeGoal?.isActive ? (dto.activeGoal.targetAmount || 0) : 0;
-                return mapDtoToCardItem(dto, goalAmount);
-              });
+              const cards = await Promise.all(
+                approvedDtos.map(async (dto) => {
+                  const progress = await paymentService.getCampaignProgress(dto.id).catch(() => null);
+                  const raised = Math.max(0, progress?.raisedAmount ?? 0);
+                  const goalFromProgress = Math.max(0, progress?.goalAmount ?? 0);
+                  const goalFromActive = dto.activeGoal?.isActive ? (dto.activeGoal.targetAmount || 0) : 0;
+                  const goalAmount = goalFromProgress > 0 ? goalFromProgress : goalFromActive;
+                  return mapDtoToCardItem(dto, goalAmount, raised);
+                })
+              );
+              campaignMap[cat.id] = cards;
             } catch (e) {
               console.error(`Failed to fetch campaigns for category ${cat.id}:`, e);
               campaignMap[cat.id] = [];

@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { campaignService } from "@/services/campaignService";
+import { paymentService } from "@/services/paymentService";
 import type { CampaignDto } from "@/types/campaign";
 import { withFallbackImage } from "@/lib/image";
 
@@ -78,18 +79,28 @@ function CampaignsListContent() {
 
       try {
         setLoading(true);
-        const res = await campaignService.getAll();
-        const approvedCampaigns = res.filter((c: CampaignDto) => c.status === "APPROVED");
+        const res = await campaignService.getAll(0, 100);
+        const data = Array.isArray(res) ? res : (res.content || []);
+        const approvedCampaigns = data.filter((c: CampaignDto) => c.status === "APPROVED");
 
-        const items: CampaignCardItem[] = approvedCampaigns.map((c: CampaignDto) => ({
-          id: String(c.id),
-          title: c.title,
-          type: c.type || c.categoryName || c.category || "Chung",
-          raised: c.balance ?? 0,
-          goal: Math.max(1, c.balance ?? 1),
-          image: withFallbackImage((c.coverImageUrl || c.coverImage) as any, "/assets/img/campaign/1.png"),
-          status: c.status,
-        }));
+        const items: CampaignCardItem[] = await Promise.all(
+          approvedCampaigns.map(async (c: CampaignDto) => {
+            const progress = await paymentService.getCampaignProgress(c.id).catch(() => null);
+            const raisedFromDonations = Math.max(0, progress?.raisedAmount ?? 0);
+            const goalFromProgress = Math.max(0, progress?.goalAmount ?? 0);
+            const goalFromActive = c.activeGoal?.isActive ? (c.activeGoal.targetAmount || 0) : 0;
+
+            return {
+              id: String(c.id),
+              title: c.title,
+              type: c.type || c.categoryName || c.category || "Chung",
+              raised: raisedFromDonations,
+              goal: goalFromProgress > 0 ? goalFromProgress : goalFromActive,
+              image: withFallbackImage((c.coverImageUrl || c.coverImage) as any, "/assets/img/campaign/1.png"),
+              status: c.status,
+            };
+          })
+        );
 
         if (!mounted) return;
         setCampaigns(items);

@@ -239,7 +239,6 @@ const CampaignAnalyticsChart = ({ campaignId }: Props) => {
                 {[
                     { label: 'Tổng nhận', value: data.totalReceived, color: '#10b981' },
                     { label: 'Tổng rút', value: data.totalSpent, color: '#ef4444' },
-                    { label: 'Nhận từ quỹ chung', value: data.receivedFromGeneralFund || 0, color: '#3b82f6' },
                     { label: 'Số dư hiện tại', value: data.currentBalance, color: '#0f172a' },
                 ].map((item) => (
                     <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

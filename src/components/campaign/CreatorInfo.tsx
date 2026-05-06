@@ -5,10 +5,11 @@ import { Star } from "lucide-react";
 
 interface CreatorInfoProps {
   user: User;
+  loading?: boolean;
   onShowTrustScore?: () => void;
 }
 
-export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps) {
+export default function CreatorInfo({ user, loading, onShowTrustScore }: CreatorInfoProps) {
   const hasTrustScore = user.trustScore !== undefined && user.trustScore !== null && user.trustScore > 0;
 
   const handleTrustScoreClick = (e: React.MouseEvent) => {
@@ -50,38 +51,46 @@ export default function CreatorInfo({ user, onShowTrustScore }: CreatorInfoProps
       </div>
       <div>
         <div style={{ opacity: 0.75, fontSize: 13 }}>Người tạo</div>
-        <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-          {user.name}
-          {hasTrustScore && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 3,
-                background: "rgba(255,94,20,0.08)",
-                color: "#ea580c",
-                borderRadius: 9999,
-                padding: "1px 8px",
-                fontSize: 11,
-                fontWeight: 600,
-                border: "1px solid rgba(255,94,20,0.25)",
-                cursor: "pointer",
-              }}
-              onClick={handleTrustScoreClick}
-              title="Bấm vào để xem chi tiết điểm uy tín"
-            >
-              <Star size={10} />
-              {user.trustScore}
-            </div>
-          )}
-        </div>
-        {hasTrustScore && onShowTrustScore && (
-          <div
-            style={{ fontSize: 10, color: '#ea580c', marginTop: 2, cursor: 'pointer' }}
-            onClick={handleTrustScoreClick}
-          >
-            Bấm vào để xem chi tiết
+        {loading ? (
+          <div className="animate-pulse" style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+            <div style={{ height: 16, width: 100, borderRadius: 6, background: "#e2e8f0" }} />
           </div>
+        ) : (
+          <>
+            <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+              {user.name}
+              {hasTrustScore && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 3,
+                    background: "rgba(255,94,20,0.08)",
+                    color: "#ea580c",
+                    borderRadius: 9999,
+                    padding: "1px 8px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    border: "1px solid rgba(255,94,20,0.25)",
+                    cursor: "pointer",
+                  }}
+                  onClick={handleTrustScoreClick}
+                  title="Bấm vào để xem chi tiết điểm uy tín"
+                >
+                  <Star size={10} />
+                  {user.trustScore}
+                </div>
+              )}
+            </div>
+            {hasTrustScore && onShowTrustScore && (
+              <div
+                style={{ fontSize: 10, color: '#ea580c', marginTop: 2, cursor: 'pointer' }}
+                onClick={handleTrustScoreClick}
+              >
+                Bấm vào để xem chi tiết
+              </div>
+            )}
+          </>
         )}
       </div>
     </Link>
