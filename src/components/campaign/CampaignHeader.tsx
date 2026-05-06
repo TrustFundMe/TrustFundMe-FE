@@ -13,6 +13,7 @@ export default function CampaignHeader({
   onToggleFlag,
   onSubmitFlag,
   onShowTrustScore,
+  creatorLoading,
   followers = [],
 }: {
   campaign: Campaign;
@@ -20,6 +21,7 @@ export default function CampaignHeader({
   onToggleFlag: () => void;
   onSubmitFlag?: (reason: string) => Promise<void>;
   onShowTrustScore?: () => void;
+  creatorLoading?: boolean;
   followers?: CampaignFollower[];
 }) {
   const sliderImages = useMemo(() => {
@@ -139,7 +141,7 @@ export default function CampaignHeader({
 
       <div style={{ paddingTop: 16 }}>
         <div style={{ marginTop: 8, marginBottom: 18 }}>
-          <CreatorInfo user={campaign.creator} onShowTrustScore={onShowTrustScore} />
+          <CreatorInfo user={campaign.creator} loading={creatorLoading} onShowTrustScore={onShowTrustScore} />
         </div>
 
         <div style={{ marginTop: 16 }}>

@@ -3,7 +3,7 @@ import { isJwtExpired } from '@/lib/utils';
 
 const BE_API_URL = process.env.BE_API_GATEWAY_URL || 'http://localhost:8080';
 
-/** GET /api/users/[id] - Lấy thông tin user theo id (dùng cho tên/avatar tác giả bài viết) */
+/** GET /api/users/[id] - Lấy thông tin user theo id (public - dùng cho tên/avatar tác giả bài viết, kể cả guest) */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -12,15 +12,15 @@ export async function GET(
     const { id } = await params;
     const accessToken = request.cookies.get('access_token')?.value;
 
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Build headers — forward token if available, but allow guest access (no token)
+    const headers: Record<string, string> = {};
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
     const response = await fetch(`${BE_API_URL}/api/users/${id}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers,
       cache: 'no-store',
     });
 

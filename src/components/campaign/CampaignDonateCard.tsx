@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
+import DonationExceedWarningModal from "@/components/donation/DonationExceedWarningModal";
 
 function CircularProgress({ value }: { value: number }) {
   const size = 84;
@@ -92,9 +93,19 @@ export default function CampaignDonateCard({
   const [amount, setAmount] = useState<number>(50000);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+  const [showExceedWarning, setShowExceedWarning] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const normalizedAmount = Math.max(0, amount || 0);
 
   const canDonate = isAgreed && normalizedAmount > 0;
+
+  const handleDonateClick = () => {
+    if (remainingAmount > 0 && normalizedAmount > remainingAmount) {
+      setShowExceedWarning(true);
+      return;
+    }
+    onDonate(normalizedAmount, isAnonymous, isAgreed);
+  };
 
   return (
     <div className="mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
@@ -142,6 +153,7 @@ export default function CampaignDonateCard({
         <div className="mt-2.5 flex items-center gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2">
             <input
+              ref={amountInputRef}
               type="text"
               value={amount.toLocaleString("vi-VN")}
               onChange={(e) => {
@@ -157,7 +169,7 @@ export default function CampaignDonateCard({
             type="button"
             whileTap={{ scale: 0.98 }}
             disabled={!canDonate}
-            onClick={() => onDonate(normalizedAmount, isAnonymous, isAgreed)}
+            onClick={handleDonateClick}
             className={`group inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
               canDonate
                 ? "bg-[#ff5e14] hover:bg-[#ea550c] cursor-pointer"
@@ -257,6 +269,25 @@ export default function CampaignDonateCard({
           </div>
         </div>
       </div>
+
+      {/* Exceed Warning Modal */}
+      <DonationExceedWarningModal
+        isOpen={showExceedWarning}
+        onConfirm={() => {
+          setShowExceedWarning(false);
+          onDonate(normalizedAmount, isAnonymous, isAgreed);
+        }}
+        onAdjust={() => {
+          setShowExceedWarning(false);
+          setTimeout(() => {
+            amountInputRef.current?.focus();
+            amountInputRef.current?.select();
+          }, 100);
+        }}
+        goalAmount={goalAmount}
+        raisedAmount={raisedAmount}
+        donationAmount={normalizedAmount}
+      />
     </div>
   );
 }

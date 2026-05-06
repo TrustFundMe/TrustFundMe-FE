@@ -78,15 +78,16 @@ function CampaignsListContent() {
 
       try {
         setLoading(true);
-        const res = await campaignService.getAll();
-        const approvedCampaigns = res.filter((c: CampaignDto) => c.status === "APPROVED");
+        const res = await campaignService.getAll(0, 100);
+        const data = Array.isArray(res) ? res : (res.content || []);
+        const approvedCampaigns = data.filter((c: CampaignDto) => c.status === "APPROVED");
 
         const items: CampaignCardItem[] = approvedCampaigns.map((c: CampaignDto) => ({
           id: String(c.id),
           title: c.title,
           type: c.type || c.categoryName || c.category || "Chung",
           raised: c.balance ?? 0,
-          goal: Math.max(1, c.balance ?? 1),
+          goal: c.activeGoal?.isActive ? (c.activeGoal.targetAmount || 0) : 0,
           image: withFallbackImage((c.coverImageUrl || c.coverImage) as any, "/assets/img/campaign/1.png"),
           status: c.status,
         }));
