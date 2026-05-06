@@ -59,7 +59,7 @@ interface AIAnalysisResult {
 }
 
 interface AIAnalysisModalProps {
-    result: AIAnalysisResult;
+    result?: Partial<AIAnalysisResult>;
     itemsProp?: ExpenditureItem[];
     donationSummary?: Record<number, number>;
     exp?: Expenditure;
@@ -73,7 +73,7 @@ const fmtVND = (v: number) =>
 const fmtNum = (v: number) => new Intl.NumberFormat('vi-VN').format(v);
 
 export default function AIAnalysisModal({
-    result,
+    result = {},
     itemsProp = [],
     exp,
     mode = 'evidence',
@@ -81,6 +81,10 @@ export default function AIAnalysisModal({
 }: AIAnalysisModalProps) {
     const [items, setItems] = useState<ExpenditureItem[]>(itemsProp);
     const [loadingItems, setLoadingItems] = useState(itemsProp.length === 0);
+    const [detected, setDetected] = useState<DetectedItem[]>(Array.isArray(result.detectedItems) ? result.detectedItems : []);
+    const [overallSummary, setOverallSummary] = useState<string>(result.summary || 'Đang chờ phân tích tổng hợp...');
+    const [overallRecommendation, setOverallRecommendation] = useState<string>(result.recommendation || 'Đang thẩm định kế hoạch chi tiêu...');
+    const [loadingAIItems, setLoadingAIItems] = useState<Record<number, boolean>>({});
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -107,13 +111,61 @@ export default function AIAnalysisModal({
         fetchItems();
     }, [exp?.id, itemsProp, result.expenditureId]);
 
+    // Bắt đầu gọi API AI cho từng item
+    useEffect(() => {
+        if (mode !== 'plan' || items.length === 0) return;
+
+        // Nếu đã có detected items từ prop (ví dụ ở evidence), bỏ qua
+        if (result.detectedItems && result.detectedItems.length > 0) return;
+
+        const invokeAI = async () => {
+            // Gọi song song (parallel) tất cả items cùng lúc để giảm tổng thời gian chờ.
+            // Kết quả hiện real-time khi từng item hoàn thành.
+            const validItems = items.filter(item => !!item.id);
+
+            // Đánh dấu loading cho tất cả items ngay từ đầu
+            setLoadingAIItems(prev => {
+                const next = { ...prev };
+                validItems.forEach(item => { next[item.id!] = true; });
+                return next;
+            });
+
+            await Promise.all(
+                validItems.map(async (sysItem) => {
+                    try {
+                        const aiData = await expenditureService.analyzeItemWithAI(sysItem.id!);
+                        if (aiData && aiData.detectedItems && aiData.detectedItems.length > 0) {
+                            const aiItem = aiData.detectedItems[0];
+                            setDetected(prev => {
+                                const newArr = prev.filter(d => d.name !== sysItem.name);
+                                return [...newArr, aiItem];
+                            });
+                        }
+                    } catch (error: any) {
+                        console.group(`🔴 [AIAudit] Lỗi item ${sysItem.id}`);
+                        console.error('HTTP Status:', error.response?.status);
+                        console.error('Response body:', error.response?.data);
+                        console.error('Error message:', error.message);
+                        console.error('Full error:', error);
+                        console.groupEnd();
+                    } finally {
+                        setLoadingAIItems(prev => ({ ...prev, [sysItem.id!]: false }));
+                    }
+                })
+            );
+
+            setOverallSummary('Đã hoàn tất kiểm tra chéo giá thị trường cho tất cả các bản nháp/hạng mục.');
+            setOverallRecommendation('Gợi ý: Căn cứ vào bảng đối soát từng mục để tự tin duyệt ngân sách mà không lo thất thoát quỹ.');
+        };
+
+        invokeAI();
+    }, [items, mode]);
+
     const getRiskStyles = (score: number) => {
         if (score < 30) return 'text-emerald-700 bg-emerald-50 border-emerald-100';
         if (score < 70) return 'text-amber-700 bg-amber-50 border-amber-100';
         return 'text-rose-700 bg-rose-50 border-rose-100';
     };
-
-    const detected: DetectedItem[] = Array.isArray(result.detectedItems) ? result.detectedItems : [];
 
     // 🔍 DEBUG — mở F12 > Console để xem
     console.group('[AIAudit] Raw result from backend');
@@ -169,15 +221,13 @@ export default function AIAnalysisModal({
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {items.map((sysItem, idx) => {
-                                    // Find matching AI analysis for this DB item
+                                    // Match by item.name
                                     const aiItem = detected.find(d => {
-                                        const s1 = (sysItem.name || '').toLowerCase().trim();
-                                        const dName = (d.name || '').toLowerCase().trim();
-                                        const dCat = (d.plannedCategory || '').toLowerCase().trim();
-                                        return (dName && (s1 === dName || s1.includes(dName) || dName.includes(s1))) ||
-                                            (dCat && (s1 === dCat || s1.includes(dCat) || dCat.includes(s1)));
+                                        // The backend explicitly maps: aiItem.setItemName(item.getName());
+                                        return d.name === sysItem.name || d.plannedCategory === sysItem.name;
                                     });
 
+                                    const isItemLoadingAI = loadingAIItems[sysItem.id!];
                                     const sysQty = sysItem.expectedQuantity || 1;
                                     const sysPrice = sysItem.expectedPrice || 0;
                                     const sysVal = sysQty * sysPrice;
@@ -213,7 +263,12 @@ export default function AIAnalysisModal({
                                                 </div>
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50 min-w-[180px]">
-                                                {aiItem ? (
+                                                {isItemLoadingAI ? (
+                                                    <div className="flex flex-col items-center justify-center py-2 opacity-50 select-none">
+                                                        <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+                                                        <span className="text-[8px] font-black text-indigo-500 uppercase mt-1">Đang phân tích...</span>
+                                                    </div>
+                                                ) : aiItem ? (
                                                     <div className="flex flex-col gap-1.5">
                                                         <div className="flex items-center justify-between">
                                                             <span className="text-[9px] font-black text-slate-400 uppercase">Giá tham chiếu (Khoảng giá):</span>
@@ -253,8 +308,7 @@ export default function AIAnalysisModal({
                                                     </div>
                                                 ) : (
                                                     <div className="flex flex-col items-center justify-center py-2 opacity-30 select-none">
-                                                        <Loader2 className="h-4 w-4 animate-spin text-slate-300" />
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase mt-1">AI đang xử lý...</span>
+                                                        <span className="text-[8px] font-black text-slate-400 uppercase mt-1">Chưa phân tích</span>
                                                     </div>
                                                 )}
                                             </td>
@@ -284,8 +338,8 @@ export default function AIAnalysisModal({
                 </div>
                 <div className="w-px self-stretch bg-slate-700 flex-shrink-0" />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <p className="text-xs font-black leading-snug">{result.recommendation}</p>
-                    <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{result.summary}&rdquo;</p>
+                    <p className="text-xs font-black leading-snug">{mode === 'plan' ? overallRecommendation : result.recommendation}</p>
+                    <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{mode === 'plan' ? overallSummary : result.summary}&rdquo;</p>
                 </div>
             </div>
         </div>

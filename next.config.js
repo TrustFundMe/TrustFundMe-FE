@@ -43,6 +43,12 @@ const nextConfig = {
   },
   experimental: {
     middlewareClientMaxBodySize: '50mb',
+    // Tăng timeout proxy để chờ Perplexity AI 3-step (mỗi item ~60s)
+    proxyTimeout: 180000,
+  },
+  // Tăng timeout http agent mặc định
+  httpAgentOptions: {
+    keepAlive: true,
   },
 };
 

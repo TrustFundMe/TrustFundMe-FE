@@ -157,7 +157,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
     const [donationSummary, setDonationSummary] = useState<Record<number, number>>({});
     const [loading, setLoading] = useState(false);
     const [analyzingAI, setAnalyzingAI] = useState(false);
-    const [aiResult, setAiResult] = useState<any>(null);
+    const [showAiModal, setShowAiModal] = useState(false);
     const [showReject, setShowReject] = useState(false);
     const [showCorrection, setShowCorrection] = useState(false);
     const { user: currentUser } = useAuth();
@@ -225,12 +225,8 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
         } catch { toast.error('Lỗi'); } finally { setLoading(false); }
     };
 
-    const handleAIAnalyze = async () => {
-        try {
-            setAnalyzingAI(true);
-            const allItems = categories.flatMap(c => c.items || []);
-            setAiResult(await expenditureService.analyzeWithAI(campaignData, exp, allItems));
-        } catch (e: any) { toast.error(e.response?.data?.error || 'Lỗi AI'); } finally { setAnalyzingAI(false); }
+    const handleAIAnalyze = () => {
+        setShowAiModal(true);
     };
 
     return (
@@ -315,7 +311,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
             )}
             {showReject && <RejectModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'REJECTED', undefined, r)} onCancel={() => setShowReject(false)} />}
             {showCorrection && <CorrectionModal onConfirm={(r: string) => handleAction(expenditureService.updateStatus, 'ALLOWED_EDIT', undefined, r)} onCancel={() => setShowCorrection(false)} />}
-            {aiResult && <AIAnalysisModal result={aiResult} itemsProp={categories.flatMap(c => c.items || [])} mode="plan" exp={exp} onClose={() => setAiResult(null)} />}
+            {showAiModal && <AIAnalysisModal result={{}} itemsProp={categories.flatMap(c => c.items || [])} mode="plan" exp={exp} onClose={() => setShowAiModal(false)} />}
         </div>
     );
 }

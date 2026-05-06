@@ -195,6 +195,15 @@ export const expenditureService = {
         return response.data;
     },
 
+    /** Kiểm toán từng hạng mục chi tiêu bằng hệ thống AI Perplexity (Backend) */
+    analyzeItemWithAI: async (itemId: number | string): Promise<any> => {
+        // Perplexity 3-step process takes up to 60s, set timeout to 120s to avoid proxy timeout
+        const response = await axiosInstance.post(`/api/expenditures/items/${itemId}/audit`, null, {
+            timeout: 120000, // 120 seconds
+        });
+        return response.data;
+    },
+
     /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
     getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
         const response = await axiosInstance.get('/api/expenditures/transactions');
