@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useMemo, Fragment } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, AlertCircle, ExternalLink, Loader2, Receipt, ShoppingCart, Link as LinkIcon, Check, ImageIcon, ChevronRight, ChevronDown, Clock } from 'lucide-react';
+import { ArrowLeft, AlertCircle, ExternalLink, Loader2, Receipt, ShoppingCart, Link as LinkIcon, Check, ImageIcon, ChevronRight, ChevronDown, Clock, XCircle, Info, Edit3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextProxy';
 import { useExpenditureDetailLogic } from './hooks/useExpenditureDetailLogic';
 import ExpenditureGalleryModal from '@/components/campaign/ExpenditureGalleryModal';
@@ -84,25 +84,91 @@ export default function ExpenditureDetailPage() {
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="px-2 py-0.5 bg-slate-100 text-[9px] font-black text-black rounded uppercase tracking-widest">Xem</span>
                                 <span className="text-[10px] font-bold text-black uppercase tracking-widest truncate max-w-[500px]">Chiến dịch: {campaign?.title}</span>
-                                {expenditure.evidenceDueAt && (
-                                    <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${new Date(expenditure.evidenceDueAt) < new Date() ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-                                        <Clock className="w-2.5 h-2.5" />
-                                        Hạn nộp: {new Date(expenditure.evidenceDueAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                )}
                             </div>
                         </div>
-                    </div>
-                    <div className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${expenditure.evidenceStatus === 'OVERDUE' ? 'bg-red-50 border-red-200 text-red-700' :
-                        isEvidenceSubmitted ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                            'bg-amber-50 border-amber-100 text-amber-700'
-                        }`}>
-                        {expenditure.evidenceStatus === 'OVERDUE' ? '⚠ Quá hạn nộp minh chứng' : isEvidenceSubmitted ? '✓ Đã nộp minh chứng' : 'Chưa cập nhật'}
                     </div>
                 </div>
             </div>
 
             <div className="max-w-[1400px] mx-auto px-6 mt-4">
+                {/* SECTION: STATUS & DEADLINE */}
+                {/* SECTION: STATUS & DEADLINE (Unified Single Box) */}
+                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm mb-6">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6">
+                        {/* Status Integrated */}
+                        {(() => {
+                            const getStatusStyles = (status?: string) => {
+                                switch (status) {
+                                    case 'OVERDUE':
+                                        return { label: 'Quá hạn', text: 'text-red-700', bgIcon: 'bg-red-50 text-red-600', icon: <XCircle className="w-5 h-5" /> };
+                                    case 'SUBMITTED':
+                                        return { label: 'Đã nộp', text: 'text-amber-700', bgIcon: 'bg-amber-50 text-amber-600', icon: <Clock className="w-5 h-5" /> };
+                                    case 'APPROVED':
+                                        return { label: 'Đã duyệt', text: 'text-emerald-700', bgIcon: 'bg-emerald-50 text-emerald-600', icon: <Check className="w-5 h-5" /> };
+                                    case 'REJECTED':
+                                        return { label: 'Bị từ chối', text: 'text-red-700', bgIcon: 'bg-red-50 text-red-600', icon: <AlertCircle className="w-5 h-5" /> };
+                                    case 'ALLOWED_EDIT':
+                                        return { label: 'Cho phép sửa', text: 'text-orange-700', bgIcon: 'bg-orange-50 text-orange-600', icon: <Edit3 className="w-5 h-5" /> };
+                                    default:
+                                        return { label: 'Chưa cập nhật', text: 'text-slate-500', bgIcon: 'bg-slate-50 text-slate-400', icon: <Info className="w-5 h-5" /> };
+                                }
+                            };
+                            const styles = getStatusStyles(expenditure.evidenceStatus);
+                            return (
+                                <div className="flex items-center gap-4 min-w-[180px]">
+                                    <div className={`p-3 rounded-2xl ${styles.bgIcon}`}>
+                                        {styles.icon}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Trạng thái</p>
+                                        <p className={`text-base font-black truncate ${styles.text}`}>
+                                            {styles.label}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        <div className="hidden md:block h-10 w-px bg-slate-100" />
+                        <div className="md:hidden h-px w-full bg-slate-50" />
+
+                        {/* Deadline Integrated */}
+                        <div className="flex items-center gap-4 min-w-[200px]">
+                            <div className={`p-3 rounded-2xl ${expenditure.evidenceDueAt && new Date(expenditure.evidenceDueAt) < new Date() ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
+                                <Clock className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Hạn nộp</p>
+                                <p className={`text-base font-black truncate ${expenditure.evidenceDueAt && new Date(expenditure.evidenceDueAt) < new Date() ? 'text-red-600' : 'text-slate-900'}`}>
+                                    {expenditure.evidenceDueAt 
+                                        ? (() => {
+                                            const d = new Date(expenditure.evidenceDueAt);
+                                            const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                                            const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                            return `${time} ${date}`;
+                                        })()
+                                        : 'Không giới hạn'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="hidden md:block h-10 w-px bg-slate-100" />
+                        <div className="md:hidden h-px w-full bg-slate-50" />
+
+                        {/* Description Integrated */}
+                        <div className="flex items-center gap-4 flex-1 min-w-0 pr-2">
+                            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 shrink-0">
+                                <Info className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Kế hoạch đợt chi</p>
+                                <p className="text-[11px] font-bold text-slate-600 line-clamp-2 leading-tight" title={expenditure.plan}>
+                                    {expenditure.plan || 'Chưa cập nhật kế hoạch'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 {/* SECTION 1: WITHDRAWAL OVERVIEW */}
                 <div className="mb-4">
                     <div className="flex items-center gap-3 mb-2">
@@ -234,9 +300,9 @@ export default function ExpenditureDetailPage() {
                                                             <td className="px-2 py-2 text-center">
                                                                 <button
                                                                     onClick={() => { setGalleryModalItemId(item.id); loadItemMedia(item.id); }}
-                                                                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all mx-auto ${mediaList.length > 0 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}
+                                                                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all mx-auto ${mediaList.length > 0 ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-50 border-slate-100 text-slate-300'}`}
                                                                 >
-                                                                    <ImageIcon className="w-4 h-4" />
+                                                                    Xem
                                                                 </button>
                                                             </td>
                                                         </tr>
@@ -303,13 +369,10 @@ export default function ExpenditureDetailPage() {
             {galleryModalItemId && (
                 <ExpenditureGalleryModal
                     isOpen={!!galleryModalItemId}
+                    isReadOnly={true}
                     onClose={() => setGalleryModalItemId(null)}
                     itemName={currentGalleryItem?.name || 'Hạng mục'}
                     media={itemMedia[galleryModalItemId] || []}
-                    onFileChange={(files) => handleItemFileChange(galleryModalItemId, files)}
-                    onUploadSubmit={() => handleItemMediaUpload(galleryModalItemId)}
-                    uploadState={itemUploadState[galleryModalItemId] || { uploading: false, files: [], previews: [] }}
-                    onDelete={(mediaId) => handleDeleteItemMedia(galleryModalItemId, mediaId)}
                 />
             )}
         </div>

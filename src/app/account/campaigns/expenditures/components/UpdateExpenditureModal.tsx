@@ -109,6 +109,15 @@ export default function UpdateExpenditureModal({
 
     const handleStepSubmit = async () => {
         if (currentStep === 3) {
+            // Block navigation to update page if evidence is already submitted/approved
+            const evStatus = updateExpenditure.evidenceStatus;
+            if (evStatus === 'SUBMITTED' || evStatus === 'APPROVED') {
+                toast.error(evStatus === 'SUBMITTED'
+                    ? 'Đợt chi tiêu này đã nộp minh chứng. Không thể chỉnh sửa thực chi.'
+                    : 'Đợt chi tiêu này đã được xác nhận. Không thể chỉnh sửa.');
+                onClose();
+                return;
+            }
             // Step 3 finished -> Go to standalone page for Step 4
             onClose();
             router.push(`/account/campaigns/expenditures/update/${updateExpenditure.id}?campaignId=${campaign.id}`);
