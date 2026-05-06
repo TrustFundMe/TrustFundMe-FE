@@ -5,53 +5,6 @@ import { motion } from "framer-motion";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import DonationExceedWarningModal from "@/components/donation/DonationExceedWarningModal";
 
-function CircularProgress({ value }: { value: number }) {
-  const size = 84;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.max(0, Math.min(100, value));
-  const dashOffset = circumference * (1 - progress / 100);
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="block">
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="rgba(17,24,39,0.1)"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="#ff5e14"
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          />
-        </svg>
-
-        <div className="absolute inset-0 flex items-center justify-center text-base font-extrabold text-slate-800">
-          {progress}%
-        </div>
-      </div>
-
-      <div className="min-w-0">
-        <div className="text-[15px] font-bold leading-tight text-slate-900">Tiến trình gây quỹ</div>
-        <div className="text-xs text-slate-500">Trạng thái gây quỹ hiện tại</div>
-      </div>
-    </div>
-  );
-}
-
 function formatTimeAgo(dateString: string) {
   try {
     const date = new Date(dateString);
@@ -74,6 +27,7 @@ export default function CampaignDonateCard({
   raisedAmount,
   goalAmount,
   progressPercentage,
+  campaignEndDate,
   donorCount = 0,
   recentDonors = [],
   onDonate,
@@ -82,13 +36,25 @@ export default function CampaignDonateCard({
   raisedAmount: number;
   goalAmount: number;
   progressPercentage: number;
+  campaignEndDate?: string | null;
   donorCount?: number;
   recentDonors?: { donorName: string; donorAvatar?: string | null; amount: number; anonymous?: boolean; createdAt: string }[];
   onDonate: (amount: number, isAnonymous: boolean, isAgreed: boolean) => void;
   onMoreDonorsClick?: () => void;
 }) {
-  const progress = Math.max(0, Math.min(100, progressPercentage || 0));
+  const actualProgress =
+    goalAmount > 0 ? Math.max(0, Math.round((raisedAmount / goalAmount) * 100)) : 0;
+  const progress = Math.max(0, Math.min(100, actualProgress || progressPercentage || 0));
   const remainingAmount = Math.max(0, goalAmount - raisedAmount);
+  const remainingDays = (() => {
+    if (!campaignEndDate) return null;
+    const end = new Date(campaignEndDate);
+    if (Number.isNaN(end.getTime())) return null;
+    const now = new Date();
+    const diffMs = end.getTime() - now.getTime();
+    if (diffMs <= 0) return 0;
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  })();
 
   const [amount, setAmount] = useState<number>(50000);
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -110,25 +76,35 @@ export default function CampaignDonateCard({
   return (
     <div className="mt-2 mb-4 rounded-[14px] border border-[rgba(15,23,42,0.12)] bg-white">
       <div className="p-3.5 md:p-4">
-        <div className="rounded-xl border border-[rgba(15,23,42,0.10)] bg-slate-50/70 p-2.5">
-          <CircularProgress value={progress} />
-        </div>
-
-        <div className="mt-2.5 rounded-xl border border-[rgba(15,23,42,0.10)] bg-white px-3 py-2.5">
-          <div className="flex items-start justify-between gap-2">
+        <div className="rounded-xl border border-[rgba(15,23,42,0.10)] bg-white px-3 py-2.5">
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Mục tiêu chiến dịch</p>
-              <p className="mt-1 truncate text-[15px] font-extrabold text-slate-900">{goalAmount.toLocaleString("vi-VN")} VNĐ</p>
+              <p className="text-[11px] font-semibold text-slate-500">Mục tiêu chiến dịch</p>
+              <p className="mt-0.5 text-[22px] font-extrabold text-slate-900">{goalAmount.toLocaleString("vi-VN")} VNĐ</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-semibold text-slate-500">Thời gian còn lại</p>
+              <p className="mt-0.5 text-xl font-extrabold text-slate-900">
+                {remainingDays === null ? "—" : `${remainingDays} ngày`}
+              </p>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-[rgba(15,23,42,0.10)] bg-slate-50 px-2.5 py-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Đã góp</p>
-              <p className="mt-0.5 truncate text-xs font-extrabold text-slate-900">{raisedAmount.toLocaleString("vi-VN")} VNĐ</p>
+
+          <div className="mt-2.5">
+            <div className="mb-1 flex items-center justify-between text-[13px]">
+              <span className="font-semibold text-slate-700">
+                Đã đạt được <span className="font-extrabold text-[#ff5e14]">{raisedAmount.toLocaleString("vi-VN")} VNĐ</span>
+              </span>
+              <span className="font-extrabold text-slate-700">{actualProgress}%</span>
             </div>
-            <div className="rounded-lg border border-[rgba(15,23,42,0.10)] bg-slate-50 px-2.5 py-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Lượt ủng hộ</p>
-              <p className="mt-0.5 truncate text-xs font-extrabold text-slate-900">{donorCount.toLocaleString("vi-VN")}</p>
+            <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full bg-[#ff8a1f] transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="mt-1.5 text-[13px] font-semibold text-slate-700">
+              Lượt ủng hộ: <span className="font-extrabold">{donorCount.toLocaleString("vi-VN")}</span>
             </div>
           </div>
         </div>
@@ -183,9 +159,11 @@ export default function CampaignDonateCard({
           </motion.button>
         </div>
 
-        <div className="mt-1.5 text-[11px] font-semibold text-slate-500">
-          Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
-        </div>
+        {remainingAmount > 0 && (
+          <div className="mt-1.5 text-[11px] font-semibold text-slate-500">
+            Còn thiếu: <span className="font-extrabold text-slate-700">{remainingAmount.toLocaleString("vi-VN")} VNĐ</span>
+          </div>
+        )}
 
         {/* Checkboxes */}
         <div className="mt-3 space-y-2.5 border-t border-[rgba(15,23,42,0.10)] pt-3">

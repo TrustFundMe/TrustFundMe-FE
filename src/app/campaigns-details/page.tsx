@@ -1,7 +1,7 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, XCircle, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -57,6 +57,7 @@ const mapCampaignDtoToUi = (
     galleryImages: galleryUrls.length > 0 ? galleryUrls : (finalCover ? [finalCover] : []),
     goalAmount: activeGoal ? activeGoal.targetAmount : 0,
     raisedAmount: dto.balance ?? 0,
+    endDate: dto.endDate,
     creator: {
       id: String(dto.fundOwnerId),
       name: owner?.name || 'Người tạo chiến dịch',
@@ -265,6 +266,17 @@ function CampaignDetailsInner() {
     if (!start || !end) return false;
     return now >= start && now <= end;
   });
+
+  const lastMilestoneEndDate = useMemo(() => {
+    const validDates = plans
+      .map((p) => p.endDate)
+      .filter((d): d is string => !!d)
+      .map((d) => new Date(d))
+      .filter((d) => !Number.isNaN(d.getTime()));
+
+    if (validDates.length === 0) return null;
+    return new Date(Math.max(...validDates.map((d) => d.getTime()))).toISOString();
+  }, [plans]);
 
   // Polling for payment status
   useEffect(() => {
@@ -751,6 +763,7 @@ function CampaignDetailsInner() {
                         raisedAmount={progress?.raisedAmount || campaign.raisedAmount}
                         goalAmount={progress?.goalAmount || campaign.goalAmount}
                         progressPercentage={progress?.progressPercentage || 0}
+                        campaignEndDate={lastMilestoneEndDate || campaign.endDate}
                         donorCount={progress?.donorCount || 0}
                         recentDonors={recentDonors}
                         onDonate={(amount, isAnonymous) => {
