@@ -167,7 +167,6 @@ const sections: Section[] = [
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Tạm dừng chiến dịch:</strong> Khi phát hiện dấu hiệu vi phạm, nhận được tố cáo có căn cứ, hoặc cần xác minh thêm thông tin.</li>
           <li><strong>Đóng chiến dịch vĩnh viễn:</strong> Khi xác định chiến dịch gian lận, sử dụng quỹ sai mục đích, hoặc vi phạm nghiêm trọng Điều khoản.</li>
-          <li><strong>Yêu cầu hoàn tiền:</strong> Trong trường hợp chiến dịch bị đóng do vi phạm, Nền tảng có quyền yêu cầu nhà tổ chức hoàn trả toàn bộ số tiền đã nhận.</li>
           <li><strong>Chỉnh sửa nội dung:</strong> Nền tảng có quyền yêu cầu chỉnh sửa hoặc gỡ bỏ nội dung không phù hợp trên trang chiến dịch.</li>
         </ul>
       </>
@@ -189,19 +188,11 @@ const sections: Section[] = [
         </ul>
         <p>Nền tảng có thể bổ sung thêm phương thức thanh toán mới và sẽ thông báo trước cho người dùng.</p>
 
-        <h4 className="mt-6 mb-2 text-[15px] font-extrabold text-slate-800">2. Chính sách hoàn tiền</h4>
+        <h4 className="mt-6 mb-2 text-[15px] font-extrabold text-slate-800">2. Chính sách không hoàn tiền</h4>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Quyên góp về bản chất là khoản đóng góp tự nguyện và <strong>không hoàn lại</strong> trong điều kiện thông thường.</li>
-          <li>Các trường hợp được xem xét hoàn tiền:
-            <ul className="list-[circle] pl-5 mt-1 space-y-0.5">
-              <li>Chiến dịch bị Nền tảng đóng do phát hiện gian lận.</li>
-              <li>Chiến dịch không đạt mục tiêu tối thiểu và nhà tổ chức chọn chế độ &quot;Hoàn tiền nếu không đạt mục tiêu&quot; (All-or-Nothing).</li>
-              <li>Lỗi kỹ thuật dẫn đến giao dịch trùng lặp hoặc sai số tiền.</li>
-            </ul>
-          </li>
-          <li>Yêu cầu hoàn tiền phải được gửi trong vòng 30 ngày kể từ ngày quyên góp.</li>
-          <li>Thời gian xử lý hoàn tiền: 7–14 ngày làm việc kể từ khi yêu cầu được chấp thuận.</li>
-          <li>Phí chuyển khoản (nếu có) sẽ được khấu trừ từ khoản hoàn tiền.</li>
+          <li>Quyên góp trên TrustFundMe là khoản đóng góp tự nguyện và <strong>không hoàn lại</strong> trong mọi trường hợp.</li>
+          <li>Người quyên góp cần cân nhắc kỹ trước khi thực hiện giao dịch.</li>
+          <li>Trong trường hợp lỗi kỹ thuật dẫn đến giao dịch trùng lặp hoặc sai số tiền, vui lòng liên hệ đội ngũ hỗ trợ qua email <strong>support@trustfundme.vn</strong> để được xử lý.</li>
         </ul>
 
         <h4 className="mt-6 mb-2 text-[15px] font-extrabold text-slate-800">3. Quyên góp ẩn danh</h4>
@@ -214,7 +205,7 @@ const sections: Section[] = [
 
         <h4 className="mt-6 mb-2 text-[15px] font-extrabold text-slate-800">4. Giới hạn quyên góp</h4>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Mức quyên góp tối thiểu: <strong>10.000 VNĐ</strong> mỗi lần.</li>
+          <li>Mức quyên góp tối thiểu: <strong>2.000 VNĐ</strong> mỗi lần.</li>
           <li>Mức quyên góp tối đa: <strong>500.000.000 VNĐ</strong> (năm trăm triệu đồng) mỗi giao dịch. Các khoản lớn hơn cần liên hệ trực tiếp với Nền tảng.</li>
           <li>Nền tảng có quyền điều chỉnh giới hạn này và sẽ thông báo trước cho người dùng.</li>
           <li>Các giao dịch có giá trị bất thường có thể bị tạm giữ để xác minh theo quy định phòng chống rửa tiền.</li>
@@ -283,7 +274,7 @@ const sections: Section[] = [
           <li><strong>Bước 1 — Liên hệ nhà tổ chức:</strong> Người quyên góp liên hệ trực tiếp nhà tổ chức thông qua hệ thống tin nhắn (Chat) trên Nền tảng.</li>
           <li><strong>Bước 2 — Gửi khiếu nại:</strong> Nếu không giải quyết được, gửi khiếu nại tới đội ngũ hỗ trợ qua email <strong>support@trustfundme.vn</strong> hoặc chức năng Flag trên Nền tảng.</li>
           <li><strong>Bước 3 — Xem xét &amp; Phân xử:</strong> Nền tảng sẽ xem xét, thu thập bằng chứng từ cả hai bên và đưa ra quyết định trong vòng 14 ngày làm việc.</li>
-          <li><strong>Bước 4 — Thực thi:</strong> Quyết định của Nền tảng bao gồm hoàn tiền, tạm dừng/đóng chiến dịch hoặc các biện pháp khác. Quyết định có hiệu lực ràng buộc trên Nền tảng.</li>
+          <li><strong>Bước 4 — Thực thi:</strong> Quyết định của Nền tảng bao gồm tạm dừng/đóng chiến dịch, trừ điểm tin cậy hoặc các biện pháp khác. Quyết định có hiệu lực ràng buộc trên Nền tảng.</li>
           <li><strong>Bước 5 — Khiếu nại pháp lý:</strong> Nếu các bên không đồng ý với quyết định, có thể giải quyết theo thủ tục tố tụng dân sự tại Tòa án nhân dân có thẩm quyền.</li>
         </ol>
       </>

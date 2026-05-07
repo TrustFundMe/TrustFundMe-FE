@@ -136,7 +136,6 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
       log.action,
       direction,
       fmtCurrency(snap['amount']),
-      (snap['counterAccountName'] as string | undefined) ?? log.actorName ?? '',
       (snap['counterAccountNumber'] as string | undefined) ?? '',
       (snap['accountNumber'] as string | undefined) ?? '',
       ((snap['description'] as string | undefined) || '').toString(),
@@ -156,7 +155,6 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
       'Hành động',
       'Loại',
       'Số tiền',
-      'Tên đối tác',
       'STK đối tác',
       'STK chiến dịch',
       'Nội dung chuyển khoản',
@@ -170,7 +168,7 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
   const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
   ws2['!cols'] = [
     { wch: 5 }, { wch: 18 }, { wch: 22 }, { wch: 12 }, { wch: 18 },
-    { wch: 26 }, { wch: 18 }, { wch: 18 }, { wch: 40 }, { wch: 22 },
+    { wch: 18 }, { wch: 18 }, { wch: 40 }, { wch: 22 },
     { wch: 70 }, { wch: 70 }, { wch: 22 },
   ];
 

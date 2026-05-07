@@ -1,7 +1,7 @@
 'use client';
 
 import DanboxLayout from '@/layout/DanboxLayout';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, XCircle, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -254,6 +254,7 @@ function CampaignDetailsInner() {
   const [postsTotal, setPostsTotal] = useState(0);
   const postsLoadedRef = useRef(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
   const [plansLoaded, setPlansLoaded] = useState(false);
   const [postsLoaded, setPostsLoaded] = useState(false);
   const [creatorLoaded, setCreatorLoaded] = useState(false);
@@ -459,10 +460,13 @@ function CampaignDetailsInner() {
           const totalItems = normalizedCategories.reduce((sum: number, cat: any) => sum + (cat.items?.length || 0), 0);
           const firstCategoryDescription =
             normalizedCategories.find((cat: any) => (cat.description || '').trim())?.description || '';
+          const expStatus = (exp.status || '').toUpperCase();
+          const isCompleted = ['DISBURSED', 'COMPLETED', 'CLOSED'].includes(expStatus);
           return {
             id: String(exp.id),
             title: exp.plan || 'Milestone',
-            amount: exp.totalExpectedAmount || exp.totalAmount || 0,
+            amount: isCompleted ? (exp.totalAmount || 0) : (exp.totalExpectedAmount || exp.totalAmount || 0),
+            budgetAmount: exp.totalReceivedAmount || 0,
             description: firstCategoryDescription,
             date: formatVnDateRange(exp.startDate, exp.endDate, exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('vi-VN') : ''),
             status: exp.status,
@@ -673,7 +677,81 @@ function CampaignDetailsInner() {
               <MilestoneTimeline
                 plans={plans}
                 raisedAmount={progress?.raisedAmount || campaign.raisedAmount || 0}
+                goalAmount={campaign.goalAmount || 0}
               />
+
+              {/* Download PDF sao kê button */}
+              <button
+                type="button"
+                disabled={pdfExporting}
+                onClick={async () => {
+                  if (!campaignId || pdfExporting) return;
+                  setPdfExporting(true);
+                  try {
+                    const [cassoTxns, ownerRes, kycRes] = await Promise.all([
+                      paymentService.getCassoTransactionsByCampaign(campaignId),
+                      campaign?.creator?.id ? userService.getUserById(Number(campaign.creator.id)).catch(() => null) : Promise.resolve(null),
+                      campaign?.creator?.id ? (await import('@/services/kycService')).kycService.getByUserId(Number(campaign.creator.id)).catch(() => null) : Promise.resolve(null),
+                    ]);
+                    const dto = await campaignService.getById(campaignId);
+                    const uName = (ownerRes as any)?.data?.fullName || campaign?.creator?.name || '';
+                    const kName = (kycRes as any)?.fullName || '';
+                    const firstIn = cassoTxns.find((t: any) => t.amount > 0);
+                    const bInfo = firstIn ? [firstIn.accountNumber, firstIn.bankAbbreviation || firstIn.bankName].filter(Boolean).join(' - ') : '';
+                    const tIn = cassoTxns.filter((t: any) => t.amount > 0).reduce((s: number, t: any) => s + t.amount, 0);
+                    const tOut = cassoTxns.filter((t: any) => t.amount < 0).reduce((s: number, t: any) => s + Math.abs(t.amount), 0);
+                    const now = new Date();
+                    const rows = cassoTxns.map((t: any, i: number) => {
+                      const date = new Date(t.transactionDate || t.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                      const amt = t.amount >= 0 ? `+${t.amount.toLocaleString('vi-VN')}` : t.amount.toLocaleString('vi-VN');
+                      const sender = t.amount < 0 ? 'Chi phí chiến dịch' : (t.donorName || t.counterAccountName || t.counterAccountNumber || '—');
+                      return `<tr><td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:12px;color:#0f172a;">${i+1}</td><td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#0f172a;">${date}</td><td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-size:12px;font-weight:800;color:${t.amount >= 0 ? '#16a34a' : '#dc2626'};">${amt}</td><td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#0f172a;max-width:260px;word-break:break-all;">${t.description||'—'}</td><td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;color:${t.amount<0?'#dc2626':'#0f172a'};">${sender}</td></tr>`;
+                    }).join('');
+                    const html = `<div style="font-family:'Segoe UI',Roboto,Arial,sans-serif;max-width:900px;margin:0 auto;padding:40px 32px;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #ff5e14;"><div><div style="font-size:24px;font-weight:900;color:#ff5e14;">TrustFundMe</div><div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:2px;">Nền tảng gây quỹ cộng đồng minh bạch</div></div><div style="text-align:right;"><div style="font-size:11px;color:#0f172a;font-weight:600;">Ngày xuất: ${now.toLocaleDateString('vi-VN')}</div></div></div><h1 style="margin:0 0 8px;font-size:26px;font-weight:900;color:#0f172a;">SAO KÊ GIAO DỊCH NGÂN HÀNG</h1><table style="width:100%;margin-bottom:24px;border-collapse:collapse;"><tr><td style="padding:4px 0;font-size:13px;color:#0f172a;width:160px;font-weight:700;">Chiến dịch:</td><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:800;">${dto.title}</td></tr><tr><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:700;">Mã chiến dịch:</td><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:600;">#${dto.id}</td></tr>${uName?`<tr><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:700;">Người tạo:</td><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:800;">${uName}</td></tr>`:''}${kName?`<tr><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:700;">Tên xác thực (KYC):</td><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:800;">${kName}</td></tr>`:''}${bInfo?`<tr><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:700;">Tài khoản NH:</td><td style="padding:4px 0;font-size:13px;color:#0f172a;font-weight:600;">${bInfo}</td></tr>`:''}</table><div style="display:flex;gap:16px;margin-bottom:28px;"><div style="flex:1;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:16px 20px;"><div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Tổng nhận</div><div style="font-size:22px;font-weight:900;color:#16a34a;">+${tIn.toLocaleString('vi-VN')} VNĐ</div></div><div style="flex:1;background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:16px 20px;"><div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Tổng chi</div><div style="font-size:22px;font-weight:900;color:#dc2626;">-${tOut.toLocaleString('vi-VN')} VNĐ</div></div><div style="flex:1;background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:16px 20px;"><div style="font-size:11px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Số dư</div><div style="font-size:22px;font-weight:900;color:#0f172a;">${dto.balance.toLocaleString('vi-VN')} VNĐ</div></div></div><table style="width:100%;border-collapse:collapse;border:2px solid #e2e8f0;border-radius:10px;overflow:hidden;"><thead><tr style="background:#0f172a;"><th style="padding:12px;text-align:center;font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;width:45px;">STT</th><th style="padding:12px;text-align:left;font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;width:150px;">Ngày giờ</th><th style="padding:12px;text-align:right;font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;width:120px;">Số tiền</th><th style="padding:12px;text-align:left;font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;">Nội dung</th><th style="padding:12px;text-align:left;font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;width:170px;">Người gửi</th></tr></thead><tbody>${rows||'<tr><td colspan="5" style="padding:28px;text-align:center;color:#0f172a;">Chưa có giao dịch nào</td></tr>'}</tbody></table><div style="margin-top:24px;padding-top:16px;border-top:2px solid #e2e8f0;display:flex;justify-content:space-between;"><div style="font-size:12px;color:#0f172a;font-weight:700;">Tổng: ${cassoTxns.length} giao dịch</div><div style="font-size:11px;color:#0f172a;font-weight:600;">Dữ liệu từ Casso · TrustFundMe © ${now.getFullYear()}</div></div></div>`;
+                    const container = document.createElement('div');
+                    container.innerHTML = html;
+                    document.body.appendChild(container);
+                    const html2pdf = (await import('html2pdf.js')).default;
+                    await (html2pdf() as any).set({
+                      margin: [10, 8, 10, 8],
+                      filename: `sao-ke-${dto.title.replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF ]/g, '').replace(/\s+/g, '-').slice(0,50)}-${now.toISOString().slice(0,10)}.pdf`,
+                      image: { type: 'jpeg', quality: 0.98 },
+                      html2canvas: { scale: 2, useCORS: true, logging: false },
+                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                    }).from(container).save();
+                    document.body.removeChild(container);
+                  } catch (err) {
+                    console.error('PDF export error:', err);
+                    toast.error('Không thể xuất sao kê. Vui lòng thử lại.');
+                  } finally {
+                    setPdfExporting(false);
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  width: '100%',
+                  padding: '14px 20px',
+                  marginBottom: 14,
+                  borderRadius: 14,
+                  background: '#ff5e14',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  border: 'none',
+                  cursor: pdfExporting ? 'wait' : 'pointer',
+                  transition: 'background 150ms',
+                  opacity: pdfExporting ? 0.7 : 1,
+                  boxShadow: '0 4px 16px rgba(255,94,20,0.3)',
+                }}
+              >
+                {pdfExporting ? '⏳ Đang xuất PDF...' : '📄 Tải sao kê giao dịch (PDF)'}
+              </button>
 
               <div
                 style={{
@@ -698,20 +776,28 @@ function CampaignDetailsInner() {
                     cursor: 'pointer',
                   }}
                 >
-                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>Thống Kê Giao Dịch</span>
+                  <div>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', display: 'block' }}>Thống Kê Giao Dịch</span>
+                    {!isStatsOpen && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#ff5e14', display: 'block', marginTop: 2 }}>
+                        Bấm để xem biểu đồ biến động số dư
+                      </span>
+                    )}
+                  </div>
                   <span
                     style={{
-                      width: 24,
-                      height: 24,
+                      width: 28,
+                      height: 28,
                       borderRadius: '50%',
-                      background: '#f1f5f9',
+                      background: isStatsOpen ? '#fff7ed' : '#f1f5f9',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 11,
-                      color: '#64748b',
-                      transition: 'transform 200ms',
+                      fontSize: 12,
+                      color: isStatsOpen ? '#ff5e14' : '#0f172a',
+                      transition: 'transform 200ms, background 200ms',
                       transform: isStatsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      fontWeight: 800,
                     }}
                   >
                     ▼

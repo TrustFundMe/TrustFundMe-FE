@@ -21,6 +21,7 @@ export interface CampaignCategory {
 export interface CampaignDto {
   id: number;
   fundOwnerId: number;
+  ownerName?: string;
   approvedByStaff?: number | null;
   approvedAt?: string | null;
   thankMessage?: string | null;

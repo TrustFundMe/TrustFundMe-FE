@@ -149,9 +149,9 @@ export default function RelatedPosts({
                     fontFamily: "var(--font-dm-sans)",
                   }}
                 >
-                  <span>{post.likeCount} likes</span>
+                  <span>{post.likeCount} thích</span>
                   <span>•</span>
-                  <span>{post.comments.length} comments</span>
+                  <span>{post.comments.length} bình luận</span>
                 </div>
               </div>
             </Link>
