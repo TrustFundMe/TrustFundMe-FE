@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Check, AlertCircle, ExternalLink, Link as LinkIcon, Loader2, Save, ShoppingCart, Receipt, Image as ImageIcon, Trash2, Plus, PlusCircle, X, ChevronRight, ChevronDown, Clock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, AlertCircle, ExternalLink, Link as LinkIcon, Loader2, Save, ShoppingCart, Receipt, Image as ImageIcon, Trash2, Plus, PlusCircle, X, ChevronRight, ChevronDown, Clock, Eye, EyeOff } from 'lucide-react';
 import { expenditureService } from '@/services/expenditureService';
 import { campaignService } from '@/services/campaignService';
 import { paymentService } from '@/services/paymentService';
@@ -72,6 +72,8 @@ export default function UpdateExpenditureActualsPage() {
         categories: new Set(),
         items: new Set()
     });
+    
+    const [showPlan, setShowPlan] = useState(true);
 
     // Validation Errors: { [itemId]: Set<fieldName> }
     const [fieldErrors, setFieldErrors] = useState<Record<string | number, Set<string>>>({});
@@ -273,9 +275,9 @@ export default function UpdateExpenditureActualsPage() {
             const ui = updateItems.find(it => it.id === item.id);
             if (!ui) continue;
             const errs = new Set<string>();
-            if (!ui.actualQuantity || ui.actualQuantity <= 0) errs.add('actualQuantity');
+            if (ui.actualQuantity === undefined || ui.actualQuantity < 0) errs.add('actualQuantity');
             if (!ui.unit || !ui.unit.trim()) errs.add('unit');
-            if (!ui.actualPrice || ui.actualPrice <= 0) errs.add('actualPrice');
+            if (ui.actualPrice === undefined || ui.actualPrice < 0) errs.add('actualPrice');
             if (!ui.actualBrand || !ui.actualBrand.trim()) errs.add('actualBrand');
             if (errs.size > 0) {
                 errors[item.id] = errs;
@@ -337,6 +339,12 @@ export default function UpdateExpenditureActualsPage() {
     const doSubmit = async () => {
         try {
             setIsSubmitting(true);
+
+            // If evidence status is ALLOWED_EDIT, it means we are resubmitting a completed expenditure.
+            // We need to momentarily set status to PROCESSING so updateActuals can succeed if the backend blocks COMPLETED ones.
+            if (expenditure?.evidenceStatus === 'ALLOWED_EDIT') {
+                await expenditureService.updateStatus(expId, 'PROCESSING');
+            }
 
             for (const catId of Array.from(pendingDeletions.categories)) {
                 await expenditureService.deleteCategory(catId as number);
@@ -508,7 +516,7 @@ export default function UpdateExpenditureActualsPage() {
     }, [updateItems, pendingDeletions]);
 
     // Helpers & Derived Data
-    const renderPrice = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.abs(n)) + ' đ';
+    const renderPrice = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.abs(n)) + ' VNĐ';
     const renderNumber = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 
     const payoutTransactions = (expenditure?.transactions || []).filter(t => t.type === 'PAYOUT' && t.status === 'COMPLETED');
@@ -658,227 +666,250 @@ export default function UpdateExpenditureActualsPage() {
 
     const renderStep2 = () => (
         <div>
+            {/* Header with Toggle */}
+            <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+                        <ShoppingCart className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Chi tiết thực tế</h2>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cập nhật hạng mục và minh chứng</p>
+                    </div>
+                </div>
+                
+                <button
+                    onClick={() => setShowPlan(!showPlan)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all border shadow-sm ${showPlan ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                >
+                    {showPlan ? (
+                        <><EyeOff className="w-3.5 h-3.5" /> Ẩn kế hoạch</>
+                    ) : (
+                        <><Eye className="w-3.5 h-3.5" /> Hiện kế hoạch</>
+                    )}
+                </button>
+            </div>
+
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="w-full overflow-x-auto font-sans">
-                    <table className="w-full text-left border-collapse table-fixed lg:table-auto">
+                    <table className="w-full text-left border-collapse table-fixed lg:table-auto border border-slate-200">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100">
-                                <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[260px]">Ảnh minh chứng</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] h-10 w-[140px]">Nơi mua</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] h-10 w-[140px]">Hiệu</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[80px]">Số lượng</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[110px]">Đơn vị</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[130px]">Đơn giá</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right w-[130px]">Thành tiền</th>
-                                <th className="px-1 w-[36px]"></th>
+                            <tr className="bg-[#f8fafc] border-b border-slate-200">
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[50px] border border-slate-200">STT</th>
+                                <th className="px-3 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[150px] border border-slate-200">Tên danh mục</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[240px] border border-slate-200">Tên hạng mục</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[140px] border border-slate-200">Nơi mua</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[140px] border border-slate-200">Hiệu</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[85px] border border-slate-200">Số lượng</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[85px] border border-slate-200">Đơn vị</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-right w-[120px] border border-slate-200">Đơn giá</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-right w-[140px] border border-slate-200">Thành tiền</th>
+                                <th className="px-1 py-3 text-[10px] font-black text-slate-700 uppercase tracking-[2px] text-center w-[90px] border border-slate-200">Ảnh minh chứng</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {Object.entries(groupedItems).map(([id, group]) => (
-                                <Fragment key={id}>
-                                    <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => toggleCategory(id)}>
-                                        <td colSpan={7} className="px-6 py-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    {collapsedCats.has(id) ? <ChevronRight className="w-4 h-4 text-emerald-600" /> : <ChevronDown className="w-4 h-4 text-emerald-600" />}
-                                                    <div className="flex items-center gap-2">
-                                                        {id === 'other' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Phát sinh</span>}
-                                                        <span className="text-sm font-black text-emerald-800 uppercase tracking-widest">Danh mục: {group.cat?.name || (id === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}</span>
-                                                    </div>
-                                                </div>
-                                                {id === 'other' ? (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleAddNewItem(); }}
-                                                        className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 uppercase hover:text-amber-700 transition-colors"
-                                                    >
-                                                        <PlusCircle className="w-3 h-3" /> Thêm hạng mục
-                                                    </button>
-                                                ) : <div />}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {!collapsedCats.has(id) && group.items.map((item) => {
+                            {(() => {
+                                let globalIdx = 1;
+                                return Object.entries(groupedItems).map(([id, group]) => {
+                                    if (collapsedCats.has(id)) {
+                                        return (
+                                            <tr key={id} className="bg-slate-50 border border-slate-200 cursor-pointer" onClick={() => toggleCategory(id)}>
+                                                <td colSpan={10} className="px-4 py-3 text-[10px] font-black text-slate-400 border border-slate-200 uppercase text-center">
+                                                    Danh mục: {group.cat?.name || 'Hạng mục phát sinh'} (Đang ẩn - Bấm để hiện)
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+
+                                    // Pre-calculate group rowspan
+                                    const groupRowSpan = group.items.reduce((acc, it) => {
+                                        const hasPlanLocal = !it.isNew && (it.expectedQuantity > 0 || it.expectedPrice > 0);
+                                        return acc + (showPlan && hasPlanLocal ? 2 : 1);
+                                    }, 0);
+
+                                    return group.items.map((item) => {
                                         const updateItem = updateItems.find(it => it.id === item.id);
-                                        const expectedQty = item.isNew ? 0 : (isItemized ? (donationSummary[item.id] || 0) : (item.expectedQuantity || 0));
-                                        const expectedPrice = item.isNew ? 0 : (item.expectedPrice || 0);
                                         const actualSubtotal = (updateItem?.actualQuantity || 0) * (updateItem?.actualPrice || 0);
                                         const mediaList = itemMedia[item.id] || [];
+                                        const hasPlan = !item.isNew && (item.expectedQuantity > 0 || item.expectedPrice > 0);
+                                        const itemRowSpan = (showPlan && hasPlan) ? 2 : 1;
+                                        
+                                        // Plan values
+                                        const expectedQty = item.isNew ? 0 : (isItemized ? (donationSummary[item.id] || 0) : (item.expectedQuantity || 0));
+                                        const expectedPrice = item.isNew ? 0 : (item.expectedPrice || 0);
+                                        const currentIdx = globalIdx++;
 
                                         return (
                                             <Fragment key={item.id}>
-                                                <tr className="border-b border-slate-50 hover:bg-slate-50/10 transition-colors group">
-                                                    <td className="px-6 py-2.5 align-middle">
-                                                        <div className="flex items-center justify-between gap-3">
+                                                {/* ACTUAL ROW */}
+                                                <tr className="border-b border-slate-200 hover:bg-slate-50/50 transition-colors group">
+                                                    {/* STT */}
+                                                    <td rowSpan={itemRowSpan} className="px-2 py-2 text-center text-[11px] font-black text-slate-400 border border-slate-200 bg-white shadow-[inset_0_0_0_1px_rgba(226,232,240,0.1)]">
+                                                        {currentIdx}
+                                                    </td>
+
+                                                    {/* Category Column */}
+                                                    {group.items.indexOf(item) === 0 && (
+                                                        <td rowSpan={groupRowSpan} className="px-3 py-2 text-center align-middle border border-slate-200 bg-white min-w-[120px]">
+                                                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight leading-tight">
+                                                                {group.cat?.name || (id === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}
+                                                            </p>
+                                                            {id === 'other' && (
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleAddNewItem(); }}
+                                                                    className="mt-1 flex items-center justify-center gap-1 text-[8px] font-black text-amber-600 uppercase hover:text-amber-700 transition-colors mx-auto p-1 px-2 border border-amber-100 rounded-md bg-amber-50/50"
+                                                                >
+                                                                    <PlusCircle className="w-2.5 h-2.5" /> Thêm hạng mục
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    )}
+
+                                                    {/* Name */}
+                                                    <td className="px-4 py-1.5 border border-slate-200 bg-white">
+                                                        <div className="flex flex-col items-start gap-0.5 py-0">
                                                             {item.isNew ? (
-                                                                <div className="relative flex-1">
+                                                                <div className="relative w-full">
                                                                     <input
-                                                                        className="w-full bg-amber-50/50 border border-amber-200 rounded-lg px-2 py-1.5 text-sm font-black focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
-                                                                        placeholder="Tên hạng mục mới..."
+                                                                        className="w-full bg-amber-50/50 border border-amber-100 rounded-md px-2 py-0.5 text-[12px] font-black focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
+                                                                        placeholder="Tên hạng mục..."
                                                                         value={updateItem?.name || ''}
                                                                         onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
                                                                     />
-                                                                    <span className="absolute -top-2.5 -left-1 px-1.5 bg-amber-100 text-[8px] font-black text-amber-600 rounded uppercase border border-amber-200">Phát sinh</span>
                                                                 </div>
                                                             ) : (
-                                                                <p className="text-sm font-black text-slate-900 leading-tight flex-1">{item.name}</p>
+                                                                <p className="text-[12px] font-black text-slate-900 leading-[1.2]">{item.name}</p>
                                                             )}
-                                                            <div className="flex items-center gap-1.5 shrink-0">
-                                                                <button
-                                                                    onClick={async () => {
-                                                                        if (item.isNew) {
-                                                                            // Eager save: create item in DB first, then open gallery
-                                                                            const ui = updateItems.find(it => it.id === item.id);
-                                                                            if (!ui?.name?.trim()) {
-                                                                                toast.error('Vui lòng nhập tên hạng mục trước khi thêm ảnh.');
-                                                                                return;
-                                                                            }
-                                                                            try {
-                                                                                const itemName = ui.name || 'Hạng mục mới';
-                                                                                const payload = [{
-                                                                                    name: itemName,
-                                                                                    catologyId: ui.catologyId,
-                                                                                    expectedQuantity: 0,
-                                                                                    expectedPrice: 0,
-                                                                                    actualQuantity: ui.actualQuantity || 1,
-                                                                                    actualPrice: ui.actualPrice || 0,
-                                                                                    actualBrand: ui.actualBrand || '',
-                                                                                    actualPurchaseLocation: ui.actualPurchaseLocation || '',
-                                                                                    actualUnit: ui.unit || 'Cái',
-                                                                                    expectedUnit: ui.unit || 'Cái',
-                                                                                }];
-                                                                                // Remove the local isNew item first
-                                                                                handleRemoveNewItem(item.id);
-                                                                                await expenditureService.addItems(expId, payload as any);
-                                                                                // Reload and find the new DB item to open gallery
-                                                                                const freshItems = await expenditureService.getItems(expId);
-                                                                                const newDbItem = freshItems.find(fi => fi.name === itemName && fi.expectedQuantity === 0);
-                                                                                await loadData(true);
-                                                                                if (newDbItem) {
-                                                                                    setGalleryItemId(newDbItem.id);
-                                                                                } else {
-                                                                                    toast.success('Đã lưu hạng mục. Bấm nút ảnh để thêm minh chứng.');
-                                                                                }
-                                                                            } catch (err) {
-                                                                                toast.error('Không thể lưu hạng mục. Thử lại sau.');
-                                                                                return;
-                                                                            }
-                                                                            return;
-                                                                        }
-                                                                        setGalleryItemId(item.id);
-                                                                    }}
-                                                                    className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-all ${item.isNew ? 'opacity-60 cursor-pointer hover:opacity-100' : (mediaList.length > 0 ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-black hover:bg-emerald-50 hover:text-emerald-600')}`}
-                                                                >
-                                                                    <ImageIcon className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
+                                                            
+                                                            {showPlan && (
+                                                                <span className="text-[7px] font-black text-white bg-emerald-500 px-1 py-0.5 rounded-[3px] uppercase tracking-[0.5px]">THỰC TẾ</span>
+                                                            )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-2 py-2">
+
+
+                                                    {/* Purchase Location */}
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
                                                         <input type="text"
-                                                            className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-xs font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50 transition-all outline-none focus:border-emerald-500 ${hasError(item.id, 'actualPurchaseLocation') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
-                                                            value={updateItem?.actualPurchaseLocation || ''}
+                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 focus:bg-white transition-all outline-none"
+                                                            value={updateItem?.actualPurchaseLocation ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPurchaseLocation', e.target.value)}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-2">
+
+                                                    {/* Brand */}
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
                                                         <input type="text"
-                                                            className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-xs font-bold focus:bg-white focus:ring-4 focus:ring-emerald-50 transition-all outline-none focus:border-emerald-500 ${hasError(item.id, 'actualBrand') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
+                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 focus:bg-white transition-all outline-none"
                                                             value={updateItem?.actualBrand || ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualBrand', e.target.value)}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-2">
+
+                                                    {/* Quantity */}
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
                                                         <input type="number"
-                                                            className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-black text-center focus:bg-white outline-none transition-all focus:border-emerald-500 ${hasError(item.id, 'actualQuantity') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
-                                                            value={updateItem?.actualQuantity || ''}
+                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-center focus:bg-white outline-none transition-all"
+                                                            value={updateItem?.actualQuantity ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualQuantity', e.target.value)}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-2">
+
+                                                    {/* Unit */}
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
                                                         <input type="text"
-                                                            className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-bold text-black uppercase focus:bg-white outline-none text-center transition-all focus:border-emerald-500 ${hasError(item.id, 'unit') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
+                                                            className="w-full h-7 px-2 bg-transparent text-[10px] font-bold text-center uppercase focus:bg-white outline-none transition-all"
                                                             value={updateItem?.unit || ''}
                                                             onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-2">
+
+                                                    {/* Price */}
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
                                                         <input type="number"
-                                                            className={`w-full h-8 px-2 bg-slate-50 border rounded-lg text-sm font-black text-emerald-600 text-right focus:bg-white outline-none transition-all focus:border-emerald-500 ${hasError(item.id, 'actualPrice') ? 'border-rose-500 bg-rose-50/30 ring-2 ring-rose-200' : 'border-slate-100'}`}
-                                                            value={updateItem?.actualPrice || ''}
+                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-right focus:bg-white outline-none transition-all"
+                                                            value={updateItem?.actualPrice ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPrice', e.target.value)}
                                                         />
                                                     </td>
-                                                    <td className="px-4 py-2 text-right">
-                                                        <p className="text-sm font-black text-slate-900">{renderPrice(actualSubtotal)}</p>
+
+                                                    {/* Subtotal */}
+                                                    <td className="px-4 py-1.5 text-right border border-slate-200 bg-[#f8fafc]/50">
+                                                        <p className="text-[12px] font-black text-emerald-600">{renderPrice(actualSubtotal)}</p>
                                                     </td>
-                                                    <td className="px-1 py-2.5 text-center align-middle">
-                                                        {(item.isNew || (item.expectedQuantity === 0 && item.expectedPrice === 0)) && (
-                                                            deletingItemId === item.id ? (
-                                                                <Loader2 className="w-4 h-4 text-rose-400 animate-spin mx-auto" />
-                                                            ) : (
+
+                                                    {/* Action / Ảnh minh chứng */}
+                                                    <td rowSpan={itemRowSpan} className="px-1 border border-slate-200 text-center bg-white">
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <button
+                                                                onClick={() => setGalleryItemId(item.id)}
+                                                                className={`w-7 h-7 flex items-center justify-center rounded-lg border transition-all ${mediaList.length > 0 ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400 hover:text-emerald-600'}`}
+                                                                title="Xem ảnh minh chứng"
+                                                            >
+                                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            {(item.isNew || (item.expectedQuantity === 0 && item.expectedPrice === 0)) && (
                                                                 <button
                                                                     onClick={() => {
                                                                         toast((t) => (
                                                                             <div className="flex flex-col gap-2 p-1">
-                                                                                <p className="text-[10px] font-black text-black uppercase tracking-widest">Xóa hạng mục phát sinh này?</p>
+                                                                                <p className="text-[10px] font-black text-black uppercase tracking-widest">Xóa hạng mục?</p>
                                                                                 <div className="flex items-center gap-2">
                                                                                     <button onClick={async () => {
                                                                                         toast.dismiss(t.id);
                                                                                         setDeletingItemId(item.id);
                                                                                         try {
-                                                                                            const ml = itemMedia[item.id] || [];
-                                                                                            for (const m of ml) {
-                                                                                                await mediaService.deleteMedia(m.id);
-                                                                                            }
                                                                                             await expenditureService.deleteItem(item.id);
-                                                                                            toast.success('Đã xóa hạng mục phát sinh.');
+                                                                                            toast.success('Đã xóa.');
                                                                                             await loadData(true);
                                                                                         } catch (err) {
-                                                                                            toast.error('Không thể xóa hạng mục.');
+                                                                                            toast.error('Lỗi khi xóa.');
                                                                                         } finally {
                                                                                             setDeletingItemId(null);
                                                                                         }
                                                                                     }} className="px-3 py-1 bg-rose-500 text-white rounded text-[8px] font-black uppercase">Xóa</button>
-                                                                                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 bg-slate-100 text-black rounded text-[8px] font-black uppercase">Hủy</button>
+                                                                                    <button onClick={() => toast.dismiss(t.id)} className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[8px] font-black uppercase">Hủy</button>
                                                                                 </div>
                                                                             </div>
-                                                                        ), { duration: 4000, position: 'top-center', style: { borderRadius: '12px', border: '1px solid #e2e8f0' } });
+                                                                        ), { duration: 4000, position: 'top-center' });
                                                                     }}
-                                                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
+                                                                    className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-rose-500 transition-colors border border-transparent hover:border-rose-100 rounded-lg"
+                                                                    title="Xóa hạng mục"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </button>
-                                                            )
-                                                        )}
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
 
-                                                {/* KẾ HOẠCH row - chỉ hiện cho items gốc (không phải phát sinh) */}
-                                                {!item.isNew && (item.expectedQuantity > 0 || item.expectedPrice > 0) && (
-                                                    <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                        <td className="px-6 py-1.5 flex items-center gap-2">
-                                                            <span className="text-[8px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-widest shrink-0">KẾ HOẠCH</span>
-                                                            <span className="text-[10px] font-bold text-slate-500 truncate">{item.name}</span>
+                                                {/* PLAN ROW */}
+                                                {(showPlan && hasPlan) && (
+                                                    <tr className="bg-slate-50/50 border-b border-slate-200">
+                                                        <td className="px-4 py-1.5 border border-slate-200">
+                                                            <div className="flex flex-col items-start gap-0.5">
+                                                                <span className="text-[11px] font-bold text-slate-500 italic leading-[1.2]">{item.name}</span>
+                                                                <span className="text-[7px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-[0.5px]">KẾ HOẠCH</span>
+                                                            </div>
                                                         </td>
-                                                        <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500">{item.expectedPurchaseLocation || '---'}</span></td>
-                                                        <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500">{item.expectedBrand || '---'}</span></td>
-                                                        <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-black text-slate-500">{renderNumber(expectedQty)}</span></td>
-                                                        <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500 uppercase">{item.expectedUnit || item.unit || '---'}</span></td>
-                                                        <td className="px-4 py-1.5 text-right"><span className="text-[10px] font-black text-slate-500">{renderPrice(expectedPrice)}</span></td>
-                                                        <td className="px-6 py-1.5 text-right"><span className="text-[10px] font-black text-slate-500">{renderPrice(expectedQty * expectedPrice)}</span></td>
-                                                        <td className="px-1 w-[36px]"></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400">{item.expectedPurchaseLocation || '---'}</span></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400">{item.expectedBrand || '---'}</span></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[11px] font-black text-slate-500">{renderNumber(expectedQty)}</span></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400 uppercase">{item.expectedUnit || item.unit || '---'}</span></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-right"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedPrice)}</span></td>
+                                                        <td className="px-4 py-1.5 border border-slate-200 text-right"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedQty * expectedPrice)}</span></td>
                                                     </tr>
                                                 )}
                                             </Fragment>
                                         );
-                                    })}
-                                </Fragment>
-                            ))}
+                                    });
+                                });
+                            })()}
                         </tbody>
                         <tfoot>
-                            <tr className="bg-slate-900 text-white">
-                                <td colSpan={6} className="px-6 py-2.5 text-xs font-black uppercase tracking-[2px] text-right">Tổng thực tế toàn chiến dịch:</td>
-                                <td colSpan={2} className="px-6 py-2.5 text-right text-lg font-black">{renderPrice(totalActualAmt)}</td>
+                            <tr className="bg-slate-900 text-white border border-slate-900">
+                                <td colSpan={8} className="px-6 py-3 text-xs font-black uppercase tracking-[2px] text-right">Tổng thực tế toàn chiến dịch:</td>
+                                <td colSpan={2} className="px-4 py-3 text-right text-lg font-black bg-slate-800 border-l border-slate-700">{renderPrice(totalActualAmt)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -934,7 +965,7 @@ export default function UpdateExpenditureActualsPage() {
                             <ArrowLeft className="w-5 h-5 text-black" />
                         </button>
                         <div>
-                            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Cập nhật Thực chi & Phát sinh</h1>
+                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{expenditure.name}</h1>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-[10px] font-bold text-black uppercase tracking-widest truncate max-w-[500px]">Chiến dịch: {campaign.title}</span>
                                 {expenditure.evidenceDueAt && (

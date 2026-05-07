@@ -21,6 +21,7 @@ export default function ExpenditureDetailPage() {
     } = useExpenditureDetailLogic(id, isAuthenticated, authLoading);
 
     const [collapsedCats, setCollapsedCats] = React.useState<Set<number | string>>(new Set());
+    const [showPlan, setShowPlan] = React.useState(true);
     const toggleCategory = (catId: number | string) => {
         setCollapsedCats(prev => {
             const next = new Set(prev);
@@ -34,7 +35,7 @@ export default function ExpenditureDetailPage() {
     const totalWithdrawn = useMemo(() => (expenditure?.evidences || []).reduce((sum: number, ev: any) => sum + Math.abs(ev.amount || 0), 0), [expenditure]);
     const totalActualAmt = useMemo(() => items.reduce((sum, it) => sum + ((it.actualQuantity || 0) * (it.actualPrice || 0)), 0), [items]);
 
-    const renderPrice = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.abs(n)) + ' đ';
+    const renderPrice = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.abs(n)) + ' VNĐ';
     const renderNumber = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
 
     const groupedItems = useMemo(() => {
@@ -80,7 +81,7 @@ export default function ExpenditureDetailPage() {
                             <ArrowLeft className="w-5 h-5 text-black" />
                         </Link>
                         <div>
-                            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-tight">Tổng quan đợt chi tiêu</h1>
+                            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{expenditure.name}</h1>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="px-2 py-0.5 bg-slate-100 text-[9px] font-black text-black rounded uppercase tracking-widest">Xem</span>
                                 <span className="text-[10px] font-bold text-black uppercase tracking-widest truncate max-w-[500px]">Chiến dịch: {campaign?.title}</span>
@@ -227,108 +228,165 @@ export default function ExpenditureDetailPage() {
 
                 {/* SECTION 2: ITEMS TABLE (read-only) */}
                 <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-100 rounded-xl text-amber-600"><ShoppingCart className="w-5 h-5" /></div>
-                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-[2px]">Danh sách hạng mục chi tiêu</h2>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-xl text-amber-600"><ShoppingCart className="w-5 h-5" /></div>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-[2px]">Danh sách hạng mục chi tiêu</h2>
+                        </div>
+                        <button
+                            onClick={() => setShowPlan(!showPlan)}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm border ${showPlan ? 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                        >
+                            {showPlan ? (
+                                <><Clock className="w-3.5 h-3.5" /> Ẩn kế hoạch</>
+                            ) : (
+                                <><Clock className="w-3.5 h-3.5" /> Hiện kế hoạch</>
+                            )}
+                        </button>
                     </div>
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                         <div className="w-full overflow-x-auto font-sans">
                             <table className="w-full text-left border-collapse table-fixed lg:table-auto">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-100">
-                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[240px]">Hạng mục</th>
-
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[140px]">Nơi mua / Hiệu</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[80px] text-center">SL</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[100px] text-center">ĐV</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[130px] text-right">Đơn giá</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right w-[130px]">Thành tiền</th>
-                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[70px] text-center">Ảnh</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[50px] text-center border-x border-slate-200">STT</th>
+                                        <th className="px-3 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[140px] text-center border-x border-slate-200">Danh mục</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] min-w-[200px] border-x border-slate-200">Hạng mục</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[130px] border-x border-slate-200">Nơi mua / Link</th>
+                                        <th className="px-3 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[120px] border-x border-slate-200">Hiệu / Thương hiệu</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[70px] text-center border-x border-slate-200">SL</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[70px] text-center border-x border-slate-200">ĐV</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[110px] text-right border-x border-slate-200">Đơn giá</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right w-[120px] border-x border-slate-200 bg-slate-100/50">Thành tiền</th>
+                                        <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[90px] text-center border-x border-slate-200">Ảnh minh chứng</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {Object.entries(groupedItems).map(([catId, group]) => (
-                                        <Fragment key={catId}>
-                                            <tr className="bg-slate-100 border-b border-slate-200 cursor-pointer hover:bg-slate-200/50 transition-colors" onClick={() => toggleCategory(catId)}>
-                                                <td colSpan={8} className="px-6 py-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                        {collapsedCats.has(catId) ? <ChevronRight className="w-4 h-4 text-emerald-600" /> : <ChevronDown className="w-4 h-4 text-emerald-600" />}
-                                                        {catId === 'other' && <span className="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Phát sinh</span>}
-                                                        <span className="text-sm font-black text-emerald-800 uppercase tracking-widest">
-                                                            Danh mục: {group.cat?.name || (catId === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {!collapsedCats.has(catId) && group.items.map((item: any) => {
-                                                const actualSubtotal = (item.actualQuantity || 0) * (item.actualPrice || 0);
-                                                const actualUnit = (item as any).actualUnit ?? item.unit ?? '';
-                                                const mediaList = itemMedia[item.id] || [];
-                                                return (
-                                                    <Fragment key={item.id}>
-                                                        {/* ACTUAL ROW */}
-                                                        <tr className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
-                                                            <td className="px-4 py-2.5">
-                                                                <p className="text-sm font-black text-slate-900 leading-tight">{item.name}</p>
-                                                            </td>
+                                    {Object.entries(groupedItems).map(([id, group]) => {
+                                        const groupRowSpan = group.items.reduce((acc, item) => {
+                                            const hasPlan = (item.expectedQuantity || 0) > 0 || (item.expectedPrice || 0) > 0;
+                                            return acc + (showPlan && hasPlan ? 2 : 1);
+                                        }, 0);
 
-                                                            <td className="px-2 py-2">
-                                                                {isEvidenceSubmitted
-                                                                    ? <span className="text-xs font-bold text-slate-700">{item.actualBrand || '---'}</span>
-                                                                    : <span className="text-[10px] font-bold text-slate-300">Chưa cập nhật</span>}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-center">
-                                                                {isEvidenceSubmitted
-                                                                    ? <span className="text-sm font-black text-slate-900">{renderNumber(item.actualQuantity || 0)}</span>
-                                                                    : <span className="text-[10px] font-bold text-slate-300">---</span>}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-center">
-                                                                {isEvidenceSubmitted
-                                                                    ? <span className="text-xs font-bold text-slate-700 uppercase">{actualUnit || '---'}</span>
-                                                                    : <span className="text-[10px] font-bold text-slate-300">---</span>}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-right">
-                                                                {isEvidenceSubmitted
-                                                                    ? <span className="text-sm font-black text-emerald-600">{renderPrice(item.actualPrice || 0)}</span>
-                                                                    : <span className="text-[10px] font-bold text-slate-300">---</span>}
-                                                            </td>
-                                                            <td className="px-4 py-2 text-right">
-                                                                {isEvidenceSubmitted
-                                                                    ? <span className="text-sm font-black text-slate-900">{renderPrice(actualSubtotal)}</span>
-                                                                    : <span className="text-[10px] font-bold text-slate-300">Chưa cập nhật</span>}
-                                                            </td>
-                                                            <td className="px-2 py-2 text-center">
-                                                                <button
-                                                                    onClick={() => { setGalleryModalItemId(item.id); loadItemMedia(item.id); }}
-                                                                    className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all mx-auto ${mediaList.length > 0 ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200' : 'bg-slate-50 border-slate-100 text-slate-300'}`}
-                                                                >
-                                                                    Xem
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                        {/* PLAN ROW (ẩn cho hạng mục phát sinh) */}
-                                                        {catId !== 'other' && <tr className="bg-slate-50/50 border-b border-slate-100">
-                                                            <td colSpan={2} className="px-6 py-1.5 flex items-center gap-2">
-                                                                <span className="text-[8px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-widest shrink-0">KẾ HOẠCH</span>
-                                                                <span className="text-[10px] font-bold text-slate-500 truncate">{item.name}</span>
-                                                            </td>
+                                        return (
+                                            <Fragment key={id}>
+                                                {group.items.map((item, itemIdx) => {
+                                                    const hasPlan = (item.expectedQuantity || 0) > 0 || (item.expectedPrice || 0) > 0;
+                                                    const itemRowSpan = (showPlan && hasPlan) ? 2 : 1;
+                                                    const actualSubtotal = (item.actualQuantity || 0) * (item.actualPrice || 0);
+                                                    const mediaList = itemMedia[item.id] || [];
+                                                    const actualUnit = (item as any).actualUnit ?? item.unit ?? '';
 
-                                                            <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500">{item.expectedBrand || '---'}</span></td>
-                                                            <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-black text-slate-500">{renderNumber(item.expectedQuantity || 0)}</span></td>
-                                                            <td className="px-4 py-1.5 text-center"><span className="text-[10px] font-bold text-slate-500 uppercase">{item.expectedUnit || item.unit || '---'}</span></td>
-                                                            <td className="px-4 py-1.5 text-right"><span className="text-[10px] font-black text-slate-500">{renderPrice(item.expectedPrice || 0)}</span></td>
-                                                            <td className="px-6 py-1.5 text-right"><span className="text-[10px] font-black text-slate-500">{renderPrice((item.expectedQuantity || 0) * (item.expectedPrice || 0))}</span></td>
-                                                            <td className="px-2 py-1.5"></td>
-                                                        </tr>}
-                                                    </Fragment>
-                                                );
-                                            })}
-                                        </Fragment>
-                                    ))}
+                                                    let globalIdx = 0;
+                                                    Object.entries(groupedItems).some(([gId, g]) => {
+                                                        if (gId === id) {
+                                                            globalIdx += itemIdx + 1;
+                                                            return true;
+                                                        }
+                                                        globalIdx += g.items.length;
+                                                        return false;
+                                                    });
+
+                                                    return (
+                                                        <Fragment key={item.id}>
+                                                            {/* ACTUAL ROW */}
+                                                            <tr className="border-b border-slate-200 hover:bg-slate-50/50 transition-colors">
+                                                                <td rowSpan={itemRowSpan} className="px-2 py-2 text-center text-[11px] font-black text-slate-400 border border-slate-200 bg-white">
+                                                                    {globalIdx}
+                                                                </td>
+
+                                                                {itemIdx === 0 && (
+                                                                    <td rowSpan={groupRowSpan} className="px-3 py-2 text-center align-middle border border-slate-200 bg-white min-w-[120px]">
+                                                                        <p className="text-[11px] font-black text-slate-900 uppercase tracking-tight leading-tight">
+                                                                            {group.cat?.name || (id === 'other' ? 'Hạng mục phát sinh' : 'Danh mục mới')}
+                                                                        </p>
+                                                                    </td>
+                                                                )}
+
+                                                                <td className="px-4 py-1.5 border border-slate-200 bg-white">
+                                                                    <div className="flex flex-col items-start gap-0.5 py-0">
+                                                                        <p className="text-[12px] font-black text-slate-900 leading-[1.2]">{item.name}</p>
+                                                                        {showPlan && (
+                                                                            <span className="text-[7px] font-black text-white bg-emerald-500 px-1 py-0.5 rounded-[3px] uppercase tracking-[0.5px]">THỰC TẾ</span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                                    <p className="px-2 text-[11px] font-bold text-slate-600 truncate">{(item as any).actualPurchaseLocation ?? item.expectedPurchaseLocation ?? '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                                    <p className="px-2 text-[11px] font-bold text-slate-600 truncate">{item.actualBrand ?? item.expectedBrand ?? '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
+                                                                    <p className="text-[12px] font-black text-slate-900">{isEvidenceSubmitted ? renderNumber(item.actualQuantity || 0) : '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
+                                                                    <p className="text-[10px] font-bold text-slate-600 uppercase">{isEvidenceSubmitted ? (actualUnit || 'Cái') : '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 bg-white text-right">
+                                                                    <p className="text-[12px] font-black text-black">{isEvidenceSubmitted ? renderPrice(item.actualPrice || 0) : '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-4 py-1.5 text-right border border-slate-200 bg-[#f8fafc]/50">
+                                                                    <p className="text-[12px] font-black text-emerald-600">{isEvidenceSubmitted ? renderPrice(actualSubtotal) : '---'}</p>
+                                                                </td>
+
+                                                                <td className="px-2 py-1.5 border border-slate-200 text-center bg-white border-l border-slate-200">
+                                                                    <button
+                                                                        onClick={() => { setGalleryModalItemId(item.id); loadItemMedia(item.id); }}
+                                                                        className="px-2 py-1 bg-slate-100 text-black text-[9px] font-black uppercase rounded hover:bg-slate-200 transition-colors"
+                                                                    >
+                                                                        Chi tiết
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+
+                                                            {/* PLAN ROW */}
+                                                            {(showPlan && hasPlan) && (
+                                                                <tr className="bg-slate-50/50 border-b border-slate-200 text-slate-500">
+                                                                    <td className="px-4 py-1.5 border border-slate-200">
+                                                                        <div className="flex flex-col items-start gap-0.5">
+                                                                            <span className="text-[11px] font-bold italic leading-[1.2]">{item.name}</span>
+                                                                            <span className="text-[7px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-[0.5px]">KẾ HOẠCH</span>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50">
+                                                                        <p className="px-2 text-[10px] font-bold italic truncate">{item.expectedPurchaseLocation || '---'}</p>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50">
+                                                                        <p className="px-2 text-[10px] font-bold italic truncate">{item.expectedBrand || '---'}</p>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50 text-center">
+                                                                        <p className="text-[11px] font-black italic">{renderNumber(item.expectedQuantity || 0)}</p>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50 text-center">
+                                                                        <p className="text-[9px] font-bold uppercase italic">{item.expectedUnit || item.unit || '---'}</p>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50 text-right">
+                                                                        <p className="text-[11px] font-black italic">{renderPrice(item.expectedPrice || 0)}</p>
+                                                                    </td>
+                                                                    <td className="px-4 py-1.5 border border-slate-200 text-right bg-slate-50/50">
+                                                                        <p className="text-[11px] font-black italic">{renderPrice((item.expectedQuantity || 0) * (item.expectedPrice || 0))}</p>
+                                                                    </td>
+                                                                    <td className="px-2 py-1.5 border border-slate-200 bg-slate-50/50"></td>
+                                                                </tr>
+                                                            )}
+                                                        </Fragment>
+                                                    );
+                                                })}
+                                            </Fragment>
+                                        );
+                                    })}
                                 </tbody>
                                 <tfoot>
                                     <tr className="bg-slate-900 text-white">
-                                        <td colSpan={6} className="px-6 py-2.5 text-xs font-black uppercase tracking-[2px] text-right">Tổng thực tế toàn chiến dịch:</td>
+                                        <td colSpan={8} className="px-6 py-2.5 text-xs font-black uppercase tracking-[2px] text-right">Tổng thực tế:</td>
                                         <td colSpan={2} className="px-6 py-2.5 text-right text-lg font-black">
                                             {isEvidenceSubmitted ? renderPrice(totalActualAmt) : <span className="text-sm font-bold text-slate-400">Chưa cập nhật</span>}
                                         </td>

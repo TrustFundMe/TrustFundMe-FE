@@ -451,6 +451,17 @@ export default function ExpenditureTable({
                                                                                         <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHI TIÊU</h4>
                                                                                     </div>
 
+                                                                                    <div className="bg-amber-100/50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
+                                                                                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                                                                        <div className="space-y-1">
+                                                                                            <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Hướng dẫn xác minh chi tiêu</p>
+                                                                                            <p className="text-[11px] font-medium text-amber-800 leading-relaxed">
+                                                                                                Hệ thống phát hiện bạn có <b>giao dịch chi (số tiền âm)</b>. Theo quy định, bạn cần giải thích rõ nội dung chi tiêu này.
+                                                                                                <br />Vui lòng <b>đăng bài viết minh chứng</b> kèm theo <b>hình ảnh hóa đơn/biên lai</b> hợp lệ để được phê duyệt đợt chi tiêu.
+                                                                                            </p>
+                                                                                        </div>
+                                                                                    </div>
+
                                                                                     {exp.disbursementProofUrl && (
                                                                                         <div className="bg-white p-4 rounded-2xl border border-black/5">
                                                                                             <p className="text-[10px] font-black text-black/40 uppercase tracking-widest mb-3">Minh chứng giải ngân (Admin)</p>
