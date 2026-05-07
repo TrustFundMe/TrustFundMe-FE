@@ -524,7 +524,8 @@ export default function NewCampaignTestPage() {
                   onOpenFullPreview={() => setStep6FullPreview(true)}
                   onPrev={() => goToStep(3)}
                   onSubmit={handleRealSubmit}
-                  canSubmit={canSubmit && !isSubmitting}
+                  canSubmit={canSubmit}
+                  isSubmitting={isSubmitting}
                 />
               )}
 
