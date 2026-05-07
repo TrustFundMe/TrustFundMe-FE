@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
     X, Sparkles, CheckCircle,
     ShieldCheck, Printer, LineChart, Store, Loader2, AlertTriangle,
-    Search, Globe, ExternalLink
+    Search, Globe
 } from 'lucide-react';
 import { ExpenditureItem, Expenditure } from '@/types/expenditure';
 import { expenditureService } from '@/services/expenditureService';
@@ -27,7 +27,7 @@ interface DetectedItem {
     productExists?: boolean;
     productExistsByBrand?: boolean;
     unit?: string;
-    evidenceUrls?: any[];
+    evidenceUrls?: (string | { url: string; title?: string; price?: number })[];
     statusMessage?: string;
     isLinkMatched?: boolean;
     linkType?: string;
@@ -112,7 +112,7 @@ export default function AIAnalysisModal({
     const [detected, setDetected] = useState<DetectedItem[]>(Array.isArray(result?.detectedItems) ? result.detectedItems : []);
     const [overallSummary, setOverallSummary] = useState<string>(result?.summary || 'Đang chờ phân tích tổng hợp...');
     const [overallRecommendation, setOverallRecommendation] = useState<string>(result?.recommendation || 'Đang thẩm định kế hoạch chi tiêu...');
-    const [reconciliation, setReconciliation] = useState<any[]>(result?.reconciliation || []);
+    const [reconciliation, setReconciliation] = useState<AIAnalysisResult['reconciliation']>(result?.reconciliation || []);
     const [billItems, setBillItems] = useState<any[]>(result?.billItems || []);
     const [unplannedBillItems, setUnplannedBillItems] = useState<any[]>(result?.unplannedBillItems || []);
     const [isAnalyzing3Way, setIsAnalyzing3Way] = useState(mode === 'evidence' && (!result?.reconciliation || result?.reconciliation?.length === 0));
@@ -130,7 +130,7 @@ export default function AIAnalysisModal({
 
     useEffect(() => {
         const targetId = exp?.id || result?.expenditureId;
-        
+
         // Chỉ cập nhật từ itemsProp nếu nó có dữ liệu. 
         // Tuyệt đối không setItems([]) nếu itemsProp trống, để giữ lại dữ liệu cũ hoặc chờ fetch.
         if (itemsProp && itemsProp.length > 0) {
@@ -148,7 +148,7 @@ export default function AIAnalysisModal({
                 const fetched: ExpenditureItem[] = await expenditureService.getItems(targetId);
                 console.log('[AIAudit] Fetched items count:', fetched.length);
                 setItems(fetched);
-            } catch (err) { 
+            } catch (err) {
                 console.error('[AIAudit] Fetch items failed:', err);
             } finally {
                 setLoadingItems(false);
@@ -177,9 +177,9 @@ export default function AIAnalysisModal({
                     photoUrls: exp?.evidencePhotos || [],
                     createdAt: exp?.createdAt
                 };
-                
-                const res: any = await aiService.analyzeEvidence(dataToSend);
-                
+
+                const res = await aiService.analyzeEvidence(dataToSend) as AIAnalysisResult;
+
                 if (res) {
                     setIsBill(res.isBill !== false);
                     setForensics(res.forensics);
@@ -188,7 +188,7 @@ export default function AIAnalysisModal({
                     setUnplannedBillItems(res.unplannedBillItems || []);
                     setOverallSummary(res.summary || 'Hoàn tất đối soát.');
                     setOverallRecommendation(res.recommendation || 'Xem kết quả chi tiết.');
-                    
+
                     if (res.detectedItems) {
                         setDetected(res.detectedItems);
                     }
@@ -332,7 +332,6 @@ export default function AIAnalysisModal({
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right border-r border-slate-100">Giá dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">SL dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đơn vị dự kiến</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hàng dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Địa điểm dự kiến mua</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Note dự kiến</th>
                                     <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">
@@ -372,10 +371,7 @@ export default function AIAnalysisModal({
                                                 <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedUnit || '-'}</div>
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
-                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedBrand || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 border-r border-slate-50">
-                                                <div className="text-[10px] text-slate-700 font-medium break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
+                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedPurchaseLocation || '-'}</div>
                                             </td>
                                             <td className="px-3 py-3 border-r border-slate-50">
                                                 <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>
@@ -443,7 +439,7 @@ export default function AIAnalysisModal({
                             {/* Tfoot logic for Plan */}
                             <tfoot className="bg-slate-50 border-t-2 border-slate-200 sticky bottom-0">
                                 <tr className="font-black text-slate-800">
-                                    <td colSpan={11} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest text-slate-400">
+                                    <td colSpan={9} className="px-3 py-3 text-right uppercase text-[9px] tracking-widest text-slate-400">
                                         Vui lòng xem chi tiết ở trên
                                     </td>
                                 </tr>
@@ -496,17 +492,15 @@ export default function AIAnalysisModal({
             <div className="flex items-center gap-2 border-b border-slate-200">
                 <button
                     onClick={() => setEvidenceTab('3way')}
-                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${
-                        evidenceTab === '3way' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${evidenceTab === '3way' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`}
                 >
-                    Đối Soát 3 Chiều
+                    Đối Soát
                 </button>
                 <button
                     onClick={() => setEvidenceTab('market')}
-                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${
-                        evidenceTab === 'market' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${evidenceTab === 'market' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`}
                 >
                     Khảo Sát Giá Thị Trường (Thực Tế)
                 </button>
@@ -517,7 +511,7 @@ export default function AIAnalysisModal({
                 <div className="flex-shrink-0 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
                         <div className="flex flex-col">
-                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Ma Trận Đối Soát 3 Chiều (3-Way Match)</h3>
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Đối Soát</h3>
                             {isAnalyzing3Way && (
                                 <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1 mt-0.5">
                                     <Loader2 className="h-3 w-3 animate-spin" /> Đang dùng AI bóc tách hóa đơn & đối soát...
@@ -531,178 +525,79 @@ export default function AIAnalysisModal({
                             <Search className="h-3 w-3" /> Khảo sát giá thị trường
                         </button>
                     </div>
-
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                         <div className="overflow-auto max-h-[500px] scrollbar-thin scrollbar-thumb-slate-200">
-                            <table className="w-full border-collapse min-w-[1400px]">
-                            <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm border-b border-slate-200">
-                                <tr className="divide-x divide-slate-200">
-                                    <th rowSpan={2} className="sticky left-0 z-30 w-12 px-2 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center bg-slate-100 border-r border-slate-200">#</th>
-                                    <th rowSpan={2} className="sticky left-12 z-30 w-[220px] px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Tên Hạng Mục</th>
-                                    <th colSpan={7} className="px-3 py-2 text-[10px] font-black text-amber-600 uppercase tracking-widest text-center bg-amber-50/50">Kế Hoạch (Plan)</th>
-                                    <th colSpan={6} className="px-3 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest text-center bg-blue-50/50">Thực Chi (Actual)</th>
-                                    <th rowSpan={2} className="w-[300px] px-3 py-3 text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center bg-indigo-50/30">Phân Tích Đối Soát (AI)</th>
-                                </tr>
-                                <tr className="divide-x divide-slate-100">
-                                    {/* Plan Headers */}
-                                    <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">SL</th>
-                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Giá</th>
-                                    <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Đơn vị</th>
-                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Hãng</th>
-                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Nơi mua</th>
-                                    <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Ghi chú</th>
-                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Tổng</th>
-                                    
-                                    {/* Actual Headers */}
-                                    <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">SL</th>
-                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">Giá</th>
-                                    <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Đơn vị</th>
-                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Hãng</th>
-                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Nơi mua</th>
-                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right font-black">Tổng</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {items.map((it: ExpenditureItem, idx) => {
-                                    const itAny = it as any;
-                                    // Tìm kết quả đối soát tương ứng từ AI (nếu có)
-                                    const aiRow = Array.isArray(reconciliation) 
-                                        ? reconciliation.find(r => r.itemName === it.name)
-                                        : null;
-                                    
-                                    // NGUYÊN TẮC: Thông tin Plan và Actual LUÔN LUÔN lấy từ DB (items)
-                                    // AI chỉ đóng vai trò bổ sung status và analysis.
-                                    const row = {
-                                        itemName: it.name,
-                                        planQty: itAny.expectedQuantity ?? itAny.expected_quantity ?? 0,
-                                        planPrice: itAny.expectedPrice ?? itAny.expected_price ?? 0,
-                                        planUnit: itAny.expectedUnit ?? itAny.expected_unit || '-',
-                                        planBrand: itAny.expectedBrand ?? itAny.expected_brand || '-',
-                                        planLocation: itAny.expectedPurchaseLocation ?? itAny.expected_purchase_location || '-',
-                                        planNote: itAny.expectedNote ?? itAny.expected_note || '-',
-                                        actualQty: itAny.actualQuantity ?? itAny.actual_quantity ?? 0,
-                                        actualPrice: itAny.actualPrice ?? itAny.actual_price ?? 0,
-                                        actualUnit: itAny.actualUnit ?? itAny.actual_unit || itAny.unit || '-',
-                                        actualBrand: itAny.actualBrand ?? itAny.actual_brand || '-',
-                                        actualLocation: itAny.actualPurchaseLocation ?? itAny.actual_purchase_location || '-',
-                                        status: aiRow?.status || 'PENDING',
-                                        analysis: aiRow?.analysis
-                                    };
+                            <table className="w-full border-collapse min-w-[1200px]">
+                                <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm border-b border-slate-200">
+                                    <tr className="divide-x divide-slate-200">
+                                        <th rowSpan={2} className="sticky left-0 z-30 w-12 px-2 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center bg-slate-100 border-r border-slate-200">#</th>
+                                        <th rowSpan={2} className="sticky left-12 z-30 w-[220px] px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Tên Hạng Mục</th>
+                                        <th colSpan={6} className="px-3 py-2 text-[10px] font-black text-amber-600 uppercase tracking-widest text-center bg-amber-50/50">Kế Hoạch (Plan)</th>
+                                        <th colSpan={5} className="px-3 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest text-center bg-blue-50/50">Thực Chi (Actual)</th>
+                                    </tr>
+                                    <tr className="divide-x divide-slate-100">
+                                        {/* Plan Headers */}
+                                        <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">SL</th>
+                                        <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Giá</th>
+                                        <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Đơn vị</th>
+                                        <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Brand</th>
+                                        <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Nơi mua</th>
+                                        <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Tổng</th>
 
-                                    const isMismatch = row.status !== 'MATCH' && row.status !== 'PENDING';
-                                    return (
-                                        <tr key={idx} className={`hover:bg-slate-50 transition-colors group ${isMismatch ? 'bg-rose-50/10' : ''}`}>
-                                            <td className="sticky left-0 z-10 px-2 py-3 text-center text-[10px] font-black text-slate-400 bg-white group-hover:bg-slate-100 border-r border-slate-100 transition-colors">{idx + 1}</td>
-                                            <td className="sticky left-12 z-10 px-3 py-3 bg-white group-hover:bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)] transition-colors">
-                                                <div className="text-[11px] font-black text-slate-800 leading-tight">{row.itemName || '-'}</div>
-                                            </td>
-                                            {/* Plan Data */}
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planQty ?? '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planPrice ? fmtNum(row.planPrice) : '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 text-center">{row.planUnit || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 truncate max-w-[80px]">{row.planBrand || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 truncate max-w-[100px]">{row.planLocation || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[8px] text-slate-400 italic truncate max-w-[100px]">{row.planNote || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5 font-black text-amber-700"><div className="text-[10px]">{fmtNum((row.planPrice || 0) * (row.planQty || 0))}</div></td>
-                                            
-                                            {/* Actual Data */}
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualQty ?? '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualPrice ? fmtNum(row.actualPrice) : '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 text-center">{row.actualUnit || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 truncate max-w-[80px]">{row.actualBrand || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 truncate max-w-[100px]">{row.actualLocation || '-'}</div></td>
-                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5 font-black text-blue-800"><div className="text-[10px]">{fmtNum((row.actualPrice || 0) * (row.actualQty || 0))}</div></td>
-
-                                            <td className="px-3 py-3 border-r border-slate-100">
-                                                {isAnalyzing3Way ? (
-                                                    <div className="flex items-center gap-2 animate-pulse">
-                                                        <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
-                                                        <span className="text-[9px] text-indigo-400 font-black uppercase">Đang đối soát...</span>
-                                                    </div>
-                                                ) : row.analysis ? (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className={`inline-block w-fit px-2 py-0.5 text-[8px] font-black uppercase rounded border mb-1 ${
-                                                            row.status === 'MATCH' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
-                                                            row.status === 'ACTUAL_MISMATCH_BILL' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-                                                            row.status === 'PLAN_EXCEEDED' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                                                            'bg-slate-100 text-slate-500 border-slate-200'
-                                                        }`}>
-                                                            {row.status === 'MATCH' ? 'Khớp' : 
-                                                             row.status === 'ACTUAL_MISMATCH_BILL' ? 'Sai lệch Bill' : 
-                                                             row.status === 'PLAN_EXCEEDED' ? 'Sai Plan' : 'N/A'}
-                                                        </span>
-                                                        <p className="text-[10px] font-medium text-slate-600 leading-tight italic">
-                                                            &quot;{row.analysis}&quot;
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[9px] text-slate-400 italic">Chưa có kết quả</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                    {/* BẢNG DỮ LIỆU GỐC TỪ HÓA ĐƠN (AI SCAN) - TÁCH RIÊNG */}
-                    <div className="flex-shrink-0 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 mb-4">
-                        <div className="px-4 py-2 border-b border-slate-100 bg-emerald-50/30 flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                            <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Dữ liệu bóc tách từ Hóa đơn (AI OCR)</h3>
-                            {isAnalyzing3Way && <Loader2 className="h-3 w-3 animate-spin text-emerald-500 ml-2" />}
-                        </div>
-                        <div className="min-h-[300px] overflow-x-auto">
-                            <table className="w-full text-left text-[11px]">
-                                <thead className="bg-slate-50 sticky top-0 border-b border-slate-100">
-                                    <tr className="text-[8px] font-black text-slate-400 uppercase tracking-wider">
-                                        <th className="px-3 py-2 text-center w-8">#</th>
-                                        <th className="px-3 py-2">Tên trên Hóa đơn</th>
-                                        <th className="px-3 py-2 text-right">SL</th>
-                                        <th className="px-3 py-2 text-right">Giá</th>
-                                        <th className="px-3 py-2">Đơn vị</th>
-                                        <th className="px-3 py-2">Hãng</th>
-                                        <th className="px-3 py-2 text-right">Thành tiền</th>
+                                        {/* Actual Headers */}
+                                        <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">SL</th>
+                                        <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">Giá</th>
+                                        <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Đơn vị</th>
+                                        <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Brand</th>
+                                        <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right font-black">Tổng</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {billItems.length > 0 ? (
-                                        billItems.map((bi, bIdx) => (
-                                            <tr key={bIdx} className="hover:bg-emerald-50/20">
-                                                <td className="px-3 py-2 text-center text-[10px] font-medium text-slate-400">{bIdx + 1}</td>
-                                                <td className="px-3 py-2 font-bold text-slate-700">{bi.name || '-'}</td>
-                                                <td className="px-3 py-2 text-right font-black text-slate-600">{bi.quantity || 0}</td>
-                                                <td className="px-3 py-2 text-right font-black text-slate-600">{fmtNum(bi.price || 0)}</td>
-                                                <td className="px-3 py-2 text-slate-500 uppercase">{bi.unit || '-'}</td>
-                                                <td className="px-3 py-2 text-slate-500">{bi.brand || '-'}</td>
-                                                <td className="px-3 py-2 text-right font-black text-emerald-700 bg-emerald-50/10">{fmtVND((bi.price || 0) * (bi.quantity || 0))}</td>
+                                <tbody className="divide-y divide-slate-100">
+                                    {items.map((it: ExpenditureItem, idx) => {
+                                        const itAny = it as any;
+
+                                        const row = {
+                                            itemName: it.name,
+                                            planQty: itAny.expectedQuantity ?? itAny.expected_quantity ?? 0,
+                                            planPrice: itAny.expectedPrice ?? itAny.expected_price ?? 0,
+                                            planUnit: itAny.expectedUnit ?? itAny.expected_unit || '-',
+                                            planBrand: itAny.expectedBrand ?? itAny.expected_brand || '-',
+                                            planLocation: itAny.expectedPurchaseLocation ?? itAny.expected_purchase_location || '-',
+                                            actualQty: itAny.actualQuantity ?? itAny.actual_quantity ?? 0,
+                                            actualPrice: itAny.actualPrice ?? itAny.actual_price ?? 0,
+                                            actualUnit: itAny.actualUnit ?? itAny.actual_unit || itAny.unit || '-',
+                                            actualBrand: itAny.actualBrand ?? itAny.actual_brand || itAny.expectedBrand || itAny.expected_brand || '-',
+                                        };
+
+                                        return (
+                                            <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                                                <td className="sticky left-0 z-10 px-2 py-3 text-center text-[10px] font-black text-slate-400 bg-white group-hover:bg-slate-100 border-r border-slate-100 transition-colors">{idx + 1}</td>
+                                                <td className="sticky left-12 z-10 px-3 py-3 bg-white group-hover:bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)] transition-colors">
+                                                    <div className="text-[11px] font-black text-slate-800 leading-tight">{row.itemName || '-'}</div>
+                                                </td>
+                                                {/* Plan Data */}
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planQty ?? '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planPrice ? fmtNum(row.planPrice) : '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 text-center">{row.planUnit || '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 text-center">{row.planBrand || '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 truncate max-w-[100px]">{row.planLocation || '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5 font-black text-amber-700"><div className="text-[10px]">{fmtNum((row.planPrice || 0) * (row.planQty || 0))}</div></td>
+
+                                                {/* Actual Data */}
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualQty ?? '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualPrice ? fmtNum(row.actualPrice) : '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 text-center">{row.actualUnit || '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 text-center">{row.actualBrand || '-'}</div></td>
+                                                <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5 font-black text-blue-800"><div className="text-[10px]">{fmtNum((row.actualPrice || 0) * (row.actualQty || 0))}</div></td>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={7} className="px-4 py-8 text-center text-slate-400 italic">
-                                                {isAnalyzing3Way ? 'Đang dùng AI quét dữ liệu hóa đơn...' : 'Chưa có dữ liệu bóc tách từ hóa đơn.'}
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {/* Hiển thị các item lạ trên bill nhưng không có trong plan */}
-                                    {unplannedBillItems.length > 0 && unplannedBillItems.map((ubi, uIdx) => (
-                                        <tr key={`un-${uIdx}`} className="bg-amber-50/20">
-                                            <td className="px-3 py-2 text-center text-[10px] font-medium text-amber-500">(!)</td>
-                                            <td className="px-3 py-2 font-bold text-amber-800">{ubi.name} <span className="text-[8px] font-black uppercase text-amber-500 ml-2">(Mục lạ)</span></td>
-                                            <td className="px-3 py-2 text-right font-black text-amber-600">{ubi.qty || 0}</td>
-                                            <td className="px-3 py-2 text-right font-black text-amber-600">{fmtNum(ubi.price || 0)}</td>
-                                            <td className="px-3 py-2 text-amber-500">-</td>
-                                            <td className="px-3 py-2 text-amber-500">-</td>
-                                            <td className="px-3 py-2 text-right font-black text-amber-700">{fmtVND(ubi.total || 0)}</td>
-                                        </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
+
                 </div>
             )}
             {evidenceTab === 'market' && (
@@ -730,10 +625,10 @@ export default function AIAnalysisModal({
                                     <tr>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Tên</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Brand</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right border-r border-slate-100">Giá thực chi</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">SL</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đơn vị</th>
-                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hàng</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Thực Chi (SL x Giá)</th>
                                         <th className="px-3 py-3 text-[9px] font-black text-indigo-500 uppercase tracking-wider border-r border-slate-100">Thẩm định & Link Thị Trường</th>
                                     </tr>
@@ -752,6 +647,9 @@ export default function AIAnalysisModal({
                                                 <td className="px-3 py-4 border-r border-slate-100">
                                                     <div className="font-black text-slate-800 leading-tight">{sysItem.name || '-'}</div>
                                                 </td>
+                                                <td className="px-3 py-4 border-r border-slate-100">
+                                                    <div className="font-bold text-slate-600">{sysItem.actualBrand || sysItem.expectedBrand || (sysItem as any).expected_brand || '-'}</div>
+                                                </td>
                                                 <td className="px-3 py-4 text-right border-r border-slate-100">
                                                     <div className="font-black text-slate-700">{fmtNum(sysPrice)} đ</div>
                                                 </td>
@@ -760,9 +658,6 @@ export default function AIAnalysisModal({
                                                 </td>
                                                 <td className="px-3 py-4 text-center border-r border-slate-100">
                                                     <div className="font-medium text-slate-600">{sysItem.actualUnit || '-'}</div>
-                                                </td>
-                                                <td className="px-3 py-4 border-r border-slate-100">
-                                                    <div className="font-medium text-slate-600">{sysItem.actualBrand || '-'}</div>
                                                 </td>
                                                 <td className="px-3 py-4 text-center border-r border-slate-100">
                                                     <div className="font-black text-slate-800 bg-slate-50 px-2 py-1 rounded-lg inline-block shadow-inner border border-slate-100">
@@ -778,34 +673,36 @@ export default function AIAnalysisModal({
                                                     ) : aiItem ? (
                                                         <div className="flex flex-col gap-3">
                                                             <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden">
-                                                                <div className={`absolute top-0 left-0 w-1 h-full ${
-                                                                    aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-500' :
+                                                                <div className={`absolute top-0 left-0 w-1 h-full ${aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-500' :
                                                                     aiItem.priceStatus === 'OVERPRICED' ? 'bg-rose-500' :
-                                                                    aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-500' : 'bg-slate-300'
-                                                                }`} />
-                                                                
+                                                                        aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-500' : 'bg-slate-300'
+                                                                    }`} />
+
                                                                 <div className="flex-1 flex flex-col gap-2">
                                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded shadow-sm border ${
-                                                                            aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded shadow-sm border ${aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                                                                             aiItem.priceStatus === 'OVERPRICED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                                                                            aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                            'bg-slate-100 text-slate-600 border-slate-200'
-                                                                        }`}>
+                                                                                aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                                                    'bg-slate-100 text-slate-600 border-slate-200'
+                                                                            }`}>
                                                                             {aiItem.priceStatus === 'MATCHED' ? '✓ Hợp lý' :
-                                                                             aiItem.priceStatus === 'OVERPRICED' ? '⚠ Khai Khống Giá' :
-                                                                             aiItem.priceStatus === 'UNDERPRICED' ? '⚠ Giá quá thấp' : 'Không rõ'}
+                                                                                aiItem.priceStatus === 'OVERPRICED' ? '⚠ Khai Khống Giá' :
+                                                                                    aiItem.priceStatus === 'UNDERPRICED' ? '⚠ Giá quá thấp' : 'Không rõ'}
                                                                         </span>
-                                                                        
-                                                                        {aiItem.marketPriceMin && aiItem.marketPriceMax ? (
+
+                                                                        {aiItem.marketPriceMin > 0 && aiItem.marketPriceMax > 0 ? (
                                                                             <span className="text-[10px] font-black text-slate-600 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
                                                                                 TT: {fmtNum(aiItem.marketPriceMin)} đ - {fmtNum(aiItem.marketPriceMax)} đ
                                                                             </span>
+                                                                        ) : aiItem.marketPriceMin === 0 || aiItem.marketPriceMax === 0 ? (
+                                                                            <span className="text-[10px] font-black text-slate-600 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
+                                                                                TT: 0 đ - 0 đ
+                                                                            </span>
                                                                         ) : (
-                                                                            <span className="text-[10px] font-bold text-slate-400 italic">Không có dữ liệu giá TT</span>
+                                                                            <span className="text-[10px] font-bold text-slate-400 italic">Không tìm thấy giá thị trường tham chiếu</span>
                                                                         )}
                                                                     </div>
-                                                                    
+
                                                                     {aiItem.statusMessage && (
                                                                         <p className="text-[10px] font-medium text-slate-600 italic">
                                                                             {aiItem.statusMessage}
@@ -854,7 +751,6 @@ export default function AIAnalysisModal({
                 </div>
             )}
 
-            <div className="hidden"></div>
         </div>
     );
 
