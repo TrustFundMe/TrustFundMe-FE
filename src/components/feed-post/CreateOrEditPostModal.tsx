@@ -74,9 +74,9 @@ export default function CreateOrEditPostModal({
         const rawTt = initialData.targetType;
         const tt: "none" | "CAMPAIGN" | "EXPENDITURE" | "EVIDENCE" =
           rawTt === "CAMPAIGN" ? "CAMPAIGN" :
-          (rawTt === "EXPENDITURE" && initialData.targetName?.startsWith("evidence")) ? "EVIDENCE" :
-          rawTt === "EXPENDITURE" ? "EXPENDITURE" :
-          rawTt === "EVIDENCE" ? "EVIDENCE" : "none";
+            (rawTt === "EXPENDITURE" && initialData.targetName?.startsWith("evidence")) ? "EVIDENCE" :
+              rawTt === "EXPENDITURE" ? "EXPENDITURE" :
+                rawTt === "EVIDENCE" ? "EVIDENCE" : "none";
         setLinkType(tt);
         if (tt === "CAMPAIGN") {
           setLinkedCampaignId(String(initialData.targetId));
@@ -101,7 +101,7 @@ export default function CreateOrEditPostModal({
                 setExpendituresOfCampaign(sorted.map((e) => ({ id: e.id, plan: e.plan ?? "" })));
               }
             })
-            .catch(() => {});
+            .catch(() => { });
         } else {
           setLinkedCampaignId("");
           setSelectedExpenditureId(null);
@@ -170,9 +170,9 @@ export default function CreateOrEditPostModal({
       const file = files[i];
       // For images/videos, create a preview. For others (like excel), use a placeholder or null
       const isMedia = file.type.startsWith("image/") || file.type.startsWith("video/");
-      newItems.push({ 
-        file, 
-        preview: isMedia ? URL.createObjectURL(file) : "" 
+      newItems.push({
+        file,
+        preview: isMedia ? URL.createObjectURL(file) : ""
       });
     }
     // Chỉ tạo preview — KHÔNG upload ngay. Upload trong handleSubmit sau khi có postId.
@@ -200,14 +200,25 @@ export default function CreateOrEditPostModal({
       return;
     }
 
+    // Frontend validation — check required fields before calling API
+    if (nextStatus === "PUBLISHED") {
+      const missing: string[] = [];
+      if (!title.trim() && !content.trim()) missing.push("Tiêu đề hoặc Nội dung");
+      if (!content.trim()) missing.push("Nội dung bài viết");
+      if (missing.length > 0) {
+        alert(`Vui lòng điền đầy đủ các trường bắt buộc:\n• ${missing.join("\n• ")}`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const effectiveTargetId =
         linkType === "CAMPAIGN"
           ? linkedCampaignId ? Number(linkedCampaignId) : null
           : (linkType === "EXPENDITURE" || linkType === "EVIDENCE")
-          ? selectedExpenditureId
-          : null;
+            ? selectedExpenditureId
+            : null;
 
       const effectiveTargetType = linkType === "EVIDENCE" ? "EXPENDITURE" : (linkType === "none" ? null : linkType);
       const effectiveTargetName = linkType === "EVIDENCE" ? (initialData?.targetName?.startsWith("evidence|") ? initialData.targetName : "evidence") : null;
@@ -218,7 +229,7 @@ export default function CreateOrEditPostModal({
 
       const postTitle = title || content.slice(0, 50);
 
-        if (isEdit && initialData?.id) {
+      if (isEdit && initialData?.id) {
         // === EDIT MODE ===
         const postId = Number(initialData.id);
         const shouldPublishDraft =
@@ -287,7 +298,7 @@ export default function CreateOrEditPostModal({
           try {
             const uploadResult = await feedPostService.uploadFile(file, postId);
             setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
-            
+
             // Collect successfully uploaded items to show immediately
             uploadedAttachments.push({
               id: uploadResult.mediaId,
@@ -306,9 +317,9 @@ export default function CreateOrEditPostModal({
         }
 
         // Attach the uploaded items to the post object so parent lists update immediately
-        const postWithMedia = { 
-          ...newPost, 
-          attachments: [...(newPost.attachments || []), ...uploadedAttachments] 
+        const postWithMedia = {
+          ...newPost,
+          attachments: [...(newPost.attachments || []), ...uploadedAttachments]
         };
 
         localStorage.removeItem(DRAFT_KEY);
@@ -331,13 +342,21 @@ export default function CreateOrEditPostModal({
       inFlightUploadsRef.current = [];
     } catch (error: unknown) {
       console.error(isEdit ? "Update post failed" : "Create post failed", error);
-      const msg =
-        (error as { response?: { status?: number; data?: { message?: string } } })?.response?.data?.message ??
-        (error as Error)?.message ??
-        (isEdit ? "Cập nhật thất bại." : "Đăng bài thất bại.");
-      if ((error as { response?: { status?: number } })?.response?.status === 401) {
+      const errResponse = (error as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string> } } })?.response;
+      const status = errResponse?.status;
+      const backendMsg = errResponse?.data?.message;
+      const fieldErrors = errResponse?.data?.errors;
+
+      if (status === 401) {
         alert("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+      } else if (status === 400 && fieldErrors) {
+        // Show specific field errors from backend validation
+        const errorList = Object.entries(fieldErrors).map(([field, msg]) => `• ${field}: ${msg}`).join("\n");
+        alert(`Vui lòng kiểm tra lại các trường sau:\n${errorList}`);
+      } else if (status === 400 && backendMsg) {
+        alert(`Lỗi: ${backendMsg}`);
       } else {
+        const msg = backendMsg ?? (error as Error)?.message ?? (isEdit ? "Cập nhật thất bại." : "Đăng bài thất bại.");
         alert(msg);
       }
     } finally {
@@ -546,7 +565,7 @@ export default function CreateOrEditPostModal({
               globalIndex: number,
               content: { type: "url"; url: string; fileName?: string } | { type: "uploading"; preview: string; done: boolean; file?: File }
             ) => {
-              const isImage = content.type === "url" 
+              const isImage = content.type === "url"
                 ? (content.url.match(/\.(jpeg|jpg|gif|png)$/i) || !content.url.includes(".")) // default to image if url doesn't have ext
                 : (content.file?.type.startsWith("image/") || content.file?.type.startsWith("video/"));
 
@@ -655,7 +674,7 @@ export default function CreateOrEditPostModal({
                   />
                 </svg>
               </span>
-              
+
               {/* Icon File/Excel */}
               <span className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-blue-500 pointer-events-none">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Thêm tệp đính kèm (Excel, PDF...)">
@@ -681,11 +700,10 @@ export default function CreateOrEditPostModal({
             type="button"
             onClick={() => handleSubmit("PUBLISHED")}
             disabled={(!title.trim() && !content.trim()) || isSubmitting}
-            className={`flex-1 py-2.5 rounded-lg text-white font-semibold transition-all flex items-center justify-center gap-2 ${
-              (title.trim() || content.trim()) && !isSubmitting
-                ? "bg-[#ff5e14] hover:bg-[#e05312] shadow-md hover:shadow-lg"
-                : "bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed text-zinc-500"
-            }`}
+            className={`flex-1 py-2.5 rounded-lg text-white font-semibold transition-all flex items-center justify-center gap-2 ${(title.trim() || content.trim()) && !isSubmitting
+              ? "bg-[#ff5e14] hover:bg-[#e05312] shadow-md hover:shadow-lg"
+              : "bg-zinc-300 dark:bg-zinc-700 cursor-not-allowed text-zinc-500"
+              }`}
           >
             {isSubmitting && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
