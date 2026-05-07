@@ -18,17 +18,39 @@ export default function TrustScorePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let cancelled = false;
+        const timeout = setTimeout(() => {
+            if (!cancelled) setLoading(false);
+        }, 5000);
+
         (async () => {
             try {
                 const data = await trustScoreService.getConfigs();
-                if (Array.isArray(data) && data.length > 0) setRules(data);
+                if (!cancelled && Array.isArray(data) && data.length > 0) setRules(data);
             } catch { /* use fallback */ }
-            finally { setLoading(false); }
+            finally {
+                if (!cancelled) { clearTimeout(timeout); setLoading(false); }
+            }
         })();
+
+        return () => { cancelled = true; clearTimeout(timeout); };
     }, []);
 
     const positiveRules = rules.filter(r => r.points > 0 && r.isActive);
     const negativeRules = rules.filter(r => r.points < 0 && r.isActive);
+
+    if (loading) {
+        return (
+            <DanboxLayout header={4}>
+                <div style={{ fontFamily: 'var(--font-dm-sans)', background: '#fff', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ width: 32, height: 32, border: '3px solid #ffe0cc', borderTopColor: '#ff5e14', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Đang tải dữ liệu...</div>
+                    </div>
+                </div>
+            </DanboxLayout>
+        );
+    }
 
     return (
         <DanboxLayout header={4}>
