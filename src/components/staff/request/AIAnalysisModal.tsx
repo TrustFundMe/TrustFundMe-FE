@@ -249,9 +249,6 @@ export default function AIAnalysisModal({
                     }
                 })
             );
-
-            setOverallSummary('Đã hoàn tất kiểm tra chéo giá thị trường cho tất cả các bản nháp/hạng mục.');
-            setOverallRecommendation('Gợi ý: Căn cứ vào bảng đối soát từng mục để tự tin duyệt ngân sách mà không lo thất thoát quỹ.');
         };
 
         invokeAI();
@@ -447,20 +444,6 @@ export default function AIAnalysisModal({
                         </table>
                     </div>
                 )}
-            </div>
-
-            {/* KẾT LUẬN KIỂM TOÁN - ngang bảng, full width, cố định dưới */}
-            <div className="flex-shrink-0 py-2 px-4 rounded-xl bg-[#1e293b] text-white shadow-md border border-slate-800 flex gap-4 items-center">
-                <div className="flex flex-col items-center flex-shrink-0 text-center">
-                    <CheckCircle className="h-5 w-5 text-emerald-400 mb-0.5" />
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-[1]" style={{ marginBottom: 0 }}>Kết luận</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-[1]">Kiểm toán</p>
-                </div>
-                <div className="w-px self-stretch bg-slate-700 flex-shrink-0" />
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <p className="text-xs font-black leading-snug">{overallRecommendation}</p>
-                    <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{overallSummary}&rdquo;</p>
-                </div>
             </div>
         </div>
     );

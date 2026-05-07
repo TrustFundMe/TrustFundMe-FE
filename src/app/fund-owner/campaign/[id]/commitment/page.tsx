@@ -733,15 +733,27 @@ export default function CommitmentPage() {
               </div>
             )}
 
-            <button
-              onClick={() => {
-                setShowSuccessModal(false);
-                router.push(`/fund-owner/campaign/${id}`);
-              }}
-              className="w-full bg-[#1A685B] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-900/20 hover:bg-[#35534a] hover:scale-105 active:scale-95 transition-all"
-            >
-              VỀ TRANG CHIẾN DỊCH
-            </button>
+            <div className="flex flex-col gap-3 w-full">
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push(`/fund-owner/campaign/${id}`);
+                }}
+                className="w-full bg-[#1A685B] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-green-900/20 hover:bg-[#35534a] hover:scale-105 active:scale-95 transition-all"
+              >
+                XEM CHIẾN DỊCH
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  router.push('/');
+                }}
+                className="w-full bg-white border-2 border-slate-200 text-slate-600 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 hover:border-slate-300 transition-all"
+              >
+                Quay về trang chủ
+              </button>
+            </div>
             <button
               onClick={() => setShowSuccessModal(false)}
               className="w-full mt-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
