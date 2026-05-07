@@ -63,6 +63,9 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
     const [refundAmount, setRefundAmount] = useState('');
     const [userBankAccounts, setUserBankAccounts] = useState<BankAccountDto[]>([]);
 
+    // Orphan Evidences (not assigned to any expenditure phase)
+    const [orphanEvidences, setOrphanEvidences] = useState<any[]>([]);
+
     const loadItemMedia = useCallback(async (itemId: number) => {
         if (itemMedia[itemId]) return;
         setItemMediaLoading(prev => ({ ...prev, [itemId]: true }));
@@ -120,6 +123,12 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
             exps.sort((a, b) => a.id - b.id);
             setExpenditurePosts(postsMap);
             setExpenditures(exps);
+
+            // Fetch orphan evidences (not assigned to any expenditure)
+            try {
+                const orphans = await expenditureService.getOrphanEvidences(Number(campaignId));
+                setOrphanEvidences(orphans || []);
+            } catch { setOrphanEvidences([]); }
         } catch (err) {
             setError('Không thể tải dữ liệu chiến dịch hoặc khoản chi.');
         } finally {
@@ -250,6 +259,13 @@ export function useExpenditureLogic(campaignId: string | null | undefined, user:
     };
 
     const handleOpenUpdateModal = async (exp: Expenditure) => {
+        // Block opening update modal if evidence has been submitted (except ALLOWED_EDIT)
+        if (exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') {
+            toast.error(exp.evidenceStatus === 'SUBMITTED'
+                ? 'Đợt chi tiêu này đã nộp minh chứng. Không thể chỉnh sửa.'
+                : 'Đợt chi tiêu này đã được xác nhận. Không thể chỉnh sửa.');
+            return;
+        }
         try {
             const itemsData = await expenditureService.getItems(exp.id);
             if (campaign?.type === 'ITEMIZED') {

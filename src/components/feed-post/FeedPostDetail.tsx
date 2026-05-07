@@ -477,17 +477,37 @@ export default function FeedPostDetail({
               </Swiper>
             )}
             {fileAttachments.map((attachment, index) => (
-              <div key={`file-${index}`} style={{ padding: "20px" }}>
+              <div key={`file-${index}`} style={{ padding: "0 20px 20px 20px" }}>
                 <a href={attachment.url} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-3"
-                  style={{ padding: 16, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, background: "#fafafa", textDecoration: "none", color: "inherit", transition: "all 0.2s" }}>
+                  className="flex items-center gap-4 group"
+                  style={{ 
+                    padding: 16, 
+                    border: "1px solid rgba(0,0,0,0.08)", 
+                    borderRadius: 12, 
+                    background: "#f8fafc", 
+                    textDecoration: "none", 
+                    color: "inherit", 
+                    transition: "all 0.2s" 
+                  }}>
                   <div className="flex items-center justify-center flex-shrink-0"
-                    style={{ width: 48, height: 48, borderRadius: 12, background: "rgba(0,0,0,0.05)" }}>
-                    <span style={{ opacity: 0.75, fontSize: 20 }}>📎</span>
+                    style={{ 
+                      width: 44, 
+                      height: 44, 
+                      borderRadius: 10, 
+                      background: "#fff",
+                      border: "1px solid rgba(0,0,0,0.05)"
+                    }}>
+                    <svg className="w-6 h-6 text-zinc-400 group-hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, fontFamily: "var(--font-dm-sans)" }}>{attachment.name || "Tệp đính kèm"}</div>
-                    <div style={{ opacity: 0.6, fontSize: 13, fontFamily: "var(--font-dm-sans)" }}>Nhấn để tải xuống</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, fontFamily: "var(--font-dm-sans)", color: "#1e293b" }}>
+                      {attachment.name || "Tệp đính kèm"}
+                    </div>
+                    <div style={{ opacity: 0.6, fontSize: 13, fontFamily: "var(--font-dm-sans)", color: "#64748b" }}>
+                      Nhấn để xem hoặc tải xuống
+                    </div>
                   </div>
                 </a>
               </div>

@@ -259,8 +259,38 @@ const Nav = ({ whiteText = false }: { whiteText?: boolean }) => (
         <li className="m-0">
           <Link href="/" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Trang chủ</Link>
         </li>
-        <li className="m-0">
-          <Link href="/about" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Giới thiệu</Link>
+        {/* ── Giới thiệu dropdown ── */}
+        <li className="m-0 relative" style={{ zIndex: 100 }}>
+          <span
+            className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-[#ff5e14] cursor-pointer inline-flex items-center gap-1 select-none intro-dropdown-trigger`}
+            style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}
+          >
+            Giới thiệu
+            <svg className="w-3 h-3 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </span>
+          {/* Dropdown menu - using CSS :hover on parent li */}
+          <div className="intro-dropdown-menu" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: '100%', paddingTop: 12, minWidth: 210, opacity: 0, visibility: 'hidden' as any, transition: 'opacity 0.2s, visibility 0.2s' }}>
+            <div style={{ borderRadius: 12, background: '#fff', padding: '8px 0', border: '1px solid #f1f5f9', boxShadow: '0 8px 30px rgba(0,0,0,0.12)', fontFamily: 'var(--font-dm-sans)' }}>
+              <Link href="/about" style={{ display: 'block', padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a', textDecoration: 'none', transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = '#fff0e8'; e.currentTarget.style.color = '#ff5e14'; }} onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#0f172a'; }}>
+                Về TrustFundMe
+              </Link>
+              <Link href="/terms" style={{ display: 'block', padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a', textDecoration: 'none', transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = '#fff0e8'; e.currentTarget.style.color = '#ff5e14'; }} onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#0f172a'; }}>
+                Điều khoản
+              </Link>
+              <Link href="/trust-score" style={{ display: 'block', padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a', textDecoration: 'none', transition: 'background 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = '#fff0e8'; e.currentTarget.style.color = '#ff5e14'; }} onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#0f172a'; }}>
+                Điểm tin cậy
+              </Link>
+            </div>
+          </div>
+          <style jsx>{`
+            li:hover .intro-dropdown-menu {
+              opacity: 1 !important;
+              visibility: visible !important;
+            }
+            li:hover .intro-dropdown-trigger svg {
+              transform: rotate(180deg);
+            }
+          `}</style>
         </li>
         <li className="m-0">
           <Link href="/campaigns" className={`font-semibold ${whiteText ? 'text-white' : 'text-gray-700'} hover:text-orange-600`} style={{ fontSize: '14px', whiteSpace: 'nowrap', transition: 'color 0.2s', textShadow: whiteText ? '0 1px 3px rgba(0,0,0,0.5)' : 'none' }}>Chiến dịch</Link>
@@ -427,8 +457,23 @@ const MobileNav = () => {
                 <i className="far fa-plus" />
               </a>
             </li>
-            <li>
-              <Link href="/about">About</Link>
+            <li className="has-dropdown">
+              <Link href="/about" className="border-none">
+                Giới thiệu
+                <i className="fas fa-angle-down" />
+              </Link>
+              <ul className="submenu" style={show("about", activeMenu)}>
+                <li><Link href="/about">Về TrustFundMe</Link></li>
+                <li><Link href="/terms">Điều khoản</Link></li>
+                <li><Link href="/trust-score">Điểm tin cậy</Link></li>
+              </ul>
+              <a
+                className="mean-expand"
+                href="#"
+                onClick={() => toggle("about", setActiveMenu, activeMenu)}
+              >
+                <i className="far fa-plus" />
+              </a>
             </li>
             <li>
               <Link href="/campaigns">Campaign</Link>

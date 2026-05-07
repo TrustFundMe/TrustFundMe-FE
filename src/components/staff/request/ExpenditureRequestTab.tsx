@@ -286,7 +286,7 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                                         <Clock className="h-3.5 w-3.5 text-orange-500 animate-pulse" />
                                         <span className="text-[10px] font-black text-orange-600 uppercase">Đang chờ chủ quỹ chỉnh sửa...</span>
                                     </div>
-                                ) : (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') && (
+                                ) : (exp.status === 'PENDING' || exp.status === 'PENDING_REVIEW') ? (
                                     <>
                                         <button
                                             onClick={() => setShowCorrection(true)}
@@ -303,7 +303,16 @@ function ExpenditureCard({ exp, campaignData, onUpdate }: { exp: Expenditure, ca
                                             DUYỆT CHI TIÊU
                                         </button>
                                     </>
-                                )}
+                                ) : (exp.status === 'COMPLETED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED' || exp.status === 'APPROVED') && (exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? (
+                                    <button
+                                        onClick={() => setShowCorrection(true)}
+                                        disabled={loading}
+                                        className="h-9 px-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-black uppercase hover:bg-amber-100 transition-colors whitespace-nowrap disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <AlertTriangle className="h-3.5 w-3.5" />
+                                        CHO CHỈNH SỬA LẠI
+                                    </button>
+                                ) : null}
                             </div>
                         </div>
                     </div>

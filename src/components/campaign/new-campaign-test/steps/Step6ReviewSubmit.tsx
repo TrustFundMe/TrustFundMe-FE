@@ -11,6 +11,8 @@ interface Props {
   onPrev: () => void;
   onSubmit: () => void;
   canSubmit: boolean;
+  /** True when the form is being submitted to the server */
+  isSubmitting?: boolean;
   /** Optional callback to jump to a specific step index for editing */
   onGoToStep?: (stepIndex: number) => void;
 }
@@ -113,6 +115,7 @@ export default function Step6ReviewSubmit({
   onPrev,
   onSubmit,
   canSubmit,
+  isSubmitting,
   onGoToStep,
 }: Props) {
   const milestones = state.milestones;
@@ -367,7 +370,13 @@ export default function Step6ReviewSubmit({
         </div>
       </div>
 
-      <StepFooter canNext={canSubmit} onPrev={onPrev} onNext={onSubmit} nextLabel="Gửi duyệt hồ sơ" />
+      <StepFooter
+        canNext={canSubmit && !isSubmitting}
+        onPrev={onPrev}
+        onNext={onSubmit}
+        nextLabel={isSubmitting ? 'Đang gửi...' : 'Gửi duyệt hồ sơ'}
+        pendingMessage={isSubmitting ? 'Đang gửi hồ sơ lên hệ thống, vui lòng chờ...' : undefined}
+      />
     </div>
   );
 }

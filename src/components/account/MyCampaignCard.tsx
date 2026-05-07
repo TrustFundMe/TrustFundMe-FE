@@ -2,12 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Eye, Edit, BarChart, MessageSquare, AlertCircle, ChevronRight } from 'lucide-react';
+import { Eye, Edit, BarChart, MessageSquare, AlertCircle, ChevronRight, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { CampaignDto } from '@/types/campaign';
 import { withFallbackImage } from '@/lib/image';
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, ModalTitle } from '@/components/ui/modal';
 import Image from 'next/image';
+import { exportCampaignAudit } from '@/lib/auditExport';
+import { useToast } from '@/components/ui/Toast';
 
 interface MyCampaignCardProps {
     campaign: CampaignDto;
@@ -78,6 +80,24 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
     const isDisabled = campaign.status?.toUpperCase() === 'DISABLED';
     const isApproved = campaign.status?.toUpperCase() === 'APPROVED';
     const [showRejectionReason, setShowRejectionReason] = useState(false);
+    const [exportingAudit, setExportingAudit] = useState(false);
+    const { toast } = useToast();
+
+    const handleExportAudit = async () => {
+        if (exportingAudit) return;
+        setExportingAudit(true);
+        try {
+            await exportCampaignAudit({
+                campaign,
+            });
+            toast('Đã xuất file kiểm toán thành công', 'success');
+        } catch (err) {
+            console.error('[Export Audit] Failed:', err);
+            toast('Không thể xuất file kiểm toán. Vui lòng thử lại.', 'error');
+        } finally {
+            setExportingAudit(false);
+        }
+    };
 
     return (
         <div id={`campaign-${campaign.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -231,6 +251,19 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                                             <BarChart className="w-4 h-4 rotate-90" />
                                             Biến động số dư
                                         </Link>
+                                        <button
+                                            type="button"
+                                            onClick={handleExportAudit}
+                                            disabled={exportingAudit}
+                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                                        >
+                                            {exportingAudit ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <FileSpreadsheet className="w-4 h-4" />
+                                            )}
+                                            {exportingAudit ? 'Đang xuất...' : 'Xuất file kiểm toán'}
+                                        </button>
                                     </>
                                 )}
                                 {!isDisabled && !isApproved && (

@@ -251,4 +251,8 @@ export const expenditureService = {
     deleteCategory: async (id: number | string): Promise<void> => {
         await axiosInstance.delete(`/api/expenditures/categories/${id}`);
     },
+    getOrphanEvidences: async (campaignId: number | string): Promise<any[]> => {
+        const response = await axiosInstance.get(`/api/expenditures/campaign/${campaignId}/orphan-evidences`);
+        return response.data;
+    },
 };

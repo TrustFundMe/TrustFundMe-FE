@@ -369,7 +369,20 @@ export default function NewCampaignTestPage() {
       setTimeout(() => { router.push('/account/campaigns'); }, 2000);
     } catch (error: any) {
       console.error('Submit error:', error);
-      const msg = error?.response?.data?.message || error.message || 'Lỗi không xác định.';
+      
+      let msg = error?.response?.data?.message || error.message || 'Lỗi không xác định.';
+      
+      // Extract detailed validation errors if available
+      const validationErrors = error?.response?.data?.errors;
+      if (validationErrors && typeof validationErrors === 'object') {
+        const detailLines = Object.entries(validationErrors).map(([field, errorMsg]) => {
+          return `${field}: ${errorMsg}`;
+        });
+        if (detailLines.length > 0) {
+          msg = `${msg}\n- ${detailLines.join('\n- ')}`;
+        }
+      }
+
       setSubmitResult({ type: 'error', message: msg });
       toast(`Lỗi: ${msg}`, 'error');
     } finally {
@@ -524,7 +537,8 @@ export default function NewCampaignTestPage() {
                   onOpenFullPreview={() => setStep6FullPreview(true)}
                   onPrev={() => goToStep(3)}
                   onSubmit={handleRealSubmit}
-                  canSubmit={canSubmit && !isSubmitting}
+                  canSubmit={canSubmit}
+                  isSubmitting={isSubmitting}
                 />
               )}
 

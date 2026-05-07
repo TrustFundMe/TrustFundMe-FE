@@ -57,6 +57,7 @@ export interface ExpenditureEvidence {
 
 export interface Expenditure {
     id: number;
+    name?: string;
     campaignId: number;
     evidenceDueAt?: string;
     evidenceStatus?: string;

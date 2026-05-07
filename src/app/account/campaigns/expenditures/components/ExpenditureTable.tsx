@@ -44,6 +44,7 @@ export default function ExpenditureTable({
                 case 'REJECTED': return 'Bị từ chối';
                 case 'ALLOWED_EDIT': return 'Yêu cầu sửa';
                 case 'CLOSED': return 'Đã hoàn tất';
+                case 'COMPLETED': return 'Đã hoàn thành';
                 default: return s;
             }
         };
@@ -264,7 +265,7 @@ export default function ExpenditureTable({
                                                                                 <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${exp.status === 'REJECTED' ? 'bg-rose-500 ring-4 ring-rose-50' : ((exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED' || exp.isWithdrawalRequested) ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50')}`}></div>
                                                                                 <div className="flex flex-col">
                                                                                     <span className={`text-sm font-black block leading-none mb-1 ${selectedLogStep === 2 ? 'text-emerald-900' : (exp.status === 'REJECTED' ? 'text-rose-600' : (exp.status === 'PENDING_REVIEW' && campaign.type === 'AUTHORIZED' ? 'text-amber-500' : (exp.isWithdrawalRequested || (campaign.type === 'AUTHORIZED' && exp.status !== 'PENDING_REVIEW') ? 'text-emerald-700' : 'text-orange-400')))}`}>
-                                                                                        2. {exp.status === 'REJECTED' ? 'Bị từ chối' : (exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED') ? 'Đã duyệt' : (campaign.type === 'AUTHORIZED' && exp.status === 'PENDING_REVIEW') ? 'Đang xét duyệt' : 'Yêu cầu rút tiền'}
+                                                                                        2. {exp.status === 'REJECTED' ? 'Bị từ chối' : 'Staff duyệt chiến dịch'}
                                                                                     </span>
                                                                                     <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
                                                                                         {(exp.status === 'APPROVED' || exp.status === 'DISBURSED' || exp.status === 'CLOSED') ? 'Đã duyệt' : exp.isWithdrawalRequested ? 'Đã thực hiện yêu cầu rút tiền' : 'Chưa thực hiện'}
@@ -293,13 +294,13 @@ export default function ExpenditureTable({
                                                                                         onClick={(e) => { e.stopPropagation(); setSelectedLogStep(4); }}
                                                                                         className={`w-full text-left relative group/log transition-all duration-300 p-4 rounded-2xl ${selectedLogStep === 4 ? 'bg-white shadow-sm ring-1 ring-black/5' : 'hover:bg-white/50'}`}
                                                                                     >
-                                                                                        <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>
+                                                                                        <div className={`absolute -left-[32px] top-5 w-2.5 h-2.5 rounded-full z-10 ${(exp.status === 'COMPLETED' && (exp.evidences || []).some((ev: any) => ev.status === 'PENDING')) ? 'bg-rose-500 ring-4 ring-rose-50' : (exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-orange-300 ring-4 ring-orange-50'}`}></div>
                                                                                         <div className="flex flex-col">
-                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${selectedLogStep === 4 ? 'text-emerald-900' : ((exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'text-emerald-700' : 'text-orange-400')}`}>
+                                                                                            <span className={`text-sm font-black block leading-none mb-2 ${(exp.status === 'COMPLETED' && (exp.evidences || []).some((ev: any) => ev.status === 'PENDING')) ? 'text-rose-600' : selectedLogStep === 4 ? 'text-emerald-900' : ((exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? 'text-emerald-700' : 'text-orange-400')}`}>
                                                                                                 4. Tổng kết & Thực chi
                                                                                             </span>
-                                                                                            <span className="text-[10px] font-bold text-black/40 uppercase tracking-wide">
-                                                                                                {exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng' : exp.evidenceStatus === 'APPROVED' ? 'Đã xác nhận' : exp.evidenceStatus === 'ALLOWED_EDIT' ? 'Cho chỉnh sửa lại' : exp.status === 'DISBURSED' ? 'Cập nhật & Hoàn tiền' : 'Chưa giải ngân'}
+                                                                                            <span className={`text-[10px] font-bold uppercase tracking-wide ${(exp.status === 'COMPLETED' && (exp.evidences || []).some((ev: any) => ev.status === 'PENDING')) ? 'text-rose-500' : 'text-black/40'}`}>
+                                                                                                {(exp.status === 'COMPLETED' && (exp.evidences || []).some((ev: any) => ev.status === 'PENDING')) ? '⚠ Cần cập nhật lại' : exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng' : exp.evidenceStatus === 'APPROVED' ? 'Đã xác nhận' : exp.evidenceStatus === 'ALLOWED_EDIT' ? 'Cho chỉnh sửa lại' : 'Chưa nộp minh chứng'}
                                                                                             </span>
                                                                                         </div>
                                                                                     </button>
@@ -437,7 +438,7 @@ export default function ExpenditureTable({
                                                                                         ) : (
                                                                                             <div className="text-center py-10 space-y-4">
                                                                                                 <Clock className="w-12 h-12 text-black/10 mx-auto" />
-                                                                                                <p className="text-sm font-bold text-black/40">Đợt chi tiêu này chưa đóng hoặc chưa gửi yêu cầu rút tiền.</p>
+                                                                                                <p className="text-sm font-bold text-black/40">Staff chưa duyệt</p>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
@@ -448,6 +449,17 @@ export default function ExpenditureTable({
                                                                                 <div className="space-y-4">
                                                                                     <div className="flex items-center justify-between">
                                                                                         <h4 className="text-[11px] font-black uppercase tracking-[3px] text-red-900/40">MINH CHỨNG CHI TIÊU</h4>
+                                                                                    </div>
+
+                                                                                    <div className="bg-amber-100/50 border border-amber-200 p-4 rounded-2xl flex items-start gap-3">
+                                                                                        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                                                                        <div className="space-y-1">
+                                                                                            <p className="text-xs font-black text-amber-900 uppercase tracking-wide">Hướng dẫn xác minh chi tiêu</p>
+                                                                                            <p className="text-[11px] font-medium text-amber-800 leading-relaxed">
+                                                                                                Hệ thống phát hiện bạn có <b>giao dịch chi (số tiền âm)</b>. Theo quy định, bạn cần giải thích rõ nội dung chi tiêu này.
+                                                                                                <br />Vui lòng <b>đăng bài viết minh chứng</b> kèm theo <b>hình ảnh hóa đơn/biên lai</b> hợp lệ để được phê duyệt đợt chi tiêu.
+                                                                                            </p>
+                                                                                        </div>
                                                                                     </div>
 
                                                                                     {exp.disbursementProofUrl && (
@@ -546,16 +558,36 @@ export default function ExpenditureTable({
                                                                                             </div>
                                                                                         )}
 
-                                                                                        <button
-                                                                                            onClick={(e) => {
-                                                                                                e.stopPropagation();
-                                                                                                router.push(`/account/campaigns/expenditures/update/${exp.id}?campaignId=${campaign.id}`);
-                                                                                            }}
-                                                                                            className="w-full py-4 bg-black text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[2px] hover:bg-emerald-900 transition-all flex items-center justify-center gap-3 shadow-xl"
-                                                                                        >
-                                                                                            <Edit3 className="w-4 h-4" />
-                                                                                            {exp.status === 'CLOSED' ? 'Xem / Chỉnh sửa thực chi' : 'Cập nhật thực chi & Tổng kết'}
-                                                                                        </button>
+                                                                                        {/* Warning: COMPLETED but has PENDING evidence */}
+                                                                                        {exp.status === 'COMPLETED' && (exp.evidences || []).some((ev: any) => ev.status === 'PENDING') && (
+                                                                                            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3">
+                                                                                                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                                                                                <div>
+                                                                                                    <p className="text-[11px] font-black text-rose-800 uppercase tracking-widest mb-1">Cần cập nhật tổng kết thực chi</p>
+                                                                                                    <p className="text-[10px] font-bold text-rose-700 leading-relaxed">
+                                                                                                        Đợt chi tiêu này đã hoàn thành nhưng có giao dịch mới chưa được xử lý. Vui lòng liên hệ nhân viên phụ trách để yêu cầu chỉnh sửa lại phần tổng kết thực chi (bước 4).
+                                                                                                    </p>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {(exp.evidenceStatus === 'SUBMITTED' || exp.evidenceStatus === 'APPROVED') ? (
+                                                                                            <div className="w-full py-4 bg-slate-100 text-slate-400 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[2px] flex items-center justify-center gap-3 cursor-not-allowed border border-slate-200">
+                                                                                                <ShieldCheck className="w-4 h-4" />
+                                                                                                {exp.evidenceStatus === 'SUBMITTED' ? 'Đã nộp minh chứng — Không thể chỉnh sửa' : 'Đã xác nhận — Không thể chỉnh sửa'}
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    router.push(`/account/campaigns/expenditures/update/${exp.id}?campaignId=${campaign.id}`);
+                                                                                                }}
+                                                                                                className="w-full py-4 bg-black text-white rounded-[1.5rem] text-[11px] font-black uppercase tracking-[2px] hover:bg-emerald-900 transition-all flex items-center justify-center gap-3 shadow-xl"
+                                                                                            >
+                                                                                                <Edit3 className="w-4 h-4" />
+                                                                                                {exp.evidenceStatus === 'ALLOWED_EDIT' ? 'Chỉnh sửa lại thực chi' : (exp.status === 'CLOSED' ? 'Xem / Chỉnh sửa thực chi' : 'Cập nhật thực chi & Tổng kết')}
+                                                                                            </button>
+                                                                                        )}
                                                                                     </div>
                                                                                 </div>
                                                                             )}

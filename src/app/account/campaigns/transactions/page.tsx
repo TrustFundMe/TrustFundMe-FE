@@ -139,25 +139,25 @@ function CampaignTransactionsContent() {
     return (
         <div className="min-h-screen relative overflow-hidden font-sans bg-white">
             <div className="absolute top-0 left-0 w-full h-[600px] pointer-events-none opacity-50 z-0"
-                 style={{ WebkitMaskImage: 'linear-gradient(to bottom, white 30%, transparent 100%)', maskImage: 'linear-gradient(to bottom, white 30%, transparent 100%)' }}>
+                style={{ WebkitMaskImage: 'linear-gradient(to bottom, white 30%, transparent 100%)', maskImage: 'linear-gradient(to bottom, white 30%, transparent 100%)' }}>
                 <Aurora colorStops={["#10b981", "#facc15", "#ffffff"]} amplitude={0.6} blend={0.5} />
             </div>
 
-            <div className="max-w-6xl mx-auto px-4 py-8 relative z-10">
-                <Link href={`/account/campaigns`} className="inline-flex items-center text-emerald-900/60 hover:text-emerald-900 mb-6 transition-colors text-[10px] font-black uppercase tracking-[2px]">
+            <div className="max-w-6xl mx-auto px-4 pt-4 pb-8 relative z-10">
+                <Link href={`/campaigns-details?id=${campaignId}`} className="inline-flex items-center text-emerald-900/60 hover:text-emerald-900 mb-2 transition-colors text-[10px] font-black uppercase tracking-[2px]">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch
                 </Link>
 
-                <div className="absolute top-[0px] left-[58%] -translate-x-1/2 pointer-events-none hidden lg:block z-0 opacity-100 animate-in fade-in zoom-in duration-1000">
+                <div className="absolute top-[0px] left-[68%] -translate-x-1/2 pointer-events-none hidden lg:block z-0 opacity-100 animate-in fade-in zoom-in duration-1000">
                     <Image src="/assets/img/campaign/9.png" alt="Piggy Bank" width={350} height={350} className="object-contain drop-shadow-2xl" />
                 </div>
 
                 {/* Top Section */}
                 <div className="flex flex-col lg:flex-row justify-between mb-2 lg:h-[240px]">
                     <div className="flex-1 flex flex-col justify-between">
-                        <div className="mb-4">
-                            <h1 className="text-4xl md:text-5xl font-black text-[#1a2e2a] tracking-tight mb-1 mt-2" style={{ fontFamily: 'var(--font-playfair-display), serif' }}>Giao dịch ngân hàng</h1>
-                            <p className="text-black text-lg italic font-medium">Chiến dịch: {campaign.title}</p>
+                        <div className="mb-2">
+                            <h1 className="text-4xl md:text-5xl font-black text-[#1a2e2a] tracking-tight mb-1" style={{ fontFamily: 'var(--font-playfair-display), serif' }}>Giao dịch ngân hàng</h1>
+                            <p className="text-black text-lg italic font-medium break-words lg:max-w-[55%] text-center mx-auto">Chiến dịch: {campaign.title}</p>
                         </div>
 
                         <div className="flex-1 min-h-[150px] relative">
@@ -203,14 +203,14 @@ function CampaignTransactionsContent() {
                             <div className="text-right flex flex-col gap-3">
                                 <div>
                                     <p className="text-[10px] font-black text-black uppercase tracking-[2px] mb-0.5 flex items-center gap-2 justify-end">
-                                        <Banknote className="w-4 h-4 text-emerald-600"/> Tổng nhận
+                                        <Banknote className="w-4 h-4 text-emerald-600" /> Tổng nhận
                                     </p>
                                     <p className="text-xl font-black text-[#377a62]">+{new Intl.NumberFormat('vi-VN').format(totalIn)} <span className="text-[10px] align-top relative top-1">VNĐ</span></p>
                                 </div>
                                 {totalOut > 0 && (
                                     <div>
                                         <p className="text-[10px] font-black text-black uppercase tracking-[2px] mb-0.5 flex items-center gap-2 justify-end">
-                                            <Banknote className="w-4 h-4 text-rose-600"/> Tổng chi
+                                            <Banknote className="w-4 h-4 text-rose-600" /> Tổng chi
                                         </p>
                                         <p className="text-xl font-black text-rose-600">-{new Intl.NumberFormat('vi-VN').format(totalOut)} <span className="text-[10px] align-top relative top-1">VNĐ</span></p>
                                     </div>
@@ -223,8 +223,8 @@ function CampaignTransactionsContent() {
 
                 {/* Transactions Table */}
                 <div className="bg-white/80 backdrop-blur-xl rounded-t-[2.5rem] rounded-b-3xl shadow-xl shadow-emerald-900/5 border border-white p-0 overflow-hidden flex flex-col h-[500px]">
-                    <div className="p-6 lg:p-8 pb-0">
-                        <h2 className="text-xl font-black text-[#1a2e2a] uppercase tracking-widest mb-4">Chi tiết giao dịch</h2>
+                    <div className="p-4 lg:p-6 pb-0">
+                        <h2 className="text-lg font-black text-[#1a2e2a] uppercase tracking-widest mb-3">Chi tiết giao dịch</h2>
                     </div>
 
                     <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-emerald-200 scrollbar-track-transparent">
@@ -273,13 +273,13 @@ function CampaignTransactionsContent() {
                                                 )}
                                             </td>
                                             <td className="py-3 px-4">
-                                                 {t.amount < 0 ? (
-                                                     <span className="text-sm font-semibold text-rose-500 truncate block">Chi phí chiến dịch</span>
-                                                 ) : (
-                                                     <span className="text-sm font-semibold text-[#1a2e2a] truncate block" title={t.donorName || formatSender(t)}>
-                                                         {t.donorName || formatSender(t)}
-                                                     </span>
-                                                 )}
+                                                {t.amount < 0 ? (
+                                                    <span className="text-sm font-semibold text-rose-500 truncate block">Chi phí chiến dịch</span>
+                                                ) : (
+                                                    <span className="text-sm font-semibold text-[#1a2e2a] truncate block" title={t.donorName || formatSender(t)}>
+                                                        {t.donorName || formatSender(t)}
+                                                    </span>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
@@ -288,7 +288,7 @@ function CampaignTransactionsContent() {
                         </table>
                     </div>
 
-                    <div className="bg-emerald-50/50 border-t border-emerald-100 p-4 px-8 flex justify-between items-center shrink-0">
+                    <div className="bg-emerald-50/50 border-t border-emerald-100 p-2 px-6 flex justify-between items-center shrink-0">
                         <p className="text-[10px] font-black text-emerald-900/60 uppercase tracking-widest">Hiển thị {transactions.length} giao dịch</p>
                     </div>
                 </div>

@@ -48,6 +48,7 @@ const S: Record<string, { label: string; c: string; bg: string }> = {
     VERIFIED: { label: 'Xác nhận', c: '#14532d', bg: '#dcfce7' },
     APPROVED: { label: 'Đã duyệt', c: '#14532d', bg: '#dcfce7' },
     REJECTED: { label: 'Từ chối', c: '#991b1b', bg: '#fee2e2' },
+    ALLOWED_EDIT: { label: 'Cho chỉnh sửa', c: '#ea580c', bg: '#fff7ed' },
 };
 function Pill({ s }: { s: string }) {
     const cfg = S[s] ?? { label: s, c: '#374151', bg: '#f3f4f6' };
@@ -574,19 +575,19 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
                         <span className="mt-0.5">{rec.hasAppointment ? 'Lịch' : 'Hẹn'}</span>
                     </button>
 
-                    {/* 8. Allow Update */}
+                    {/* 8. Allow Edit - Cho chỉnh sửa lại */}
                     <button
                         onClick={() => setConfirmAction({
                             type: 'ALLOW_EDIT_EVIDENCE',
                             id: rec.expenditureId,
-                            title: 'Cho phép chỉnh sửa?',
-                            message: 'Chủ quỹ sẽ nhận được thông báo yêu cầu cập nhật lại minh chứng này. Trạng thái minh chứng sẽ chuyển sang "Từ chối" để mở quyền chỉnh sửa.'
+                            title: 'Cho phép chỉnh sửa lại?',
+                            message: `Chủ quỹ sẽ được phép chỉnh sửa lại phần tổng kết thực chi cho đợt "${rec.plan}". Trạng thái minh chứng sẽ chuyển sang "Cho chỉnh sửa" để mở quyền chỉnh sửa.`
                         })}
-                        disabled={loading || rec.evidenceStatus === 'REJECTED' || rec.evidenceStatus === 'ALLOWED_EDIT'}
-                        className="flex flex-col items-center justify-center h-8 rounded-lg border border-gray-100 bg-white text-gray-500 text-[9px] font-black uppercase hover:bg-amber-50 transition-all disabled:opacity-50"
+                        disabled={loading || rec.evidenceStatus === 'REJECTED' || rec.evidenceStatus === 'ALLOWED_EDIT' || rec.evidenceStatus === 'PENDING'}
+                        className={`flex flex-col items-center justify-center h-8 rounded-lg border text-[9px] font-black uppercase transition-all disabled:opacity-50 ${rec.evidenceStatus === 'ALLOWED_EDIT' ? 'bg-amber-50 border-amber-200 text-amber-600' : 'border-gray-100 bg-white text-gray-500 hover:bg-amber-50'}`}
                     >
                         <RefreshCw className="h-3.5 w-3.5" />
-                        <span className="mt-0.5">Sửa</span>
+                        <span className="mt-0.5">{rec.evidenceStatus === 'ALLOWED_EDIT' ? 'Đã cho' : 'Cho sửa'}</span>
                     </button>
                 </div>
 

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { CampaignPlan } from "./types";
-import { ChevronDown, ChevronUp, Calendar } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp } from "lucide-react";
 
 type TimelineState = "completed" | "active" | "upcoming";
 
@@ -24,22 +24,23 @@ function getStatusLabel(status: string): string {
 export default function MilestoneTimeline({
   plans,
   raisedAmount = 0,
+  goalAmount = 0,
 }: {
   plans: CampaignPlan[];
   raisedAmount?: number;
+  goalAmount?: number;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const timeline = useMemo(() => {
     return plans.map((plan) => {
-      const amount = Math.max(0, plan.amount || 0);
       const status = (plan.status || "").toUpperCase();
 
       let state: TimelineState = "upcoming";
       if (["DISBURSED", "COMPLETED", "CLOSED"].includes(status)) state = "completed";
       else if (["APPROVED", "WITHDRAWAL_REQUESTED", "PENDING_REVIEW", "PENDING", "ALLOWED_EDIT"].includes(status)) state = "active";
 
-      return { ...plan, state, requiredAmount: amount };
+      return { ...plan, state };
     });
   }, [plans]);
 
@@ -58,7 +59,7 @@ export default function MilestoneTimeline({
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
           Giai Đoạn Của Chiến Dịch
         </h4>
@@ -66,6 +67,30 @@ export default function MilestoneTimeline({
           {completedCount}/{timeline.length} đợt đã hoàn thành
         </span>
       </div>
+      <p style={{ margin: "0 0 12px", fontSize: 12, color: "#0f172a", lineHeight: 1.4 }}>
+        Kế hoạch dự kiến do người tạo chiến dịch đề xuất.
+      </p>
+
+      {/* Goal amount summary */}
+      {goalAmount > 0 && (
+        <div
+          style={{
+            background: "#fff7ed",
+            borderRadius: 8,
+            padding: "8px 12px",
+            marginBottom: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            border: "1px solid #fed7aa",
+          }}
+        >
+          <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 700 }}>Mục tiêu chiến dịch</span>
+          <span style={{ fontSize: 13, fontWeight: 900, color: "#ff5e14" }}>
+            {goalAmount.toLocaleString("vi-VN")} <span style={{ fontSize: 10, color: "#0f172a", fontWeight: 600 }}>VNĐ</span>
+          </span>
+        </div>
+      )}
 
       {/* Vertical Timeline Wrapper */}
       <div style={{ position: "relative", paddingLeft: 24 }}>
@@ -84,7 +109,6 @@ export default function MilestoneTimeline({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           {timeline.map((item, idx) => {
-            const isExpanded = expandedId === item.id;
             const isCompleted = item.state === "completed";
             const isActive = item.state === "active";
             const isRejected = (item.status || "").toUpperCase() === "REJECTED";
@@ -118,7 +142,7 @@ export default function MilestoneTimeline({
                 </div>
 
                 {/* Content Card */}
-                <div 
+                <div
                   style={{
                     background: bgAccent,
                     borderRadius: 12,
@@ -126,13 +150,9 @@ export default function MilestoneTimeline({
                     border: `1px solid ${isActive ? "rgba(255,94,20,0.1)" : "rgba(15,23,42,0.05)"}`,
                   }}
                 >
-                  <div 
-                    style={{ 
-                      display: "flex", 
-                      flexDirection: "column",
-                      cursor: "pointer"
-                    }}
-                    onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                  <div
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setExpandedId(expandedId === item.id ? null : item.id)}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                       <div style={{ minWidth: 0, flex: 1 }}>
@@ -141,62 +161,60 @@ export default function MilestoneTimeline({
                             {item.title.toLowerCase().includes(`đợt ${idx + 1}`) ? item.title : `Đợt ${idx + 1}: ${item.title}`}
                           </span>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#94a3b8" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, color: "#0f172a" }}>
                           <Calendar size={10} />
                           <span style={{ fontSize: 10, fontWeight: 600 }}>{item.date || "Chưa xác định"}</span>
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 14, fontWeight: 900, color: "#0f172a" }}>
-                          {item.requiredAmount?.toLocaleString("vi-VN")}đ
-                        </div>
+                        {(item.budgetAmount != null && item.budgetAmount > 0) && (
+                          <div style={{ fontSize: 14, fontWeight: 900, color: "#0f172a", marginBottom: 1 }}>
+                            {item.budgetAmount.toLocaleString("vi-VN")}đ
+                          </div>
+                        )}
                         <div style={{ fontSize: 9, fontWeight: 800, color: accentColor, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                           {getStatusLabel(item.status || "")}
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "#ff5e14" : "#64748b" }}>
-                        {isExpanded ? "Thu gọn" : "Xem chi tiết hạng mục"}
-                      </span>
-                      {isExpanded ? <ChevronUp size={12} color={isActive ? "#ff5e14" : "#94a3b8"} /> : <ChevronDown size={12} color={isActive ? "#ff5e14" : "#94a3b8"} />}
-                    </div>
+                    {item.categories && item.categories.length > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? "#ff5e14" : "#0f172a" }}>
+                          {expandedId === item.id ? "Thu gọn" : "Xem hạng mục dự kiến"}
+                        </span>
+                        {expandedId === item.id ? <ChevronUp size={12} color={isActive ? "#ff5e14" : "#0f172a"} /> : <ChevronDown size={12} color={isActive ? "#ff5e14" : "#0f172a"} />}
+                      </div>
+                    )}
                   </div>
 
-                  {isExpanded && (
-                    <div style={{
-                      marginTop: 10,
-                      paddingTop: 10,
-                      borderTop: `1px dashed ${isActive ? "rgba(255,94,20,0.2)" : "rgba(15,23,42,0.1)"}`,
-                    }}>
-                      {item.categories && item.categories.length > 0 ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                          {item.categories.map((cat, cIdx) => (
-                            <div key={cat.id || cIdx} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", background: "rgba(15,23,42,0.03)", padding: "4px 8px", borderRadius: 6 }}>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: "#475569", textTransform: "uppercase" }}>{cat.name}</span>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a" }}>{cat.expectedAmount?.toLocaleString("vi-VN")}đ</span>
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 4px" }}>
-                                {cat.items.map((it, iIdx) => (
-                                  <div key={it.id || iIdx} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                                    <div style={{ minWidth: 0, flex: 1 }}>
-                                      <div style={{ fontSize: 11, fontWeight: 600, color: "#334155" }}>{it.name}</div>
-                                      <div style={{ fontSize: 10, color: "#94a3b8" }}>{it.expectedQuantity} x {it.expectedPrice?.toLocaleString("vi-VN")}đ</div>
-                                    </div>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a", flexShrink: 0 }}>
-                                      {((it.expectedQuantity || 0) * (it.expectedPrice || 0)).toLocaleString("vi-VN")}đ
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
+                  {expandedId === item.id && item.categories && item.categories.length > 0 && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${isActive ? "rgba(255,94,20,0.2)" : "rgba(15,23,42,0.1)"}` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#ff5e14", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                        Hạng mục chi tiêu dự kiến
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        {item.categories.map((cat, cIdx) => (
+                          <div key={cat.id || cIdx} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", background: "rgba(15,23,42,0.03)", padding: "4px 8px", borderRadius: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>{cat.name}</span>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: 11, color: "#94a3b8", fontStyle: "italic", margin: 0 }}>Chưa có chi tiết cho đợt này.</p>
-                      )}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 4px" }}>
+                              {cat.items.map((it, iIdx) => (
+                                <div key={it.id || iIdx} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                                  <div style={{ minWidth: 0, flex: 1 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: "#0f172a" }}>{it.name}</div>
+                                    <div style={{ fontSize: 10, color: "#0f172a", opacity: 0.6 }}>{it.expectedQuantity} x {it.expectedPrice?.toLocaleString("vi-VN")}đ</div>
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a", flexShrink: 0 }}>
+                                    {((it.expectedQuantity || 0) * (it.expectedPrice || 0)).toLocaleString("vi-VN")}đ
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -70,7 +70,7 @@ function CampaignExpendituresContent() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
                     {error || 'Không tìm thấy chiến dịch'}
                 </div>
-                <Link href="/account/campaigns" className="mt-4 inline-flex items-center text-[#dc2626] hover:text-red-700 font-bold uppercase tracking-tight text-xs">
+                <Link href={`/campaigns-details?id=${campaignId}`} className="mt-4 inline-flex items-center text-[#dc2626] hover:text-red-700 font-bold uppercase tracking-tight text-xs">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch
                 </Link>
             </div>
@@ -84,7 +84,7 @@ function CampaignExpendituresContent() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header */}
                 <div className="mb-2">
-                    <Link href="/account/campaigns" className="inline-flex items-center text-black/40 hover:text-black mb-1 transition-colors text-[10px] font-black uppercase tracking-[2px]">
+                    <Link href={`/campaigns-details?id=${campaignId}`} className="inline-flex items-center text-black/40 hover:text-black mb-1 transition-colors text-[10px] font-black uppercase tracking-[2px]">
                         <ArrowLeft className="w-4 h-4 mr-2" /> Quay lại chiến dịch của tôi
                     </Link>
 
