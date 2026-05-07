@@ -22,8 +22,6 @@ interface MyCampaignCardProps {
 }
 
 const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedReviewerName, hasStaff, pendingEvidenceCount = 0, onChatClick }) => {
-    const targetAmount = campaign.activeGoal?.targetAmount || 0;
-    const progress = targetAmount > 0 ? Math.min(100, (campaign.balance / targetAmount) * 100) : 0;
 
     const handleChatClick = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -177,23 +175,6 @@ const MyCampaignCard: React.FC<MyCampaignCardProps> = ({ campaign, assignedRevie
                                     {campaign.description}
                                 </p>
 
-                                {/* Progress Bar */}
-                                <div className="mb-2">
-                                    <div className="flex justify-between text-sm mb-1">
-                                        <span className="font-semibold text-gray-900">
-                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign.balance)}
-                                        </span>
-                                        <span className="text-gray-600">
-                                            {progress.toFixed(0)}% of {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(targetAmount)}
-                                        </span>
-                                    </div>
-                                    <div className="w-full bg-gray-100 rounded-full h-2">
-                                        <div
-                                            className="bg-orange-600 h-2 rounded-full transition-all duration-500"
-                                            style={{ width: `${progress}%` }}
-                                        ></div>
-                                    </div>
-                                </div>
                             </>
                         ) : (
                             <div className="bg-red-50 border border-red-100 rounded-lg p-4 mb-4">

@@ -16,12 +16,6 @@ export type CampaignCardItem = {
 };
 
 export default function CampaignCard({ item }: { item: CampaignCardItem }) {
-  const targetAmount = Number(item.goal || 0);
-  const raisedAmount = Number(item.raised || 0);
-  const progress = targetAmount > 0
-    ? Math.min(100, Math.max(0, Math.round((raisedAmount / targetAmount) * 100)))
-    : 0;
-
   return (
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
@@ -69,16 +63,12 @@ export default function CampaignCard({ item }: { item: CampaignCardItem }) {
           </div>
 
           <div className="mt-4">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full bg-brand"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-sm font-semibold text-slate-700">
-              <span>{raisedAmount.toLocaleString("vi-VN")} VNĐ</span>
-              <span>{progress}%</span>
-            </div>
+            <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-full text-sm font-bold group-hover:bg-orange-100 transition-colors">
+              Xem chi tiết
+              <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
           </div>
         </div>
       </Link>

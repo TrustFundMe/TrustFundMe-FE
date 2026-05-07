@@ -157,7 +157,7 @@ function CampaignTransactionsContent() {
                     <div className="flex-1 flex flex-col justify-between">
                         <div className="mb-2">
                             <h1 className="text-4xl md:text-5xl font-black text-[#1a2e2a] tracking-tight mb-1" style={{ fontFamily: 'var(--font-playfair-display), serif' }}>Giao dịch ngân hàng</h1>
-                            <p className="text-black text-lg italic font-medium break-words lg:max-w-[55%] text-center mx-auto">Chiến dịch: {campaign.title}</p>
+                            <p className="text-black text-lg italic font-medium break-words">Chiến dịch: {campaign.title}</p>
                         </div>
 
                         <div className="flex-1 min-h-[150px] relative">
