@@ -696,10 +696,7 @@ export default function FlagsManagementPage() {
                   <div className="p-4">
                     {selectedTarget.type === 'CAMPAIGN' && selectedTarget.flags[0]?.campaign ? (
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Số tiền quyên góp</p>
-                          <p className="text-[13px] font-bold text-[#ff5e14]">{formatCurrency(selectedTarget.flags[0].campaign.raisedAmount)}</p>
-                        </div>
+
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Mục tiêu (VND)</p>
                           <p className="text-[13px] font-bold text-gray-800">{loadingDetails ? '...' : formatCurrency(campaignDetails?.goalAmount || 0)}</p>
@@ -735,14 +732,7 @@ export default function FlagsManagementPage() {
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Danh mục</p>
                           <p className="text-[13px] font-bold text-gray-800 uppercase tracking-tighter">{loadingDetails ? '...' : campaignDetails?.categoryName}</p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Thời gian bắt đầu</p>
-                          <p className="text-[12px] font-medium text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.startDate)}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Thời gian kết thúc</p>
-                          <p className="text-[12px] font-medium text-gray-600">{loadingDetails ? '...' : formatDate(campaignDetails?.endDate)}</p>
-                        </div>
+
                         <div className="space-y-1">
                           <p className="text-[11px] font-black text-gray-600 uppercase tracking-tight">Ngày khởi tạo</p>
                           <p className="text-[12px] font-medium text-gray-600">{formatDate(selectedTarget.flags[0].campaign.createdAt)}</p>

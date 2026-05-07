@@ -624,7 +624,9 @@ export default function EvidenceTab() {
                 appointmentService.getByStaff(user.id).catch(() => [])
             ]);
 
-            const et = tasks.filter((t: any) => t.type === 'EVIDENCE');
+            const etRaw = tasks.filter((t: any) => t.type === 'EVIDENCE');
+            // Filter to ensure unique targetId (expenditureId) for evidence tasks to avoid duplicate UI items
+            const et = Array.from(new Map(etRaw.map((t: any) => [t.targetId, t])).values());
             const rows = await Promise.all(et.map(async (task: any) => {
                 try {
                     const exp = await expenditureService.getById(task.targetId);
