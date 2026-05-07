@@ -36,6 +36,13 @@ export const auditService = {
     return res.data;
   },
 
+  async getByEntityPaged(entityType: string, entityId: number, page = 0, size = 500) {
+    const res = await api.get<Page<AuditLog>>(`/api/audit/entity/${entityType}/${entityId}`, {
+      params: { page, size }
+    });
+    return res.data;
+  },
+
   async getByUser(actorId: string | number, page = 0, size = 20) {
     const res = await api.get<Page<AuditLog>>(`/api/audit/user/${actorId}`, {
       params: { page, size }

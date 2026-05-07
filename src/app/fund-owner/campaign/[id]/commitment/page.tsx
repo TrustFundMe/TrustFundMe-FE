@@ -48,6 +48,7 @@ export default function CommitmentPage() {
   const [isExpired, setIsExpired] = useState(false);
   const [isSavedData, setIsSavedData] = useState(false);
   const [savedFullName, setSavedFullName] = useState('');
+  const [submissionHash, setSubmissionHash] = useState<string>('');
 
   const calculateTimeLeft = useCallback((updatedAt: string) => {
     const startTime = new Date(updatedAt).getTime();
@@ -711,6 +712,26 @@ export default function CommitmentPage() {
             <p className="text-sm text-slate-500 leading-relaxed mb-10">
               Bản cam kết trách nhiệm điện tử của bạn đã được mã hóa bảo mật và kích hoạt thành công trên hệ thống TrustFundMe e-Contract.
             </p>
+
+            {submissionHash && (
+              <div className="w-full bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Mã băm giao dịch (Audit Hash)</p>
+                <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
+                  <code className="text-[10px] font-mono text-blue-600 break-all flex-1 text-left">
+                    {submissionHash}
+                  </code>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(submissionHash);
+                      toast.success('Đã sao chép mã băm!');
+                    }}
+                    className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    <Printer className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={() => {

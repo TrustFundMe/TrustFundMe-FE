@@ -172,6 +172,35 @@ export default function AuditExplorer() {
     toast('Đã sao chép mã Hash!', 'success');
   };
 
+  const getFriendlyType = (type: string, action: string) => {
+    if (type === 'DONATION_TRANSACTION') {
+      return action === 'EXPENDITURE_DISBURSED' ? 'Rút tiền giải ngân' : 'Nhận tiền ủng hộ';
+    }
+    const types: Record<string, string> = {
+      'KYC': 'Xác thực danh tính',
+      'USER_KYC': 'Hồ sơ KYC',
+      'DONATION': 'Khoản quyên góp',
+      'EXPENDITURE': 'Chi tiêu quỹ',
+      'CAMPAIGN': 'Chiến dịch',
+      'CAMPAIGN_COMMITMENT': 'Cam kết chiến dịch',
+      'EVIDENCE_SUBMISSION': 'Minh chứng chi tiêu'
+    };
+    return types[type] || type;
+  };
+
+  const getFriendlyAction = (action: string) => {
+    const actions: Record<string, string> = {
+      'CREATE': 'Tạo mới',
+      'UPDATE': 'Cập nhật',
+      'APPROVE': 'Phê duyệt',
+      'REJECT': 'Từ chối',
+      'SIGN': 'Ký tên',
+      'DONATION_RECEIVED': 'Tiền đã vào tài khoản',
+      'EXPENDITURE_DISBURSED': 'Đã chuyển tiền ra'
+    };
+    return actions[action] || action;
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] overflow-x-hidden">
       {/* Super Slim Header */}
@@ -276,13 +305,18 @@ export default function AuditExplorer() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-0.5">
-                            <span className="text-[9px] font-bold text-slate-900 uppercase truncate">{log.entityType}</span>
+                            <span className={`text-[9px] font-bold uppercase truncate ${
+                              log.action === 'DONATION_RECEIVED' || log.action === 'CREATE' ? 'text-emerald-600' : 
+                              log.action === 'EXPENDITURE_DISBURSED' || log.action === 'REJECT' ? 'text-rose-600' : 'text-slate-900'
+                            }`}>
+                              {getFriendlyType(log.entityType, log.action)}
+                            </span>
                             <span className="text-[8px] text-slate-400">
                               {new Date(log.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <p className="text-[10px] font-bold text-slate-900 truncate">
-                            {log.actorName || 'Hệ thống'} — <span className="text-slate-500 font-medium">{log.action}</span>
+                            {log.actorName || 'Hệ thống'} — <span className="text-slate-500 font-medium">{getFriendlyAction(log.action)}</span>
                           </p>
                         </div>
                       </div>
