@@ -134,7 +134,14 @@ export const aiService = {
         photoUrls: string[];
         createdAt: string;
     }) {
-        const response = await aiApi.post<ExpenditureAnalysisResult>('/api/analyze-evidence', data);
-        return response.data;
+        console.log('[AI-Service] 🚀 Sending evidence for 3-way analysis:', data);
+        try {
+            const response = await aiApi.post<ExpenditureAnalysisResult>('/api/analyze-evidence', data);
+            console.log('[AI-Service] ✅ Evidence analysis result:', response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error('[AI-Service] ❌ Evidence analysis failed:', error.response?.data || error.message);
+            throw error;
+        }
     },
 };

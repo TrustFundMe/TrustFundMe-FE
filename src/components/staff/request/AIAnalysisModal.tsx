@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import {
     X, Sparkles, CheckCircle,
-    ShieldCheck, Printer, LineChart, Store, Loader2, AlertTriangle
+    ShieldCheck, Printer, LineChart, Store, Loader2, AlertTriangle,
+    Search, Globe, ExternalLink
 } from 'lucide-react';
 import { ExpenditureItem, Expenditure } from '@/types/expenditure';
 import { expenditureService } from '@/services/expenditureService';
+import { aiService } from '@/services/aiService';
 
 interface DetectedItem {
     name: string;
@@ -25,7 +27,7 @@ interface DetectedItem {
     productExists?: boolean;
     productExistsByBrand?: boolean;
     unit?: string;
-    evidenceUrls?: string[];
+    evidenceUrls?: any[];
     statusMessage?: string;
     isLinkMatched?: boolean;
     linkType?: string;
@@ -56,13 +58,39 @@ interface AIAnalysisResult {
     isElectronicInvoice?: boolean;
     invoiceLookupLink?: string;
     vendorTaxCode?: string;
+    forensics?: {
+        isManipulated: boolean;
+        heatmapUrl?: string;
+        warnings?: string[];
+    };
+    reconciliation?: {
+        itemName: string;
+        planPrice: number;
+        planQty: number;
+        planUnit?: string;
+        planBrand?: string;
+        planLocation?: string;
+        planNote?: string;
+        actualPrice: number;
+        actualQty: number;
+        actualUnit?: string;
+        actualBrand?: string;
+        actualLocation?: string;
+        billPrice: number;
+        billQty: number;
+        billUnit?: string;
+        billBrand?: string;
+        status: string;
+    }[];
+    billItems?: any[];
+    unplannedBillItems?: any[];
 }
 
 interface AIAnalysisModalProps {
     result?: Partial<AIAnalysisResult>;
     itemsProp?: ExpenditureItem[];
     donationSummary?: Record<number, number>;
-    exp?: Expenditure;
+    exp?: any;
     mode?: 'plan' | 'evidence';
     onClose: () => void;
 }
@@ -81,10 +109,19 @@ export default function AIAnalysisModal({
 }: AIAnalysisModalProps) {
     const [items, setItems] = useState<ExpenditureItem[]>(itemsProp);
     const [loadingItems, setLoadingItems] = useState(itemsProp.length === 0);
-    const [detected, setDetected] = useState<DetectedItem[]>(Array.isArray(result.detectedItems) ? result.detectedItems : []);
-    const [overallSummary, setOverallSummary] = useState<string>(result.summary || 'Đang chờ phân tích tổng hợp...');
-    const [overallRecommendation, setOverallRecommendation] = useState<string>(result.recommendation || 'Đang thẩm định kế hoạch chi tiêu...');
+    const [detected, setDetected] = useState<DetectedItem[]>(Array.isArray(result?.detectedItems) ? result.detectedItems : []);
+    const [overallSummary, setOverallSummary] = useState<string>(result?.summary || 'Đang chờ phân tích tổng hợp...');
+    const [overallRecommendation, setOverallRecommendation] = useState<string>(result?.recommendation || 'Đang thẩm định kế hoạch chi tiêu...');
+    const [reconciliation, setReconciliation] = useState<any[]>(result?.reconciliation || []);
+    const [billItems, setBillItems] = useState<any[]>(result?.billItems || []);
+    const [unplannedBillItems, setUnplannedBillItems] = useState<any[]>(result?.unplannedBillItems || []);
+    const [isAnalyzing3Way, setIsAnalyzing3Way] = useState(mode === 'evidence' && (!result?.reconciliation || result?.reconciliation?.length === 0));
     const [loadingAIItems, setLoadingAIItems] = useState<Record<number, boolean>>({});
+    const [showHeatmap, setShowHeatmap] = useState(false);
+    const [evidenceTab, setEvidenceTab] = useState<'3way' | 'market'>('3way');
+    const [marketAuditStarted, setMarketAuditStarted] = useState(false);
+    const [isBill, setIsBill] = useState(result?.isBill !== false);
+    const [forensics, setForensics] = useState(result?.forensics);
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
@@ -92,31 +129,89 @@ export default function AIAnalysisModal({
     }, []);
 
     useEffect(() => {
-        const targetId = exp?.id || result.expenditureId;
-        if (!targetId || itemsProp.length > 0) {
+        const targetId = exp?.id || result?.expenditureId;
+        
+        // Chỉ cập nhật từ itemsProp nếu nó có dữ liệu. 
+        // Tuyệt đối không setItems([]) nếu itemsProp trống, để giữ lại dữ liệu cũ hoặc chờ fetch.
+        if (itemsProp && itemsProp.length > 0) {
             setItems(itemsProp);
             setLoadingItems(false);
             return;
         }
 
+        if (!targetId) return;
+
         const fetchItems = async () => {
+            console.log('[AIAudit] No itemsProp, fetching from backend for ID:', targetId);
             try {
                 setLoadingItems(true);
                 const fetched: ExpenditureItem[] = await expenditureService.getItems(targetId);
+                console.log('[AIAudit] Fetched items count:', fetched.length);
                 setItems(fetched);
-            } catch { /* ignore */ } finally {
+            } catch (err) { 
+                console.error('[AIAudit] Fetch items failed:', err);
+            } finally {
                 setLoadingItems(false);
             }
         };
         fetchItems();
-    }, [exp?.id, itemsProp, result.expenditureId]);
+    }, [exp?.id, itemsProp, result?.expenditureId]);
+
+    // NEW: Tự động chạy phân tích đối soát 3 chân nếu chưa có
+    useEffect(() => {
+        if (mode !== 'evidence' || !isAnalyzing3Way || items.length === 0) {
+            console.log('[AI-3Way] Skip invocation:', { mode, isAnalyzing3Way, itemsCount: items.length });
+            return;
+        }
+
+        const invoke3Way = async () => {
+            console.log('[AI-3Way] Starting analysis for expId:', exp?.id);
+            try {
+                const itemsToAnalyze = items.filter(i => (i.actualQuantity ?? 0) > 0);
+                const dataToSend = {
+                    expenditureId: exp?.id,
+                    plan: exp?.plan,
+                    purpose: exp?.purpose || '',
+                    totalAmount: exp?.totalAmount,
+                    items: itemsToAnalyze.length > 0 ? itemsToAnalyze : items,
+                    photoUrls: exp?.evidencePhotos || [],
+                    createdAt: exp?.createdAt
+                };
+                
+                const res: any = await aiService.analyzeEvidence(dataToSend);
+                
+                if (res) {
+                    setIsBill(res.isBill !== false);
+                    setForensics(res.forensics);
+                    setReconciliation(res.reconciliation || []);
+                    setBillItems(res.billItems || []);
+                    setUnplannedBillItems(res.unplannedBillItems || []);
+                    setOverallSummary(res.summary || 'Hoàn tất đối soát.');
+                    setOverallRecommendation(res.recommendation || 'Xem kết quả chi tiết.');
+                    
+                    if (res.detectedItems) {
+                        setDetected(res.detectedItems);
+                    }
+                }
+            } catch (err) {
+                console.error('[AI-3Way] Execution Error:', err);
+                setOverallSummary('Lỗi phân tích đối soát.');
+            } finally {
+                setIsAnalyzing3Way(false);
+            }
+        };
+
+
+
+        invoke3Way();
+    }, [mode, isAnalyzing3Way, items, exp]);
 
     // Bắt đầu gọi API AI cho từng item
     useEffect(() => {
         if (mode !== 'plan' || items.length === 0) return;
 
         // Nếu đã có detected items từ prop (ví dụ ở evidence), bỏ qua
-        if (result.detectedItems && result.detectedItems.length > 0) return;
+        if (result?.detectedItems && result.detectedItems.length > 0) return;
 
         const invokeAI = async () => {
             // Gọi song song (parallel) tất cả items cùng lúc để giảm tổng thời gian chờ.
@@ -141,12 +236,13 @@ export default function AIAnalysisModal({
                                 return [...newArr, aiItem];
                             });
                         }
-                    } catch (error: any) {
+                    } catch (error) {
+                        const axiosError = error as any;
                         console.group(`🔴 [AIAudit] Lỗi item ${sysItem.id}`);
-                        console.error('HTTP Status:', error.response?.status);
-                        console.error('Response body:', error.response?.data);
-                        console.error('Error message:', error.message);
-                        console.error('Full error:', error);
+                        console.error('HTTP Status:', axiosError.response?.status);
+                        console.error('Response body:', axiosError.response?.data);
+                        console.error('Error message:', axiosError.message);
+                        console.error('Full error:', axiosError);
                         console.groupEnd();
                     } finally {
                         setLoadingAIItems(prev => ({ ...prev, [sysItem.id!]: false }));
@@ -159,26 +255,54 @@ export default function AIAnalysisModal({
         };
 
         invokeAI();
-    }, [items, mode]);
+    }, [items, mode, result.detectedItems]);
 
-    const getRiskStyles = (score: number) => {
-        if (score < 30) return 'text-emerald-700 bg-emerald-50 border-emerald-100';
-        if (score < 70) return 'text-amber-700 bg-amber-50 border-amber-100';
-        return 'text-rose-700 bg-rose-50 border-rose-100';
+    const runMarketAuditForActuals = async () => {
+        setMarketAuditStarted(true);
+        const validItems = items.filter(item => !!item.id);
+
+        setLoadingAIItems(prev => {
+            const next = { ...prev };
+            validItems.forEach(item => { next[item.id!] = true; });
+            return next;
+        });
+
+        await Promise.all(
+            validItems.map(async (sysItem) => {
+                try {
+                    const aiData = await expenditureService.analyzeActualItemWithAI(sysItem.id!);
+                    if (aiData && aiData.detectedItems && aiData.detectedItems.length > 0) {
+                        const aiItem = aiData.detectedItems[0];
+                        setDetected(prev => {
+                            const newArr = prev.filter(d => d.name !== sysItem.name);
+                            return [...newArr, aiItem];
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error market audit actual', sysItem.id, error);
+                } finally {
+                    setLoadingAIItems(prev => ({ ...prev, [sysItem.id!]: false }));
+                }
+            })
+        );
     };
 
+
+
     // 🔍 DEBUG — mở F12 > Console để xem
-    console.group('[AIAudit] Raw result from backend');
-    console.log('Full result object:', result);
-    console.log('detectedItems:', result.detectedItems);
-    console.log('detectedItems count:', detected.length);
-    console.log('summary:', result.summary);
-    console.log('recommendation:', result.recommendation);
-    console.groupEnd();
+    useEffect(() => {
+        console.group('[AIAudit] State Change Detected');
+        console.log('Mode:', mode);
+        console.log('Result Prop:', result);
+        console.log('Items State:', items.length, items);
+        console.log('Detected State:', detected.length, detected);
+        console.log('Is Analyzing 3-Way:', isAnalyzing3Way);
+        console.groupEnd();
+    }, [result, items, detected, isAnalyzing3Way, mode]);
 
     // Split Rendering based on mode to provide a dedicated, stunning Evidence UI
     const renderPlanMode = () => (
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50 p-4 gap-3">
+        <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50/50 p-4 gap-3 custom-scrollbar">
             {/* BẢNG PHÂN TÍCH - KẾ HOẠCH */}
             <div className="flex flex-col flex-1 min-h-0 gap-1.5">
                 <div className="flex items-center gap-2 px-1 flex-shrink-0">
@@ -199,7 +323,7 @@ export default function AIAnalysisModal({
                     </div>
                 ) : (
                     /* Chỉ scroll trong bảng */
-                    <div className="flex-1 min-h-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-auto">
+                    <div className="flex-shrink-0 min-h-[500px] rounded-xl border border-slate-200 bg-white shadow-sm overflow-x-auto">
                         <table className="w-full text-left text-[11px]">
                             <thead className="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10">
                                 <tr>
@@ -338,8 +462,8 @@ export default function AIAnalysisModal({
                 </div>
                 <div className="w-px self-stretch bg-slate-700 flex-shrink-0" />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <p className="text-xs font-black leading-snug">{mode === 'plan' ? overallRecommendation : result.recommendation}</p>
-                    <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{mode === 'plan' ? overallSummary : result.summary}&rdquo;</p>
+                    <p className="text-xs font-black leading-snug">{overallRecommendation}</p>
+                    <p className="text-[10px] text-slate-300 italic opacity-80 leading-snug">&ldquo;{overallSummary}&rdquo;</p>
                 </div>
             </div>
         </div>
@@ -347,125 +471,172 @@ export default function AIAnalysisModal({
 
     // Dịch vụ render UI độc lập cho Mảng EVIDENCE - ĐẸP, PREMIUM VÀ TẬP TRUNG
     const renderEvidenceMode = () => (
-        <div className="flex-1 flex flex-col overflow-hidden bg-slate-50 p-4 gap-4">
+        <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50 p-4 gap-4 custom-scrollbar">
 
             {/* CẢNH BÁO NẾU ẢNH KHÔNG PHẢI LÀ HÓA ĐƠN */}
-            {result.isBill === false && (
-                <div className="flex-shrink-0 p-4 rounded-2xl border-2 bg-rose-50 border-rose-200 flex flex-col justify-center relative overflow-hidden shadow-sm">
-                    <div className="flex items-start gap-3 relative z-10">
-                        <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
-                            <AlertTriangle className="h-5 w-5 text-rose-600" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h4 className="text-sm font-black text-rose-700 uppercase tracking-tight">Cảnh Báo Nài! Hình Ảnh Không Hợp Lệ</h4>
-                            <p className="text-[11px] text-rose-600 font-medium leading-relaxed mt-1">
-                                Hệ thống AI Vision nhận diện ảnh tải lên <strong className="font-black">KHÔNG PHẢI</strong> là hóa đơn hoặc chứng từ mua bán hợp lệ. Đây có thể là ảnh phong cảnh, ảnh chụp màn hình linh tinh. Yêu cầu tải lại ảnh hóa đơn thật.
-                            </p>
-                        </div>
+
+            {/* THANH TRẠNG THÁI FORENSICS - SIÊU GỌN */}
+            {forensics && (
+                <div className={`flex-shrink-0 px-4 py-2 rounded-xl border flex items-center justify-between shadow-sm transition-all ${forensics.isManipulated ? 'bg-rose-50 border-rose-100 text-rose-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
+                    <div className="flex items-center gap-2">
+                        {forensics.isManipulated ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                        <span className="text-[10px] font-black uppercase tracking-tight">
+                            {forensics.isManipulated ? `CẢNH BÁO: PHÁT HIỆN CHỈNH SỬA (${forensics.warnings?.join(', ')})` : 'XÁC THỰC: ẢNH NGUYÊN BẢN (SẠCH)'}
+                        </span>
                     </div>
-                    <div className="absolute -right-4 -bottom-4 opacity-5">
-                        <AlertTriangle className="h-32 w-32 text-rose-900" />
-                    </div>
+                    {forensics.heatmapUrl && (
+                        <button onClick={() => setShowHeatmap(true)} className="px-3 py-1 bg-slate-900 text-white rounded-lg text-[9px] font-black uppercase hover:bg-slate-800 transition-colors">
+                            Xem Heatmap
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* BẢNG ĐỐI SOÁT CHI TIẾT - EVIDENCE */}
-            <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Ma Trận Đối Soát 1-1 (Reconciliation Matrix)</h3>
-                </div>
+            {/* TAB SELECTION */}
+            <div className="flex items-center gap-2 border-b border-slate-200">
+                <button
+                    onClick={() => setEvidenceTab('3way')}
+                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                        evidenceTab === '3way' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                >
+                    Đối Soát 3 Chiều
+                </button>
+                <button
+                    onClick={() => setEvidenceTab('market')}
+                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                        evidenceTab === 'market' ? 'border-blue-600 text-blue-700 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                    }`}
+                >
+                    Khảo Sát Giá Thị Trường (Thực Tế)
+                </button>
+            </div>
 
-                {loadingItems ? (
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+            {/* TAB CONTENT */}
+            {evidenceTab === '3way' && (
+                <div className="flex-shrink-0 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Ma Trận Đối Soát 3 Chiều (3-Way Match)</h3>
+                            {isAnalyzing3Way && (
+                                <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1 mt-0.5">
+                                    <Loader2 className="h-3 w-3 animate-spin" /> Đang dùng AI bóc tách hóa đơn & đối soát...
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setEvidenceTab('market')}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-2 hover:bg-blue-700 transition-all shadow-sm"
+                        >
+                            <Search className="h-3 w-3" /> Khảo sát giá thị trường
+                        </button>
                     </div>
-                ) : items.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center text-slate-400 text-xs font-medium">
-                        Không có dữ liệu hệ thống để đối soát.
-                    </div>
-                ) : (
-                    <div className="flex-1 overflow-auto p-0">
-                        <table className="w-full text-left border-collapse min-w-[1100px]">
-                            <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm">
-                                <tr>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest w-8 text-center border-b border-slate-200">#</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Tên</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Nhãn hàng</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-center">Đơn vị</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Địa điểm mua</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">Ghi chú</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Hệ Thống PD</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 text-right">Bóc Tách HĐ</th>
-                                    <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200 w-[110px] text-center">Kết quả Khớp</th>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                        <div className="overflow-auto max-h-[500px] scrollbar-thin scrollbar-thumb-slate-200">
+                            <table className="w-full border-collapse min-w-[1400px]">
+                            <thead className="bg-[#f8fafc] sticky top-0 z-10 shadow-sm border-b border-slate-200">
+                                <tr className="divide-x divide-slate-200">
+                                    <th rowSpan={2} className="sticky left-0 z-30 w-12 px-2 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center bg-slate-100 border-r border-slate-200">#</th>
+                                    <th rowSpan={2} className="sticky left-12 z-30 w-[220px] px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">Tên Hạng Mục</th>
+                                    <th colSpan={7} className="px-3 py-2 text-[10px] font-black text-amber-600 uppercase tracking-widest text-center bg-amber-50/50">Kế Hoạch (Plan)</th>
+                                    <th colSpan={6} className="px-3 py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest text-center bg-blue-50/50">Thực Chi (Actual)</th>
+                                    <th rowSpan={2} className="w-[300px] px-3 py-3 text-[10px] font-black text-indigo-500 uppercase tracking-widest text-center bg-indigo-50/30">Phân Tích Đối Soát (AI)</th>
+                                </tr>
+                                <tr className="divide-x divide-slate-100">
+                                    {/* Plan Headers */}
+                                    <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">SL</th>
+                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Giá</th>
+                                    <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Đơn vị</th>
+                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Hãng</th>
+                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Nơi mua</th>
+                                    <th className="px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20">Ghi chú</th>
+                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-amber-50/20 text-right">Tổng</th>
+                                    
+                                    {/* Actual Headers */}
+                                    <th className="w-14 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">SL</th>
+                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right">Giá</th>
+                                    <th className="w-20 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Đơn vị</th>
+                                    <th className="w-24 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Hãng</th>
+                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20">Nơi mua</th>
+                                    <th className="w-28 px-2 py-2 text-[9px] font-black text-slate-400 uppercase bg-blue-50/20 text-right font-black">Tổng</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {items.map((sysItem, idx) => {
-                                    // Match AI item
-                                    const aiItem = detected.find(d => {
-                                        const s1 = (sysItem.name || '').toLowerCase().trim();
-                                        const dName = (d.name || '').toLowerCase().trim();
-                                        return dName && (s1 === dName || s1.includes(dName) || dName.includes(s1));
-                                    });
+                                {items.map((it: ExpenditureItem, idx) => {
+                                    const itAny = it as any;
+                                    // Tìm kết quả đối soát tương ứng từ AI (nếu có)
+                                    const aiRow = Array.isArray(reconciliation) 
+                                        ? reconciliation.find(r => r.itemName === it.name)
+                                        : null;
+                                    
+                                    // NGUYÊN TẮC: Thông tin Plan và Actual LUÔN LUÔN lấy từ DB (items)
+                                    // AI chỉ đóng vai trò bổ sung status và analysis.
+                                    const row = {
+                                        itemName: it.name,
+                                        planQty: itAny.expectedQuantity ?? itAny.expected_quantity ?? 0,
+                                        planPrice: itAny.expectedPrice ?? itAny.expected_price ?? 0,
+                                        planUnit: itAny.expectedUnit ?? itAny.expected_unit || '-',
+                                        planBrand: itAny.expectedBrand ?? itAny.expected_brand || '-',
+                                        planLocation: itAny.expectedPurchaseLocation ?? itAny.expected_purchase_location || '-',
+                                        planNote: itAny.expectedNote ?? itAny.expected_note || '-',
+                                        actualQty: itAny.actualQuantity ?? itAny.actual_quantity ?? 0,
+                                        actualPrice: itAny.actualPrice ?? itAny.actual_price ?? 0,
+                                        actualUnit: itAny.actualUnit ?? itAny.actual_unit || itAny.unit || '-',
+                                        actualBrand: itAny.actualBrand ?? itAny.actual_brand || '-',
+                                        actualLocation: itAny.actualPurchaseLocation ?? itAny.actual_purchase_location || '-',
+                                        status: aiRow?.status || 'PENDING',
+                                        analysis: aiRow?.analysis
+                                    };
 
-                                    const sysQty = sysItem.actualQuantity || 0;
-                                    const sysPrice = sysItem.actualPrice || 0;
-                                    const sysVal = sysQty * sysPrice;
-
-                                    const aiQty = aiItem?.quantity || 0;
-                                    const aiPrice = aiItem?.unitPrice || 0;
-                                    const aiVal = aiItem?.total || 0;
-
-                                    const isMatched = aiItem && (sysVal === aiVal || Math.abs(sysVal - aiVal) < 1000);
-
+                                    const isMismatch = row.status !== 'MATCH' && row.status !== 'PENDING';
                                     return (
-                                        <tr key={idx} className="hover:bg-blue-50/30 transition-colors group align-top">
-                                            <td className="px-3 py-3 text-center text-[10px] font-black text-slate-400 group-hover:text-blue-500">{idx + 1}</td>
-                                            <td className="px-3 py-3">
-                                                <div className="text-[11px] font-black text-slate-800 leading-tight">{sysItem.name || '-'}</div>
+                                        <tr key={idx} className={`hover:bg-slate-50 transition-colors group ${isMismatch ? 'bg-rose-50/10' : ''}`}>
+                                            <td className="sticky left-0 z-10 px-2 py-3 text-center text-[10px] font-black text-slate-400 bg-white group-hover:bg-slate-100 border-r border-slate-100 transition-colors">{idx + 1}</td>
+                                            <td className="sticky left-12 z-10 px-3 py-3 bg-white group-hover:bg-slate-100 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)] transition-colors">
+                                                <div className="text-[11px] font-black text-slate-800 leading-tight">{row.itemName || '-'}</div>
                                             </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedBrand || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <div className="text-[10px] font-bold text-slate-700">{sysItem.expectedUnit || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                <div className="text-[9px] text-slate-600 break-all">{sysItem.expectedPurchaseLocation || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                <div className="text-[9px] text-slate-500">{sysItem.expectedNote || '-'}</div>
-                                            </td>
-                                            <td className="px-3 py-3 text-right">
-                                                <div className="text-[11px] font-black text-slate-800 tabular-nums">{fmtVND(sysVal)}</div>
-                                                <div className="text-[9px] font-bold text-slate-500 tabular-nums mt-0.5">{sysQty} x {fmtNum(sysPrice)} đ</div>
-                                            </td>
-                                            <td className="px-3 py-3 text-right">
-                                                {aiItem ? (
-                                                    <>
-                                                        <div className="text-[11px] font-black text-indigo-700 tabular-nums">{fmtVND(aiVal)}</div>
-                                                        <div className="text-[9px] font-bold text-slate-500 tabular-nums mt-0.5">{aiQty} x {fmtNum(aiPrice)} đ</div>
-                                                    </>
-                                                ) : <span className="text-[10px] text-slate-300">—</span>}
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                {!aiItem ? (
-                                                    <span className="inline-block px-2 py-1 bg-slate-100 text-slate-500 text-[9px] font-black uppercase rounded border border-slate-200">
-                                                        Thiếu sót
-                                                    </span>
-                                                ) : isMatched ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[9px] font-black uppercase rounded shadow-sm">
-                                                        <CheckCircle className="h-3 w-3" /> Trùng khớp
-                                                    </span>
-                                                ) : (
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className="inline-block px-2 py-1 bg-rose-50 text-rose-600 border border-rose-200 text-[9px] font-black uppercase rounded shadow-sm">
-                                                            Lệch giá trị
-                                                        </span>
-                                                        <span className="text-[10px] font-black text-rose-500 tabular-nums">
-                                                            {sysVal > aiVal ? '-' : '+'}{fmtVND(Math.abs(sysVal - aiVal))}
-                                                        </span>
+                                            {/* Plan Data */}
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planQty ?? '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5"><div className="text-[10px] font-bold text-slate-700">{row.planPrice ? fmtNum(row.planPrice) : '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 text-center">{row.planUnit || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 truncate max-w-[80px]">{row.planBrand || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[9px] text-slate-600 truncate max-w-[100px]">{row.planLocation || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-amber-50/5"><div className="text-[8px] text-slate-400 italic truncate max-w-[100px]">{row.planNote || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-amber-50/5 font-black text-amber-700"><div className="text-[10px]">{fmtNum((row.planPrice || 0) * (row.planQty || 0))}</div></td>
+                                            
+                                            {/* Actual Data */}
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualQty ?? '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5"><div className="text-[10px] font-black text-slate-700">{row.actualPrice ? fmtNum(row.actualPrice) : '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 text-center">{row.actualUnit || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 truncate max-w-[80px]">{row.actualBrand || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 bg-blue-50/5"><div className="text-[9px] font-bold text-blue-700 truncate max-w-[100px]">{row.actualLocation || '-'}</div></td>
+                                            <td className="px-2 py-3 border-r border-slate-100 text-right bg-blue-50/5 font-black text-blue-800"><div className="text-[10px]">{fmtNum((row.actualPrice || 0) * (row.actualQty || 0))}</div></td>
+
+                                            <td className="px-3 py-3 border-r border-slate-100">
+                                                {isAnalyzing3Way ? (
+                                                    <div className="flex items-center gap-2 animate-pulse">
+                                                        <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
+                                                        <span className="text-[9px] text-indigo-400 font-black uppercase">Đang đối soát...</span>
                                                     </div>
+                                                ) : row.analysis ? (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className={`inline-block w-fit px-2 py-0.5 text-[8px] font-black uppercase rounded border mb-1 ${
+                                                            row.status === 'MATCH' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' :
+                                                            row.status === 'ACTUAL_MISMATCH_BILL' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                                            row.status === 'PLAN_EXCEEDED' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                                                            'bg-slate-100 text-slate-500 border-slate-200'
+                                                        }`}>
+                                                            {row.status === 'MATCH' ? 'Khớp' : 
+                                                             row.status === 'ACTUAL_MISMATCH_BILL' ? 'Sai lệch Bill' : 
+                                                             row.status === 'PLAN_EXCEEDED' ? 'Sai Plan' : 'N/A'}
+                                                        </span>
+                                                        <p className="text-[10px] font-medium text-slate-600 leading-tight italic">
+                                                            &quot;{row.analysis}&quot;
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[9px] text-slate-400 italic">Chưa có kết quả</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -474,45 +645,216 @@ export default function AIAnalysisModal({
                             </tbody>
                         </table>
                     </div>
-                )}
-            </div>
+                </div>
 
-            {/* XÁC MINH HÓA ĐƠN ĐIỆN TỬ -> THAY THẾ KẾT LUẬN KIỂM TOÁN TẠI ĐÂY */}
-            <div className={`flex-shrink-0 py-3 px-5 rounded-2xl shadow-xl flex items-center justify-between mt-2 border relative overflow-hidden transition-all ${result.isElectronicInvoice
-                ? 'bg-gradient-to-r from-indigo-700 to-indigo-600 border-indigo-500 text-white'
-                : 'bg-white border-slate-200 text-slate-800'
-                }`}>
-                <div className="flex items-center gap-4 relative z-10 w-full">
-                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-inner ${result.isElectronicInvoice ? 'bg-indigo-500/40 border border-indigo-400' : 'bg-slate-100 border border-slate-200'
-                        }`}>
-                        <Sparkles className={`h-6 w-6 ${result.isElectronicInvoice ? 'text-indigo-100' : 'text-slate-400'}`} />
+                    {/* BẢNG DỮ LIỆU GỐC TỪ HÓA ĐƠN (AI SCAN) - TÁCH RIÊNG */}
+                    <div className="flex-shrink-0 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mt-4 mb-4">
+                        <div className="px-4 py-2 border-b border-slate-100 bg-emerald-50/30 flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                            <h3 className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Dữ liệu bóc tách từ Hóa đơn (AI OCR)</h3>
+                            {isAnalyzing3Way && <Loader2 className="h-3 w-3 animate-spin text-emerald-500 ml-2" />}
+                        </div>
+                        <div className="min-h-[300px] overflow-x-auto">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-slate-50 sticky top-0 border-b border-slate-100">
+                                    <tr className="text-[8px] font-black text-slate-400 uppercase tracking-wider">
+                                        <th className="px-3 py-2 text-center w-8">#</th>
+                                        <th className="px-3 py-2">Tên trên Hóa đơn</th>
+                                        <th className="px-3 py-2 text-right">SL</th>
+                                        <th className="px-3 py-2 text-right">Giá</th>
+                                        <th className="px-3 py-2">Đơn vị</th>
+                                        <th className="px-3 py-2">Hãng</th>
+                                        <th className="px-3 py-2 text-right">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {billItems.length > 0 ? (
+                                        billItems.map((bi, bIdx) => (
+                                            <tr key={bIdx} className="hover:bg-emerald-50/20">
+                                                <td className="px-3 py-2 text-center text-[10px] font-medium text-slate-400">{bIdx + 1}</td>
+                                                <td className="px-3 py-2 font-bold text-slate-700">{bi.name || '-'}</td>
+                                                <td className="px-3 py-2 text-right font-black text-slate-600">{bi.quantity || 0}</td>
+                                                <td className="px-3 py-2 text-right font-black text-slate-600">{fmtNum(bi.price || 0)}</td>
+                                                <td className="px-3 py-2 text-slate-500 uppercase">{bi.unit || '-'}</td>
+                                                <td className="px-3 py-2 text-slate-500">{bi.brand || '-'}</td>
+                                                <td className="px-3 py-2 text-right font-black text-emerald-700 bg-emerald-50/10">{fmtVND((bi.price || 0) * (bi.quantity || 0))}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={7} className="px-4 py-8 text-center text-slate-400 italic">
+                                                {isAnalyzing3Way ? 'Đang dùng AI quét dữ liệu hóa đơn...' : 'Chưa có dữ liệu bóc tách từ hóa đơn.'}
+                                            </td>
+                                        </tr>
+                                    )}
+                                    {/* Hiển thị các item lạ trên bill nhưng không có trong plan */}
+                                    {unplannedBillItems.length > 0 && unplannedBillItems.map((ubi, uIdx) => (
+                                        <tr key={`un-${uIdx}`} className="bg-amber-50/20">
+                                            <td className="px-3 py-2 text-center text-[10px] font-medium text-amber-500">(!)</td>
+                                            <td className="px-3 py-2 font-bold text-amber-800">{ubi.name} <span className="text-[8px] font-black uppercase text-amber-500 ml-2">(Mục lạ)</span></td>
+                                            <td className="px-3 py-2 text-right font-black text-amber-600">{ubi.qty || 0}</td>
+                                            <td className="px-3 py-2 text-right font-black text-amber-600">{fmtNum(ubi.price || 0)}</td>
+                                            <td className="px-3 py-2 text-amber-500">-</td>
+                                            <td className="px-3 py-2 text-amber-500">-</td>
+                                            <td className="px-3 py-2 text-right font-black text-amber-700">{fmtVND(ubi.total || 0)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div className="flex flex-col flex-1">
-                        <h4 className={`text-sm font-black uppercase tracking-tight ${result.isElectronicInvoice ? 'text-white' : 'text-slate-700'}`}>
-                            {result.isElectronicInvoice ? 'HÓA ĐƠN ĐIỆN TỬ (CÓ MÃ XÁC THỰC)' : 'HÓA ĐƠN BÁN LẺ THUẦN (KHÔNG ĐIỆN TỬ)'}
-                        </h4>
-                        <p className={`text-[11px] font-medium mt-0.5 ${result.isElectronicInvoice ? 'text-indigo-200' : 'text-slate-500'}`}>
-                            Mã số Thuế nhà cung cấp: <strong className="font-black text-xs tabular-nums">{result.vendorTaxCode || result.vendorInfo?.taxId || 'N/A'}</strong>
-                        </p>
-                    </div>
-
-                    {result.isElectronicInvoice && result.invoiceLookupLink ? (
-                        <a href={result.invoiceLookupLink} target="_blank" rel="noopener noreferrer"
-                            className="bg-white text-indigo-700 hover:bg-slate-50 px-5 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-md flex items-center gap-2 flex-shrink-0">
-                            <Sparkles className="h-4 w-4" /> Link Tra cứu Hợp pháp
-                        </a>
+                </div>
+            )}
+            {evidenceTab === 'market' && (
+                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    {!marketAuditStarted ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                                <Search className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2">Kiểm toán giá thị trường thực tế</h3>
+                            <p className="text-xs text-slate-500 max-w-md mb-6">
+                                Hệ thống sẽ dùng AI quét trên internet để tìm khoảng giá thị trường cho các mặt hàng thực tế đã được mua và đối chiếu với giá nhập trên hệ thống.
+                            </p>
+                            <button
+                                onClick={runMarketAuditForActuals}
+                                className="px-6 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all hover:scale-105"
+                            >
+                                Bắt Đầu Khảo Sát Giá
+                            </button>
+                        </div>
                     ) : (
-                        <div className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider ${result.isElectronicInvoice ? 'bg-indigo-800 text-indigo-300' : 'bg-slate-100 text-slate-400'}`}>
-                            Không có link tra cứu
+                        <div className="flex-1 overflow-auto p-0 bg-white">
+                            <table className="w-full text-left text-[11px]">
+                                <thead className="bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider w-8 text-center border-r border-slate-100">#</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Tên</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-right border-r border-slate-100">Giá thực chi</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">SL</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Đơn vị</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider border-r border-slate-100">Nhãn hàng</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-slate-500 uppercase tracking-wider text-center border-r border-slate-100">Thực Chi (SL x Giá)</th>
+                                        <th className="px-3 py-3 text-[9px] font-black text-indigo-500 uppercase tracking-wider border-r border-slate-100">Thẩm định & Link Thị Trường</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {items.map((sysItem, idx) => {
+                                        const aiItem = detected.find(d => d.name === sysItem.name || d.plannedCategory === sysItem.name);
+                                        const isItemLoadingAI = loadingAIItems[sysItem.id!];
+                                        const sysQty = sysItem.actualQuantity || 1;
+                                        const sysPrice = sysItem.actualPrice || 0;
+                                        const sysVal = sysQty * sysPrice;
+
+                                        return (
+                                            <tr key={idx} className="hover:bg-blue-50/30 transition-colors group align-top">
+                                                <td className="px-3 py-4 text-center font-black text-slate-400 group-hover:text-blue-500 border-r border-slate-100">{idx + 1}</td>
+                                                <td className="px-3 py-4 border-r border-slate-100">
+                                                    <div className="font-black text-slate-800 leading-tight">{sysItem.name || '-'}</div>
+                                                </td>
+                                                <td className="px-3 py-4 text-right border-r border-slate-100">
+                                                    <div className="font-black text-slate-700">{fmtNum(sysPrice)} đ</div>
+                                                </td>
+                                                <td className="px-3 py-4 text-center border-r border-slate-100">
+                                                    <div className="font-bold text-slate-700">{sysQty}</div>
+                                                </td>
+                                                <td className="px-3 py-4 text-center border-r border-slate-100">
+                                                    <div className="font-medium text-slate-600">{sysItem.actualUnit || '-'}</div>
+                                                </td>
+                                                <td className="px-3 py-4 border-r border-slate-100">
+                                                    <div className="font-medium text-slate-600">{sysItem.actualBrand || '-'}</div>
+                                                </td>
+                                                <td className="px-3 py-4 text-center border-r border-slate-100">
+                                                    <div className="font-black text-slate-800 bg-slate-50 px-2 py-1 rounded-lg inline-block shadow-inner border border-slate-100">
+                                                        {fmtVND(sysVal)}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-4">
+                                                    {isItemLoadingAI ? (
+                                                        <div className="flex items-center gap-2 text-indigo-500 bg-indigo-50/50 p-2 rounded-lg border border-indigo-100">
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                            <span className="text-[10px] font-black uppercase tracking-wider">Đang quét giá thị trường thực tế...</span>
+                                                        </div>
+                                                    ) : aiItem ? (
+                                                        <div className="flex flex-col gap-3">
+                                                            <div className="flex items-start gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm relative overflow-hidden">
+                                                                <div className={`absolute top-0 left-0 w-1 h-full ${
+                                                                    aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-500' :
+                                                                    aiItem.priceStatus === 'OVERPRICED' ? 'bg-rose-500' :
+                                                                    aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-500' : 'bg-slate-300'
+                                                                }`} />
+                                                                
+                                                                <div className="flex-1 flex flex-col gap-2">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded shadow-sm border ${
+                                                                            aiItem.priceStatus === 'MATCHED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                                            aiItem.priceStatus === 'OVERPRICED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                                            aiItem.priceStatus === 'UNDERPRICED' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                                            'bg-slate-100 text-slate-600 border-slate-200'
+                                                                        }`}>
+                                                                            {aiItem.priceStatus === 'MATCHED' ? '✓ Hợp lý' :
+                                                                             aiItem.priceStatus === 'OVERPRICED' ? '⚠ Khai Khống Giá' :
+                                                                             aiItem.priceStatus === 'UNDERPRICED' ? '⚠ Giá quá thấp' : 'Không rõ'}
+                                                                        </span>
+                                                                        
+                                                                        {aiItem.marketPriceMin && aiItem.marketPriceMax ? (
+                                                                            <span className="text-[10px] font-black text-slate-600 bg-white px-2 py-1 rounded border border-slate-200 shadow-sm">
+                                                                                TT: {fmtNum(aiItem.marketPriceMin)} đ - {fmtNum(aiItem.marketPriceMax)} đ
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="text-[10px] font-bold text-slate-400 italic">Không có dữ liệu giá TT</span>
+                                                                        )}
+                                                                    </div>
+                                                                    
+                                                                    {aiItem.statusMessage && (
+                                                                        <p className="text-[10px] font-medium text-slate-600 italic">
+                                                                            {aiItem.statusMessage}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            {aiItem.evidenceUrls && aiItem.evidenceUrls.length > 0 && (
+                                                                <div className="flex flex-col gap-1.5 mt-1">
+                                                                    <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-1">
+                                                                        <Globe className="h-3 w-3" /> Nguồn đối chứng:
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                                                        {(aiItem.evidenceUrls || []).slice(0, 4).map((link: any, lIdx: number) => {
+                                                                            const url = typeof link === 'string' ? link : link.url;
+                                                                            const title = typeof link === 'string' ? new URL(link).hostname : (link.title || new URL(url).hostname);
+                                                                            if (!url) return null;
+                                                                            return (
+                                                                                <a
+                                                                                    key={lIdx}
+                                                                                    href={url}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    className="inline-flex items-center gap-1.5 px-2 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md text-[9px] font-black border border-indigo-100 transition-all hover:scale-105 active:scale-95"
+                                                                                >
+                                                                                    <Store className="h-3 w-3" /> {title} {link.price ? `(${fmtNum(link.price)}đ)` : ''}
+                                                                                </a>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400 italic font-medium">Chưa có dữ liệu</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>
+            )}
 
-                {/* Decorative background overlay */}
-                {result.isElectronicInvoice && (
-                    <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 skew-x-12 transform origin-bottom border-l border-white/10 pointer-events-none" />
-                )}
-            </div>
+            <div className="hidden"></div>
         </div>
     );
 
@@ -521,7 +863,7 @@ export default function AIAnalysisModal({
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[3px]" onClick={onClose} />
 
             <div
-                className="relative bg-[#fdfdfd] rounded-2xl shadow-2xl w-full max-w-6xl border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden"
+                className="relative bg-[#fdfdfd] rounded-[32px] shadow-2xl w-full max-w-[95vw] border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col overflow-hidden"
                 style={{ height: '94vh', maxHeight: '94vh' }}
             >
                 {/* Header - cố định */}
@@ -550,6 +892,16 @@ export default function AIAnalysisModal({
 
                 {/* GỌI GIAO DIỆN TÙY VÀO MODE */}
                 {mode === 'plan' ? renderPlanMode() : renderEvidenceMode()}
+
+                {/* Heatmap Modal Overlay */}
+                {showHeatmap && result.forensics?.heatmapUrl && (
+                    <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in-95">
+                        <h3 className="text-white font-black uppercase tracking-widest mb-4">Ảnh phân tích nhiệt (ELA Heatmap)</h3>
+                        <p className="text-rose-400 text-xs mb-6 text-center max-w-lg">Các điểm sáng bất thường là dấu vết của việc thêm nội dung văn bản hoặc ghép ảnh bằng phần mềm chỉnh sửa ảnh.</p>
+                        <img src={result.forensics.heatmapUrl} alt="ELA Heatmap" className="max-h-[70vh] rounded-xl border border-white/20 shadow-2xl" />
+                        <button onClick={() => setShowHeatmap(false)} className="mt-8 px-6 py-3 bg-white text-black font-black uppercase rounded-xl hover:bg-slate-200">Đóng Heatmap</button>
+                    </div>
+                )}
 
                 {/* Footer - cố định */}
                 <div className="px-5 py-3 border-t border-slate-200 bg-white flex items-center justify-between gap-4 flex-shrink-0 z-20 relative">

@@ -32,6 +32,7 @@ export interface ExpenditureItem {
     unit?: string;
     expectedBrand?: string;
     actualBrand?: string;
+    actualUnit?: string;
     expectedPurchaseLocation?: string;
     actualPurchaseLocation?: string;
     createdAt?: string;

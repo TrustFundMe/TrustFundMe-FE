@@ -50,9 +50,15 @@ function CampaignsContent() {
       if (!user?.id) return;
       try {
         setLoading(true);
-        // Load all campaigns at once for client-side filter + paginate
-        const data = await campaignService.getUserCampaignsPaginated(user.id, 0, 1000);
-        setCampaigns(data.content);
+        // Try paginated first, fallback to non-paginated if 500
+        try {
+          const data = await campaignService.getUserCampaignsPaginated(user.id, 0, 100);
+          setCampaigns(data.content);
+        } catch (paginatedErr: any) {
+          console.warn('[Campaigns] Paginated endpoint failed, falling back to getByFundOwner:', paginatedErr?.message);
+          const list = await campaignService.getByFundOwner(user.id);
+          setCampaigns(list);
+        }
       } catch (error) {
         console.error('Failed to fetch user campaigns:', error);
       } finally {

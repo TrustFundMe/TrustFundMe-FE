@@ -87,6 +87,7 @@ function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel, dange
 function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () => void }) {
     const [aiResult, setAiResult] = useState<AIResult | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
+    const [isAIModalOpen, setIsAIModalOpen] = useState(false);
     const [confirm, setConfirm] = useState<null | 'post_fraud' | 'send_legal'>(null);
     const [showSchedule, setShowSchedule] = useState(false);
     const [photosOpen, setPhotosOpen] = useState(true);
@@ -250,38 +251,23 @@ function DetailPanel({ rec, onRefresh }: { rec: EvidenceRecord; onRefresh: () =>
         send_legal: { title: 'Cảnh báo pháp lý', message: `Gửi email cảnh báo vi phạm hợp đồng đến "${rec.ownerEmail}".`, confirmLabel: 'Gửi cảnh báo', danger: false },
     };
 
-    const runAI = async () => {
+    const runAI = () => {
         if (!hasPhotos) { toast.error('Chưa có ảnh minh chứng'); return; }
-        setAnalyzing(true);
-        try {
-            const itemsToAnalyze = rec.expenditureItems.filter((i: any) => (i.actualQuantity ?? 0) > 0);
-
-            const result = await aiService.analyzeEvidence({
-                expenditureId: rec.expenditureId,
-                plan: rec.plan,
-                purpose: rec.purpose || '',
-                totalAmount: rec.totalAmount,
-                items: itemsToAnalyze.length > 0 ? itemsToAnalyze : rec.expenditureItems,
-                photoUrls: rec.evidencePhotos,
-                createdAt: rec.createdAt
-            });
-            setAiResult(result as any);
-        } catch (err: any) {
-            const msg = err?.response?.data?.error || err?.response?.data?.details || err?.message || 'AI phân tích thất bại';
-            console.error('[runAI]', msg);
-            toast.error(msg);
-        } finally { setAnalyzing(false); }
+        setIsAIModalOpen(true);
     };
 
     return (
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-            {aiResult && (
+            {isAIModalOpen && (
                 <AIAnalysisModal
-                    result={aiResult}
+                    result={aiResult || {}}
                     itemsProp={rec.expenditureItems}
-                    exp={{ id: rec.expenditureId } as any}
+                    exp={rec as any}
                     mode="evidence"
-                    onClose={() => setAiResult(null)}
+                    onClose={() => {
+                        setIsAIModalOpen(false);
+                        setAiResult(null);
+                    }}
                 />
             )}
             {lightbox && (
@@ -648,21 +634,33 @@ export default function EvidenceTab() {
 
                     // Lấy ảnh từ feedpost minh chứng (targetName = evidence, targetType = EXPENDITURE)
                     let evidencePhotos: string[] = [];
+                    
+                    // Fallback 1: Lấy từ proofUrl của chính expenditure (nếu có)
+                    if ((exp as any).proofUrl) {
+                        evidencePhotos.push((exp as any).proofUrl);
+                    }
+
                     try {
                         const posts = await feedPostService.getByTarget(exp.id, 'EXPENDITURE');
-                        const evidencePost = posts.find((p: any) => {
-                            const tName = p.targetName || p.target_name || '';
-                            return tName === 'evidence' || tName.startsWith('evidence|');
-                        });
-
-                        if (evidencePost) {
-                            // Ưu tiên lấy từ attachments của post DTO nếu có
-                            if (evidencePost.attachments && evidencePost.attachments.length > 0) {
-                                evidencePhotos = evidencePost.attachments.map((a: any) => a.url);
+                        
+                        // Lấy tất cả ảnh từ tất cả các post liên quan để tránh bỏ sót
+                        for (const p of posts) {
+                            if (p.attachments && p.attachments.length > 0) {
+                                p.attachments.forEach((a: any) => {
+                                    if (a.url && !evidencePhotos.includes(a.url)) {
+                                        evidencePhotos.push(a.url);
+                                    }
+                                });
                             } else {
                                 // Fallback: fetch media by postId
-                                const media = await mediaService.getMediaByPostId(evidencePost.id).catch(() => []);
-                                evidencePhotos = media.map((m: any) => m.url);
+                                try {
+                                    const media = await mediaService.getMediaByPostId(p.id);
+                                    media.forEach((m: any) => {
+                                        if (m.url && !evidencePhotos.includes(m.url)) {
+                                            evidencePhotos.push(m.url);
+                                        }
+                                    });
+                                } catch (e) {}
                             }
                         }
                     } catch (err) {

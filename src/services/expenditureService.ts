@@ -204,6 +204,14 @@ export const expenditureService = {
         return response.data;
     },
 
+    /** Kiểm toán từng hạng mục thực tế bằng hệ thống AI Perplexity (Backend) */
+    analyzeActualItemWithAI: async (itemId: number | string): Promise<any> => {
+        const response = await axiosInstance.post(`/api/expenditures/items/${itemId}/audit/actual`, null, {
+            timeout: 120000, // 120 seconds
+        });
+        return response.data;
+    },
+
     /** Lấy tất cả ExpenditureTransaction (PAYOUT + REFUND) */
     getAllTransactions: async (): Promise<ExpenditureTransaction[]> => {
         const response = await axiosInstance.get('/api/expenditures/transactions');
