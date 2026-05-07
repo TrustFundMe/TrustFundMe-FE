@@ -92,109 +92,79 @@ export default function ExpenditureDetailPage() {
             </div>
 
             <div className="max-w-[1400px] mx-auto px-6 mt-4">
-                {/* SECTION: STATUS & DEADLINE */}
-                {/* SECTION: STATUS & DEADLINE (Unified Single Box) */}
-                <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm mb-6">
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6">
-                        {/* Status Integrated */}
-                        {(() => {
-                            const getStatusStyles = (status?: string) => {
-                                switch (status) {
-                                    case 'OVERDUE':
-                                        return { label: 'Quá hạn', text: 'text-red-700', bgIcon: 'bg-red-50 text-red-600', icon: <XCircle className="w-5 h-5" /> };
-                                    case 'SUBMITTED':
-                                        return { label: 'Đã nộp', text: 'text-amber-700', bgIcon: 'bg-amber-50 text-amber-600', icon: <Clock className="w-5 h-5" /> };
-                                    case 'APPROVED':
-                                        return { label: 'Đã duyệt', text: 'text-emerald-700', bgIcon: 'bg-emerald-50 text-emerald-600', icon: <Check className="w-5 h-5" /> };
-                                    case 'REJECTED':
-                                        return { label: 'Bị từ chối', text: 'text-red-700', bgIcon: 'bg-red-50 text-red-600', icon: <AlertCircle className="w-5 h-5" /> };
-                                    case 'ALLOWED_EDIT':
-                                        return { label: 'Cho phép sửa', text: 'text-orange-700', bgIcon: 'bg-orange-50 text-orange-600', icon: <Edit3 className="w-5 h-5" /> };
-                                    default:
-                                        return { label: 'Chưa cập nhật', text: 'text-slate-500', bgIcon: 'bg-slate-50 text-slate-400', icon: <Info className="w-5 h-5" /> };
-                                }
-                            };
-                            const styles = getStatusStyles(expenditure.evidenceStatus);
-                            return (
-                                <div className="flex items-center gap-4 min-w-[180px]">
-                                    <div className={`p-3 rounded-2xl ${styles.bgIcon}`}>
-                                        {styles.icon}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Trạng thái</p>
-                                        <p className={`text-base font-black truncate ${styles.text}`}>
-                                            {styles.label}
-                                        </p>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-
-                        <div className="hidden md:block h-10 w-px bg-slate-100" />
-                        <div className="md:hidden h-px w-full bg-slate-50" />
-
-                        {/* Deadline Integrated */}
-                        <div className="flex items-center gap-4 min-w-[200px]">
-                            <div className={`p-3 rounded-2xl ${expenditure.evidenceDueAt && new Date(expenditure.evidenceDueAt) < new Date() ? 'bg-red-50 text-red-600' : 'bg-orange-50 text-orange-600'}`}>
-                                <Clock className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Hạn nộp</p>
-                                <p className={`text-base font-black truncate ${expenditure.evidenceDueAt && new Date(expenditure.evidenceDueAt) < new Date() ? 'text-red-600' : 'text-slate-900'}`}>
-                                    {expenditure.evidenceDueAt 
-                                        ? (() => {
-                                            const d = new Date(expenditure.evidenceDueAt);
-                                            const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-                                            const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                                            return `${time} ${date}`;
-                                        })()
-                                        : 'Không giới hạn'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="hidden md:block h-10 w-px bg-slate-100" />
-                        <div className="md:hidden h-px w-full bg-slate-50" />
-
-                        {/* Description Integrated */}
-                        <div className="flex items-center gap-4 flex-1 min-w-0 pr-2">
-                            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 shrink-0">
-                                <Info className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mb-0.5">Kế hoạch đợt chi</p>
-                                <p className="text-[11px] font-bold text-slate-600 line-clamp-2 leading-tight" title={expenditure.plan}>
-                                    {expenditure.plan || 'Chưa cập nhật kế hoạch'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 {/* SECTION 1: WITHDRAWAL OVERVIEW */}
                 <div className="mb-4">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-emerald-100 rounded-xl text-emerald-600"><Receipt className="w-5 h-5" /></div>
-                        <h2 className="text-sm font-black text-slate-900 uppercase tracking-[2px]">Tổng quan rút tiền & Chứng từ</h2>
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600"><Receipt className="w-4 h-4" /></div>
+                        <h2 className="text-xs font-black text-slate-900 uppercase tracking-[2px]">Tổng quan rút tiền & Chứng từ</h2>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-                        <div className="lg:col-span-1 space-y-3">
-                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                                <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-1">Số lần đã rút tiền</span>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-3xl font-black text-slate-900">{expenditure.evidences?.length || 0}</span>
-                                    <span className="text-xs font-bold text-black uppercase tracking-widest">đợt</span>
+                    <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-3">
+                        <div className="space-y-3">
+                            {/* Status / Deadline / Plan */}
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                                {/* Plan - first, large */}
+                                <div>
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-0.5">Kế hoạch</span>
+                                    <p className="text-lg font-black text-slate-900 leading-tight" title={expenditure.plan}>
+                                        {expenditure.plan || 'Chưa cập nhật'}
+                                    </p>
+                                </div>
+                                <div className="h-px bg-slate-100" />
+                                {/* Status */}
+                                {(() => {
+                                    const getStatusStyles = (status?: string) => {
+                                        switch (status) {
+                                            case 'OVERDUE': return { label: 'Quá hạn', text: 'text-red-700' };
+                                            case 'SUBMITTED': return { label: 'Đã nộp', text: 'text-amber-700' };
+                                            case 'APPROVED': return { label: 'Đã duyệt', text: 'text-emerald-700' };
+                                            case 'REJECTED': return { label: 'Bị từ chối', text: 'text-red-700' };
+                                            case 'ALLOWED_EDIT': return { label: 'Cho phép sửa', text: 'text-orange-700' };
+                                            default: return { label: 'Chưa cập nhật', text: 'text-slate-500' };
+                                        }
+                                    };
+                                    const styles = getStatusStyles(expenditure.evidenceStatus);
+                                    return (
+                                        <div>
+                                            <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-0.5">Trạng thái</span>
+                                            <span className={`text-lg font-black ${styles.text}`}>{styles.label}</span>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="h-px bg-slate-100" />
+                                {/* Deadline */}
+                                <div>
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-0.5">Hạn nộp</span>
+                                    <span className={`text-lg font-black ${expenditure.evidenceDueAt && new Date(expenditure.evidenceDueAt) < new Date() ? 'text-red-600' : 'text-slate-900'}`}>
+                                        {expenditure.evidenceDueAt
+                                            ? (() => {
+                                                const d = new Date(expenditure.evidenceDueAt);
+                                                const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                                                const date = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                                return `${time} ${date}`;
+                                            })()
+                                            : 'Không giới hạn'}
+                                    </span>
+                                </div>
+                                <div className="h-px bg-slate-100" />
+                                <div>
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-0.5">Số lần đã rút</span>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-lg font-black text-slate-900">{expenditure.evidences?.length || 0}</span>
+                                        <span className="text-[10px] font-bold text-black uppercase tracking-widest">đợt</span>
+                                    </div>
+                                </div>
+                                <div className="h-px bg-slate-100" />
+                                <div>
+                                    <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-0.5">Tổng tiền đã rút</span>
+                                    <span className="text-lg font-black text-emerald-600">{renderPrice(totalWithdrawn)}</span>
                                 </div>
                             </div>
-                            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                                <span className="text-[10px] font-black text-black uppercase tracking-widest block mb-1">Tổng tiền đã rút</span>
-                                <span className="text-3xl font-black text-emerald-600">{renderPrice(totalWithdrawn)}</span>
-                            </div>
                         </div>
-                        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                            <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/50">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                            <div className="px-4 py-1.5 border-b border-slate-100 bg-slate-50/50 shrink-0">
                                 <span className="text-[10px] font-black text-black uppercase tracking-widest">Danh sách các đợt rút tiền</span>
                             </div>
-                            <div className="flex-1 overflow-y-auto max-h-[280px]">
+                            <div className="flex-1 overflow-y-auto">
                                 {(expenditure.evidences || []).map((ev: any, idx: number) => (
                                     <div key={ev.id || idx} className="px-6 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
                                         <div className="flex items-center gap-4">
@@ -251,13 +221,13 @@ export default function ExpenditureDetailPage() {
                                     <tr className="bg-slate-50 border-b border-slate-100">
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[50px] text-center border-x border-slate-200">STT</th>
                                         <th className="px-3 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[140px] text-center border-x border-slate-200">Danh mục</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] min-w-[200px] border-x border-slate-200">Hạng mục</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] min-w-[120px] w-[140px] border-x border-slate-200">Hạng mục</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[130px] border-x border-slate-200">Nơi mua / Link</th>
                                         <th className="px-3 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[120px] border-x border-slate-200">Hiệu / Thương hiệu</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[70px] text-center border-x border-slate-200">SL</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[70px] text-center border-x border-slate-200">ĐV</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[110px] text-right border-x border-slate-200">Đơn giá</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right w-[120px] border-x border-slate-200 bg-slate-100/50">Thành tiền</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-black uppercase tracking-[2px] text-right min-w-[160px] w-[200px] border-x border-slate-200 bg-slate-100/50">Thành tiền</th>
                                         <th className="px-2 py-3 text-[10px] font-black text-black uppercase tracking-[2px] w-[90px] text-center border-x border-slate-200">Ảnh minh chứng</th>
                                     </tr>
                                 </thead>

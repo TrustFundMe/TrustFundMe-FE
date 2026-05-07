@@ -103,9 +103,6 @@ export default function CampaignDonateCard({
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="mt-1.5 text-[13px] font-semibold text-slate-700">
-              Lượt ủng hộ: <span className="font-extrabold">{donorCount.toLocaleString("vi-VN")}</span>
-            </div>
           </div>
         </div>
 
@@ -115,11 +112,10 @@ export default function CampaignDonateCard({
               key={v}
               type="button"
               onClick={() => setAmount(v)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                amount === v
+              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${amount === v
                   ? "border-[#ff5e14]/40 bg-[#ff5e14]/10 text-[#a3471a]"
                   : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-              }`}
+                }`}
             >
               {v >= 1000 ? `${v / 1000}k` : v}
             </button>
@@ -146,11 +142,10 @@ export default function CampaignDonateCard({
             whileTap={{ scale: 0.98 }}
             disabled={!canDonate}
             onClick={handleDonateClick}
-            className={`group inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-              canDonate
+            className={`group inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-extrabold text-white transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${canDonate
                 ? "bg-[#ff5e14] hover:bg-[#ea550c] cursor-pointer"
                 : "bg-slate-300 cursor-not-allowed"
-            }`}
+              }`}
           >
             Quyên góp
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-0.5">
