@@ -9,6 +9,7 @@ import { api } from '@/config/axios';
 import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 import { kycService } from '@/services/kycService';
 import { auditService } from '@/services/auditService';
+import { BankAccountDto } from '@/types/bankAccount';
 
 interface UnifiedVerificationModalProps {
   userId: string | number;
@@ -26,12 +27,10 @@ export default function UnifiedVerificationModal({
   onClose,
   onSuccess,
   kycData,
-  bankAccount: initialBankAccount,
   cvUrl: initialCvUrl
 }: UnifiedVerificationModalProps) {
   const { updateUser } = useAuth();
   const { toast } = useToast();
-  const [isSubmittingAll, setIsSubmittingAll] = useState(false);
   const [isSubmittingAll, setIsSubmittingAll] = useState(false);
 
   // Helper to generate SHA-256 hash
@@ -154,7 +153,7 @@ export default function UnifiedVerificationModal({
     if (kycData?.status !== 'APPROVED') {
       const kycStatus = isKycComplete();
       if (!kycStatus.ok) {
-        toast(`Vui lòng điền đủ: ${kycStatus.missing.join(', ')}`, 'error');
+        toast(`Vui lòng điền đủ: ${kycStatus.missing?.join(', ') || 'Thông tin bắt buộc'}`, 'error');
         return;
       }
     }
@@ -225,7 +224,7 @@ export default function UnifiedVerificationModal({
   // ── Step completion checks ──
   const isKycComplete = () => {
     // 1. KYC already submitted and has a status → complete
-    if (kycData?.status === 'APPROVED' || kycData?.status === 'PENDING') return true;
+    if (kycData?.status === 'APPROVED' || kycData?.status === 'PENDING') return { ok: true };
 
     // 2. KYC data exists from server (any status) with required fields filled
     if (kycData && kycData.fullName && kycData.idNumber && kycData.issueDate && kycData.expiryDate && kycData.issuePlace) {
