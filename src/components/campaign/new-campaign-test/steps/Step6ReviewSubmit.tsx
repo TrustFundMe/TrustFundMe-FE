@@ -300,7 +300,18 @@ export default function Step6ReviewSubmit({
                       <p className="text-sm font-bold text-gray-800">{m.title || `Đợt ${idx + 1}`}</p>
                     </div>
                     <span className="whitespace-nowrap text-sm font-bold tabular-nums text-orange-600">
-                      {formatMoney(m.plannedAmount)}
+                      {formatMoney(
+                        (m.categories || []).reduce(
+                          (total, cat) =>
+                            total +
+                            cat.items.reduce(
+                              (s, i) =>
+                                s + (Number(i.expectedQuantity) || 0) * (Number(i.expectedPrice) || 0),
+                              0,
+                            ),
+                          0,
+                        ) || m.plannedAmount
+                      )}
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 pl-7 text-xs text-gray-500">
