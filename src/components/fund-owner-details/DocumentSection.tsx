@@ -73,11 +73,12 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
           flex: 1;
           overflow: hidden;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-          border: 1px solid #f1f5f9;
+          border: 1px solid rgba(15,23,42,0.10);
+          font-family: var(--font-dm-sans, 'DM Sans', 'Inter', sans-serif);
         }
         .tabs-header {
           padding: 0 32px;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid rgba(15,23,42,0.10);
           background: #fff;
           flex-shrink: 0;
         }
@@ -91,14 +92,16 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
           padding: 20px 0;
           font-size: 14px;
           font-weight: 700;
-          color: #94a3b8;
+          color: #0f172a;
+          opacity: 0.45;
           cursor: pointer;
           position: relative;
           transition: all 0.2s;
           letter-spacing: -0.2px;
+          font-family: inherit;
         }
-        .tab-btn:hover { color: #64748b; }
-        .tab-btn.active { color: #1e293b; }
+        .tab-btn:hover { opacity: 0.7; }
+        .tab-btn.active { color: #0f172a; opacity: 1; }
         .tab-btn.active::after {
           content: '';
           position: absolute;
@@ -106,8 +109,7 @@ const DocumentSection = ({ id }: DocumentSectionProps) => {
           left: 0;
           width: 100%;
           height: 3px;
-          background: #2dd4bf; /* Using a fresh teal like the image, or red if user insists */
-          background: #dc2626; /* User wanted red theme */
+          background: #ff5e14;
           border-radius: 2px 2px 0 0;
         }
         .tab-viewport {

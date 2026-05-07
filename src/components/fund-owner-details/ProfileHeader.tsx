@@ -3,16 +3,21 @@ import Image from 'next/image';
 import { Calendar } from 'lucide-react';
 import { userService, UserInfo } from '@/services/userService';
 import { campaignService } from '@/services/campaignService';
-import { expenditureService } from '@/services/expenditureService';
 
 interface ProfileHeaderProps {
   id: string | number;
 }
 
+interface FundOwnerStatistics {
+  totalReceived: number;
+  totalSpent: number;
+  currentBalance: number;
+}
+
 const ProfileHeader = ({ id }: ProfileHeaderProps) => {
   const [userData, setUserData] = useState<UserInfo | null>(null);
   const [campaignCount, setCampaignCount] = useState<number>(0);
-  const [totalDisbursed, setTotalDisbursed] = useState<number>(0);
+  const [stats, setStats] = useState<FundOwnerStatistics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,17 +25,23 @@ const ProfileHeader = ({ id }: ProfileHeaderProps) => {
       if (!id) return;
       setLoading(true);
       try {
-        const [userRes, countRes, disbursedRes] = await Promise.all([
+        const [userRes, countRes, statsRes] = await Promise.all([
           userService.getUserById(id),
           campaignService.getCampaignCount(id),
-          expenditureService.getTotalDisbursed(id)
+          campaignService.getStatistics(id)
         ]);
 
         if (userRes.success && userRes.data) {
           setUserData(userRes.data);
         }
         setCampaignCount(countRes || 0);
-        setTotalDisbursed(disbursedRes || 0);
+        if (statsRes) {
+          setStats({
+            totalReceived: Number(statsRes.totalReceived) || 0,
+            totalSpent: Number(statsRes.totalSpent) || 0,
+            currentBalance: Number(statsRes.currentBalance) || 0,
+          });
+        }
       } catch (error) {
         console.error("Error fetching header data:", error);
       } finally {
@@ -94,12 +105,22 @@ const ProfileHeader = ({ id }: ProfileHeaderProps) => {
             </div>
 
             <div className="metric-item">
-              <div className="metric-icon-box">
-                <Image src="https://cdn-icons-png.flaticon.com/512/10224/10224952.png" alt="Disbursed" width={24} height={24} />
+              <div className="metric-icon-box accent">
+                <Image src="https://cdn-icons-png.flaticon.com/512/10224/10224952.png" alt="Donations" width={24} height={24} />
               </div>
               <div className="metric-texts">
-                <span className="metric-value">{formatCurrency(totalDisbursed)}</span>
-                <span className="metric-label">Đã giải ngân</span>
+                <span className="metric-value">{formatCurrency(stats?.totalReceived || 0)}</span>
+                <span className="metric-label">Tổng quyên góp</span>
+              </div>
+            </div>
+
+            <div className="metric-item">
+              <div className="metric-icon-box">
+                <Image src="https://cdn-icons-png.flaticon.com/512/2489/2489756.png" alt="Spent" width={24} height={24} />
+              </div>
+              <div className="metric-texts">
+                <span className="metric-value">{formatCurrency(stats?.totalSpent || 0)}</span>
+                <span className="metric-label">Đã chi</span>
               </div>
             </div>
 
@@ -116,10 +137,6 @@ const ProfileHeader = ({ id }: ProfileHeaderProps) => {
         </div>
       </div>
 
-      <div className="right-section">
-        {/* Follow button removed per user request */}
-      </div>
-
       <style jsx>{`
         .profile-header {
           background: #fff;
@@ -127,28 +144,28 @@ const ProfileHeader = ({ id }: ProfileHeaderProps) => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 2px solid #fee2e2;
+          border-bottom: 2px solid rgba(15,23,42,0.10);
+          font-family: var(--font-dm-sans, 'DM Sans', 'Inter', sans-serif);
         }
-        .profile-header.loading { height: 120px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #dc2626; }
+        .profile-header.loading { height: 120px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #ff5e14; }
         
         .left-section { display: flex; gap: 24px; align-items: center; }
         .avatar-container { position: relative; width: 72px; height: 72px; }
-        .profile-avatar { border-radius: 50%; object-fit: cover; border: 3px solid #fef2f2; }
+        :global(.profile-avatar) { border-radius: 50%; object-fit: cover; border: 3px solid #fff3ed; }
 
         .profile-info { display: flex; flex-direction: column; gap: 12px; }
         .name-row { display: flex; align-items: center; gap: 16px; }
-        .name { font-size: 28px; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.5px; }
-        .join-date { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #991b1b; font-weight: 700; background: #fef2f2; padding: 4px 12px; border-radius: 99px; }
+        .name { font-size: 28px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
+        .join-date { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #ff5e14; font-weight: 700; background: #fff3ed; padding: 4px 12px; border-radius: 99px; }
         
         .metrics-row { display: flex; gap: 32px; align-items: center; }
         .metric-item { display: flex; align-items: center; gap: 12px; }
         .metric-icon-box { background: #f8fafc; padding: 8px; border-radius: 12px; display: flex; }
+        .metric-icon-box.accent { background: #fff3ed; }
         
         .metric-texts { display: flex; flex-direction: column; }
-        .metric-value { font-size: 20px; font-weight: 700; color: #111827; line-height: 1.1; }
-        .metric-label { font-size: 12px; color: #6b7280; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
-
-        .right-section { display: flex; align-items: center; }
+        .metric-value { font-size: 20px; font-weight: 700; color: #0f172a; line-height: 1.1; }
+        .metric-label { font-size: 12px; color: #0f172a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
 
         @media (max-width: 1024px) {
           .metrics-row { gap: 24px; }

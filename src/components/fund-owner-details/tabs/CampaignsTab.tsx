@@ -92,24 +92,24 @@ const CampaignCard = ({ campaign }: { campaign: CampaignDto }) => {
                     )}
                 </div>
                 <style jsx>{`
-            .campaign-card-link { text-decoration: none; color: inherit; display: block; }
-            .campaign-card { background: #fff; border-radius: 12px; border: 1px solid #f1f5f9; overflow: hidden; transition: all 0.2s ease; position: relative; height: 100%; display: flex; flex-direction: column; }
-            .campaign-card:hover { transform: translateY(-3px); border-color: #fee2e2; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
-            .card-image { position: relative; width: 100%; height: 140px; flex-shrink: 0; }
-            .img { object-fit: cover; }
-            .type-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #0f172a; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-            .status-overlay { position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); color: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; z-index: 2; }
-            .card-content { padding: 12px; flex: 1; display: flex; flex-direction: column; }
-            .card-title { font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; height: 40px; overflow: hidden; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+            :global(.campaign-card-link) { text-decoration: none; color: inherit; display: block; }
+            .campaign-card { background: #fff; border-radius: 12px; border: 1px solid rgba(15,23,42,0.10); overflow: hidden; transition: all 0.2s ease; position: relative; height: 100%; display: flex; flex-direction: column; font-family: var(--font-dm-sans, 'DM Sans', 'Inter', sans-serif); }
+            .campaign-card:hover { transform: translateY(-3px); border-color: #ff5e14; box-shadow: 0 10px 15px -3px rgba(255, 94, 20, 0.10); }
+            .card-image { position: relative; width: 100%; height: 160px; flex-shrink: 0; }
+            :global(.img) { object-fit: cover; }
+            .type-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; z-index: 2; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #0f172a; border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+            .status-overlay { position: absolute; bottom: 8px; right: 8px; background: rgba(255, 255, 255, 0.9); color: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; z-index: 2; }
+            .card-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+            .card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 12px 0; height: 42px; overflow: hidden; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
             .progress-section { margin-bottom: 8px; }
-            .progress-bar { height: 4px; background: #f1f5f9; border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
-            .progress-fill { height: 100%; background: #dc2626; border-radius: 2px; transition: width 0.3s ease; }
+            .progress-bar { height: 4px; background: rgba(15,23,42,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+            .progress-fill { height: 100%; background: #ff5e14; border-radius: 2px; transition: width 0.3s ease; }
             .progress-info { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; }
-            .percent { color: #dc2626; }
-            .label { color: #94a3b8; }
-            .card-footer { display: flex; align-items: center; color: #64748b; font-size: 11px; font-weight: 600; margin-top: auto; }
+            .percent { color: #ff5e14; }
+            .label { color: #0f172a; }
+            .card-footer { display: flex; align-items: center; color: #0f172a; font-size: 11px; font-weight: 600; margin-top: auto; }
             .donors { display: flex; align-items: center; gap: 4px; }
-            .finished-status { display: flex; align-items: center; gap: 6px; color: #991b1b; font-size: 11px; font-weight: 700; background: #fef2f2; padding: 6px; border-radius: 6px; margin-top: auto; }
+            .finished-status { display: flex; align-items: center; gap: 6px; color: #ff5e14; font-size: 11px; font-weight: 700; background: #fff3ed; padding: 6px; border-radius: 6px; margin-top: auto; }
           `}</style>
             </div>
         </Link>
@@ -279,14 +279,14 @@ const CampaignsTab = ({ id }: CampaignsTabProps) => {
             </div>
 
             <style jsx>{`
-                .campaigns-tab { height: 100%; display: flex; flex-direction: column; background: #fff; }
+                .campaigns-tab { height: 100%; display: flex; flex-direction: column; background: #fff; font-family: var(--font-dm-sans, 'DM Sans', 'Inter', sans-serif); }
                 
                 .premium-filter-bar {
                     padding: 12px 32px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    border-bottom: 1px solid #f1f5f9;
+                    border-bottom: 1px solid rgba(15,23,42,0.10);
                     background: #fff;
                     min-height: 56px;
                 }
@@ -300,28 +300,29 @@ const CampaignsTab = ({ id }: CampaignsTabProps) => {
                     display: flex;
                     align-items: center;
                 }
-                .search-icon { position: absolute; left: 12px; color: #94a3b8; pointer-events: none; z-index: 10; }
+                :global(.search-icon) { position: absolute; left: 12px; color: #0f172a; pointer-events: none; z-index: 10; opacity: 0.4; }
                 .search-input-wrapper input {
                     width: 100%;
                     padding: 8px 12px 8px 38px;
-                    border: 1.5px solid #e2e8f0;
+                    border: 1.5px solid rgba(15,23,42,0.15);
                     border-radius: 8px;
                     font-size: 13px;
                     font-weight: 500;
-                    color: #1e293b;
+                    color: #0f172a;
                     outline: none;
-                    background: #f8fafc;
+                    background: #fff;
                     height: 38px;
                     transition: all 0.2s;
+                    font-family: inherit;
                 }
-                .search-input-wrapper input:focus { border-color: #cbd5e1; background: #fff; box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.4); }
+                .search-input-wrapper input:focus { border-color: #ff5e14; box-shadow: 0 0 0 4px rgba(255, 94, 20, 0.08); }
 
                 .dropdown-controls { display: flex; gap: 12px; align-items: center; height: 100%; }
                 .dropdown-box {
                     position: relative;
                     padding: 0 16px;
                     height: 38px;
-                    border: 1.5px solid #e2e8f0;
+                    border: 1.5px solid rgba(15,23,42,0.15);
                     border-radius: 8px;
                     display: flex;
                     align-items: center;
@@ -331,9 +332,9 @@ const CampaignsTab = ({ id }: CampaignsTabProps) => {
                     white-space: nowrap;
                     transition: all 0.2s;
                 }
-                .dropdown-box:hover { border-color: #cbd5e1; background: #f8fafc; }
-                .dropdown-box span { font-size: 13px; font-weight: 700; color: #475569; }
-                .dropdown-box .icon { color: #64748b; }
+                .dropdown-box:hover { border-color: #ff5e14; }
+                .dropdown-box span { font-size: 13px; font-weight: 700; color: #0f172a; }
+                :global(.dropdown-box .icon) { color: #0f172a; opacity: 0.5; }
                 .dropdown-box select {
                     position: absolute;
                     inset: 0;
@@ -343,40 +344,36 @@ const CampaignsTab = ({ id }: CampaignsTabProps) => {
                     height: 100%;
                 }
 
-                .status-dropdown, .type-dropdown { border-color: #e2e8f0; }
-                .status-dropdown span, .type-dropdown span { color: #475569; }
-                .status-dropdown .icon, .type-dropdown .icon { color: #64748b; }
-                .status-dropdown:hover, .type-dropdown:hover { border-color: #cbd5e1; background: #f8fafc; }
-
                 .clear-filter-btn {
                     padding: 0 16px;
                     height: 38px;
-                    border: 1.5px solid #e2e8f0;
+                    border: 1.5px solid rgba(15,23,42,0.15);
                     border-radius: 8px;
                     font-size: 13px;
                     font-weight: 700;
-                    color: #64748b;
+                    color: #0f172a;
                     background: #fff;
                     cursor: pointer;
                     transition: all 0.2s;
                     white-space: nowrap;
+                    font-family: inherit;
                 }
                 .clear-filter-btn:hover {
-                    background: #f1f5f9;
-                    color: #1e293b;
-                    border-color: #cbd5e1;
+                    background: #fff3ed;
+                    color: #ff5e14;
+                    border-color: #ff5e14;
                 }
 
-                .right-controls { display: flex; align-items: center; height: 100%; }
+                .right-controls { display: flex; align-items: center; gap: 12px; height: 100%; }
 
                 .scroll-content { flex: 1; padding: 24px 32px; overflow-y: auto; }
-                .campaign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-                .no-result { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; color: #94a3b8; font-weight: 600; gap: 12px; }
-                .empty-icon { opacity: 0.3; }
+                .campaign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+                .no-result { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; color: #0f172a; font-weight: 600; gap: 12px; opacity: 0.5; }
+                :global(.empty-icon) { opacity: 0.3; }
                 .loading-bar { padding: 40px; display: flex; justify-content: center; }
-                .loader { width: 30px; height: 30px; border: 3px solid #f3f4f6; border-top: 3px solid #dc2626; border-radius: 50%; animation: spin 1s linear infinite; }
+                .loader { width: 30px; height: 30px; border: 3px solid rgba(15,23,42,0.08); border-top: 3px solid #ff5e14; border-radius: 50%; animation: spin 1s linear infinite; }
                 @keyframes spin { to { transform: rotate(360deg); } }
-                .pagination-wrapper { padding: 12px 32px; border-top: 1px solid #f1f5f9; background: #fff; }
+                .pagination-wrapper { padding: 12px 32px; border-top: 1px solid rgba(15,23,42,0.10); background: #fff; }
             `}</style>
         </div>
     );

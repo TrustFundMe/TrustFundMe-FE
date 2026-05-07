@@ -41,6 +41,8 @@ export type CampaignPlan = {
   id: string;
   title: string;
   amount: number;
+  /** Budget amount = totalReceivedAmount from expenditure (the planned/received budget, NOT actual spending) */
+  budgetAmount?: number;
   description: string;
   date: string;
   status?: string;

@@ -4,10 +4,13 @@ import type { CampaignPlan } from "./types";
 
 function accentForStatus(status: string) {
   switch (status) {
+    case "COMPLETED": return "#10b981";
     case "DISBURSED": return "#10b981";
     case "APPROVED": return "#3b82f6";
     case "PENDING":
     case "PENDING_REVIEW": return "#f59e0b";
+    case "ALLOWED_EDIT": return "#f59e0b";
+    case "WITHDRAWAL_REQUESTED": return "#8b5cf6";
     case "REJECTED": return "#ef4444";
     case "CLOSED": return "#6b7280";
     default: return "#94a3b8";
@@ -19,9 +22,12 @@ function getStatusText(status: string) {
     case "PENDING": return "Chờ xử lý";
     case "APPROVED": return "Đã duyệt";
     case "PENDING_REVIEW": return "Chờ duyệt";
+    case "COMPLETED": return "Đã hoàn thành";
     case "DISBURSED": return "Đã giải ngân";
     case "REJECTED": return "Từ chối";
     case "CLOSED": return "Hoàn tất";
+    case "ALLOWED_EDIT": return "Yêu cầu chỉnh sửa";
+    case "WITHDRAWAL_REQUESTED": return "Đã yêu cầu rút tiền";
     default: return status;
   }
 }
@@ -86,14 +92,17 @@ function PlanCard({
           </div>
 
           <div style={{ textAlign: "right", flexShrink: 0 }}>
+            {!["DISBURSED", "COMPLETED", "CLOSED"].includes(status) && (
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#ff5e14", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: 1 }}>Dự kiến</div>
+            )}
             <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", whiteSpace: "nowrap" }}>
               {plan.amount.toLocaleString("vi-VN")}
             </div>
-            <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>VNĐ</div>
+            <div style={{ fontSize: 10, color: "#0f172a", fontWeight: 600 }}>VNĐ</div>
           </div>
         </div>
 
-        {/* Status + date row */}
+        {/* Status row */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           <span
             style={{
@@ -109,14 +118,6 @@ function PlanCard({
           >
             {getStatusText(status)}
           </span>
-          {plan.date && (
-            <>
-              <span style={{ fontSize: 10, color: "#cbd5e1" }}>&middot;</span>
-              <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>
-                {plan.date}
-              </span>
-            </>
-          )}
         </div>
 
         {/* Description */}
@@ -190,6 +191,10 @@ export default function PlansList({
     );
   }
 
+  const completedStatuses = ["DISBURSED", "COMPLETED", "CLOSED"];
+  const totalActual = plans
+    .filter(p => completedStatuses.includes((p.status || "").toUpperCase()))
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
   const totalBudget = plans.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   return (
@@ -232,9 +237,9 @@ export default function PlansList({
           justifyContent: "space-between",
         }}
       >
-        <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>Tổng ngân sách dự kiến</span>
+        <span style={{ fontSize: 12, color: "#0f172a", fontWeight: 700 }}>Tổng thực chi</span>
         <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>
-          {totalBudget.toLocaleString("vi-VN")} <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>VNĐ</span>
+          {totalActual.toLocaleString("vi-VN")} <span style={{ fontSize: 10, color: "#0f172a", fontWeight: 600 }}>VNĐ</span>
         </span>
       </div>
 

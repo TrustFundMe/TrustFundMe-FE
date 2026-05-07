@@ -3,7 +3,7 @@ import { auditService, AuditLog } from '@/services/auditService';
 import { campaignService } from '@/services/campaignService';
 import { paymentService } from '@/services/paymentService';
 import { expenditureService } from '@/services/expenditureService';
-import { FileText, Search, RefreshCw, CheckCircle2, ShieldCheck, ChevronDown, ChevronUp, Database, AlertCircle } from 'lucide-react';
+import { FileText, Search, RefreshCw, CheckCircle2, ShieldCheck, ChevronDown, ChevronUp, Database, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 
 interface ReconciliationTabProps {
@@ -13,7 +13,7 @@ interface ReconciliationTabProps {
 const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [campaignMap, setCampaignMap] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   
@@ -32,14 +32,12 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
     try {
       if (log.dataSnapshot) {
         const snap = JSON.parse(log.dataSnapshot);
-        // dataSnapshot might have campaignId inside it for DONATION/EXPENDITURE
         if (snap.campaignId) {
           return snap.campaignId.toString();
         }
       }
     } catch (e) {}
     
-    // Fallback to entityId
     return log.entityId ? log.entityId.toString() : 'Khác';
   };
 
@@ -47,34 +45,28 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
     if (!id) return;
     setIsLoading(true);
     try {
-      // 1. Fetch Campaigns owned by user to get the IDs for context
       const userCampaigns = await campaignService.getByFundOwner(id);
       const campaignIds = userCampaigns ? userCampaigns.map(c => c.id) : [];
 
-      // 2. Fetch Reconciliation Logs (User actions + Campaign events like donations/withdrawals)
       const data = await auditService.getReconciliationLogs(id, campaignIds, 0, 500);
       
-      // EXCLUDE KYC to avoid leaking personal info as requested
       const safeLogs = (data.content || []).filter(
         log => log.entityType !== 'KYC' && log.entityType !== 'USER_KYC'
       );
       setLogs(safeLogs);
 
-      // 3. Extract unique campaign IDs correctly (even if entityId is DonationID/EvidenceID)
       const uniqueCampaignIds = Array.from(new Set(
         safeLogs
           .map(log => getCampaignIdFromLog(log))
           .filter(cId => cId !== 'Khác')
       ));
 
-      // 4. Fetch Campaign Titles for mapping
       const map: Record<string, string> = {};
       
       await Promise.allSettled(
         uniqueCampaignIds.map(async (cId) => {
           if (!cId) return;
           try {
-            // Check if we already have it from userCampaigns
             const existing = userCampaigns.find(c => c.id.toString() === cId.toString());
             if (existing) {
               map[cId.toString()] = existing.title;
@@ -104,7 +96,6 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
     setVerifyingId(log.id);
     try {
       let liveData: any = null;
-      // We try to get the real entityId from the snapshot or use entityId
       const targetId = getCampaignIdFromLog(log) === log.entityId?.toString() ? log.entityId : (JSON.parse(log.dataSnapshot || '{}').id || log.entityId);
       const entityId = Number(targetId);
 
@@ -143,18 +134,16 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
       }
 
       if (!liveData) {
-        toast('Dữ liệu không tồn tại trên Live DB (Có thể đã bị xóa) 🗑️', 'warning');
+        toast('Dữ liệu không tồn tại trên Live DB (Có thể đã bị xóa) 🗑️', 'info');
         setVerifyingId(null);
         return;
       }
 
-      // Compare snapshot with live data
       const snapshot = JSON.parse(log.dataSnapshot || '{}');
       
       let isMatch = true;
       const mismatchedFields: string[] = [];
 
-      // Essential fields to check (ignoring timestamps and derived fields if they differ in format)
       const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id'];
 
       for (const key in snapshot) {
@@ -163,7 +152,6 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           const liveVal = liveData[key];
           
           if (snapshotVal !== undefined && liveVal !== undefined) {
-             // Convert to string for comparison to handle number/string variations
              if (String(snapshotVal) !== String(liveVal)) {
                 isMatch = false;
                 mismatchedFields.push(key);
@@ -213,7 +201,7 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
     <div className="reconciliation-tab">
       <div className="toolbar">
         <div className="search-box">
-          <Search className="h-4 w-4 text-slate-400" />
+          <Search className="h-4 w-4" style={{ color: '#0f172a', opacity: 0.4 }} />
           <input 
             type="text"
             placeholder="Tìm theo Tên chiến dịch, loại dữ liệu..."
@@ -228,9 +216,14 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
       </div>
 
       <div className="content">
-        {filteredCampaigns.length === 0 ? (
+        {isLoading ? (
+          <div className="loading-state">
+            <Loader2 className="animate-spin" size={32} style={{ color: '#ff5e14' }} />
+            <p>Đang tải dữ liệu đối soát...</p>
+          </div>
+        ) : filteredCampaigns.length === 0 ? (
           <div className="empty-state">
-            <ShieldCheck className="h-10 w-10 text-slate-200 mb-2" />
+            <ShieldCheck className="h-10 w-10" style={{ color: '#0f172a', opacity: 0.2 }} />
             <p>Không có dữ liệu đối soát nào</p>
           </div>
         ) : (
@@ -249,7 +242,7 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
                     <span className="badge">{groupedLogs[campaignId].length} bản ghi</span>
                   </div>
                   <div className="header-right">
-                    {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
+                    {isExpanded ? <ChevronUp className="h-5 w-5" style={{ color: '#0f172a', opacity: 0.4 }} /> : <ChevronDown className="h-5 w-5" style={{ color: '#0f172a', opacity: 0.4 }} />}
                   </div>
                 </div>
                 
@@ -304,14 +297,15 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           display: flex;
           flex-direction: column;
           height: 100%;
-          background: #f8fafc;
+          background: #fff;
+          font-family: var(--font-dm-sans, 'DM Sans', 'Inter', sans-serif);
         }
         .toolbar {
           display: flex;
           gap: 12px;
           padding: 16px 24px;
-          background: white;
-          border-bottom: 1px solid #f1f5f9;
+          background: #fff;
+          border-bottom: 1px solid rgba(15,23,42,0.10);
         }
         .search-box {
           flex: 1;
@@ -319,14 +313,14 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           align-items: center;
           gap: 8px;
           padding: 8px 12px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
+          background: #fff;
+          border: 1px solid rgba(15,23,42,0.15);
           border-radius: 8px;
           transition: all 0.2s;
         }
         .search-box:focus-within {
-          border-color: #cbd5e1;
-          box-shadow: 0 0 0 2px #f1f5f9;
+          border-color: #ff5e14;
+          box-shadow: 0 0 0 3px rgba(255, 94, 20, 0.08);
         }
         .search-box input {
           border: none;
@@ -334,26 +328,43 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           outline: none;
           width: 100%;
           font-size: 13px;
+          color: #0f172a;
+          font-family: inherit;
         }
+        .search-box input::placeholder { color: #0f172a; opacity: 0.4; }
         .refresh-btn {
           display: flex;
           align-items: center;
           gap: 6px;
           padding: 8px 16px;
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: #fff;
+          border: 1px solid rgba(15,23,42,0.15);
           border-radius: 8px;
           font-size: 13px;
           font-weight: 600;
-          color: #475569;
+          color: #0f172a;
           cursor: pointer;
           transition: all 0.2s;
+          font-family: inherit;
         }
-        .refresh-btn:hover { background: #f8fafc; }
+        .refresh-btn:hover { background: #fff3ed; color: #ff5e14; border-color: #ff5e14; }
         .content {
           flex: 1;
           overflow-y: auto;
           padding: 24px;
+        }
+        .loading-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 200px;
+          gap: 12px;
+        }
+        .loading-state p {
+          color: #0f172a;
+          font-size: 14px;
+          font-weight: 700;
         }
         .empty-state {
           display: flex;
@@ -361,24 +372,25 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           align-items: center;
           justify-content: center;
           height: 200px;
-          color: #94a3b8;
+          color: #0f172a;
           font-size: 13px;
-          font-weight: 500;
+          font-weight: 600;
+          gap: 8px;
         }
         .campaign-group {
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: #fff;
+          border: 1px solid rgba(15,23,42,0.10);
           border-radius: 12px;
           margin-bottom: 16px;
           overflow: hidden;
           transition: all 0.2s;
         }
         .campaign-group:hover {
-          border-color: #cbd5e1;
+          border-color: rgba(15,23,42,0.20);
         }
         .campaign-group.expanded {
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-          border-color: #cbd5e1;
+          border-color: #ff5e14;
         }
         .campaign-header {
           display: flex;
@@ -390,11 +402,11 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           transition: background 0.2s;
         }
         .campaign-header:hover {
-          background: #f8fafc;
+          background: #fff3ed;
         }
         .expanded .campaign-header {
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
+          background: #fff3ed;
+          border-bottom: 1px solid rgba(15,23,42,0.10);
         }
         .header-left {
           display: flex;
@@ -405,14 +417,14 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           margin: 0;
           font-size: 14px;
           font-weight: 700;
-          color: #1e293b;
+          color: #0f172a;
         }
         .badge {
           font-size: 11px;
           font-weight: 600;
           padding: 2px 8px;
-          background: #e2e8f0;
-          color: #475569;
+          background: #fff3ed;
+          color: #ff5e14;
           border-radius: 12px;
         }
         .logs-list {
@@ -424,12 +436,12 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           display: flex;
           gap: 16px;
           padding: 16px;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid rgba(15,23,42,0.06);
           align-items: flex-start;
           transition: background 0.2s;
         }
         .log-item:hover {
-          background: #f8fafc;
+          background: #fafafa;
         }
         .log-item:last-child {
           border-bottom: none;
@@ -438,11 +450,11 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: #f1f5f9;
+          background: #fff3ed;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #64748b;
+          color: #ff5e14;
           flex-shrink: 0;
         }
         .log-details {
@@ -459,18 +471,19 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           font-size: 11px;
           font-weight: 700;
           color: #0f172a;
-          background: #f1f5f9;
+          background: rgba(15,23,42,0.06);
           padding: 2px 6px;
           border-radius: 4px;
         }
         .action {
           font-size: 13px;
           font-weight: 600;
-          color: #334155;
+          color: #0f172a;
         }
         .log-time {
           font-size: 11px;
-          color: #94a3b8;
+          color: #0f172a;
+          opacity: 0.5;
           margin-bottom: 6px;
         }
         .log-hash {
@@ -496,7 +509,7 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
         .live-check-btn {
           display: flex;
           align-items: center;
-          background: white;
+          background: #fff;
           border: 1px solid #10b981;
           color: #10b981;
           padding: 2px 8px;
@@ -505,10 +518,11 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
+          font-family: inherit;
         }
         .live-check-btn:hover:not(:disabled) {
           background: #10b981;
-          color: white;
+          color: #fff;
         }
         .live-check-btn:disabled {
           opacity: 0.5;
