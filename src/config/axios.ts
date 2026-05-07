@@ -46,14 +46,30 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status !== 401) {
+    // Handle Auth errors (401 and 403)
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      const errorMessage = error.response?.data?.message || "";
+      
+      // If it's a 403 but specifically mentions token or authentication issues
+      // Or if it's a 401 (always auth issue)
+      if (error.response?.status === 401 || 
+          errorMessage.toLowerCase().includes("token") || 
+          errorMessage.toLowerCase().includes("access denied") ||
+          errorMessage.toLowerCase().includes("unauthorized")) {
+        
+        if (typeof window !== "undefined") {
+          const currentToken = window.localStorage.getItem("token");
+          if (currentToken) {
+            console.warn("Auth error detected, clearing token:", error.response?.status);
+            window.localStorage.removeItem("token");
+            // Optionally redirect to sign-in if not already there
+            if (!window.location.pathname.includes('/sign-in')) {
+              window.location.href = "/sign-in?callbackUrl=" + encodeURIComponent(window.location.pathname);
+            }
+          }
+        }
+      }
       return Promise.reject(error);
-    }
-
-    // Placeholder for refresh-token flow.
-    // When you implement auth service, wire it here to refresh and retry.
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("token");
     }
 
     return Promise.reject(error);
