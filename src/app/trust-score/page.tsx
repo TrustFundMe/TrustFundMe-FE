@@ -109,7 +109,7 @@ export default function TrustScorePage() {
                     <div style={{ padding: '20px 24px', background: '#f8fafc', borderRadius: 12, border: '1px solid rgba(15,23,42,0.06)' }}>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Lưu ý</div>
                         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, fontWeight: 500, color: '#0f172a', lineHeight: 1.8 }}>
-                            <li>Điểm khởi tạo mặc định cho mỗi chủ quỹ mới là 100.</li>
+                            <li>Điểm khởi tạo mặc định cho mỗi chủ quỹ mới là 0. Điểm tích lũy dần qua hoạt động.</li>
                             <li>Điểm được cập nhật tự động sau mỗi hành vi liên quan.</li>
                             <li>Chủ quỹ có thể xem lịch sử điểm chi tiết trên trang cá nhân.</li>
                             <li>Hệ thống chấm điểm hoàn toàn tự động, không có sự can thiệp thủ công.</li>
