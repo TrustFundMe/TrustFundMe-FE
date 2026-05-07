@@ -52,16 +52,21 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
   if (!campaign?.id) throw new Error('Thiếu thông tin chiến dịch');
 
   // Pull all relevant audit logs (entityId == campaignId for these types)
-  const [withdrawalLogs, transactionLogs, evidenceLogs] = await Promise.all([
+  const [withdrawalLogs, reviewLogs, transactionLogs, evidenceSubmissionLogs, evidenceReviewLogs] = await Promise.all([
     collectAllByEntity('EXPENDITURE_WITHDRAWAL', campaign.id),
+    collectAllByEntity('EXPENDITURE_REVIEW', campaign.id),
     collectAllByEntity('DONATION_TRANSACTION', campaign.id),
     collectAllByEntity('EVIDENCE_SUBMISSION', campaign.id),
+    collectAllByEntity('EVIDENCE_REVIEW', campaign.id),
   ]);
+
+  const expenditureLogs = [...withdrawalLogs, ...reviewLogs];
+  const evidenceLogs = [...evidenceSubmissionLogs, ...evidenceReviewLogs];
 
   const sortByDateAsc = (a: AuditLog, b: AuditLog) =>
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 
-  withdrawalLogs.sort(sortByDateAsc);
+  expenditureLogs.sort(sortByDateAsc);
   transactionLogs.sort(sortByDateAsc);
   evidenceLogs.sort(sortByDateAsc);
 
@@ -101,15 +106,18 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
     ],
   ];
 
-  const expenditureRows = withdrawalLogs.map((log, idx) => {
+  const expenditureRows = expenditureLogs.map((log, idx) => {
     const snap = safeParse(log.dataSnapshot);
+    // Handle both EXPENDITURE_WITHDRAWAL (withdrawAmount) and EXPENDITURE_REVIEW (totalExpectedAmount)
+    const amount = snap['withdrawAmount'] ?? snap['totalExpectedAmount'] ?? snap['totalAmount'] ?? 0;
+    
     return [
       idx + 1,
       (snap['expenditureId'] as string | number | undefined) ?? '',
       (snap['campaignId'] as string | number | undefined) ?? log.entityId,
       log.action,
-      fmtCurrency(snap['withdrawAmount']),
-      (snap['status'] as string | undefined) ?? '',
+      fmtCurrency(amount),
+      (snap['status'] as string | undefined) ?? (snap['evidenceStatus'] as string | undefined) ?? '',
       fmtDateTime(snap['evidenceDueAt']),
       log.actorName || '',
       log.auditHash,
@@ -177,13 +185,13 @@ export const exportCampaignAudit = async ({ campaign, ownerName }: AuditExportIn
     const snap = safeParse(log.dataSnapshot);
     return [
       idx + 1,
-      (snap['evidenceId'] as string | number | undefined) ?? '',
+      (snap['evidenceId'] as string | number | undefined) ?? (snap['expenditureId'] as string | number | undefined) ?? '',
       (snap['campaignId'] as string | number | undefined) ?? log.entityId,
       log.action,
-      fmtCurrency(snap['amount']),
-      ((snap['description'] as string | undefined) || '').toString(),
+      fmtCurrency(snap['amount'] ?? 0),
+      ((snap['description'] as string | undefined) || (snap['plan'] as string | undefined) || '').toString(),
       (snap['proofUrl'] as string | undefined) ?? '',
-      (snap['status'] as string | undefined) ?? '',
+      (snap['status'] as string | undefined) ?? (snap['evidenceStatus'] as string | undefined) ?? '',
       log.actorName || '',
       log.auditHash,
       log.previousHash || '',

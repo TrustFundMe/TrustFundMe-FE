@@ -124,30 +124,6 @@ function CampaignExpendituresContent() {
                             </div>
                         </div>
 
-                        {/* Nút Tạo khoản chi mới */}
-                        {canCreate ? (
-                            <Link
-                                href={`/account/campaigns/expenditures/create?campaignId=${campaign.id}`}
-                                className="inline-flex items-center px-8 py-3 rounded-full shadow-2xl shadow-red-900/10 text-xs font-black uppercase tracking-[1px] text-white bg-red-800 hover:bg-red-900 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            >
-                                <Plus className="w-4 h-4 mr-2" />
-                                Tạo đợt chi tiêu mới
-                            </Link>
-                        ) : (
-                            <div className="flex flex-col items-end gap-2">
-                                <button
-                                    disabled
-                                    className="inline-flex items-center px-8 py-3 rounded-full text-xs font-black uppercase tracking-[1px] text-white bg-gray-300 cursor-not-allowed opacity-60"
-                                >
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Tạo đợt chi tiêu mới
-                                </button>
-                                <p className="text-[10px] font-bold text-amber-600 max-w-xs text-right flex items-start gap-1">
-                                    <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                                    {blockReason}
-                                </p>
-                            </div>
-                        )}
                     </div>
                 </div>
 
