@@ -255,11 +255,6 @@ export default function NotificationBell() {
                         <span style={{ fontSize: 11, color: "rgba(0,0,0,0.4)", fontFamily: "var(--font-dm-sans)" }}>
                           {formatTimeAgo(notif.createdAt)}
                         </span>
-                        {notif.link && (
-                          <Link href={notif.link} style={{ fontSize: 11, color: "#1A685B", fontWeight: 600, fontFamily: "var(--font-dm-sans)", textDecoration: "none" }}>
-                            Xem →
-                          </Link>
-                        )}
                         {!notif.isRead && (
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1A685B", display: "inline-block", marginLeft: "auto" }} />
                         )}
