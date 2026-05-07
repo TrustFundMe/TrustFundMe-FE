@@ -9,13 +9,17 @@ import {
   FileText,
   Lock,
   ChevronRight,
+  ChevronLeft,
   Info,
   CheckCircle2,
   Copy,
   ExternalLink,
   RefreshCw,
   Box,
-  AlertCircle
+  AlertCircle,
+  XCircle,
+  Link2Off,
+  AlertTriangle
 } from 'lucide-react';
 import { auditService, AuditLog } from '@/services/auditService';
 import { campaignService } from '@/services/campaignService';
@@ -30,17 +34,24 @@ export default function AuditExplorer() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [selectedAudit, setSelectedAudit] = useState<AuditLog | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [integrityResult, setIntegrityResult] = useState<{ valid: boolean; currentHash?: string; dataValid?: boolean; tamperedEntity?: string } | null>(null);
+  const [integrityResult, setIntegrityResult] = useState<{ valid: boolean; currentHash?: string; dataValid?: boolean; chainValid?: boolean; storedHash?: string; actualHash?: string; tamperedEntity?: string } | null>(null);
   const [stats, setStats] = useState({ total: 0, integrity: '100%' });
   const [hasSearched, setHasSearched] = useState(false);
   const [isCheckingLive, setIsCheckingLive] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
   const { toast } = useToast();
 
-  const fetchLogs = async (query = '') => {
+  const fetchLogs = async (query = '', page = 0) => {
     setIsLoading(true);
     try {
-      const data = await auditService.getAll(0, 20, query.trim());
+      const data = await auditService.getAll(page, PAGE_SIZE, query.trim());
       setAuditLogs(data.content);
+      setCurrentPage(data.number);
+      setTotalPages(data.totalPages);
+      setTotalElements(data.totalElements);
 
       // Also fetch global stats
       const globalStats = await auditService.getGlobalStatus();
@@ -78,12 +89,18 @@ export default function AuditExplorer() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setCurrentPage(0);
     if (!searchTerm.trim()) {
-      fetchLogs();
+      fetchLogs('', 0);
       setHasSearched(false);
       return;
     }
-    fetchLogs(searchTerm.trim());
+    fetchLogs(searchTerm.trim(), 0);
+  };
+
+  const goToPage = (page: number) => {
+    if (page < 0 || page >= totalPages) return;
+    fetchLogs(hasSearched ? searchTerm.trim() : '', page);
   };
 
   const checkLiveData = async () => {
@@ -91,7 +108,10 @@ export default function AuditExplorer() {
     setIsCheckingLive(true);
     try {
       let liveData: any = null;
-      const entityId = Number(selectedAudit.entityId);
+      // Resolve real entityId from snapshot (same logic as ReconciliationTab)
+      const snap = JSON.parse(selectedAudit.dataSnapshot || '{}');
+      const targetId = snap.id || selectedAudit.entityId;
+      const entityId = Number(targetId);
 
       switch (selectedAudit.entityType) {
         case 'CAMPAIGN':
@@ -115,10 +135,10 @@ export default function AuditExplorer() {
           // entityId is campaignId for DONATION_TRANSACTION (set by CassoWebhookService)
           // Fetch the actual Casso transaction by tid from the snapshot
           try {
-            const snap = JSON.parse(selectedAudit.dataSnapshot || '{}');
             const txTid = snap.tid;
-            if (txTid && entityId) {
-              const cassoTxs = await paymentService.getCassoTransactionsByCampaign(entityId);
+            const campaignId = Number(selectedAudit.entityId);
+            if (txTid && campaignId) {
+              const cassoTxs = await paymentService.getCassoTransactionsByCampaign(campaignId);
               liveData = cassoTxs.find((tx: any) => String(tx.tid) === String(txTid)) || null;
             }
           } catch (e: any) {
@@ -130,8 +150,7 @@ export default function AuditExplorer() {
         case 'EVIDENCE_SUBMITTED':
           // entityId is campaignId — need to get evidenceId from snapshot
           try {
-            const evidenceSnap = JSON.parse(selectedAudit.dataSnapshot || '{}');
-            const evidenceId = evidenceSnap.evidenceId;
+            const evidenceId = snap.evidenceId;
             if (evidenceId) {
               liveData = await expenditureService.getEvidenceById(evidenceId);
             }
@@ -162,7 +181,7 @@ export default function AuditExplorer() {
         case 'KYC':
         case 'USER_KYC':
           try {
-            liveData = await kycService.getById(entityId);
+            liveData = await kycService.getByUserId(entityId);
           } catch (e: any) {
             if (e.response?.status === 404) liveData = null;
             else throw e;
@@ -170,34 +189,52 @@ export default function AuditExplorer() {
           break;
         default:
           toast(`Không hỗ trợ kiểm tra live cho loại ${selectedAudit.entityType}`, 'info');
+          setIsCheckingLive(false);
           return;
       }
 
       if (!liveData) {
-        toast('Dữ liệu không tồn tại trên Live DB (Có thể đã bị xóa) 🗑️', 'warning');
+        toast('Dữ liệu không tồn tại trên Live DB (Có thể đã bị xóa) 🗑️', 'error');
+        setIsCheckingLive(false);
         return;
       }
 
       // For entity types where the snapshot is a self-contained transaction record
       // (not a mirror of the live entity), only verify the entity exists on Live DB.
+      // The snapshot fields (tid, counterAccountName, etc.) don't map to campaign fields.
       const selfContainedTypes = [
         'EXPENDITURE_REVIEW', 'EXPENDITURE_WITHDRAWAL',
         'EVIDENCE_REVIEW'
       ];
 
       if (selfContainedTypes.includes(selectedAudit.entityType)) {
+        // Entity exists on Live DB — that's sufficient verification
         toast('Dữ liệu khớp hoàn toàn với Live DB ✅', 'success');
       } else {
+        // Full field-by-field comparison for entity types where snapshot mirrors the entity
         const snapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
         let isMatch = true;
         const mismatchedFields: string[] = [];
+
+        // Essential fields to check (ignoring timestamps and derived fields if they differ in format)
         const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source'];
 
         for (const key in snapshot) {
           if (Object.prototype.hasOwnProperty.call(snapshot, key) && !fieldsToIgnore.includes(key)) {
-            if (String(snapshot[key]) !== String(liveData[key])) {
-              isMatch = false;
-              mismatchedFields.push(key);
+            const snapshotVal = snapshot[key];
+            const liveVal = liveData[key];
+
+            // If snapshot has the field, compare even if live doesn't have it (field removed = tamper)
+            if (snapshotVal !== undefined && snapshotVal !== null && snapshotVal !== '') {
+              if (liveVal === undefined || liveVal === null) {
+                // Field exists in snapshot but missing from live data — treat as mismatch
+                isMatch = false;
+                mismatchedFields.push(`${key} (missing in live)`);
+              } else if (String(snapshotVal) !== String(liveVal)) {
+                // Convert to string for comparison to handle number/string/BigDecimal variations
+                isMatch = false;
+                mismatchedFields.push(key);
+              }
             }
           }
         }
@@ -257,7 +294,10 @@ export default function AuditExplorer() {
       'EVIDENCE_SUBMITTED': 'Nộp minh chứng',
       'EVIDENCE_APPROVED': 'Duyệt minh chứng',
       'EVIDENCE_REJECTED': 'Từ chối minh chứng',
-      'EXPENDITURE_STATUS_CHANGED': 'Cập nhật trạng thái'
+      'EXPENDITURE_STATUS_CHANGED': 'Cập nhật trạng thái',
+      'APPROVED': 'Duyệt (Thành công)',
+      'REJECTED': 'Từ chối (Thành công)',
+      'CORRECTION': 'Yêu cầu sửa (Thành công)'
     };
     return actions[action] || action;
   };
@@ -364,9 +404,9 @@ export default function AuditExplorer() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-0.5">
-                            <span className={`text-[9px] font-bold uppercase truncate ${log.action === 'DONATION_RECEIVED' || log.action === 'CREATE' || log.action === 'EXPENDITURE_APPROVED' || log.action === 'EVIDENCE_APPROVED' ? 'text-emerald-600' :
-                              log.action === 'EXPENDITURE_DISBURSED' || log.action === 'REJECT' || log.action === 'EXPENDITURE_REJECTED' || log.action === 'EVIDENCE_REJECTED' ? 'text-rose-600' :
-                                log.action === 'EXPENDITURE_CORRECTION_REQUESTED' || log.action === 'WITHDRAWAL_REQUESTED' ? 'text-amber-600' : 'text-slate-900'
+                            <span className={`text-[9px] font-bold uppercase truncate ${log.action === 'DONATION_RECEIVED' || log.action === 'CREATE' || log.action === 'EXPENDITURE_APPROVED' || log.action === 'EVIDENCE_APPROVED' || log.action === 'APPROVED' ? 'text-emerald-600' :
+                              log.action === 'EXPENDITURE_DISBURSED' || log.action === 'REJECT' || log.action === 'EXPENDITURE_REJECTED' || log.action === 'EVIDENCE_REJECTED' || log.action === 'REJECTED' ? 'text-rose-600' :
+                                log.action === 'EXPENDITURE_CORRECTION_REQUESTED' || log.action === 'WITHDRAWAL_REQUESTED' || log.action === 'CORRECTION' ? 'text-amber-600' : 'text-slate-900'
                               }`}>
                               {getFriendlyType(log.entityType, log.action)}
                             </span>
@@ -389,10 +429,61 @@ export default function AuditExplorer() {
                   </div>
                 )}
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-3 px-1">
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">
+                    {totalElements} bản ghi • Trang {currentPage + 1}/{totalPages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 0 || isLoading}
+                      className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      // Show pages around current page
+                      let pageNum: number;
+                      if (totalPages <= 5) {
+                        pageNum = i;
+                      } else if (currentPage < 3) {
+                        pageNum = i;
+                      } else if (currentPage > totalPages - 4) {
+                        pageNum = totalPages - 5 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => goToPage(pageNum)}
+                          disabled={isLoading}
+                          className={`h-7 min-w-[28px] px-1 flex items-center justify-center rounded-md text-[9px] font-bold transition-all ${pageNum === currentPage
+                            ? 'bg-slate-900 text-white border border-slate-900'
+                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                          {pageNum + 1}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage >= totalPages - 1 || isLoading}
+                      className="h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Content Detail */}
-            <div className="flex-1 w-full">
+            <div className="flex-1 w-full lg:sticky lg:top-6 lg:self-start">
               {selectedAudit ? (
                 <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
                   <div className="p-4 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
@@ -460,36 +551,62 @@ export default function AuditExplorer() {
                       </div>
                     </div>
 
-                    <div className={`mt-4 flex items-center justify-between p-3 rounded-lg border transition-all ${isVerifying
-                      ? 'bg-slate-50 border-slate-200 opacity-60'
-                      : integrityResult?.valid
-                        ? 'bg-emerald-50 border-emerald-100'
-                        : 'bg-red-50 border-red-100 animate-bounce'
-                      }`}>
-                      <div className="flex items-center gap-2">
-                        {isVerifying ? (
-                          <RefreshCw className="h-4 w-4 text-slate-400 animate-spin" />
-                        ) : integrityResult?.valid ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-red-600" />
-                        )}
-                        <span className={`text-[10px] font-bold uppercase ${isVerifying ? 'text-slate-500' : integrityResult?.valid ? 'text-emerald-800' : 'text-red-800'
-                          }`}>
-                          Trạng thái: {isVerifying ? 'Đang xác minh...' : integrityResult?.valid ? 'Toàn vẹn (Integrity Verified)' : !integrityResult?.dataValid ? 'CẢNH BÁO: DỮ LIỆU BỊ SỬA!' : 'CẢNH BÁO: PHÁT HIỆN GIAN LẬN!'}
-                        </span>
+                    {/* Integrity verification result — synced with ReconciliationTab style */}
+                    {isVerifying && (
+                      <div className="mt-4 flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
+                        <RefreshCw className="h-4 w-4 text-slate-400 animate-spin" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Đang xác minh tính toàn vẹn...</span>
                       </div>
-                      <span className={`text-[9px] font-medium ${integrityResult?.valid ? 'text-emerald-600' : 'text-red-600'
-                        }`}>
-                        {isVerifying
-                          ? 'Vui lòng đợi trong giây lát...'
-                          : integrityResult?.valid
-                            ? 'Bản ghi này bất biến và không thể bị sửa đổi.'
-                            : !integrityResult?.dataValid
-                              ? 'Mã Hash dữ liệu hiện tại không khớp với mã niêm phong.'
-                              : `Dữ liệu của ${integrityResult?.tamperedEntity} đã bị thay đổi trái phép!`}
-                      </span>
-                    </div>
+                    )}
+
+                    {!isVerifying && integrityResult && integrityResult.valid && (
+                      <div className="mt-4 flex items-center gap-2.5 p-3 rounded-lg border border-emerald-200 bg-emerald-50">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                        <span className="text-[10px] font-bold text-emerald-800">Bản ghi toàn vẹn — Hash khớp & Chuỗi liên kết hợp lệ</span>
+                      </div>
+                    )}
+
+                    {!isVerifying && integrityResult && !integrityResult.valid && (
+                      <div className="mt-4 rounded-xl border-2 border-red-300 bg-gradient-to-br from-red-50 to-rose-50 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <AlertTriangle className="h-5 w-5 shrink-0" />
+                          <strong className="text-[12px] font-black uppercase tracking-tight">⚠️ Phát hiện giả mạo dữ liệu</strong>
+                        </div>
+
+                        {!integrityResult.dataValid && (
+                          <div className="flex gap-3 items-start text-[11px] text-slate-800">
+                            <XCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                            <div className="space-y-1.5">
+                              <p className="font-bold text-[11px]">Hash bị thay đổi trực tiếp trong DB</p>
+                              <p className="text-[10px] text-slate-500 leading-relaxed">Mã Hash lưu trong DB không khớp với SHA-256 tính lại từ dữ liệu gốc (dataSnapshot + previousHash).</p>
+                              <div className="font-mono text-[9px] space-y-1">
+                                <div>
+                                  <span className="font-bold text-slate-500 font-sans text-[8px] uppercase">Hash lưu trong DB:</span>{' '}
+                                  <code className="text-red-600 bg-red-50 px-1.5 py-0.5 rounded break-all">{integrityResult.storedHash}</code>
+                                </div>
+                                <div>
+                                  <span className="font-bold text-slate-500 font-sans text-[8px] uppercase">Hash tính lại:</span>{' '}
+                                  <code className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded break-all">{integrityResult.actualHash}</code>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {integrityResult.chainValid === false && (
+                          <div className="flex gap-3 items-start text-[11px] text-slate-800">
+                            <Link2Off className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="space-y-1">
+                              <p className="font-bold text-[11px]">Chuỗi liên kết (Chain) bị đứt</p>
+                              <p className="text-[10px] text-slate-500 leading-relaxed">Previous Hash của bản ghi này không khớp với Hash của bản ghi liền trước, có thể bản ghi trước đã bị chèn/xóa/sửa.</p>
+                              {integrityResult.tamperedEntity && integrityResult.tamperedEntity !== 'None' && (
+                                <p className="text-[10px] font-bold text-amber-700">Bản ghi bị nghi ngờ: <strong>{integrityResult.tamperedEntity}</strong></p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

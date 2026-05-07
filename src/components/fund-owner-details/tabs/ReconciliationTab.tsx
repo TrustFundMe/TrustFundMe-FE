@@ -288,9 +288,14 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
             const snapshotVal = snapshot[key];
             const liveVal = liveData[key];
 
-            if (snapshotVal !== undefined && liveVal !== undefined) {
-              // Convert to string for comparison to handle number/string variations
-              if (String(snapshotVal) !== String(liveVal)) {
+            // If snapshot has the field, compare even if live doesn't have it (field removed = tamper)
+            if (snapshotVal !== undefined && snapshotVal !== null && snapshotVal !== '') {
+              if (liveVal === undefined || liveVal === null) {
+                // Field exists in snapshot but missing from live data — treat as mismatch
+                isMatch = false;
+                mismatchedFields.push(`${key} (missing in live)`);
+              } else if (String(snapshotVal) !== String(liveVal)) {
+                // Convert to string for comparison to handle number/string/BigDecimal variations
                 isMatch = false;
                 mismatchedFields.push(key);
               }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, IdCard, ScrollText, Loader2, CheckCircle2, FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download, Clock, XCircle } from 'lucide-react';
+import { X, IdCard, ScrollText, Loader2, CheckCircle2, FileDown, Upload, Trash2, Eye, Fingerprint, Star, Lock, AlertCircle, Download, Clock, XCircle, MapPin, FileWarning } from 'lucide-react';
 import KYCInputForm from '@/components/staff/request/KYCInputForm';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/contexts/AuthContextProxy';
@@ -47,9 +47,9 @@ export default function UnifiedVerificationModal({
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', h);
     document.body.style.overflow = 'hidden';
-    return () => { 
-      window.removeEventListener('keydown', h); 
-      document.body.style.overflow = ''; 
+    return () => {
+      window.removeEventListener('keydown', h);
+      document.body.style.overflow = '';
     };
   }, [onClose]);
 
@@ -72,14 +72,14 @@ export default function UnifiedVerificationModal({
       const safeFullName = removeAccents(userName || 'User').replace(/\s+/g, '_');
       const fileName = `${safeFullName}_${dateStr}_${timestamp}.${file.name.split('.').pop()}`;
       const bucketName = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'TrustFundMe';
-      
+
       const { error: uploadError } = await supabase.storage.from(bucketName).upload(`cvs/${fileName}`, file, {
         upsert: true
       });
       if (uploadError) throw uploadError;
-      
+
       const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(`cvs/${fileName}`);
-      
+
       // Note: We no longer persist to DB immediately. Persisting happens on final submit.
       updateUser({ cvUrl: publicUrl });
       setCurrentCvUrl(publicUrl);
@@ -179,11 +179,11 @@ export default function UnifiedVerificationModal({
           livenessMetadata: kycFormData.livenessMetadata ? JSON.stringify(kycFormData.livenessMetadata) : null,
           faceMeshSample: kycFormData.faceMeshSample ? JSON.stringify(kycFormData.faceMeshSample) : null,
         };
-        
+
         // Generate Audit Hash for the submission
         const hash = await generateSHA256(JSON.stringify(kycPayload));
         setSubmissionHash(hash);
-        
+
         let savedKyc;
         if (kycData && kycData.id) {
           savedKyc = await kycService.update(userId, kycPayload);
@@ -202,7 +202,7 @@ export default function UnifiedVerificationModal({
             actorId: Number(userId),
             actorName: kycPayload.fullName || userName
           });
-          
+
           if (savedAudit && savedAudit.auditHash) {
             setSubmissionHash(savedAudit.auditHash);
           }
@@ -253,7 +253,7 @@ export default function UnifiedVerificationModal({
       if (!d.idImageFront) missing.push('Ảnh mặt trước/Hộ chiếu');
       if (d.idType !== 'PASSPORT' && !d.idImageBack) missing.push('Ảnh mặt sau');
       if (!d.selfieImage) missing.push('Ảnh xác thực gương mặt');
-      
+
       if (missing.length > 0) {
         return { ok: false, missing };
       }
@@ -304,7 +304,7 @@ export default function UnifiedVerificationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backdropFilter: 'blur(12px)', backgroundColor: 'rgba(0,0,0,0.4)' }}>
       <div className="relative w-full max-w-6xl bg-white rounded-[2rem] shadow-2xl flex flex-col h-fit max-h-[95vh] overflow-hidden animate-in fade-in zoom-in duration-300">
-        
+
         {/* Header Section - Ultra Compact */}
         <div className="px-6 py-3 border-b border-gray-100 bg-gradient-to-br from-gray-50/50 to-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -326,7 +326,7 @@ export default function UnifiedVerificationModal({
         {/* Content Section - Merged View */}
         <div className="overflow-y-auto px-6 py-4 custom-scrollbar bg-white">
           <div className="grid grid-cols-12 gap-6 items-start">
-            
+
             {/* LEFT: KYC Form */}
             <div className="col-span-7 flex flex-col gap-4">
               <div className="flex items-center justify-between">
@@ -336,23 +336,22 @@ export default function UnifiedVerificationModal({
                   </div>
                   <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Phần 1: Thông tin định danh cá nhân</h3>
                   {kycData?.status && (
-                    <div className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
-                      kycData.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                    <div className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest border ${kycData.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
                       kycData.status === 'PENDING' ? 'bg-amber-50 border-amber-100 text-amber-600' :
-                      'bg-red-50 border-red-100 text-red-600'
-                    }`}>
-                      {kycData.status === 'APPROVED' ? 'Đã phê duyệt' : 
-                       kycData.status === 'PENDING' ? 'Đang chờ duyệt' : 'Bị từ chối'}
+                        'bg-red-50 border-red-100 text-red-600'
+                      }`}>
+                      {kycData.status === 'APPROVED' ? 'Đã phê duyệt' :
+                        kycData.status === 'PENDING' ? 'Đang chờ duyệt' : 'Bị từ chối'}
                     </div>
                   )}
                 </div>
               </div>
-              
+
               <div className="bg-gray-50/30 rounded-3xl p-1 border border-gray-100">
                 <KYCInputForm
                   userId={userId}
                   userName={userName}
-                  onSuccess={() => {}}
+                  onSuccess={() => { }}
                   isStaff={false}
                   readOnly={kycData?.status === 'APPROVED' || kycData?.status === 'PENDING'}
                   onDataChange={handleKycDataChange}
@@ -373,13 +372,12 @@ export default function UnifiedVerificationModal({
                   <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-tight">Phần 2: Hồ sơ năng lực</h3>
                 </div>
 
-                <div 
+                <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`bg-gray-50/50 rounded-2xl p-4 border-2 border-dashed transition-all flex flex-col items-center justify-center min-h-[140px] ${
-                    isDragging ? 'border-black bg-gray-100 scale-[0.99]' : 'border-gray-200'
-                  }`}
+                  className={`bg-gray-50/50 rounded-2xl p-4 border-2 border-dashed transition-all flex flex-col items-center justify-center min-h-[140px] ${isDragging ? 'border-black bg-gray-100 scale-[0.99]' : 'border-gray-200'
+                    }`}
                 >
                   {currentCvUrl ? (
                     <div className="w-full space-y-4 text-center">
@@ -394,35 +392,35 @@ export default function UnifiedVerificationModal({
                             <p className="text-[8px] font-medium text-gray-400">Tải lên lúc: {cvMetadata.time}</p>
                           </div>
                         ) : (
-                           <p className="text-[9px] font-medium text-gray-400 italic">Tài liệu đã được ghi nhận</p>
+                          <p className="text-[9px] font-medium text-gray-400 italic">Tài liệu đã được ghi nhận</p>
                         )}
                       </div>
-                        <div className="flex items-center justify-center gap-2">
-                          <a href={currentCvUrl} target="_blank" rel="noopener noreferrer" 
-                             className="h-10 px-4 flex items-center gap-2 rounded-xl bg-white border border-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all">
-                            <Eye className="h-3.5 w-3.5" /> Xem
-                          </a>
-                          {kycData?.status !== 'PENDING' && kycData?.status !== 'APPROVED' && (
-                            <>
-                              <label className="cursor-pointer">
-                                <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
-                                <div className="h-10 px-4 flex items-center gap-2 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all">
-                                  {cvUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                                  Đổi
-                                </div>
-                              </label>
-                              <button 
-                                type="button" 
-                                onClick={deleteCv}
-                                disabled={cvUploading}
-                                className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all"
-                                title="Xóa hồ sơ"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <a href={currentCvUrl} target="_blank" rel="noopener noreferrer"
+                          className="h-10 px-4 flex items-center gap-2 rounded-xl bg-white border border-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all">
+                          <Eye className="h-3.5 w-3.5" /> Xem
+                        </a>
+                        {kycData?.status !== 'PENDING' && kycData?.status !== 'APPROVED' && (
+                          <>
+                            <label className="cursor-pointer">
+                              <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleCvUpload} disabled={cvUploading} />
+                              <div className="h-10 px-4 flex items-center gap-2 rounded-xl bg-black text-white text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all">
+                                {cvUploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                                Đổi
+                              </div>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={deleteCv}
+                              disabled={cvUploading}
+                              className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all"
+                              title="Xóa hồ sơ"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center">
@@ -442,14 +440,61 @@ export default function UnifiedVerificationModal({
                   <p className="text-[9px] font-bold text-gray-500 leading-relaxed mb-4">
                     Chứng minh khả năng thực hiện dự án bằng cách tải lên CV hoặc các tài liệu liên quan.
                   </p>
-                  <a 
-                    href="/templates/Mau_CV_Thien_Nguyen.docx" 
+                  <a
+                    href="/templates/Mau_CV_Thien_Nguyen.docx"
                     download
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-600 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
                   >
                     <Download className="h-3 w-3" />
                     Mẫu hồ sơ (.docx)
                   </a>
+                </div>
+
+                {/* ── Giấy xác nhận hạnh kiểm requirement ── */}
+                <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50/50 p-4 relative overflow-hidden">
+                  <div className="absolute top-3 right-3 opacity-10">
+                    <FileWarning className="h-16 w-16 text-amber-600" />
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-200">
+                      <FileWarning className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-black text-amber-900 uppercase tracking-tight leading-tight">
+                        Yêu cầu bắt buộc: Giấy xác nhận hạnh kiểm
+                      </p>
+                      <p className="text-[10px] font-semibold text-amber-800 leading-relaxed">
+                        Để hoàn tất xác thực danh tính, bạn cần nộp <strong>bản gốc Giấy xác nhận hạnh kiểm</strong> được cấp bởi <strong>Công an phường/xã</strong> nơi bạn cư trú.
+                      </p>
+                      <div className="bg-white/70 rounded-xl p-3 border border-amber-200 space-y-2">
+                        <p className="text-[9px] font-black text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <MapPin className="h-3 w-3 text-amber-600" />
+                          Địa chỉ nhận giấy:
+                        </p>
+                        <p className="text-[11px] font-bold text-gray-900 leading-relaxed pl-4">
+                          Tòa nhà TrustFundMe, Lầu 5, Số 123 Nguyễn Huệ,<br />
+                          Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh
+                        </p>
+                        <p className="text-[9px] font-semibold text-gray-500 pl-4">
+                          Giờ tiếp nhận: Thứ 2 – Thứ 6, 08:00 – 17:00
+                        </p>
+                      </div>
+                      <ul className="text-[9px] font-semibold text-amber-700 space-y-1.5 list-none pl-0">
+                        <li className="flex items-start gap-2">
+                          <span className="text-amber-500 font-black shrink-0 mt-0.5">•</span>
+                          <span>Giấy xác nhận hạnh kiểm phải còn hiệu lực trong vòng <strong>6 tháng</strong> kể từ ngày cấp.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-amber-500 font-black shrink-0 mt-0.5">•</span>
+                          <span>Chỉ chấp nhận <strong>bản gốc</strong> có đóng dấu và chữ ký của cơ quan công an cấp phường/xã.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-amber-500 font-black shrink-0 mt-0.5">•</span>
+                          <span>Gửi qua đường bưu điện hoặc nộp trực tiếp tại địa chỉ trên.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
                 {kycData?.status === 'PENDING' && (
@@ -482,9 +527,9 @@ export default function UnifiedVerificationModal({
 
               {kycData?.status !== 'PENDING' && kycData?.status !== 'APPROVED' && (
                 <div className="mt-auto pt-4">
-                  <button 
+                  <button
                     onClick={handleFinalSubmit}
-                    disabled={isSubmittingAll} 
+                    disabled={isSubmittingAll}
                     className="w-full py-3.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isSubmittingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
@@ -512,10 +557,10 @@ export default function UnifiedVerificationModal({
                 <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Nộp hồ sơ thành công</h3>
                 <p className="text-sm text-gray-500">Hồ sơ của bạn đã được niêm phong kỹ thuật số và đưa vào hệ thống kiểm toán bất biến.</p>
               </div>
-              
+
               <div className="bg-slate-900 rounded-2xl p-5 text-left relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                   <Fingerprint className="h-20 w-20 text-white" />
+                  <Fingerprint className="h-20 w-20 text-white" />
                 </div>
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Cryptographic Fingerprint (SHA-256)</span>
                 <div className="font-mono text-[11px] text-emerald-400 break-all leading-relaxed bg-black/30 p-3 rounded-xl border border-white/5">
@@ -528,7 +573,7 @@ export default function UnifiedVerificationModal({
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={() => {
                     navigator.clipboard.writeText(submissionHash || '');
                     toast('Đã sao chép mã Hash!', 'success');
@@ -537,7 +582,7 @@ export default function UnifiedVerificationModal({
                 >
                   <Fingerprint className="h-4 w-4" /> Sao chép mã xác minh
                 </button>
-                <button 
+                <button
                   onClick={onClose}
                   className="w-full py-4 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-xl"
                 >
