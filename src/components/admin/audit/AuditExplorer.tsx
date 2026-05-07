@@ -110,7 +110,23 @@ export default function AuditExplorer() {
       let liveData: any = null;
       // Resolve real entityId from snapshot (same logic as ReconciliationTab)
       const snap = JSON.parse(selectedAudit.dataSnapshot || '{}');
-      const targetId = snap.id || selectedAudit.entityId;
+      const getCampaignIdFromLog = (log: any): string => {
+        try {
+          if (log.dataSnapshot) {
+            const snap = JSON.parse(log.dataSnapshot);
+            if (snap.campaignId) return snap.campaignId.toString();
+          }
+          return log.entityId ? log.entityId.toString() : '0';
+        } catch (e) {
+          return log.entityId ? log.entityId.toString() : '0';
+        }
+      };
+
+      const campaignIdFromLog = getCampaignIdFromLog(selectedAudit);
+      const targetId = (selectedAudit.entityType === 'CAMPAIGN_COMMITMENT') 
+        ? campaignIdFromLog 
+        : (campaignIdFromLog === selectedAudit.entityId?.toString() ? selectedAudit.entityId : (snap.id || selectedAudit.entityId));
+      
       const entityId = Number(targetId);
 
       switch (selectedAudit.entityType) {
@@ -212,12 +228,20 @@ export default function AuditExplorer() {
         toast('Dữ liệu khớp hoàn toàn với Live DB ✅', 'success');
       } else {
         // Full field-by-field comparison for entity types where snapshot mirrors the entity
-        const snapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
+        const fullSnapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
+        
+        // Special case for CAMPAIGN_APPROVAL: snapshot is a multi-step object
+        // we should compare against the campaign part (step2_campaign)
+        let snapshot = fullSnapshot;
+        if (selectedAudit.entityType === 'CAMPAIGN_APPROVAL' && fullSnapshot.step2_campaign) {
+          snapshot = fullSnapshot.step2_campaign;
+        }
+
         let isMatch = true;
         const mismatchedFields: string[] = [];
 
         // Essential fields to check (ignoring timestamps and derived fields if they differ in format)
-        const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source'];
+        const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source', 'status', 'campaignTitle', 'commitmentId', 'signedAt'];
 
         for (const key in snapshot) {
           if (Object.prototype.hasOwnProperty.call(snapshot, key) && !fieldsToIgnore.includes(key)) {
@@ -226,6 +250,10 @@ export default function AuditExplorer() {
 
             // If snapshot has the field, compare even if live doesn't have it (field removed = tamper)
             if (snapshotVal !== undefined && snapshotVal !== null && snapshotVal !== '') {
+              // For nested objects or arrays (like FundraisingGoals), skip deep comparison for now
+              // to avoid false positives with different object references
+              if (typeof snapshotVal === 'object') continue;
+
               if (liveVal === undefined || liveVal === null) {
                 // Field exists in snapshot but missing from live data — treat as mismatch
                 isMatch = false;

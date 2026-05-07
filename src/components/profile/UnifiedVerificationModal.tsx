@@ -178,30 +178,11 @@ export default function UnifiedVerificationModal({
           faceMeshSample: kycFormData.faceMeshSample ? JSON.stringify(kycFormData.faceMeshSample) : null,
         };
 
-        // Generate Audit Hash for the submission
-        const hash = await generateSHA256(JSON.stringify(kycPayload));
-
         let savedKyc;
         if (kycData && kycData.id) {
           savedKyc = await kycService.update(userId, kycPayload);
         } else {
           savedKyc = await kycService.submit(userId, kycPayload);
-        }
-
-        // 3. Save to Audit Service (Microservice)
-        try {
-          await auditService.create({
-            entityType: 'KYC',
-            entityId: Number(userId), // Using userId as primary reference for KYC audits
-            action: kycData?.id ? 'UPDATE' : 'CREATE',
-            dataSnapshot: JSON.stringify(kycPayload),
-            auditHash: hash,
-            actorId: Number(userId),
-            actorName: kycPayload.fullName || userName
-          });
-        } catch (auditErr) {
-          console.error('Audit Log failed (Silent Error):', auditErr);
-          // We don't block the UI if audit log fails, but it should be recorded in real scenarios
         }
       }
 

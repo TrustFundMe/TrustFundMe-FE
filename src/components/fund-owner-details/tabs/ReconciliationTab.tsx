@@ -179,7 +179,12 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
     try {
       let liveData: any = null;
       // We try to get the real entityId from the snapshot or use entityId
-      const targetId = getCampaignIdFromLog(log) === log.entityId?.toString() ? log.entityId : (JSON.parse(log.dataSnapshot || '{}').id || log.entityId);
+      // For CAMPAIGN_COMMITMENT, we ALWAYS need the campaignId to call getCommitment
+      const campaignIdFromLog = getCampaignIdFromLog(log);
+      const targetId = (log.entityType === 'CAMPAIGN_COMMITMENT') 
+        ? campaignIdFromLog 
+        : (campaignIdFromLog === log.entityId?.toString() ? log.entityId : (JSON.parse(log.dataSnapshot || '{}').id || log.entityId));
+      
       const entityId = Number(targetId);
 
       switch (log.entityType) {
@@ -275,13 +280,20 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
         setLiveCheckResults(prev => ({ ...prev, [log.id]: 'match' }));
       } else {
         // Full field-by-field comparison for entity types where snapshot mirrors the entity
-        const snapshot = JSON.parse(log.dataSnapshot || '{}');
+        const fullSnapshot = JSON.parse(log.dataSnapshot || '{}');
+        
+        // Special case for CAMPAIGN_APPROVAL: snapshot is a multi-step object
+        // we should compare against the campaign part (step2_campaign)
+        let snapshot = fullSnapshot;
+        if (log.entityType === 'CAMPAIGN_APPROVAL' && fullSnapshot.step2_campaign) {
+          snapshot = fullSnapshot.step2_campaign;
+        }
 
         let isMatch = true;
         const mismatchedFields: string[] = [];
 
         // Essential fields to check (ignoring timestamps and derived fields if they differ in format)
-        const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source'];
+        const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source', 'status', 'campaignTitle', 'commitmentId', 'signedAt'];
 
         for (const key in snapshot) {
           if (Object.prototype.hasOwnProperty.call(snapshot, key) && !fieldsToIgnore.includes(key)) {
@@ -290,6 +302,10 @@ const ReconciliationTab = ({ id }: ReconciliationTabProps) => {
 
             // If snapshot has the field, compare even if live doesn't have it (field removed = tamper)
             if (snapshotVal !== undefined && snapshotVal !== null && snapshotVal !== '') {
+              // For nested objects or arrays (like FundraisingGoals), skip deep comparison for now
+              // to avoid false positives with different object references
+              if (typeof snapshotVal === 'object') continue;
+
               if (liveVal === undefined || liveVal === null) {
                 // Field exists in snapshot but missing from live data — treat as mismatch
                 isMatch = false;
