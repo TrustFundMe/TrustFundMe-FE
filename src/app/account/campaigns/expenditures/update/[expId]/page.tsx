@@ -782,68 +782,68 @@ export default function UpdateExpenditureActualsPage() {
                                                     )}
 
                                                     {/* Name */}
-                                                    <td className="px-4 py-1.5 border border-slate-200 bg-white text-center">
-                                                        <div className="flex flex-col items-center gap-0.5 py-0">
+                                                    <td className="px-4 py-1.5 border border-slate-200 bg-white text-left">
+                                                        <div className="flex items-center gap-1.5 py-0">
+                                                            {showPlan && (
+                                                                <span className="text-[7px] font-black text-white bg-emerald-500 px-1 py-0.5 rounded-[3px] uppercase tracking-[0.5px] shrink-0">THỰC TẾ</span>
+                                                            )}
                                                             {item.isNew ? (
-                                                                <div className="relative w-full">
-                                                                    <input
-                                                                        className="w-full bg-amber-50/50 border border-amber-100 rounded-md px-2 py-0.5 text-[12px] font-black focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
-                                                                        placeholder="Tên hạng mục..."
-                                                                        value={updateItem?.name || ''}
-                                                                        onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
-                                                                    />
-                                                                </div>
+                                                                <input
+                                                                    className="w-full bg-amber-50/50 border border-amber-100 rounded-md px-2 py-0.5 text-[12px] font-black focus:bg-white focus:ring-2 focus:ring-amber-200 outline-none"
+                                                                    placeholder="Tên hạng mục..."
+                                                                    value={updateItem?.name || ''}
+                                                                    onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
+                                                                />
                                                             ) : (
                                                                 <p className="text-[12px] font-black text-slate-900 leading-[1.2]">{item.name}</p>
-                                                            )}
-
-                                                            {showPlan && (
-                                                                <span className="text-[7px] font-black text-white bg-emerald-500 px-1 py-0.5 rounded-[3px] uppercase tracking-[0.5px]">THỰC TẾ</span>
                                                             )}
                                                         </div>
                                                     </td>
 
 
                                                     {/* Purchase Location */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
+                                                    <td className={`px-2 py-1.5 border bg-white text-center ${hasError(item.id, 'actualPurchaseLocation') ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}>
                                                         <input type="text"
-                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 text-center focus:bg-white transition-all outline-none"
+                                                            className={`w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-600 text-center focus:bg-white focus:border-emerald-400 transition-all outline-none ${hasError(item.id, 'actualPurchaseLocation') ? 'border-red-400 bg-red-50 placeholder:text-red-300' : ''}`}
                                                             value={updateItem?.actualPurchaseLocation ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPurchaseLocation', e.target.value)}
+                                                            placeholder={hasError(item.id, 'actualPurchaseLocation') ? 'Bắt buộc' : ''}
                                                         />
                                                     </td>
 
                                                     {/* Brand */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
+                                                    <td className={`px-2 py-1.5 border bg-white text-center ${hasError(item.id, 'actualBrand') ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}>
                                                         <input type="text"
-                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 text-center focus:bg-white transition-all outline-none"
+                                                            className={`w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded text-[11px] font-bold text-slate-600 text-center focus:bg-white focus:border-emerald-400 transition-all outline-none ${hasError(item.id, 'actualBrand') ? 'border-red-400 bg-red-50 placeholder:text-red-300' : ''}`}
                                                             value={updateItem?.actualBrand || ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualBrand', e.target.value)}
+                                                            placeholder={hasError(item.id, 'actualBrand') ? 'Bắt buộc' : ''}
                                                         />
                                                     </td>
 
                                                     {/* Quantity */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                    <td className={`px-2 py-1.5 border bg-white ${hasError(item.id, 'actualQuantity') ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}>
                                                         <input type="number"
-                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-center focus:bg-white outline-none transition-all"
+                                                            className={`w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded text-[12px] font-black text-center focus:bg-white focus:border-emerald-400 outline-none transition-all ${hasError(item.id, 'actualQuantity') ? 'border-red-400 bg-red-50' : ''}`}
                                                             value={updateItem?.actualQuantity ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualQuantity', e.target.value)}
                                                         />
                                                     </td>
 
                                                     {/* Unit */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                    <td className={`px-2 py-1.5 border bg-white ${hasError(item.id, 'unit') ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}>
                                                         <input type="text"
-                                                            className="w-full h-7 px-2 bg-transparent text-[10px] font-bold text-center uppercase focus:bg-white outline-none transition-all"
+                                                            className={`w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded text-[10px] font-bold text-center uppercase focus:bg-white focus:border-emerald-400 outline-none transition-all ${hasError(item.id, 'unit') ? 'border-red-400 bg-red-50 placeholder:text-red-300' : ''}`}
                                                             value={updateItem?.unit || ''}
                                                             onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                                                            placeholder={hasError(item.id, 'unit') ? 'Bắt buộc' : ''}
                                                         />
                                                     </td>
 
                                                     {/* Price */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
+                                                    <td className={`px-2 py-1.5 border bg-white text-center ${hasError(item.id, 'actualPrice') ? 'border-red-400 bg-red-50' : 'border-slate-200'}`}>
                                                         <input type="number"
-                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-center focus:bg-white outline-none transition-all"
+                                                            className={`w-full h-7 px-2 bg-slate-50 border border-slate-200 rounded text-[12px] font-black text-center focus:bg-white focus:border-emerald-400 outline-none transition-all ${hasError(item.id, 'actualPrice') ? 'border-red-400 bg-red-50' : ''}`}
                                                             value={updateItem?.actualPrice ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPrice', e.target.value)}
                                                         />
@@ -902,10 +902,10 @@ export default function UpdateExpenditureActualsPage() {
                                                 {/* PLAN ROW */}
                                                 {(showPlan && hasPlan) && (
                                                     <tr className="bg-slate-50/50 border-b border-slate-200">
-                                                        <td className="px-4 py-1.5 border border-slate-200 text-center">
-                                                            <div className="flex flex-col items-center gap-0.5">
+                                                        <td className="px-4 py-1.5 border border-slate-200 text-left">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[7px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-[0.5px] shrink-0">KẾ HOẠCH</span>
                                                                 <span className="text-[11px] font-bold text-slate-500 italic leading-[1.2]">{item.name}</span>
-                                                                <span className="text-[7px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-[0.5px]">KẾ HOẠCH</span>
                                                             </div>
                                                         </td>
                                                         <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400">{item.expectedPurchaseLocation || '---'}</span></td>
