@@ -30,7 +30,7 @@ export const auditService = {
     });
     return res.data;
   },
-  
+
   async getByEntity(entityType: string, entityId: number) {
     const res = await api.get<AuditLog[]>(`/api/audit/entity/${entityType}/${entityId}`);
     return res.data;
@@ -66,7 +66,7 @@ export const auditService = {
   },
 
   async verifyIntegrity(auditId: number) {
-    const res = await api.get<{ valid: boolean, currentHash: string }>(`/api/audit/${auditId}/verify`);
+    const res = await api.get<{ valid: boolean, dataValid: boolean, chainValid: boolean, storedHash: string, actualHash: string, tamperedEntity: string }>(`/api/audit/${auditId}/verify`);
     return res.data;
   },
 
@@ -83,3 +83,4 @@ export const auditService = {
     return res.data;
   }
 };
+

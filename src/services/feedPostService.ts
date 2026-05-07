@@ -136,10 +136,48 @@ export const feedPostService = {
     return res.data;
   },
 
-  async uploadImage(file: File, postId?: number): Promise<{ url: string; mediaId: number }> {
-    const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, "PHOTO");
-    if (!result.url) throw new Error("Upload thất bại: không nhận được URL từ media service.");
-    return { url: result.url, mediaId: result.id ?? 0 };
+  async uploadFile(file: File, postId: number): Promise<{ url: string; mediaId: number }> {
+    let mediaType: "PHOTO" | "VIDEO" | "FILE" | "DOCUMENT" | "EXCEL" = "FILE";
+    const type = file.type.toLowerCase();
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+
+    console.log(`[feedPostService] Detecting type for file: ${file.name}, MIME: ${type}, Ext: ${ext}`);
+
+    if (type.startsWith("image/")) {
+      mediaType = "PHOTO";
+    } else if (type.startsWith("video/")) {
+      mediaType = "VIDEO";
+    } else if (
+      type.includes("excel") || 
+      type.includes("spreadsheet") || 
+      type.includes("csv") || 
+      ext === "xlsx" || 
+      ext === "xls" || 
+      ext === "csv"
+    ) {
+      mediaType = "EXCEL";
+    } else if (
+      type.includes("pdf") || 
+      type.includes("document") || 
+      type.includes("word") || 
+      ext === "pdf" || 
+      ext === "doc" || 
+      ext === "docx"
+    ) {
+      mediaType = "DOCUMENT";
+    }
+
+    console.log(`[feedPostService] Categorized as: ${mediaType}`);
+
+    try {
+      const result = await mediaService.uploadMedia(file, undefined, postId, undefined, undefined, mediaType);
+      console.log(`[feedPostService] Upload success for ${file.name}, mediaId: ${result.id}`);
+      if (!result.url) throw new Error("Upload thất bại: không nhận được URL từ media service.");
+      return { url: result.url, mediaId: result.id ?? 0 };
+    } catch (error) {
+      console.error(`[feedPostService] Upload FAILED for ${file.name}:`, error);
+      throw error;
+    }
   },
 
   async lockPost(id: number): Promise<FeedPostDto> {

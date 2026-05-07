@@ -11,7 +11,7 @@ const uploadApi = axios.create({
 export interface MediaUploadResponse {
     id: number;
     url: string;
-    mediaType: "PHOTO" | "VIDEO" | "FILE";
+    mediaType: "PHOTO" | "VIDEO" | "FILE" | "DOCUMENT" | "EXCEL";
     fileName: string;
     contentType: string;
     sizeBytes: number;
@@ -27,7 +27,7 @@ export const mediaService = {
         postId?: number,
         expenditureId?: number,
         description?: string,
-        mediaType?: "PHOTO" | "VIDEO" | "FILE",
+        mediaType?: "PHOTO" | "VIDEO" | "FILE" | "DOCUMENT" | "EXCEL",
         onProgress?: (progress: number) => void,
         expenditureItemId?: number
     ): Promise<MediaUploadResponse> {
@@ -71,7 +71,7 @@ export const mediaService = {
         file: File,
         conversationId: number,
         description?: string,
-        mediaType?: "PHOTO" | "VIDEO" | "FILE",
+        mediaType?: "PHOTO" | "VIDEO" | "FILE" | "DOCUMENT" | "EXCEL",
         onProgress?: (progress: number) => void
     ): Promise<MediaUploadResponse> {
         console.log(`[mediaService] Starting conversation upload: ${file.name}, type: ${mediaType}`);

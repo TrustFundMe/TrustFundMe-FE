@@ -73,6 +73,10 @@ export default function FeedPostCard({
     seenUrls.add(a.url);
     return true;
   });
+  const fileAttachments = (attachments || []).filter((a) => 
+    a.type === "file" || 
+    ["FILE", "DOCUMENT", "EXCEL"].includes((a as any).mediaType)
+  );
   const hasMedia = images.length > 0;
   const campaign = (post as any).campaign as CampaignInfo | undefined;
   const isHtml = /<[a-z][\s\S]*>/i.test(post.content || "");
@@ -391,7 +395,54 @@ export default function FeedPostCard({
           {...(isHtml
             ? { dangerouslySetInnerHTML: { __html: post.content || "" } }
             : { children: post.content })}
-        />
+        </div>
+
+        {fileAttachments.length > 0 && (
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+            {fileAttachments.map((att, idx) => (
+              <a
+                key={idx}
+                href={att.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "10px 14px",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 10,
+                  textDecoration: "none",
+                  transition: "all 0.2s"
+                }}
+                className="hover:bg-blue-50 hover:border-blue-200 group"
+              >
+                <div style={{ 
+                  width: 32, 
+                  height: 32, 
+                  borderRadius: 8, 
+                  background: "#fff", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  border: "1px solid #e2e8f0"
+                }}>
+                  <svg className="w-4 h-4 text-zinc-500 group-hover:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {att.name || "Tệp đính kèm"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>Nhấn để tải về</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </fieldset>
 
       {/* Campaign */}

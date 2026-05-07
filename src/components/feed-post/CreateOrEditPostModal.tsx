@@ -162,14 +162,18 @@ export default function CreateOrEditPostModal({
   }, [title, content, linkedCampaignId, linkType, visibility, isOpen, isEdit]);
 
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     const newItems: { file: File; preview: string }[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (!file.type.startsWith("image/")) continue;
-      newItems.push({ file, preview: URL.createObjectURL(file) });
+      // For images/videos, create a preview. For others (like excel), use a placeholder or null
+      const isMedia = file.type.startsWith("image/") || file.type.startsWith("video/");
+      newItems.push({ 
+        file, 
+        preview: isMedia ? URL.createObjectURL(file) : "" 
+      });
     }
     // Chỉ tạo preview — KHÔNG upload ngay. Upload trong handleSubmit sau khi có postId.
     setUploadingItems((prev) => [...prev, ...newItems.map((item) => ({ ...item, done: false }))]);
@@ -241,11 +245,11 @@ export default function CreateOrEditPostModal({
           try { await mediaService.unlinkFromPost(mediaId); } catch { /* noop */ }
         }
 
-        // Step 3: Upload new images
+        // Step 3: Upload new images/files
         let uploadFailCount = 0;
         for (const { file } of uploadingItems) {
           try {
-            await feedPostService.uploadImage(file, postId);
+            await feedPostService.uploadFile(file, postId);
             setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
           } catch (e) {
             uploadFailCount++;
@@ -276,23 +280,39 @@ export default function CreateOrEditPostModal({
         });
         const postId = Number(newPost.id);
 
-        // Upload all images with postId, mark only successful ones as done
+        // Upload all images/files with postId, mark only successful ones as done
         let uploadFailCount = 0;
+        const uploadedAttachments: any[] = [];
         for (const { file } of uploadingItems) {
           try {
-            await feedPostService.uploadImage(file, postId);
+            const uploadResult = await feedPostService.uploadFile(file, postId);
             setUploadingItems((prev) => prev.map((it) => it.file === file ? { ...it, done: true } : it));
+            
+            // Collect successfully uploaded items to show immediately
+            uploadedAttachments.push({
+              id: uploadResult.mediaId,
+              url: uploadResult.url,
+              name: file.name,
+              type: file.type.startsWith('image/') ? 'image' : 'file'
+            });
           } catch (e) {
             uploadFailCount++;
             console.error("Upload failed:", e);
           }
         }
+
         if (uploadFailCount > 0) {
-          alert(`Bài viết đã đăng, nhưng ${uploadFailCount} ảnh upload thất bại. Vui lòng chỉnh sửa bài và thêm lại ảnh.`);
+          alert(`Bài viết đã đăng, nhưng ${uploadFailCount} tệp upload thất bại. Vui lòng chỉnh sửa bài và thêm lại.`);
         }
 
+        // Attach the uploaded items to the post object so parent lists update immediately
+        const postWithMedia = { 
+          ...newPost, 
+          attachments: [...(newPost.attachments || []), ...uploadedAttachments] 
+        };
+
         localStorage.removeItem(DRAFT_KEY);
-        onPostCreated?.(newPost);
+        onPostCreated?.(postWithMedia);
       }
 
       onClose();
@@ -524,17 +544,29 @@ export default function CreateOrEditPostModal({
 
             const renderThumb = (
               globalIndex: number,
-              content: { type: "url"; url: string } | { type: "uploading"; preview: string; done: boolean }
-            ) => (
-              <div key={content.type === "url" ? `url-${globalIndex}-${content.url}` : `up-${content.preview}`} className={thumbClass}>
-                {content.type === "url" ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={content.url} alt="" className="absolute inset-0 w-full h-full object-contain" />
-                ) : content.done ? (
-                  // Uploaded successfully — show green checkmark
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
+              content: { type: "url"; url: string; fileName?: string } | { type: "uploading"; preview: string; done: boolean; file?: File }
+            ) => {
+              const isImage = content.type === "url" 
+                ? (content.url.match(/\.(jpeg|jpg|gif|png)$/i) || !content.url.includes(".")) // default to image if url doesn't have ext
+                : (content.file?.type.startsWith("image/") || content.file?.type.startsWith("video/"));
+
+              return (
+                <div key={content.type === "url" ? `url-${globalIndex}-${content.url}` : `up-${content.preview || (content.file?.name)}`} className={thumbClass}>
+                  {isImage ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={content.type === "url" ? content.url : content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-800 p-2 text-center">
+                      <svg className="w-8 h-8 text-zinc-400 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-[10px] font-bold text-zinc-500 truncate w-full px-1">
+                        {content.type === "url" ? (content.fileName || "Tệp đính kèm") : content.file?.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {content.type === "uploading" && content.done && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[1]">
                       <div className="w-7 h-7 bg-[#1A685B] rounded-full flex items-center justify-center">
                         <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -542,40 +574,34 @@ export default function CreateOrEditPostModal({
                         </svg>
                       </div>
                     </div>
-                  </>
-                ) : isSubmitting ? (
-                  // Submitting + not done yet → actually uploading now → spinner
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
+                  )}
+
+                  {content.type === "uploading" && !content.done && isSubmitting && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[1]">
                       <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
-                  </>
-                ) : (
-                  // Pending — selected but not yet submitted → just show preview, no overlay
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={content.preview} alt="" className="absolute inset-0 w-full h-full object-contain" />
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    globalIndex < existingImages.length
-                      ? removeAt("url", globalIndex)
-                      : removeAt("uploading", globalIndex - existingImages.length)
-                  }
-                  className={removeBtnClass}
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            );
+                  )}
 
-            const items: ({ type: "url"; url: string } | { type: "uploading"; preview: string; done: boolean })[] = [
-              ...existingImages.map(({ url }) => ({ type: "url" as const, url })),
-              ...uploadingItems.map((item) => ({ type: "uploading" as const, preview: item.preview, done: item.done })),
+                  <button
+                    type="button"
+                    onClick={() =>
+                      globalIndex < existingImages.length
+                        ? removeAt("url", globalIndex)
+                        : removeAt("uploading", globalIndex - existingImages.length)
+                    }
+                    className={removeBtnClass}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              );
+            };
+
+            const items: ({ type: "url"; url: string; fileName?: string } | { type: "uploading"; preview: string; done: boolean; file: File })[] = [
+              ...existingImages.map((img) => ({ type: "url" as const, url: img.url, fileName: (img as any).fileName })),
+              ...uploadingItems.map((item) => ({ type: "uploading" as const, preview: item.preview, done: item.done, file: item.file })),
             ];
 
             if (useSwipe) {
@@ -612,21 +638,31 @@ export default function CreateOrEditPostModal({
             <input
               ref={fileInputRef}
               type="file"
-              onChange={handleImageUpload}
+              onChange={handleFileUpload}
               className="hidden"
-              accept="image/*"
+              accept="image/*,video/*,.xlsx,.xls,.csv,.doc,.docx,.pdf"
               multiple
             />
-            <span className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-green-500 pointer-events-none">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </span>
+            <div className="flex items-center gap-1">
+              {/* Icon Image */}
+              <span className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-green-500 pointer-events-none">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Thêm ảnh/video">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </span>
+              
+              {/* Icon File/Excel */}
+              <span className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors text-blue-500 pointer-events-none">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" title="Thêm tệp đính kèm (Excel, PDF...)">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </span>
+            </div>
           </label>
         </div>
 
