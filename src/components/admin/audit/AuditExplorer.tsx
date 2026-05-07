@@ -108,10 +108,27 @@ export default function AuditExplorer() {
     setIsCheckingLive(true);
     try {
       let liveData: any = null;
-      // Resolve real entityId from snapshot (same logic as ReconciliationTab)
-      const snap = JSON.parse(selectedAudit.dataSnapshot || '{}');
-      const targetId = snap.id || selectedAudit.entityId;
-      const entityId = Number(targetId);
+      // Resolve real entityId from snapshot
+      const snapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
+      let entityId = Number(selectedAudit.entityId);
+
+      // Specialized ID mapping
+      if (selectedAudit.entityType === 'CAMPAIGN_COMMITMENT' && snapshot.campaignId) {
+        entityId = Number(snapshot.campaignId);
+      } else {
+        // If snapshot has a campaignId, check if it matches the log's entityId
+        const campaignIdFromSnap = snapshot.campaignId?.toString();
+        
+        // If it's a record-specific type, always prefer snapshot ID
+        const recordTypes = ['DONATION', 'EVIDENCE_SUBMISSION', 'EVIDENCE_SUBMITTED'];
+        if (recordTypes.includes(selectedAudit.entityType)) {
+          entityId = Number(snapshot.id || snapshot.commitmentId || snapshot.evidenceId || selectedAudit.entityId);
+        } else if (campaignIdFromSnap && campaignIdFromSnap !== selectedAudit.entityId?.toString()) {
+          // If IDs differ, use specific snapshot ID
+          entityId = Number(snapshot.id || snapshot.commitmentId || snapshot.evidenceId || selectedAudit.entityId);
+        }
+        // Otherwise, entityId remains the campaignId from log.entityId
+      }
 
       switch (selectedAudit.entityType) {
         case 'CAMPAIGN':
@@ -135,7 +152,7 @@ export default function AuditExplorer() {
           // entityId is campaignId for DONATION_TRANSACTION (set by CassoWebhookService)
           // Fetch the actual Casso transaction by tid from the snapshot
           try {
-            const txTid = snap.tid;
+            const txTid = snapshot.tid;
             const campaignId = Number(selectedAudit.entityId);
             if (txTid && campaignId) {
               const cassoTxs = await paymentService.getCassoTransactionsByCampaign(campaignId);
@@ -150,7 +167,7 @@ export default function AuditExplorer() {
         case 'EVIDENCE_SUBMITTED':
           // entityId is campaignId — need to get evidenceId from snapshot
           try {
-            const evidenceId = snap.evidenceId;
+            const evidenceId = snapshot.evidenceId;
             if (evidenceId) {
               liveData = await expenditureService.getEvidenceById(evidenceId);
             }
@@ -204,7 +221,7 @@ export default function AuditExplorer() {
       // The snapshot fields (tid, counterAccountName, etc.) don't map to campaign fields.
       const selfContainedTypes = [
         'EXPENDITURE_REVIEW', 'EXPENDITURE_WITHDRAWAL',
-        'EVIDENCE_REVIEW'
+        'EVIDENCE_REVIEW', 'DONATION_TRANSACTION', 'CAMPAIGN_COMMITMENT'
       ];
 
       if (selfContainedTypes.includes(selectedAudit.entityType)) {
@@ -212,26 +229,42 @@ export default function AuditExplorer() {
         toast('Dữ liệu khớp hoàn toàn với Live DB ✅', 'success');
       } else {
         // Full field-by-field comparison for entity types where snapshot mirrors the entity
-        const snapshot = JSON.parse(selectedAudit.dataSnapshot || '{}');
+        let dataToCompare = snapshot;
+        
+        // Handle composite/multi-step snapshots
+        if ((selectedAudit.entityType === 'CAMPAIGN' || selectedAudit.entityType === 'CAMPAIGN_APPROVAL') && snapshot.step2_campaign) {
+          dataToCompare = snapshot.step2_campaign;
+        }
+
         let isMatch = true;
         const mismatchedFields: string[] = [];
 
         // Essential fields to check (ignoring timestamps and derived fields if they differ in format)
-        const fieldsToIgnore = ['updatedAt', 'createdAt', 'approvedAt', 'id', 'source'];
+        const fieldsToIgnore = [
+          'updatedAt', 'createdAt', 'approvedAt', 'id', 'source',
+          'kycVerified', 'bankVerified', 'ownerName', 'ownerAvatarUrl',
+          'categoryName', 'categoryIconUrl', 'coverImageUrl',
+          'review', 'step1_bank', 'step2_campaign', 'step2_fundraisingGoals',
+          'commitmentId', 'campaignTitle', 'signedAt', 'fundraisingGoal', 'campaign'
+        ];
 
-        for (const key in snapshot) {
-          if (Object.prototype.hasOwnProperty.call(snapshot, key) && !fieldsToIgnore.includes(key)) {
-            const snapshotVal = snapshot[key];
+        const isValueSame = (v1: any, v2: any) => {
+          if (v1 === v2) return true;
+          const s1 = String(v1 ?? '').trim().replace(/\r\n/g, '\n');
+          const s2 = String(v2 ?? '').trim().replace(/\r\n/g, '\n');
+          return s1 === s2;
+        };
+
+        for (const key in dataToCompare) {
+          if (Object.prototype.hasOwnProperty.call(dataToCompare, key) && !fieldsToIgnore.includes(key)) {
+            const snapshotVal = dataToCompare[key];
             const liveVal = liveData[key];
 
-            // If snapshot has the field, compare even if live doesn't have it (field removed = tamper)
             if (snapshotVal !== undefined && snapshotVal !== null && snapshotVal !== '') {
               if (liveVal === undefined || liveVal === null) {
-                // Field exists in snapshot but missing from live data — treat as mismatch
                 isMatch = false;
                 mismatchedFields.push(`${key} (missing in live)`);
-              } else if (String(snapshotVal) !== String(liveVal)) {
-                // Convert to string for comparison to handle number/string/BigDecimal variations
+              } else if (!isValueSame(snapshotVal, liveVal)) {
                 isMatch = false;
                 mismatchedFields.push(key);
               }
