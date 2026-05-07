@@ -72,7 +72,7 @@ export default function UpdateExpenditureActualsPage() {
         categories: new Set(),
         items: new Set()
     });
-    
+
     const [showPlan, setShowPlan] = useState(true);
 
     // Validation Errors: { [itemId]: Set<fieldName> }
@@ -677,7 +677,7 @@ export default function UpdateExpenditureActualsPage() {
                         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cập nhật hạng mục và minh chứng</p>
                     </div>
                 </div>
-                
+
                 <button
                     onClick={() => setShowPlan(!showPlan)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all border shadow-sm ${showPlan ? 'bg-slate-900 border-slate-900 text-white hover:bg-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
@@ -697,13 +697,13 @@ export default function UpdateExpenditureActualsPage() {
                             <tr className="bg-[#f8fafc] border-b border-slate-200">
                                 <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[50px] border border-slate-200">STT</th>
                                 <th className="px-3 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[150px] border border-slate-200">Tên danh mục</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[240px] border border-slate-200">Tên hạng mục</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[140px] border border-slate-200">Nơi mua</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-left w-[140px] border border-slate-200">Hiệu</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[240px] border border-slate-200">Tên hạng mục</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[140px] border border-slate-200">Nơi mua</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[140px] border border-slate-200">Hiệu</th>
                                 <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[85px] border border-slate-200">Số lượng</th>
                                 <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[85px] border border-slate-200">Đơn vị</th>
-                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-right w-[120px] border border-slate-200">Đơn giá</th>
-                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-right w-[140px] border border-slate-200">Thành tiền</th>
+                                <th className="px-2 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[120px] border border-slate-200">Đơn giá</th>
+                                <th className="px-4 py-3 text-[10px] font-black text-slate-700 uppercase tracking-wider text-center w-[140px] border border-slate-200">Thành tiền</th>
                                 <th className="px-1 py-3 text-[10px] font-black text-slate-700 uppercase tracking-[2px] text-center w-[90px] border border-slate-200">Ảnh minh chứng</th>
                             </tr>
                         </thead>
@@ -727,13 +727,29 @@ export default function UpdateExpenditureActualsPage() {
                                         return acc + (showPlan && hasPlanLocal ? 2 : 1);
                                     }, 0);
 
+                                    // Show "add item" row if group is empty and it's the 'other' group
+                                    if (group.items.length === 0 && id === 'other') {
+                                        return (
+                                            <tr key="add-item-row" className="border-b border-slate-200">
+                                                <td colSpan={10} className="px-6 py-4 text-center border border-slate-200">
+                                                    <button
+                                                        onClick={handleAddNewItem}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 transition-all"
+                                                    >
+                                                        <PlusCircle className="w-3.5 h-3.5" /> Thêm hạng mục phát sinh
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+
                                     return group.items.map((item) => {
                                         const updateItem = updateItems.find(it => it.id === item.id);
                                         const actualSubtotal = (updateItem?.actualQuantity || 0) * (updateItem?.actualPrice || 0);
                                         const mediaList = itemMedia[item.id] || [];
                                         const hasPlan = !item.isNew && (item.expectedQuantity > 0 || item.expectedPrice > 0);
                                         const itemRowSpan = (showPlan && hasPlan) ? 2 : 1;
-                                        
+
                                         // Plan values
                                         const expectedQty = item.isNew ? 0 : (isItemized ? (donationSummary[item.id] || 0) : (item.expectedQuantity || 0));
                                         const expectedPrice = item.isNew ? 0 : (item.expectedPrice || 0);
@@ -766,8 +782,8 @@ export default function UpdateExpenditureActualsPage() {
                                                     )}
 
                                                     {/* Name */}
-                                                    <td className="px-4 py-1.5 border border-slate-200 bg-white">
-                                                        <div className="flex flex-col items-start gap-0.5 py-0">
+                                                    <td className="px-4 py-1.5 border border-slate-200 bg-white text-center">
+                                                        <div className="flex flex-col items-center gap-0.5 py-0">
                                                             {item.isNew ? (
                                                                 <div className="relative w-full">
                                                                     <input
@@ -780,7 +796,7 @@ export default function UpdateExpenditureActualsPage() {
                                                             ) : (
                                                                 <p className="text-[12px] font-black text-slate-900 leading-[1.2]">{item.name}</p>
                                                             )}
-                                                            
+
                                                             {showPlan && (
                                                                 <span className="text-[7px] font-black text-white bg-emerald-500 px-1 py-0.5 rounded-[3px] uppercase tracking-[0.5px]">THỰC TẾ</span>
                                                             )}
@@ -789,18 +805,18 @@ export default function UpdateExpenditureActualsPage() {
 
 
                                                     {/* Purchase Location */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
                                                         <input type="text"
-                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 focus:bg-white transition-all outline-none"
+                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 text-center focus:bg-white transition-all outline-none"
                                                             value={updateItem?.actualPurchaseLocation ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPurchaseLocation', e.target.value)}
                                                         />
                                                     </td>
 
                                                     {/* Brand */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
                                                         <input type="text"
-                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 focus:bg-white transition-all outline-none"
+                                                            className="w-full h-7 px-2 bg-transparent text-[11px] font-bold text-slate-600 text-center focus:bg-white transition-all outline-none"
                                                             value={updateItem?.actualBrand || ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualBrand', e.target.value)}
                                                         />
@@ -825,16 +841,16 @@ export default function UpdateExpenditureActualsPage() {
                                                     </td>
 
                                                     {/* Price */}
-                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white">
+                                                    <td className="px-2 py-1.5 border border-slate-200 bg-white text-center">
                                                         <input type="number"
-                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-right focus:bg-white outline-none transition-all"
+                                                            className="w-full h-7 px-2 bg-transparent text-[12px] font-black text-center focus:bg-white outline-none transition-all"
                                                             value={updateItem?.actualPrice ?? ''}
                                                             onChange={(e) => handleItemChange(item.id, 'actualPrice', e.target.value)}
                                                         />
                                                     </td>
 
                                                     {/* Subtotal */}
-                                                    <td className="px-4 py-1.5 text-right border border-slate-200 bg-[#f8fafc]/50">
+                                                    <td className="px-4 py-1.5 text-center border border-slate-200 bg-[#f8fafc]/50">
                                                         <p className="text-[12px] font-black text-emerald-600">{renderPrice(actualSubtotal)}</p>
                                                     </td>
 
@@ -886,8 +902,8 @@ export default function UpdateExpenditureActualsPage() {
                                                 {/* PLAN ROW */}
                                                 {(showPlan && hasPlan) && (
                                                     <tr className="bg-slate-50/50 border-b border-slate-200">
-                                                        <td className="px-4 py-1.5 border border-slate-200">
-                                                            <div className="flex flex-col items-start gap-0.5">
+                                                        <td className="px-4 py-1.5 border border-slate-200 text-center">
+                                                            <div className="flex flex-col items-center gap-0.5">
                                                                 <span className="text-[11px] font-bold text-slate-500 italic leading-[1.2]">{item.name}</span>
                                                                 <span className="text-[7px] font-black text-white bg-slate-400 px-1.5 py-0.5 rounded-[4px] uppercase tracking-[0.5px]">KẾ HOẠCH</span>
                                                             </div>
@@ -896,8 +912,8 @@ export default function UpdateExpenditureActualsPage() {
                                                         <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400">{item.expectedBrand || '---'}</span></td>
                                                         <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[11px] font-black text-slate-500">{renderNumber(expectedQty)}</span></td>
                                                         <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[10px] font-bold text-slate-400 uppercase">{item.expectedUnit || item.unit || '---'}</span></td>
-                                                        <td className="px-2 py-1.5 border border-slate-200 text-right"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedPrice)}</span></td>
-                                                        <td className="px-4 py-1.5 border border-slate-200 text-right"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedQty * expectedPrice)}</span></td>
+                                                        <td className="px-2 py-1.5 border border-slate-200 text-center"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedPrice)}</span></td>
+                                                        <td className="px-4 py-1.5 border border-slate-200 text-center"><span className="text-[11px] font-black text-slate-500">{renderPrice(expectedQty * expectedPrice)}</span></td>
                                                     </tr>
                                                 )}
                                             </Fragment>
